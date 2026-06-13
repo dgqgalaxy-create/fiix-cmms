@@ -1,0 +1,32 @@
+import api from './axios';
+
+export interface Asset {
+  id: string;
+  internal_code: string;
+  name: string;
+  brand: string;
+  model: string;
+  serial_number?: string;
+  description?: string;
+  status: 'OPERATIVO' | 'EN_MANTENIMIENTO' | 'FUERA_DE_SERVICIO';
+}
+
+export const getAssets = async (): Promise<Asset[]> => {
+  const response = await api.get('/assets');
+  return response.data;
+};
+
+export const createAsset = async (data: Omit<Asset, 'id'>) => {
+  const response = await api.post('/assets', data);
+  return response.data;
+};
+
+export const updateAsset = async (id: string, data: Partial<Asset>) => {
+  const response = await api.patch(`/assets/${id}`, data);
+  return response.data;
+};
+
+export const deleteAsset = async (id: string) => {
+  const response = await api.delete(`/assets/${id}`);
+  return response.data;
+};
