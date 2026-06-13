@@ -20,14 +20,21 @@ Asegúrate de tener instalados estos dos programas en tu computadora nueva:
 - [Node.js](https://nodejs.org/es) (Versión 18 o superior recomendada)
 - [PostgreSQL](https://www.postgresql.org/download/) (Asegúrate de recordar la contraseña del usuario `postgres` que pongas al instalarlo).
 
-### 2. Clonar el repositorio
+### 2. Extensiones Recomendadas para el Editor
+Para tener la mejor experiencia programando en Antigravity IDE (o VS Code), te sugiero instalar las siguientes extensiones:
+- **Prettier - Code formatter:** Para mantener el código ordenado y limpio automáticamente.
+- **ES7+ React/Redux/React-Native snippets:** Para escribir componentes de React más rápido (atajos como `rfce`).
+- **Tailwind CSS IntelliSense:** Indispensable para autocompletado y colores de las clases de Tailwind.
+- **Prisma:** Para que el archivo `schema.prisma` tenga colores, resaltado de sintaxis y autocompletado.
+
+### 3. Clonar el repositorio
 Abre tu terminal y descarga el código:
 ```bash
 git clone https://github.com/dgqgalaxy-create/fiix-cmms.git
 cd fiix-cmms
 ```
 
-### 3. Instalar Dependencias
+### 4. Instalar Dependencias
 Instala los paquetes necesarios tanto para el backend como para el frontend:
 ```bash
 # Terminal 1 (Instalar Backend)
@@ -39,7 +46,7 @@ cd frontend
 npm install
 ```
 
-### 4. Configurar Variables de Entorno (.env)
+### 5. Configurar Variables de Entorno (.env)
 Las credenciales de conexión NO se suben a GitHub por seguridad. 
 Crea un archivo llamado `.env` **dentro de la carpeta `backend`** y pega el siguiente código. Modifica `TU_CONTRASEÑA` por la contraseña que le pusiste a PostgreSQL al instalarlo:
 
@@ -49,7 +56,7 @@ DATABASE_URL="postgresql://postgres:TU_CONTRASEÑA@localhost:5432/fiix_cmms?sche
 JWT_SECRET="mi_secreto_super_seguro_para_jwt_123"
 ```
 
-### 5. Configurar la Base de Datos
+### 6. Configurar la Base de Datos
 Desde tu terminal, dentro de la carpeta `backend`, ejecuta los siguientes comandos de Prisma:
 
 ```bash
@@ -62,7 +69,7 @@ npx prisma db seed
 
 *Nota: La contraseña para el usuario administrador (`admin@fiix.com`) que se crea con el seed es `password123`.*
 
-### 6. Levantar los Servidores
+### 7. Levantar los Servidores
 Necesitas dos terminales abiertas para correr el proyecto localmente:
 
 **Terminal 1 (Backend):**
