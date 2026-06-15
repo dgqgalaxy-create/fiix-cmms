@@ -23,7 +23,7 @@ export const Sidebar = () => {
     navItems.push({ name: 'Personal', path: '/users', icon: <Users size={20} /> });
   }
 
-  if (hasPermission('MANAGE_KPIS')) {
+  if (hasPermission('VIEW_KPIS') || hasPermission('MANAGE_KPIS')) {
     navItems.push({ name: 'KPIs y Metas', path: '/kpis', icon: <Activity size={20} /> });
   }
 

@@ -10,18 +10,7 @@ import type { User } from '../api/users';
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { 
-    title: string; 
-    description: string; 
-    asset_id: string; 
-    zone_id: string;
-    priority: string;
-    maintenance_type: string;
-    machine_stopped: boolean;
-    requester_name: string;
-    production_group: string;
-    assigned_technicians_ids?: string[] 
-  }) => Promise<void>;
+  onSubmit: (data: any) => Promise<void>;
 }
 
 export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
@@ -35,6 +24,7 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
   const [requesterName, setRequesterName] = useState('');
   const [productionGroup, setProductionGroup] = useState('NA');
   const [assignedTechniciansIds, setAssignedTechniciansIds] = useState<string[]>([]);
+  const [requestImage, setRequestImage] = useState<File | null>(null);
   
   const [assets, setAssets] = useState<Asset[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
@@ -90,19 +80,22 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
       setIsSubmitting(true);
       setError('');
       
-      const payload: any = { 
-        title, 
-        description, 
-        asset_id: assetId,
-        zone_id: zoneId,
-        priority,
-        maintenance_type: maintenanceType,
-        machine_stopped: machineStopped,
-        requester_name: requesterName.trim(),
-        production_group: productionGroup
-      };
+      const payload = new FormData();
+      payload.append('title', title);
+      payload.append('description', description);
+      payload.append('asset_id', assetId);
+      payload.append('zone_id', zoneId);
+      payload.append('priority', priority);
+      payload.append('maintenance_type', maintenanceType);
+      payload.append('machine_stopped', String(machineStopped));
+      payload.append('requester_name', requesterName.trim());
+      payload.append('production_group', productionGroup);
+      
       if (assignedTechniciansIds.length > 0) {
-        payload.assigned_technicians_ids = assignedTechniciansIds;
+        assignedTechniciansIds.forEach(id => payload.append('assigned_technicians_ids', id));
+      }
+      if (requestImage) {
+        payload.append('request_image', requestImage);
       }
       
       await onSubmit(payload);
@@ -115,6 +108,7 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
       setMaintenanceType('CORRECTIVO');
       setProductionGroup('NA');
       setAssignedTechniciansIds([]);
+      setRequestImage(null);
       onClose();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Ocurrió un error al crear la orden');
@@ -338,6 +332,21 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
                   )}
                 </div>
               )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">📸 Foto de la Falla (Opcional)</label>
+              <input 
+                type="file" 
+                accept="image/*"
+                onChange={(e) => setRequestImage(e.target.files?.[0] || null)}
+                className="block w-full text-sm text-slate-500
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-full file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-slate-100 file:text-slate-700
+                  hover:file:bg-slate-200 transition-colors cursor-pointer border border-slate-200 rounded-xl p-1"
+              />
             </div>
           </form>
         </div>

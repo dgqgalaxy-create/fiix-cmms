@@ -63,7 +63,8 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
           <thead className="bg-slate-50/50 border-b border-slate-100 text-slate-500 font-medium">
             <tr>
               <th className="px-6 py-4">Orden</th>
-              <th className="px-6 py-4">Activo</th>
+              <th className="px-6 py-4">Activo y Zona</th>
+              <th className="px-6 py-4">Tipo</th>
               <th className="px-6 py-4">Estado</th>
               <th className="px-6 py-4">Asignado A</th>
               <th className="px-6 py-4">Fecha Creación</th>
@@ -92,11 +93,19 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">
                       {wo.asset.name.substring(0, 2).toUpperCase()}
                     </div>
-                    <span className="font-medium text-slate-700">{wo.asset.name}</span>
+                    <div>
+                      <span className="font-medium text-slate-700 block">{wo.asset.name}</span>
+                      <span className="text-xs text-slate-500 block">{wo.zone?.name || 'Sin Zona'}</span>
+                    </div>
                   </div>
+                </td>
+                <td className="px-6 py-4">
+                  <span className="text-sm font-medium text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
+                    {wo.maintenance_type}
+                  </span>
                 </td>
                 <td className="px-6 py-4">
                   {getStatusBadge(wo.status)}

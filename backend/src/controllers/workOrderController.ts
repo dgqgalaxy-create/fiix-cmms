@@ -80,11 +80,23 @@ export const getWorkOrderById = async (req: AuthRequest, res: Response): Promise
 
 export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { title, description, asset_id, assigned_technicians_ids, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group } = req.body;
+    const { title, description, asset_id, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group } = req.body;
+    let { assigned_technicians_ids } = req.body;
+    
+    if (assigned_technicians_ids && !Array.isArray(assigned_technicians_ids)) {
+      assigned_technicians_ids = [assigned_technicians_ids];
+    }
     
     if (!req.user) {
       res.status(401).json({ error: 'No autorizado' });
       return;
+    }
+
+    const files = (req as any).files as { [fieldname: string]: Express.Multer.File[] };
+    let request_image_url: string | undefined;
+    
+    if (files && files['request_image']) {
+      request_image_url = `/uploads/${files['request_image'][0].filename}`;
     }
 
     const newWorkOrder = await prisma.workOrder.create({
@@ -99,6 +111,7 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
         requester_name,
         production_group,
         status: 'PENDIENTE',
+        request_image_url,
         created_by_id: req.user.userId,
         assigned_technicians: assigned_technicians_ids && assigned_technicians_ids.length > 0
           ? { connect: assigned_technicians_ids.map((id: string) => ({ id })) }
@@ -114,7 +127,7 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
 export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { title, description, asset_id, status, hold_reason, resolution_notes, assigned_technicians_ids, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group } = req.body;
+    const { title, description, asset_id, status, hold_reason, resolution_notes, assigned_technicians_ids, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group, signature_clean_area, signature_delivery } = req.body;
     const userRole = req.user?.role;
     const userId = req.user?.userId;
 
@@ -141,6 +154,17 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
       }
     }
 
+    if (status === 'EN_PROCESO' && userRole !== 'TECNICO') {
+      const willHaveTechnicians = assigned_technicians_ids 
+        ? assigned_technicians_ids.length > 0 
+        : currentWorkOrder.assigned_technicians.length > 0;
+        
+      if (!willHaveTechnicians) {
+        res.status(400).json({ error: 'Debes asignar al menos un técnico para pasar la orden a EN PROCESO.' });
+        return;
+      }
+    }
+
     // Multer inyecta los archivos aquí
     const files = (req as any).files as { [fieldname: string]: Express.Multer.File[] };
     
@@ -152,6 +176,8 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
     if (machine_stopped !== undefined) updateData.machine_stopped = machine_stopped === true || machine_stopped === 'true';
     if (requester_name !== undefined) updateData.requester_name = requester_name;
     if (production_group !== undefined) updateData.production_group = production_group;
+    if (signature_clean_area !== undefined) updateData.signature_clean_area = signature_clean_area;
+    if (signature_delivery !== undefined) updateData.signature_delivery = signature_delivery;
     
     // Auto-asignación: Si un técnico la cambia a EN_PROCESO, se auto-asigna si la lista estaba vacía
     if (userRole === 'TECNICO' && status === 'EN_PROCESO' && currentWorkOrder.status === 'PENDIENTE') {

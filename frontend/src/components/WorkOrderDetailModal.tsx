@@ -2,8 +2,13 @@ import { useState, useEffect } from 'react';
 import { X, Loader2, Save, Trash2, Ban, Clock } from 'lucide-react';
 import type { WorkOrder } from '../api/workOrders';
 import { useAuth } from '../context/AuthContext';
-import { getUsers } from '../api/users';
 import type { User } from '../api/users';
+import { SignatureField } from './SignatureField';
+import type { SignatureFieldRef } from './SignatureField';
+import { useRef } from 'react';
+import { Download } from 'lucide-react';
+import { ErrorBoundary } from './ErrorBoundary';
+import { generateWorkOrderPDF } from '../utils/pdfGenerator';
 
 interface Props {
   workOrder: WorkOrder | null;
@@ -20,11 +25,17 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
   const [status, setStatus] = useState<string>('');
   const [holdReason, setHoldReason] = useState<string>('');
   const [resolutionNotes, setResolutionNotes] = useState<string>('');
+  const [signatureCleanArea, setSignatureCleanArea] = useState<string>('');
+  const [signatureDelivery, setSignatureDelivery] = useState<string>('');
+  
+  const sigCleanAreaRef = useRef<SignatureFieldRef>(null);
+  const sigDeliveryRef = useRef<SignatureFieldRef>(null);
   
   const [beforeImage, setBeforeImage] = useState<File | null>(null);
   const [afterImage, setAfterImage] = useState<File | null>(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [error, setError] = useState('');
   
   const [technicians, setTechnicians] = useState<User[]>([]);
@@ -35,6 +46,8 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
       setStatus(workOrder.status);
       setHoldReason(workOrder.hold_reason || '');
       setResolutionNotes(workOrder.resolution_notes || '');
+      setSignatureCleanArea(workOrder.signature_clean_area || '');
+      setSignatureDelivery(workOrder.signature_delivery || '');
       setAssignedTechniciansIds(workOrder.assigned_technicians?.map(t => t.id) || []);
       setBeforeImage(null);
       setAfterImage(null);
@@ -51,6 +64,26 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
   if (!isOpen || !workOrder) return null;
 
   const isClosed = workOrder.status === 'FINALIZADO' || workOrder.status === 'ANULADO';
+
+  const canDownloadPDF = workOrder.status === 'FINALIZADO' && (
+    user?.role === 'ADMINISTRADOR' || 
+    user?.role === 'GESTIONADOR' || 
+    (user?.role === 'TECNICO' && workOrder.assigned_technicians?.some(t => t.id === (user as any).userId || t.id === (user as any).id))
+  );
+
+  const pdfRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadPDF = async () => {
+    try {
+      setIsSubmitting(true);
+      await generateWorkOrderPDF(workOrder);
+    } catch (err: any) {
+      console.error("Error generating PDF:", err);
+      setError(`Ocurrió un error al generar el PDF: ${err.message || String(err)}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const getDuration = () => {
     let diffMs = 0;
@@ -92,24 +125,56 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    let finalStatus = status;
-    // Si la orden está PENDIENTE y el técnico le da guardar, pasarla a EN_PROCESO automáticamente
-    if (workOrder.status === 'PENDIENTE' && status === 'PENDIENTE') {
-      finalStatus = 'EN_PROCESO';
-    }
-
-    // Validar foto antes de iniciar
-    if (finalStatus === 'EN_PROCESO' && !beforeImage && !workOrder.before_image_url) {
-      setError('Debes subir una foto de evidencia (Antes) para poder iniciar el trabajo.');
-      return;
-    }
-
-    if (finalStatus === 'EN_ESPERA' && !holdReason.trim()) {
-      setError('El motivo de espera es obligatorio cuando el estado es EN_ESPERA.');
-      return;
-    }
-
     try {
+      let finalStatus = status;
+      // Si la orden está PENDIENTE y el técnico le da guardar, pasarla a EN_PROCESO automáticamente
+      if (user?.role === 'TECNICO' && workOrder.status === 'PENDIENTE' && status === 'PENDIENTE') {
+        finalStatus = 'EN_PROCESO';
+      }
+
+      if (finalStatus === 'EN_PROCESO' && user?.role !== 'TECNICO' && assignedTechniciansIds.length === 0) {
+        setError('Debes asignar al menos un técnico para poder poner la orden en proceso.');
+        return;
+      }
+
+      // Validar foto antes de iniciar
+      if (finalStatus === 'EN_PROCESO' && !beforeImage && !workOrder.before_image_url) {
+        setError('Debes subir una foto de evidencia (Antes) para poder iniciar el trabajo.');
+        return;
+      }
+
+      let cleanAreaBase64 = signatureCleanArea;
+      let deliveryBase64 = signatureDelivery;
+
+      if (finalStatus === 'FINALIZADO') {
+        if (!resolutionNotes?.trim()) {
+          setError('Debes ingresar las notas de resolución detallando el trabajo realizado.');
+          return;
+        }
+
+        if (!afterImage && !workOrder.after_image_url) {
+          setError('Debes subir una foto de evidencia (Después) para poder finalizar el trabajo.');
+          return;
+        }
+
+        if (sigCleanAreaRef.current && !sigCleanAreaRef.current.isEmpty()) {
+          cleanAreaBase64 = sigCleanAreaRef.current.getData() || signatureCleanArea;
+        }
+        if (sigDeliveryRef.current && !sigDeliveryRef.current.isEmpty()) {
+          deliveryBase64 = sigDeliveryRef.current.getData() || signatureDelivery;
+        }
+
+        if (!cleanAreaBase64?.trim() || !deliveryBase64?.trim()) {
+          setError('Debes ingresar las firmas de liberación de área y entrega de trabajo para finalizar.');
+          return;
+        }
+      }
+
+      if (finalStatus === 'EN_ESPERA' && !holdReason?.trim()) {
+        setError('El motivo de espera es obligatorio cuando el estado es EN_ESPERA.');
+        return;
+      }
+
       setIsSubmitting(true);
       setError('');
       
@@ -126,13 +191,19 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
         updateData.hold_reason = holdReason;
       }
       
+      if (finalStatus === 'FINALIZADO') {
+        updateData.signature_clean_area = cleanAreaBase64;
+        updateData.signature_delivery = deliveryBase64;
+      }
+      
       if (beforeImage) updateData.before_image = beforeImage;
       if (afterImage) updateData.after_image = afterImage;
 
       await onUpdate(workOrder.id, updateData);
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al actualizar la orden de trabajo');
+      console.error("Error in handleSubmit:", err);
+      setError(err.response?.data?.error || err.message || 'Error inesperado al procesar la orden.');
     } finally {
       setIsSubmitting(false);
     }
@@ -171,10 +242,11 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}></div>
+    <ErrorBoundary>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}></div>
 
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
           <div>
             <div className="flex items-center gap-3">
@@ -214,7 +286,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-between">
               <div>
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Activo Asociado</span>
-                <div className="font-medium text-slate-800">{workOrder.asset.name}</div>
+                <div className="font-medium text-slate-800">{workOrder.asset?.name || 'Desconocido'}</div>
               </div>
               <div className="mt-3 pt-3 border-t border-slate-200/60">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Zona</span>
@@ -290,9 +362,16 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
               {workOrder.description || <span className="italic text-slate-400">Sin descripción...</span>}
             </div>
             
+            {workOrder.request_image_url && (
+              <div className="mt-4 border-t border-slate-100 pt-3">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">📸 Foto al reportar la falla</span>
+                <img src={`http://localhost:3000${workOrder.request_image_url}`} alt="Falla Reportada" className="w-full h-32 object-cover rounded-xl border border-slate-200" />
+              </div>
+            )}
+            
             {workOrder.before_image_url && (
-              <div className="mt-3">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Evidencia (Antes)</span>
+              <div className="mt-4 border-t border-slate-100 pt-3">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">📸 Evidencia Técnica (Antes de reparar)</span>
                 <img src={`http://localhost:3000${workOrder.before_image_url}`} alt="Antes" className="w-full h-32 object-cover rounded-xl border border-slate-200" />
               </div>
             )}
@@ -300,8 +379,29 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
           
           {workOrder.after_image_url && (
             <div className="mb-8 bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
-               <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider block mb-1">Evidencia (Después)</span>
+               <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider block mb-2">📸 Evidencia de Reparación (Después)</span>
                <img src={`http://localhost:3000${workOrder.after_image_url}`} alt="Después" className="w-full h-48 object-cover rounded-xl border border-emerald-200" />
+               
+               {workOrder.signature_clean_area && workOrder.signature_delivery && (
+                 <div className="mt-4 pt-4 border-t border-emerald-200/50 grid grid-cols-2 gap-4">
+                   <div>
+                     <span className="text-xs font-semibold text-emerald-700 block mb-1">Firma Liberación de Área:</span>
+                     {typeof workOrder.signature_clean_area === 'string' && workOrder.signature_clean_area.startsWith('data:image') ? (
+                       <img src={workOrder.signature_clean_area} alt="Firma" className="h-16 object-contain bg-white rounded-lg border border-emerald-100 p-1 block" />
+                     ) : (
+                       <span className="text-sm font-medium text-emerald-900 bg-white px-3 py-1.5 rounded-lg border border-emerald-100 block">{workOrder.signature_clean_area}</span>
+                     )}
+                   </div>
+                   <div>
+                     <span className="text-xs font-semibold text-emerald-700 block mb-1">Firma Entrega de Trabajo:</span>
+                     {typeof workOrder.signature_delivery === 'string' && workOrder.signature_delivery.startsWith('data:image') ? (
+                       <img src={workOrder.signature_delivery} alt="Firma" className="h-16 object-contain bg-white rounded-lg border border-emerald-100 p-1 block" />
+                     ) : (
+                       <span className="text-sm font-medium text-emerald-900 bg-white px-3 py-1.5 rounded-lg border border-emerald-100 block">{workOrder.signature_delivery}</span>
+                     )}
+                   </div>
+                 </div>
+               )}
             </div>
           )}
 
@@ -379,7 +479,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                         <span className="text-sm text-slate-500 italic">Nadie asignado</span>
                       )}
                     </div>
-                    {!isClosed && workOrder.assigned_technicians && workOrder.assigned_technicians.length > 0 && !workOrder.assigned_technicians.some(t => t.id === user.userId) && (workOrder.status === 'EN_PROCESO' || workOrder.status === 'PENDIENTE') && (
+                    {!isClosed && workOrder.assigned_technicians && workOrder.assigned_technicians.length > 0 && !workOrder.assigned_technicians.some(t => t.id === (user as any).userId || t.id === (user as any).id) && (workOrder.status === 'EN_PROCESO' || workOrder.status === 'PENDIENTE') && (
                       <button 
                         type="button" 
                         onClick={handleJoin}
@@ -425,19 +525,36 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                     />
                     
                     {!isClosed && (
-                      <div className="mt-4 p-4 bg-emerald-100/50 border border-emerald-200 rounded-xl">
-                        <label className="block text-sm font-medium text-emerald-800 mb-2">📸 Evidencia de Reparación (Después)</label>
-                        <input 
-                          type="file" 
-                          accept="image/*"
-                          onChange={(e) => setAfterImage(e.target.files?.[0] || null)}
-                          className="block w-full text-sm text-emerald-700
-                            file:mr-4 file:py-2 file:px-4
-                            file:rounded-full file:border-0
-                            file:text-sm file:font-semibold
-                            file:bg-emerald-600 file:text-white
-                            hover:file:bg-emerald-700 transition-colors cursor-pointer"
-                        />
+                      <div className="mt-4 p-4 bg-emerald-100/50 border border-emerald-200 rounded-xl space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-emerald-800 mb-2">📸 Evidencia de Reparación (Después)</label>
+                          <input 
+                            type="file" 
+                            accept="image/*"
+                            onChange={(e) => setAfterImage(e.target.files?.[0] || null)}
+                            className="block w-full text-sm text-emerald-700
+                              file:mr-4 file:py-2 file:px-4
+                              file:rounded-full file:border-0
+                              file:text-sm file:font-semibold
+                              file:bg-emerald-600 file:text-white
+                              hover:file:bg-emerald-700 transition-colors cursor-pointer"
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-emerald-200/50">
+                          <div>
+                            <SignatureField 
+                              ref={sigCleanAreaRef}
+                              label="Firma: Liberación de Área Limpia *"
+                            />
+                          </div>
+                          <div>
+                            <SignatureField 
+                              ref={sigDeliveryRef}
+                              label="Firma: Entrega de Trabajo *"
+                            />
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -480,6 +597,17 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
             )}
           </div>
           <div className="flex gap-3">
+            {canDownloadPDF && (
+              <button 
+                type="button" 
+                onClick={handleDownloadPDF} 
+                disabled={isSubmitting} 
+                className="px-5 py-2.5 flex items-center gap-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-colors shadow-sm"
+              >
+                {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+                Descargar PDF
+              </button>
+            )}
             <button type="button" onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors">
               Cerrar
             </button>
@@ -493,5 +621,6 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
         </div>
       </div>
     </div>
+    </ErrorBoundary>
   );
 };

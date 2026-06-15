@@ -9,7 +9,13 @@ router.get('/', authenticate, getWorkOrders);
 
 router.get('/summary', authenticate, getWorkOrdersSummary);
 router.get('/:id', authenticate, getWorkOrderById);
-router.post('/', authenticate, requirePermission('CREATE_WORK_ORDERS'), createWorkOrder);
+router.post(
+  '/', 
+  authenticate, 
+  requirePermission('CREATE_WORK_ORDERS'), 
+  upload.fields([{ name: 'request_image', maxCount: 1 }]), 
+  createWorkOrder
+);
 router.patch(
   '/:id', 
   authenticate, 

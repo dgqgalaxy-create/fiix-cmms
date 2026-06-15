@@ -117,8 +117,12 @@ model WorkOrder {
   last_resumed_at     DateTime?
   accumulated_time_ms Int             @default(0)
   resolution_notes    String?
+  request_image_url   String?
   before_image_url    String?
   after_image_url     String?
+
+  signature_clean_area String?
+  signature_delivery   String?
 
   created_by_id    String          @db.Uuid
   created_by       User            @relation("CreatedOrders", fields: [created_by_id], references: [id])
