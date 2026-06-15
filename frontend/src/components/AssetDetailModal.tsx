@@ -1,4 +1,4 @@
-import { X, Database, MapPin, Tag, Activity, Settings, Ban } from 'lucide-react';
+import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye } from 'lucide-react';
 import type { Asset } from '../api/assets';
 
 interface Props {
@@ -67,6 +67,17 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
         <div className="p-6 overflow-y-auto">
           <div className="space-y-6">
             
+            {/* Image */}
+            {asset.image_url && (
+              <div className="w-full h-64 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0">
+                <img 
+                  src={`http://localhost:3000${asset.image_url}`} 
+                  alt={`Foto de ${asset.name}`} 
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            )}
+            
             {/* Description */}
             {asset.description && (
               <div>
@@ -111,6 +122,42 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                 <div className="text-sm font-medium text-slate-800">{asset.serial_number || 'No especificado'}</div>
               </div>
             </div>
+
+            {/* Document / Manual */}
+            {asset.document_url && (
+              <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800">Ficha Técnica / Manual</h4>
+                    <p className="text-xs text-slate-500 font-medium">Documento adjunto al equipo</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <a 
+                    href={`http://localhost:3000${asset.document_url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-white hover:bg-blue-50 text-blue-700 text-sm font-medium rounded-xl border border-blue-200 transition-colors flex items-center gap-2 shadow-sm"
+                  >
+                    <Eye size={16} />
+                    Ver
+                  </a>
+                  <a 
+                    href={`http://localhost:3000${asset.document_url}`}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors flex items-center gap-2 shadow-sm shadow-blue-500/20"
+                  >
+                    <Download size={16} />
+                    Descargar
+                  </a>
+                </div>
+              </div>
+            )}
 
           </div>
         </div>

@@ -80,6 +80,9 @@ model Asset {
   description     String?
   status          AssetStatus
 
+  image_url       String?
+  document_url    String?
+
   created_at      DateTime    @default(now())
   updated_at      DateTime    @updatedAt
 

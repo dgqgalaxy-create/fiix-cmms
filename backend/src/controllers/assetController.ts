@@ -36,11 +36,33 @@ export const getAssetById = async (req: Request, res: Response): Promise<void> =
 
 export const createAsset = async (req: Request, res: Response): Promise<void> => {
   try {
-    const assetData = req.body;
-    if (!assetData.zone_id) {
+    const { zone_id, internal_code, name, brand, model, serial_number, description, status } = req.body;
+    
+    const assetData: any = {
+      internal_code,
+      name,
+      brand,
+      model,
+      serial_number: serial_number || null,
+      description: description || null,
+      status,
+    };
+
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    if (files?.['image']) {
+      assetData.image_url = `/uploads/assets/${files['image'][0].filename}`;
+    }
+    if (files?.['document']) {
+      assetData.document_url = `/uploads/assets/${files['document'][0].filename}`;
+    }
+
+    if (!zone_id) {
       res.status(400).json({ error: 'La zona (zone_id) es obligatoria' });
       return;
     }
+
+    assetData.zone = { connect: { id: zone_id } };
+
     const newAsset = await prisma.asset.create({ data: assetData });
     res.status(201).json(newAsset);
   } catch (error: any) {
@@ -55,13 +77,33 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
 export const updateAsset = async (req: Request, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const assetData = req.body;
+    const { zone_id, internal_code, name, brand, model, serial_number, description, status } = req.body;
+
+    const assetData: any = {};
+    if (internal_code) assetData.internal_code = internal_code;
+    if (name) assetData.name = name;
+    if (brand) assetData.brand = brand;
+    if (model) assetData.model = model;
+    if (serial_number !== undefined) assetData.serial_number = serial_number || null;
+    if (description !== undefined) assetData.description = description || null;
+    if (status) assetData.status = status;
+    if (zone_id) assetData.zone = { connect: { id: zone_id } };
+
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    if (files?.['image']) {
+      assetData.image_url = `/uploads/assets/${files['image'][0].filename}`;
+    }
+    if (files?.['document']) {
+      assetData.document_url = `/uploads/assets/${files['document'][0].filename}`;
+    }
+
     const updatedAsset = await prisma.asset.update({
       where: { id },
       data: assetData
     });
     res.json(updatedAsset);
   } catch (error) {
+    console.error('Update Asset Error:', error);
     res.status(500).json({ error: 'Error al actualizar activo' });
   }
 };

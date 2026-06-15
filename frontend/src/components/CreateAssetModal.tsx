@@ -25,6 +25,9 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
   const [isLoadingZones, setIsLoadingZones] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -47,6 +50,8 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
         setStatus('OPERATIVO');
         setZoneId('');
       }
+      setImageFile(null);
+      setDocumentFile(null);
 
       setIsLoadingZones(true);
       getZones().then(data => {
@@ -69,16 +74,21 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
       }
       setIsSubmitting(true);
       setError('');
-      await onSubmit({
-        internal_code: internalCode,
-        name,
-        brand,
-        model,
-        serial_number: serialNumber,
-        description,
-        status,
-        zone_id: zoneId,
-      });
+      
+      const submitData = new FormData();
+      submitData.append('internal_code', internalCode);
+      submitData.append('name', name);
+      submitData.append('brand', brand);
+      submitData.append('model', model);
+      submitData.append('serial_number', serialNumber);
+      submitData.append('description', description);
+      submitData.append('status', status);
+      submitData.append('zone_id', zoneId);
+      
+      if (imageFile) submitData.append('image', imageFile);
+      if (documentFile) submitData.append('document', documentFile);
+
+      await onSubmit(submitData as any);
       // Reset state handled by useEffect on next open
       onClose();
     } catch (err: any) {
@@ -160,6 +170,17 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Número de Serie (Opcional)</label>
                 <input type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="SN-12345" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Foto del Equipo (Opcional)</label>
+                <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 text-sm file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 transition-all cursor-pointer" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Ficha Técnica/Manual (Opcional)</label>
+                <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setDocumentFile(e.target.files?.[0] || null)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 text-sm file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all cursor-pointer" />
               </div>
             </div>
 

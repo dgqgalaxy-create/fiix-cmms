@@ -10,6 +10,8 @@ export interface Asset {
   description?: string;
   status: 'OPERATIVO' | 'EN_MANTENIMIENTO' | 'FUERA_DE_SERVICIO';
   zone_id: string;
+  image_url?: string;
+  document_url?: string;
   zone?: {
     id: string;
     name: string;
@@ -21,12 +23,12 @@ export const getAssets = async (): Promise<Asset[]> => {
   return response.data;
 };
 
-export const createAsset = async (data: Omit<Asset, 'id'>) => {
+export const createAsset = async (data: any) => {
   const response = await api.post('/assets', data);
   return response.data;
 };
 
-export const updateAsset = async (id: string, data: Partial<Asset>) => {
+export const updateAsset = async (id: string, data: any) => {
   const response = await api.patch(`/assets/${id}`, data);
   return response.data;
 };
