@@ -33,6 +33,12 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
             <CheckCircle2 size={14} /> Finalizado
           </span>
         );
+      case 'ANULADO':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500 line-through">
+            <AlertCircle size={14} /> Anulado
+          </span>
+        );
       default:
         return <span className="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">{status}</span>;
     }
@@ -71,8 +77,18 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
                 className={`transition-colors ${onRowClick ? 'cursor-pointer hover:bg-slate-50' : 'hover:bg-slate-50/50'}`}
               >
                 <td className="px-6 py-4">
-                  <div className="font-medium text-slate-900">{wo.title}</div>
-                  {wo.description && <div className="text-slate-500 text-xs mt-1 line-clamp-1">{wo.description}</div>}
+                  <div className="flex items-center gap-2 mb-1">
+                      <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs font-bold border border-slate-200">
+                        WO-{(wo.folio || 0).toString().padStart(4, '0')}
+                      </span>
+                      {wo.priority === 'URGENTE' && (
+                        <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold border border-red-200">
+                          URGENTE
+                        </span>
+                      )}
+                      <div className="font-medium text-slate-900">{wo.title}</div>
+                  </div>
+                  {wo.description && <div className="text-slate-500 text-xs line-clamp-1">{wo.description}</div>}
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
@@ -86,8 +102,14 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
                   {getStatusBadge(wo.status)}
                 </td>
                 <td className="px-6 py-4">
-                  {wo.assigned_to ? (
-                    <span className="text-slate-700">{wo.assigned_to.name}</span>
+                  {wo.assigned_technicians && wo.assigned_technicians.length > 0 ? (
+                    <div className="flex flex-col gap-0.5">
+                      {wo.assigned_technicians.map((t) => (
+                        <span key={t.id} className="text-slate-700 text-xs font-medium bg-slate-100 px-2 py-0.5 rounded-md inline-block w-fit">
+                          {t.name}
+                        </span>
+                      ))}
+                    </div>
                   ) : (
                     <span className="text-slate-400 italic">Sin asignar</span>
                   )}

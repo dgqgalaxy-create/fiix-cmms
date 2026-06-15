@@ -1,5 +1,6 @@
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import { getMyPermissions } from '../api/permissions';
 
 interface User {
   userId: string;
@@ -13,6 +14,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (token: string, userData?: any) => void;
   logout: () => void;
+  hasPermission: (permission: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,18 +22,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<User | null>(null);
+  const [permissions, setPermissions] = useState<Record<string, boolean>>({});
+
+  const loadPermissions = async () => {
+    try {
+      const perms = await getMyPermissions();
+      setPermissions(perms);
+    } catch (err) {
+      console.error('Error loading permissions', err);
+    }
+  };
 
   useEffect(() => {
     if (token) {
       try {
         const decoded = jwtDecode<User>(token);
         setUser(decoded);
+        loadPermissions();
       } catch (error) {
         console.error('Invalid token', error);
         logout();
       }
     } else {
       setUser(null);
+      setPermissions({});
     }
   }, [token]);
 
@@ -47,10 +61,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
+    setPermissions({});
+  };
+
+  const hasPermission = (permission: string): boolean => {
+    // Si el rol es administrador y no tiene los permisos cargados, tal vez por defecto darle true, 
+    // pero mejor guiarnos por la base de datos siempre. Sin embargo, para evitar bloqueos
+    // si falla la carga:
+    if (user?.role === 'ADMINISTRADOR' && Object.keys(permissions).length === 0) {
+      return true;
+    }
+    return !!permissions[permission];
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated: !!token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isAuthenticated: !!token, login, logout, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

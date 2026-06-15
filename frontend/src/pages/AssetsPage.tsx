@@ -3,14 +3,17 @@ import { useAuth } from '../context/AuthContext';
 import { Plus, RefreshCw } from 'lucide-react';
 import { AssetsTable } from '../components/AssetsTable';
 import { CreateAssetModal } from '../components/CreateAssetModal';
-import { getAssets, createAsset, deleteAsset } from '../api/assets';
+import { AssetDetailModal } from '../components/AssetDetailModal';
+import { getAssets, createAsset, deleteAsset, updateAsset } from '../api/assets';
 import type { Asset } from '../api/assets';
 
 export const AssetsPage = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [detailAsset, setDetailAsset] = useState<Asset | null>(null);
 
   const fetchAssets = async () => {
     try {
@@ -28,8 +31,12 @@ export const AssetsPage = () => {
     fetchAssets();
   }, []);
 
-  const handleCreateAsset = async (data: Omit<Asset, 'id'>) => {
-    await createAsset(data);
+  const handleSubmitAsset = async (data: Partial<Asset>) => {
+    if (editingAsset) {
+      await updateAsset(editingAsset.id, data);
+    } else {
+      await createAsset(data as Omit<Asset, 'id'>);
+    }
     await fetchAssets();
   };
 
@@ -44,7 +51,7 @@ export const AssetsPage = () => {
     }
   };
 
-  const canManage = user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR';
+  const canManage = hasPermission('MANAGE_ASSETS');
 
   return (
     <>
@@ -65,7 +72,7 @@ export const AssetsPage = () => {
           
           {canManage && (
             <button 
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => { setEditingAsset(null); setIsModalOpen(true); }}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow-sm shadow-emerald-500/20 transition-colors"
             >
               <Plus size={18} />
@@ -81,13 +88,26 @@ export const AssetsPage = () => {
           <p className="text-slate-500 font-medium">Cargando inventario...</p>
         </div>
       ) : (
-        <AssetsTable assets={assets} onDelete={handleDeleteAsset} canManage={canManage} />
+        <AssetsTable 
+          assets={assets} 
+          onDelete={handleDeleteAsset} 
+          onEdit={(asset) => { setEditingAsset(asset); setIsModalOpen(true); }}
+          onRowClick={(asset) => setDetailAsset(asset)}
+          canManage={canManage} 
+        />
       )}
 
       <CreateAssetModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        onSubmit={handleCreateAsset} 
+        onSubmit={handleSubmitAsset}
+        initialData={editingAsset}
+      />
+
+      <AssetDetailModal
+        asset={detailAsset}
+        isOpen={!!detailAsset}
+        onClose={() => setDetailAsset(null)}
       />
     </>
   );

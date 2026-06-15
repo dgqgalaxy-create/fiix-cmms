@@ -5,6 +5,10 @@ import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { AssetsPage } from './pages/AssetsPage';
+import { UsersPage } from './pages/UsersPage';
+import { KPIPage } from './pages/KPIPage';
+import { PermissionsPage } from './pages/PermissionsPage';
+import { ZonesPage } from './pages/ZonesPage';
 
 function App() {
   return (
@@ -30,6 +34,50 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <AssetsPage />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/users" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <UsersPage />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/kpis" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <KPIPage />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/zones" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ZonesPage />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/permissions" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PermissionsPage />
                 </Layout>
               </ProtectedRoute>
             } 

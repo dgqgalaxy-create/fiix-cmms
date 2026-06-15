@@ -2,37 +2,70 @@ import { useState, useEffect } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { getAssets } from '../api/assets';
 import type { Asset } from '../api/assets';
+import { getZones } from '../api/zones';
+import type { Zone } from '../api/zones';
+import { getUsers } from '../api/users';
+import type { User } from '../api/users';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { title: string; description: string; asset_id: string }) => Promise<void>;
+  onSubmit: (data: { 
+    title: string; 
+    description: string; 
+    asset_id: string; 
+    zone_id: string;
+    priority: string;
+    maintenance_type: string;
+    machine_stopped: boolean;
+    requester_name: string;
+    production_group: string;
+    assigned_technicians_ids?: string[] 
+  }) => Promise<void>;
 }
 
 export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assetId, setAssetId] = useState('');
+  const [zoneId, setZoneId] = useState('');
+  const [priority, setPriority] = useState('NORMAL');
+  const [maintenanceType, setMaintenanceType] = useState('CORRECTIVO');
+  const [machineStopped, setMachineStopped] = useState(false);
+  const [requesterName, setRequesterName] = useState('');
+  const [productionGroup, setProductionGroup] = useState('NA');
+  const [assignedTechniciansIds, setAssignedTechniciansIds] = useState<string[]>([]);
   
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [technicians, setTechnicians] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (isOpen) {
-      loadAssets();
+    if (isOpen) {
+      loadAssetsAndTechs();
+    }
     }
   }, [isOpen]);
 
-  const loadAssets = async () => {
+  const loadAssetsAndTechs = async () => {
     try {
       setIsLoading(true);
-      const data = await getAssets();
-      setAssets(data);
-      if (data.length > 0) setAssetId(data[0].id);
+      const [assetsData, techsData, zonesData] = await Promise.all([
+        getAssets(),
+        getUsers('TECNICO'),
+        getZones()
+      ]);
+      setAssets(assetsData);
+      setTechnicians(techsData);
+      setZones(zonesData);
+      setAssetId('');
+      setZoneId('');
     } catch (err) {
-      setError('Error al cargar la lista de activos');
+      setError('Error al cargar datos del formulario');
     } finally {
       setIsLoading(false);
     }
@@ -44,14 +77,44 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
       setError('Debes seleccionar un activo');
       return;
     }
+    if (!zoneId) {
+      setError('Debes seleccionar una zona');
+      return;
+    }
+    if (!requesterName.trim()) {
+      setError('El nombre del solicitante es obligatorio');
+      return;
+    }
     
     try {
       setIsSubmitting(true);
       setError('');
-      await onSubmit({ title, description, asset_id: assetId });
+      
+      const payload: any = { 
+        title, 
+        description, 
+        asset_id: assetId,
+        zone_id: zoneId,
+        priority,
+        maintenance_type: maintenanceType,
+        machine_stopped: machineStopped,
+        requester_name: requesterName.trim(),
+        production_group: productionGroup
+      };
+      if (assignedTechniciansIds.length > 0) {
+        payload.assigned_technicians_ids = assignedTechniciansIds;
+      }
+      
+      await onSubmit(payload);
       // Reset form
       setTitle('');
       setDescription('');
+      setRequesterName('');
+      setMachineStopped(false);
+      setPriority('NORMAL');
+      setMaintenanceType('CORRECTIVO');
+      setProductionGroup('NA');
+      setAssignedTechniciansIds([]);
       onClose();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Ocurrió un error al crear la orden');
@@ -95,7 +158,7 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
               <input
                 type="text"
                 required
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all"
                 placeholder="Ej: Mantenimiento preventivo de bomba"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -106,36 +169,175 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
               <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
               <textarea
                 rows={3}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all resize-none"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all resize-none"
                 placeholder="Detalla el problema o tarea a realizar..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Activo asociado</label>
-              <div className="relative">
-                {isLoading ? (
-                  <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 flex items-center gap-2">
-                    <Loader2 className="animate-spin" size={16} /> Cargando activos...
-                  </div>
-                ) : (
-                  <select
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all appearance-none"
-                    value={assetId}
-                    onChange={(e) => setAssetId(e.target.value)}
-                    required
-                  >
-                    <option value="" disabled>Selecciona un activo</option>
-                    {assets.map((asset) => (
-                      <option key={asset.id} value={asset.id}>
-                        {asset.name} ({asset.internal_code})
-                      </option>
-                    ))}
-                  </select>
-                )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Zona</label>
+                <div className="relative">
+                  {isLoading ? (
+                    <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 flex items-center gap-2">
+                      <Loader2 className="animate-spin" size={16} /> Cargando zonas...
+                    </div>
+                  ) : (
+                    <select
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                      value={zoneId}
+                      onChange={(e) => {
+                        setZoneId(e.target.value);
+                        setAssetId('');
+                      }}
+                      required
+                    >
+                      <option value="" disabled>Selecciona una zona</option>
+                      {zones.map((zone) => (
+                        <option key={zone.id} value={zone.id}>
+                          {zone.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Activo asociado</label>
+                <div className="relative">
+                  {isLoading ? (
+                    <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 flex items-center gap-2">
+                      <Loader2 className="animate-spin" size={16} /> Cargando activos...
+                    </div>
+                  ) : (
+                    <select
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none disabled:opacity-50 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                      value={assetId}
+                      onChange={(e) => setAssetId(e.target.value)}
+                      required
+                      disabled={!zoneId}
+                    >
+                      <option value="" disabled>{zoneId ? 'Selecciona un activo' : 'Primero selecciona una zona'}</option>
+                      {assets.filter(a => a.zone_id === zoneId).map((asset) => (
+                        <option key={asset.id} value={asset.id}>
+                          {asset.name} ({asset.internal_code})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Prioridad</label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value)}
+                  required
+                >
+                  <option value="BAJO">Bajo</option>
+                  <option value="NORMAL">Normal</option>
+                  <option value="URGENTE">Urgente</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Mantenimiento</label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                  value={maintenanceType}
+                  onChange={(e) => setMaintenanceType(e.target.value)}
+                  required
+                >
+                  <option value="SERVICIO">Servicio</option>
+                  <option value="PREVENTIVO">Preventivo</option>
+                  <option value="CORRECTIVO">Correctivo</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del Solicitante</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all"
+                  placeholder="Ej: Juan Pérez"
+                  value={requesterName}
+                  onChange={(e) => setRequesterName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Grupo de Producción</label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                  value={productionGroup}
+                  onChange={(e) => setProductionGroup(e.target.value)}
+                  required
+                >
+                  <option value="A">Grupo A</option>
+                  <option value="B">Grupo B</option>
+                  <option value="C">Grupo C</option>
+                  <option value="D">Grupo D</option>
+                  <option value="NA">N/A</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-5 h-5 text-red-600 rounded border-slate-300 focus:ring-red-600"
+                  checked={machineStopped}
+                  onChange={(e) => setMachineStopped(e.target.checked)}
+                />
+                <div>
+                  <span className="font-medium text-slate-800 block">Paro de máquina</span>
+                  <span className="text-xs text-slate-500">¿Esta falla detuvo la producción?</span>
+                </div>
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Asignar a (Técnicos)</label>
+              {isLoading ? (
+                <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 flex items-center gap-2">
+                  <Loader2 className="animate-spin" size={16} /> Cargando técnicos...
+                </div>
+              ) : (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2">
+                  {technicians.length === 0 ? (
+                    <div className="text-sm text-slate-500 italic">No hay técnicos disponibles</div>
+                  ) : (
+                    technicians.map((tech) => (
+                      <label key={tech.id} className="flex items-center gap-3 p-2 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-600"
+                          checked={assignedTechniciansIds.includes(tech.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setAssignedTechniciansIds([...assignedTechniciansIds, tech.id]);
+                            } else {
+                              setAssignedTechniciansIds(assignedTechniciansIds.filter(id => id !== tech.id));
+                            }
+                          }}
+                        />
+                        <span className="text-sm font-medium text-slate-700">{tech.name}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           </form>
         </div>
@@ -152,7 +354,7 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
             type="submit"
             form="create-wo-form"
             disabled={isSubmitting || isLoading}
-            className="px-6 py-2.5 flex items-center justify-center gap-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-70 disabled:cursor-not-allowed rounded-xl transition-colors shadow-sm shadow-purple-500/20"
+            className="px-6 py-2.5 flex items-center justify-center gap-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-70 disabled:cursor-not-allowed rounded-xl transition-colors shadow-sm shadow-emerald-700/20"
           >
             {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : null}
             Crear Orden

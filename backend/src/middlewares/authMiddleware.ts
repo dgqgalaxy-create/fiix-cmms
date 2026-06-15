@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/auth';
+import prisma from '../config/prisma';
+import { Role } from '@prisma/client';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -38,5 +40,38 @@ export const requireRole = (roles: string[]) => {
     }
     
     next();
+  };
+};
+
+export const requirePermission = (permission: string) => {
+  return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    if (!req.user) {
+      res.status(401).json({ error: 'No autenticado' });
+      return;
+    }
+
+    try {
+      const rolePerms = await prisma.rolePermission.findUnique({
+        where: { role: req.user.role as Role },
+      });
+
+      if (!rolePerms) {
+        // If not seeded yet, fallback to roles checking or deny
+        if (req.user.role === 'ADMINISTRADOR') {
+          return next();
+        }
+        res.status(403).json({ error: 'No tienes permisos asignados' });
+        return;
+      }
+
+      const perms: any = rolePerms.permissions;
+      if (perms[permission] === true) {
+        next();
+      } else {
+        res.status(403).json({ error: 'No tienes el permiso: ' + permission });
+      }
+    } catch (err) {
+      res.status(500).json({ error: 'Error verificando permisos' });
+    }
   };
 };

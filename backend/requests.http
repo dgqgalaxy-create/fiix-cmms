@@ -1,0 +1,32 @@
+### Login para obtener un Token (Reemplaza con datos válidos)
+# @name login
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@fiix.com",
+  "password": "password123"
+}
+
+###
+
+### Variable para guardar el token temporalmente
+@token = {{login.response.body.token}}
+
+###
+
+### Obtener todos los usuarios (Requiere Token)
+GET http://localhost:3000/api/users
+Authorization: Bearer {{token}}
+
+###
+
+### Obtener SOLO los Técnicos (Requiere Token)
+GET http://localhost:3000/api/users?role=TECNICO
+Authorization: Bearer {{token}}
+
+###
+
+### Obtener órdenes de trabajo
+GET http://localhost:3000/api/work-orders
+Authorization: Bearer {{token}}

@@ -1,13 +1,15 @@
 import type { Asset } from '../api/assets';
-import { Activity, Ban, Settings, Trash2, Edit } from 'lucide-react';
+import { Activity, Ban, Settings, Trash2, Edit, Database } from 'lucide-react';
 
 interface Props {
   assets: Asset[];
   onDelete: (id: string) => void;
+  onEdit?: (asset: Asset) => void;
+  onRowClick?: (asset: Asset) => void;
   canManage: boolean;
 }
 
-export const AssetsTable = ({ assets, onDelete, canManage }: Props) => {
+export const AssetsTable = ({ assets, onDelete, onEdit, onRowClick, canManage }: Props) => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'OPERATIVO':
@@ -53,6 +55,7 @@ export const AssetsTable = ({ assets, onDelete, canManage }: Props) => {
             <tr>
               <th className="px-6 py-4">Código</th>
               <th className="px-6 py-4">Equipo</th>
+              <th className="px-6 py-4">Zona</th>
               <th className="px-6 py-4">Marca / Modelo</th>
               <th className="px-6 py-4">Estado</th>
               {canManage && <th className="px-6 py-4 text-right">Acciones</th>}
@@ -60,7 +63,11 @@ export const AssetsTable = ({ assets, onDelete, canManage }: Props) => {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {assets.map((asset) => (
-              <tr key={asset.id} className="hover:bg-slate-50/50 transition-colors">
+              <tr 
+                key={asset.id} 
+                onClick={() => onRowClick?.(asset)}
+                className={`transition-colors ${onRowClick ? 'cursor-pointer hover:bg-slate-50/50' : 'hover:bg-slate-50/50'}`}
+              >
                 <td className="px-6 py-4 font-mono text-sm text-slate-500">
                   {asset.internal_code}
                 </td>
@@ -69,20 +76,34 @@ export const AssetsTable = ({ assets, onDelete, canManage }: Props) => {
                   {asset.description && <div className="text-slate-500 text-xs mt-1 line-clamp-1">{asset.description}</div>}
                 </td>
                 <td className="px-6 py-4 text-slate-700">
+                  {asset.zone?.name || <span className="text-slate-400 italic">Sin Zona</span>}
+                </td>
+                <td className="px-6 py-4 text-slate-700">
                   {asset.brand} <span className="text-slate-400">/</span> {asset.model}
                 </td>
                 <td className="px-6 py-4">
                   {getStatusBadge(asset.status)}
                 </td>
                 {canManage && (
-                  <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => onDelete(asset.id)}
-                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Eliminar"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                  <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-2">
+                      {onEdit && (
+                        <button 
+                          onClick={() => onEdit(asset)}
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Editar"
+                        >
+                          <Edit size={18} />
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => onDelete(asset.id)}
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Eliminar"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </td>
                 )}
               </tr>

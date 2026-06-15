@@ -24,6 +24,27 @@ enum WorkOrderStatus {
   EN_PROCESO
   EN_ESPERA
   FINALIZADO
+  ANULADO
+}
+
+enum Priority {
+  URGENTE
+  NORMAL
+  BAJO
+}
+
+enum MaintenanceType {
+  SERVICIO
+  PREVENTIVO
+  CORRECTIVO
+}
+
+enum ProductionGroup {
+  A
+  B
+  C
+  D
+  NA
 }
 
 model User {
@@ -39,6 +60,16 @@ model User {
   assigned_orders WorkOrder[] @relation("AssignedOrders")
 }
 
+model Zone {
+  id          String      @id @default(uuid()) @db.Uuid
+  name        String      @unique
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+
+  work_orders WorkOrder[]
+  assets      Asset[]
+}
+
 model Asset {
   id              String      @id @default(uuid()) @db.Uuid
   internal_code   String      @unique
@@ -52,31 +83,61 @@ model Asset {
   created_at      DateTime    @default(now())
   updated_at      DateTime    @updatedAt
 
+  zone_id         String?     @db.Uuid
+  zone            Zone?       @relation(fields: [zone_id], references: [id])
+
   work_orders     WorkOrder[]
 }
 
 model WorkOrder {
   id               String          @id @default(uuid()) @db.Uuid
+  folio            Int             @default(autoincrement())
   title            String
   description      String?
 
   asset_id         String          @db.Uuid
   asset            Asset           @relation(fields: [asset_id], references: [id])
 
+  zone_id          String?         @db.Uuid
+  zone             Zone?           @relation(fields: [zone_id], references: [id])
+
+  priority         Priority        @default(NORMAL)
+  maintenance_type MaintenanceType @default(CORRECTIVO)
+  machine_stopped  Boolean         @default(false)
+  requester_name   String?
+  production_group ProductionGroup @default(NA)
+
   status           WorkOrderStatus
   hold_reason      String?
-  paused_at        DateTime?
-  resolution_notes String?
-  before_image_url String?
-  after_image_url  String?
+  started_at          DateTime?
+  paused_at           DateTime?
+  last_resumed_at     DateTime?
+  accumulated_time_ms Int             @default(0)
+  resolution_notes    String?
+  before_image_url    String?
+  after_image_url     String?
 
   created_by_id    String          @db.Uuid
   created_by       User            @relation("CreatedOrders", fields: [created_by_id], references: [id])
 
-  assigned_to_id   String?         @db.Uuid
-  assigned_to      User?           @relation("AssignedOrders", fields: [assigned_to_id], references: [id])
+  assigned_technicians User[]          @relation("AssignedOrders")
 
   created_at       DateTime        @default(now())
   updated_at       DateTime        @updatedAt
   completed_at     DateTime?
+}
+
+model KPIGoal {
+  id               String          @id @default(uuid()) @db.Uuid
+  metricKey        String          @unique
+  targetValue      Float
+  unit             String?
+  updated_at       DateTime        @updatedAt
+}
+
+model RolePermission {
+  id          String   @id @default(uuid()) @db.Uuid
+  role        Role     @unique
+  permissions Json
+  updated_at  DateTime @updatedAt
 }

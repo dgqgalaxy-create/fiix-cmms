@@ -15,6 +15,10 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 import authRoutes from './routes/authRoutes';
 import assetRoutes from './routes/assetRoutes';
 import workOrderRoutes from './routes/workOrderRoutes';
+import kpiRoutes from './routes/kpiRoutes';
+import permissionRoutes from './routes/permissionRoutes';
+import userRoutes from './routes/userRoutes';
+import zoneRoutes from './routes/zoneRoutes';
 
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', message: 'CMMS API is running' });
@@ -24,6 +28,10 @@ app.get('/api/health', (req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/assets', assetRoutes);
 app.use('/api/work-orders', workOrderRoutes);
+app.use('/api/kpis', kpiRoutes);
+app.use('/api/permissions', permissionRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/zones', zoneRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

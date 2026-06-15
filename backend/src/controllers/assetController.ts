@@ -3,7 +3,12 @@ import prisma from '../config/prisma';
 
 export const getAssets = async (req: Request, res: Response): Promise<void> => {
   try {
-    const assets = await prisma.asset.findMany();
+    const assets = await prisma.asset.findMany({
+      include: {
+        zone: true,
+      },
+      orderBy: { created_at: 'desc' },
+    });
     res.json(assets);
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener activos' });
@@ -13,7 +18,12 @@ export const getAssets = async (req: Request, res: Response): Promise<void> => {
 export const getAssetById = async (req: Request, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const asset = await prisma.asset.findUnique({ where: { id } });
+    const asset = await prisma.asset.findUnique({
+      where: { id },
+      include: {
+        zone: true,
+      },
+    });
     if (!asset) {
       res.status(404).json({ error: 'Activo no encontrado' });
       return;
@@ -27,6 +37,10 @@ export const getAssetById = async (req: Request, res: Response): Promise<void> =
 export const createAsset = async (req: Request, res: Response): Promise<void> => {
   try {
     const assetData = req.body;
+    if (!assetData.zone_id) {
+      res.status(400).json({ error: 'La zona (zone_id) es obligatoria' });
+      return;
+    }
     const newAsset = await prisma.asset.create({ data: assetData });
     res.status(201).json(newAsset);
   } catch (error: any) {

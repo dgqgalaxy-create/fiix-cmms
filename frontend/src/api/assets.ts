@@ -9,6 +9,11 @@ export interface Asset {
   serial_number?: string;
   description?: string;
   status: 'OPERATIVO' | 'EN_MANTENIMIENTO' | 'FUERA_DE_SERVICIO';
+  zone_id: string;
+  zone?: {
+    id: string;
+    name: string;
+  };
 }
 
 export const getAssets = async (): Promise<Asset[]> => {
