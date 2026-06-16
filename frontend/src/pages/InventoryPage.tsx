@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, ShoppingCart, ArrowUpDown } from 'lucide-react';
 import { 
   getItems, getTransactions, getCategories, getLocations, getVendors
 } from '../api/inventory';
@@ -9,10 +10,12 @@ import { ItemModal } from '../components/inventory/ItemModal';
 import { TransactionModal } from '../components/inventory/TransactionModal';
 import { TransactionDetailModal } from '../components/inventory/TransactionDetailModal';
 import { CatalogModal } from '../components/inventory/CatalogModal';
+import { QRDisplayModal } from '../components/common/QRDisplayModal';
 
 export const InventoryPage = () => {
   const { hasPermission } = useAuth();
   const canManage = hasPermission('MANAGE_INVENTORY');
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [activeTab, setActiveTab] = useState<'items' | 'transactions' | 'categories' | 'locations' | 'vendors'>('items');
   
@@ -24,10 +27,13 @@ export const InventoryPage = () => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'code' | 'category' | 'stock'>('name');
 
   // Modals state
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | undefined>(undefined);
+  const [qrItem, setQrItem] = useState<Item | null>(null);
 
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isTransactionDetailModalOpen, setIsTransactionDetailModalOpen] = useState(false);
@@ -64,6 +70,34 @@ export const InventoryPage = () => {
     fetchData();
   }, []);
 
+  // Handle URL parameters (scan & filters)
+  useEffect(() => {
+    let shouldReplaceUrl = false;
+    
+    const scanId = searchParams.get('scan');
+    if (scanId && items.length > 0) {
+      const scannedItem = items.find(i => i.id === scanId);
+      if (scannedItem) {
+        setSelectedItem(scannedItem);
+        setIsItemModalOpen(true);
+      }
+      searchParams.delete('scan');
+      shouldReplaceUrl = true;
+    }
+
+    const filter = searchParams.get('filter');
+    if (filter === 'low_stock') {
+      setShowLowStockOnly(true);
+      setActiveTab('items');
+      searchParams.delete('filter');
+      shouldReplaceUrl = true;
+    }
+
+    if (shouldReplaceUrl) {
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, items, setSearchParams]);
+
   const handleOpenCatalogModal = (type: 'category' | 'location' | 'vendor', item?: any, readOnly: boolean = false) => {
     setCatalogType(type);
     setSelectedCatalogItem(item);
@@ -89,6 +123,80 @@ export const InventoryPage = () => {
     { id: 'vendors', label: 'Proveedores', icon: <Building2 size={18} /> }
   ];
 
+  const filteredItems = useMemo(() => {
+    let list = items;
+    
+    if (showLowStockOnly) {
+      list = list.filter(i => i.stock <= i.minimum_inventory);
+    }
+    
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      list = list.filter(i => 
+        (i.name || '').toLowerCase().includes(term) || 
+        (i.internal_code || '').toLowerCase().includes(term) ||
+        (i.category?.name || '').toLowerCase().includes(term) ||
+        (i.location?.name || '').toLowerCase().includes(term)
+      );
+    }
+    
+    list.sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return (a.name || '').localeCompare(b.name || '');
+        case 'code':
+          return (a.internal_code || '').localeCompare(b.internal_code || '');
+        case 'category':
+          return (a.category?.name || '').localeCompare(b.category?.name || '');
+        case 'stock':
+          return a.stock - b.stock;
+        default:
+          return 0;
+      }
+    });
+
+    return list;
+  }, [items, searchTerm, showLowStockOnly, sortBy]);
+
+  const handleGeneratePurchaseList = () => {
+    const lowStockItems = items.filter(i => i.stock <= i.minimum_inventory);
+    if (lowStockItems.length === 0) {
+      alert("No hay repuestos con stock crítico para generar la lista.");
+      return;
+    }
+
+    const groupedByVendor = lowStockItems.reduce((acc, item) => {
+      const vendorName = item.vendor?.name || 'Sin Proveedor Asignado';
+      if (!acc[vendorName]) acc[vendorName] = [];
+      acc[vendorName].push(item);
+      return acc;
+    }, {} as Record<string, Item[]>);
+
+    let content = "LISTA DE COMPRAS - REABASTECIMIENTO DE INVENTARIO\n";
+    content += `Fecha: ${new Date().toLocaleDateString()}\n\n`;
+
+    Object.entries(groupedByVendor).forEach(([vendor, items]) => {
+      content += `=================================================\n`;
+      content += `PROVEEDOR: ${vendor}\n`;
+      content += `=================================================\n`;
+      items.forEach(item => {
+        const qtyToBuy = Math.max(item.minimum_inventory - item.stock, 0) || 1; // At least buy 1 or the difference
+        content += `- [ ] ${qtyToBuy}x ${item.name} (${item.internal_code})\n`;
+        content += `      Stock actual: ${item.stock} ${item.uom} | Min: ${item.minimum_inventory} ${item.uom}\n`;
+      });
+      content += `\n`;
+    });
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Lista_de_Compras_${new Date().toISOString().split('T')[0]}.txt`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -101,82 +209,176 @@ export const InventoryPage = () => {
     switch (activeTab) {
       case 'items':
         return (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-600">
-                <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 uppercase text-xs font-semibold">
-                  <tr>
-                    <th className="px-6 py-4">Código</th>
-                    <th className="px-6 py-4">Imagen</th>
-                    <th className="px-6 py-4">Repuesto</th>
-                    <th className="px-6 py-4">Categoría</th>
-                    <th className="px-6 py-4">Ubicación</th>
-                    <th className="px-6 py-4 text-right">Stock</th>
-                    <th className="px-6 py-4 text-center">Estado</th>
-                    {canManage && <th className="px-6 py-4 text-center">Acciones</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {items.filter(i => (i.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || (i.internal_code || '').toLowerCase().includes(searchTerm.toLowerCase())).map((item) => (
-                    <tr 
-                      key={item.id} 
-                      className="hover:bg-slate-50/50 transition-colors cursor-pointer"
-                      onClick={() => handleOpenItemModal(item)}
-                    >
-                      <td className="px-6 py-4 font-mono text-slate-500">{item.internal_code}</td>
-                      <td className="px-6 py-4">
-                        {item.image_url ? (
-                          <img src={`http://localhost:3000${item.image_url}`} alt={item.name} className="w-10 h-10 object-cover rounded border border-slate-200" />
-                        ) : (
-                          <div className="w-10 h-10 bg-slate-100 rounded flex items-center justify-center text-slate-400">
-                            <Package size={20} />
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-slate-900">{item.name}</div>
-                        <div className="text-xs text-slate-500 truncate max-w-xs">{item.description}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {item.category?.name || 'N/A'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">{item.location?.name || 'N/A'}</td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className={`font-bold ${item.stock <= item.minimum_inventory ? 'text-rose-600' : 'text-emerald-600'}`}>
-                            {item.stock}
-                          </span>
-                          <span className="text-xs text-slate-400">{item.uom}</span>
+          <div className="space-y-4">
+            {/* Mobile View (Cards) */}
+            <div className="block sm:hidden space-y-4">
+              {filteredItems.map((item) => (
+                <div 
+                  key={item.id} 
+                  onClick={() => handleOpenItemModal(item)}
+                  className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm active:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  <div className="flex justify-between items-start mb-3 gap-2">
+                    <span className="font-mono text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                      {item.internal_code}
+                    </span>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${item.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                      {item.is_active ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex gap-3 items-center mb-3">
+                    <div className="flex-shrink-0">
+                      {item.image_url ? (
+                        <img src={`http://localhost:3000${item.image_url}`} alt={item.name} className="w-12 h-12 object-cover rounded-xl border border-slate-200" />
+                      ) : (
+                        <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400">
+                          <Package size={20} />
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${item.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                          {item.is_active ? 'Activo' : 'Inactivo'}
-                        </span>
-                      </td>
-                      {canManage && (
-                        <td className="px-6 py-4 text-center">
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handleOpenItemModal(item); }}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                        </td>
                       )}
-                    </tr>
-                  ))}
-                  {items.length === 0 && (
-                    <tr>
-                      <td colSpan={8} className="px-6 py-8 text-center text-slate-500">
-                        No se encontraron repuestos.
-                      </td>
-                    </tr>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-sm leading-snug">{item.name}</h3>
+                      <p className="text-slate-500 text-xs line-clamp-1">{item.description}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-3 mt-1">
+                    <div className="text-slate-500">
+                      Cat: <span className="font-semibold text-slate-700">{item.category?.name || 'N/A'}</span>
+                    </div>
+                    <div className="text-slate-500 text-right">
+                      Ubicación: <span className="font-semibold text-slate-700">{item.location?.name || 'N/A'}</span>
+                    </div>
+                    <div className="col-span-2 flex justify-between items-center mt-1 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                      <span className="text-slate-600 font-medium">Stock Actual:</span>
+                      <div className="flex items-center gap-1">
+                        <span className={`font-bold text-sm ${item.stock <= item.minimum_inventory ? 'text-rose-600' : 'text-emerald-600'}`}>
+                          {item.stock}
+                        </span>
+                        <span className="text-slate-400 font-medium">{item.uom}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {canManage && (
+                    <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-slate-100" onClick={(e) => e.stopPropagation()}>
+                      <button 
+                        onClick={() => setQrItem(item)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                      >
+                        <QrCode size={14} /> Imprimir QR
+                      </button>
+                      <button 
+                        onClick={() => handleOpenItemModal(item)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                      >
+                        <Edit2 size={14} /> Editar
+                      </button>
+                    </div>
                   )}
-                </tbody>
-              </table>
+                </div>
+              ))}
+              {filteredItems.length === 0 && (
+                <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-500">
+                  No se encontraron repuestos.
+                </div>
+              )}
+            </div>
+
+            {/* Desktop View (Table) */}
+            <div className="hidden sm:block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-slate-600">
+                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 uppercase text-xs font-semibold">
+                    <tr>
+                      <th className="px-6 py-4">Código</th>
+                      <th className="px-6 py-4">Repuesto</th>
+                      <th className="px-6 py-4 text-center">Stock Actual</th>
+                      <th className="px-6 py-4 hidden md:table-cell">Categoría / Ubic.</th>
+                      {canManage && <th className="px-6 py-4 text-right whitespace-nowrap">Acciones</th>}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredItems.map((item) => (
+                      <tr 
+                        key={item.id} 
+                        className="hover:bg-slate-50/50 transition-colors cursor-pointer"
+                        onClick={() => handleOpenItemModal(item)}
+                      >
+                        <td className="px-6 py-4 font-mono text-slate-500 font-medium">{item.internal_code}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex-shrink-0">
+                              {item.image_url ? (
+                                <img src={`http://localhost:3000${item.image_url}`} alt={item.name} className="w-10 h-10 object-cover rounded border border-slate-200" />
+                              ) : (
+                                <div className="w-10 h-10 bg-slate-100 rounded flex items-center justify-center text-slate-400">
+                                  <Package size={20} />
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-slate-900 flex items-center gap-2">
+                                {item.name}
+                                {!item.is_active && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700">Inactivo</span>
+                                )}
+                              </div>
+                              <div className="text-xs text-slate-500 truncate max-w-[200px]">{item.description}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="inline-flex items-center justify-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                            <span className={`font-bold text-base ${item.stock <= item.minimum_inventory ? 'text-rose-600' : 'text-emerald-600'}`}>
+                              {item.stock}
+                            </span>
+                            <span className="text-xs text-slate-400 font-medium">{item.uom}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 hidden md:table-cell">
+                          <div className="flex flex-col gap-1">
+                            <span className="inline-flex w-max items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                              {item.category?.name || 'Sin Cat.'}
+                            </span>
+                            <span className="text-xs text-slate-500 flex items-center gap-1">
+                              <MapPin size={12} /> {item.location?.name || 'N/A'}
+                            </span>
+                          </div>
+                        </td>
+                        {canManage && (
+                          <td className="px-6 py-4 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                              <button 
+                                onClick={() => setQrItem(item)}
+                                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-100"
+                                title="Imprimir QR"
+                              >
+                                <QrCode size={18} />
+                              </button>
+                              <button 
+                                onClick={() => handleOpenItemModal(item)}
+                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                                title="Editar"
+                              >
+                                <Edit2 size={18} />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                    {filteredItems.length === 0 && (
+                      <tr>
+                        <td colSpan={canManage ? 5 : 4} className="px-6 py-8 text-center text-slate-500">
+                          No se encontraron repuestos.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         );
@@ -395,14 +597,70 @@ export const InventoryPage = () => {
         </div>
 
         <div className="flex-1 min-w-0">
-          {(activeTab === 'items' || activeTab === 'transactions') && (
+          {activeTab === 'items' && (
+            <div className="mb-6 flex flex-col md:flex-row gap-4">
+              <div className="flex-1 bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex items-center">
+                <div className="pl-3 pr-2 text-slate-400">
+                  <Search size={20} />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Buscar en repuestos..."
+                  className="w-full bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 px-2 py-1.5"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400">
+                    <ArrowUpDown size={16} />
+                  </div>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none shadow-sm cursor-pointer"
+                  >
+                    <option value="name">Ordenar por Nombre</option>
+                    <option value="code">Ordenar por Código</option>
+                    <option value="category">Ordenar por Categoría</option>
+                    <option value="stock">Ordenar por Stock (Menor)</option>
+                  </select>
+                </div>
+
+                <button
+                  onClick={() => setShowLowStockOnly(!showLowStockOnly)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border font-medium transition-all ${
+                    showLowStockOnly 
+                      ? 'bg-rose-50 border-rose-200 text-rose-700 shadow-sm' 
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <AlertCircle size={18} className={showLowStockOnly ? 'text-rose-500' : 'text-slate-400'} />
+                  <span className="whitespace-nowrap">Stock Crítico</span>
+                </button>
+
+                <button
+                  onClick={handleGeneratePurchaseList}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition-colors shadow-sm"
+                  title="Generar Lista de Compras"
+                >
+                  <ShoppingCart size={18} className="text-slate-500" />
+                  <span className="hidden md:inline whitespace-nowrap">Generar Pedido</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'transactions' && (
             <div className="mb-6 bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex items-center">
               <div className="pl-3 pr-2 text-slate-400">
                 <Search size={20} />
               </div>
               <input
                 type="text"
-                placeholder={`Buscar en ${activeTab === 'items' ? 'repuestos' : 'movimientos'}...`}
+                placeholder="Buscar en movimientos..."
                 className="w-full bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 px-2 py-1.5"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -442,11 +700,19 @@ export const InventoryPage = () => {
       <CatalogModal
         isOpen={isCatalogModalOpen}
         onClose={() => setIsCatalogModalOpen(false)}
-        onSaved={fetchData}
         type={catalogType}
         item={selectedCatalogItem}
-        readOnly={!canManage || isCatalogReadOnly}
+        onSaved={fetchData}
+        readOnly={isCatalogReadOnly}
         allItems={items}
+      />
+
+      <QRDisplayModal
+        isOpen={!!qrItem}
+        onClose={() => setQrItem(null)}
+        title={qrItem?.name || ''}
+        subtitle={qrItem?.internal_code || ''}
+        value={qrItem ? `FIIX-ITEM:${qrItem.id}` : ''}
       />
     </div>
   );

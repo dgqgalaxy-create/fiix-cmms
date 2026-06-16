@@ -258,7 +258,31 @@ export const updateItem = async (req: Request, res: Response): Promise<void> => 
 };
 
 // ==========================================
-// TRANSACTIONS
+// SUMMARY
+// ==========================================
+export const getInventorySummary = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const items = await prisma.item.findMany({
+      select: {
+        id: true,
+        stock: true,
+        minimum_inventory: true
+      }
+    });
+    
+    const lowStockCount = items.filter(item => item.stock <= item.minimum_inventory).length;
+    
+    res.json({
+      total_items: items.length,
+      low_stock_count: lowStockCount
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener resumen de inventario' });
+  }
+};
+
+// ==========================================
+// INVENTORY TRANSACTIONS
 // ==========================================
 export const getTransactions = async (req: Request, res: Response): Promise<void> => {
   try {

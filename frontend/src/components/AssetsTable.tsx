@@ -1,15 +1,16 @@
 import type { Asset } from '../api/assets';
-import { Activity, Ban, Settings, Trash2, Edit, Database } from 'lucide-react';
+import { Activity, Ban, Settings, Trash2, Edit, Database, QrCode } from 'lucide-react';
 
 interface Props {
   assets: Asset[];
   onDelete: (id: string) => void;
   onEdit?: (asset: Asset) => void;
   onRowClick?: (asset: Asset) => void;
+  onPrintQR?: (asset: Asset) => void;
   canManage: boolean;
 }
 
-export const AssetsTable = ({ assets, onDelete, onEdit, onRowClick, canManage }: Props) => {
+export const AssetsTable = ({ assets, onDelete, onEdit, onRowClick, onPrintQR, canManage }: Props) => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'OPERATIVO':
@@ -80,6 +81,15 @@ export const AssetsTable = ({ assets, onDelete, onEdit, onRowClick, canManage }:
               
               {canManage && (
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  {onPrintQR && (
+                    <button 
+                      onClick={() => onPrintQR(asset)}
+                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                      title="Imprimir QR"
+                    >
+                      <QrCode size={15} />
+                    </button>
+                  )}
                   {onEdit && (
                     <button 
                       onClick={() => onEdit(asset)}
@@ -143,6 +153,15 @@ export const AssetsTable = ({ assets, onDelete, onEdit, onRowClick, canManage }:
                   {canManage && (
                     <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-2">
+                        {onPrintQR && (
+                          <button 
+                            onClick={() => onPrintQR(asset)}
+                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="Imprimir QR"
+                          >
+                            <QrCode size={18} />
+                          </button>
+                        )}
                         {onEdit && (
                           <button 
                             onClick={() => onEdit(asset)}

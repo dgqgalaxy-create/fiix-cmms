@@ -1,0 +1,128 @@
+import React, { useEffect, useState, useRef } from 'react';
+import { X, Camera, AlertCircle } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
+import { useNavigate } from 'react-router-dom';
+
+interface Props {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose }) => {
+  const [error, setError] = useState<string>('');
+  const [isScanning, setIsScanning] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isOpen) {
+      setError('');
+      setIsScanning(true);
+      
+      const scanner = new Html5Qrcode("qr-reader");
+      scannerRef.current = scanner;
+
+      scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          handleScan(decodedText);
+        },
+        (errorMessage) => {
+          // Ignore frequent parse errors (it happens when no QR is in frame)
+        }
+      ).catch((err) => {
+        setError("Error al acceder a la cámara. Asegúrate de dar permisos.");
+        console.error("QR Start Error:", err);
+      });
+    } else {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(console.error);
+        scannerRef.current.clear();
+        scannerRef.current = null;
+      }
+      setIsScanning(false);
+    }
+
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(console.error);
+        scannerRef.current.clear();
+        scannerRef.current = null;
+      }
+    };
+  }, [isOpen]);
+
+  const handleScan = (data: string | null) => {
+    if (data) {
+      if (data.startsWith('FIIX-ASSET:')) {
+        const id = data.replace('FIIX-ASSET:', '');
+        onClose();
+        navigate(`/assets?scan=${id}`);
+      } else if (data.startsWith('FIIX-ITEM:')) {
+        const id = data.replace('FIIX-ITEM:', '');
+        onClose();
+        navigate(`/inventory?scan=${id}`);
+      } else {
+        setError("Código QR no reconocido por FIIX CMMS.");
+        // We pause the scanner temporarily
+        if (scannerRef.current) {
+            scannerRef.current.pause(true);
+            setTimeout(() => {
+                if (scannerRef.current) scannerRef.current.resume();
+                setError('');
+            }, 3000);
+        }
+      }
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
+      
+      <div className="bg-white rounded-3xl shadow-xl w-full max-w-md relative flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+              <Camera size={20} />
+            </div>
+            <h2 className="text-xl font-bold text-slate-800 tracking-tight">Escáner QR</h2>
+          </div>
+          <button 
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-6 flex-1 overflow-y-auto">
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-xl text-sm font-medium flex items-center gap-2 border border-red-100">
+              <AlertCircle size={16} className="shrink-0" />
+              {error}
+            </div>
+          )}
+
+          <div className="relative w-full rounded-2xl overflow-hidden bg-slate-900 aspect-square">
+             <div id="qr-reader" className="w-full h-full"></div>
+             {isScanning && !error && (
+               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                 <div className="w-[250px] h-[250px] border-4 border-white/50 rounded-2xl relative">
+                   {/* Scanning animation line */}
+                   <div className="w-full h-1 bg-emerald-500 absolute top-1/2 left-0 animate-[ping_2s_ease-in-out_infinite] shadow-[0_0_10px_2px_rgba(16,185,129,0.8)]"></div>
+                 </div>
+               </div>
+             )}
+          </div>
+          <p className="text-center text-slate-500 text-sm mt-4">
+            Apunta la cámara al código QR de una máquina o repuesto.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};

@@ -4,7 +4,8 @@ import {
   getLocations, createLocation, updateLocation, deleteLocation,
   getVendors, createVendor, updateVendor, deleteVendor,
   getItems, createItem, updateItem,
-  getTransactions, createTransaction
+  getTransactions, createTransaction,
+  getInventorySummary
 } from '../controllers/inventoryController';
 import { authenticate, requirePermission } from '../middlewares/authMiddleware';
 import multer from 'multer';
@@ -33,8 +34,9 @@ const upload = multer({ storage: storage });
 router.use(authenticate);
 
 // ==========================================
-// RUTAS DE CATALOGOS (Solo admins/gestionadores editan)
+// RUTAS DE CATALOGOS Y RESUMEN
 // ==========================================
+router.get('/summary', getInventorySummary);
 router.get('/categories', getCategories);
 router.post('/categories', requirePermission('MANAGE_INVENTORY'), createCategory);
 router.patch('/categories/:id', requirePermission('MANAGE_INVENTORY'), updateCategory);

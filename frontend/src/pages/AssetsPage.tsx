@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Plus, RefreshCw } from 'lucide-react';
 import { AssetsTable } from '../components/AssetsTable';
 import { CreateAssetModal } from '../components/CreateAssetModal';
 import { AssetDetailModal } from '../components/AssetDetailModal';
+import { QRDisplayModal } from '../components/common/QRDisplayModal';
 import { getAssets, createAsset, deleteAsset, updateAsset } from '../api/assets';
 import type { Asset } from '../api/assets';
 
@@ -14,6 +16,8 @@ export const AssetsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [detailAsset, setDetailAsset] = useState<Asset | null>(null);
+  const [qrAsset, setQrAsset] = useState<Asset | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const fetchAssets = async () => {
     try {
@@ -30,6 +34,20 @@ export const AssetsPage = () => {
   useEffect(() => {
     fetchAssets();
   }, []);
+
+  // Handle URL scanning parameter
+  useEffect(() => {
+    const scanId = searchParams.get('scan');
+    if (scanId && assets.length > 0) {
+      const scannedAsset = assets.find(a => a.id === scanId);
+      if (scannedAsset) {
+        setDetailAsset(scannedAsset);
+      }
+      // Clear the search param after processing
+      searchParams.delete('scan');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, assets, setSearchParams]);
 
   const handleSubmitAsset = async (data: Partial<Asset>) => {
     if (editingAsset) {
@@ -93,6 +111,7 @@ export const AssetsPage = () => {
           onDelete={handleDeleteAsset} 
           onEdit={(asset) => { setEditingAsset(asset); setIsModalOpen(true); }}
           onRowClick={(asset) => setDetailAsset(asset)}
+          onPrintQR={(asset) => setQrAsset(asset)}
           canManage={canManage} 
         />
       )}
@@ -108,6 +127,14 @@ export const AssetsPage = () => {
         asset={detailAsset}
         isOpen={!!detailAsset}
         onClose={() => setDetailAsset(null)}
+      />
+
+      <QRDisplayModal
+        isOpen={!!qrAsset}
+        onClose={() => setQrAsset(null)}
+        title={qrAsset?.name || ''}
+        subtitle={qrAsset?.internal_code || ''}
+        value={qrAsset ? `FIIX-ASSET:${qrAsset.id}` : ''}
       />
     </>
   );

@@ -6,12 +6,16 @@ import { CreateWorkOrderModal } from '../components/CreateWorkOrderModal';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { getWorkOrders, getWorkOrdersSummary, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder } from '../api/workOrders';
+import { getInventorySummary, InventorySummary } from '../api/inventory';
 import type { WorkOrder } from '../api/workOrders';
+import { useNavigate } from 'react-router-dom';
 
 export const Dashboard = () => {
+  const navigate = useNavigate();
   const { user, hasPermission } = useAuth();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [summary, setSummary] = useState<Record<string, number>>({});
+  const [invSummary, setInvSummary] = useState<InventorySummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -75,12 +79,14 @@ export const Dashboard = () => {
   const fetchWorkOrders = async () => {
     try {
       setIsLoading(true);
-      const [data, summaryData] = await Promise.all([
+      const [data, summaryData, invSumData] = await Promise.all([
         getWorkOrders(),
-        getWorkOrdersSummary()
+        getWorkOrdersSummary(),
+        hasPermission('VIEW_INVENTORY') ? getInventorySummary() : Promise.resolve(null)
       ]);
       setWorkOrders(data);
       setSummary(summaryData);
+      setInvSummary(invSumData);
     } catch (error) {
       console.error('Error fetching work orders', error);
     } finally {
@@ -219,7 +225,7 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+      <div className={`grid grid-cols-2 md:grid-cols-${hasPermission('VIEW_INVENTORY') ? '5' : '4'} gap-3 sm:gap-4 mb-6 sm:mb-8`}>
         <div 
           onClick={() => handleStatusClick('PENDIENTE')}
           className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'PENDIENTE' ? 'ring-2 ring-amber-500 border-amber-500 shadow-md scale-[1.02]' : 'border-amber-100 shadow-sm shadow-amber-100/50 hover:shadow-md'}`}
@@ -248,13 +254,13 @@ export const Dashboard = () => {
 
         <div 
           onClick={() => handleStatusClick('EN_ESPERA')}
-          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'EN_ESPERA' ? 'ring-2 ring-red-500 border-red-500 shadow-md scale-[1.02]' : 'border-red-100 shadow-sm shadow-red-100/50 hover:shadow-md'}`}
+          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'EN_ESPERA' ? 'ring-2 ring-purple-500 border-purple-500 shadow-md scale-[1.02]' : 'border-purple-100 shadow-sm shadow-purple-100/50 hover:shadow-md'}`}
         >
-          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-red-50 opacity-50 group-hover:scale-110 transition-transform">
+          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-purple-50 opacity-50 group-hover:scale-110 transition-transform">
              <AlertCircle className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
           <div className="relative z-10">
-            <span className="text-red-600 text-xs sm:text-sm font-bold uppercase tracking-wider">En Espera</span>
+            <span className="text-purple-600 text-xs sm:text-sm font-bold uppercase tracking-wider">En Espera</span>
             <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{summary.EN_ESPERA || 0}</div>
           </div>
         </div>
@@ -271,6 +277,27 @@ export const Dashboard = () => {
             <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{summary.FINALIZADO || 0}</div>
           </div>
         </div>
+
+        {hasPermission('VIEW_INVENTORY') && invSummary && (
+          <div 
+            onClick={() => navigate('/inventory?filter=low_stock')}
+            className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group border-rose-100 shadow-sm shadow-rose-100/50 hover:shadow-md col-span-2 md:col-span-1`}
+          >
+            <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-rose-50 opacity-50 group-hover:scale-110 transition-transform">
+               <AlertCircle className="w-14 h-14 sm:w-20 sm:h-20" />
+            </div>
+            <div className="relative z-10">
+              <span className="text-rose-600 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-1">
+                Stock Crítico
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                </span>
+              </span>
+              <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{invSummary.low_stock_count || 0}</div>
+            </div>
+          </div>
+        )}
       </div>
 
       {isLoading && workOrders.length === 0 ? (

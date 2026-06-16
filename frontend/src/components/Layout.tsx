@@ -1,9 +1,11 @@
 import { ReactNode, useState } from 'react';
 import { Sidebar } from './Sidebar';
-import { Menu } from 'lucide-react';
+import { Menu, Camera } from 'lucide-react';
+import { QRScannerModal } from './common/QRScannerModal';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900">
@@ -30,11 +32,25 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       </header>
 
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      <div className="flex-1 md:ml-64 p-4 md:p-8 overflow-y-auto h-screen pt-20 md:pt-8">
+      <div className="flex-1 md:ml-64 p-4 md:p-8 overflow-y-auto h-screen pt-20 md:pt-8 relative">
         <div className="max-w-6xl mx-auto">
           {children}
         </div>
+
+        {/* Floating Action Button for Scanner */}
+        <button
+          onClick={() => setIsScannerOpen(true)}
+          className="fixed bottom-6 right-6 md:bottom-10 md:right-10 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 transition-colors z-30 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-indigo-500/30"
+          title="Escáner Inteligente QR"
+        >
+          <Camera size={24} />
+        </button>
       </div>
+
+      <QRScannerModal 
+        isOpen={isScannerOpen} 
+        onClose={() => setIsScannerOpen(false)} 
+      />
     </div>
   );
 };

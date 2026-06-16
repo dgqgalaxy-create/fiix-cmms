@@ -59,8 +59,13 @@ export interface InventoryTransaction {
   created_at: string;
 }
 
+export interface InventorySummary {
+  total_items: number;
+  low_stock_count: number;
+}
+
 // Categories
-export const getCategories = async () => {
+export const getCategories = async (): Promise<ItemCategory[]> => {
   const response = await axiosInstance.get<ItemCategory[]>('/inventory/categories');
   return response.data;
 };
@@ -136,6 +141,12 @@ export const updateItem = async (id: string, formData: FormData) => {
   const response = await axiosInstance.patch<Item>(`/inventory/items/${id}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
+  return response.data;
+};
+
+// Summary
+export const getInventorySummary = async (): Promise<InventorySummary> => {
+  const response = await axiosInstance.get('/inventory/summary');
   return response.data;
 };
 
