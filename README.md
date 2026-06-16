@@ -100,3 +100,26 @@ Las evidencias fotográficas que se suben al sistema **no se guardan en la base 
 
 ### 3. Prisma Schema
 Si en el futuro agregas nuevas tablas o columnas a la base de datos, siempre debes hacerlo en `backend/prisma/schema.prisma` y luego ejecutar `npx prisma migrate dev` para aplicarlo.
+
+### 4. Actualizaciones en Producción (Deploy)
+Para desplegar nuevos cambios al servidor de producción (Ubuntu), el proyecto cuenta con un script automatizado (`update.sh`) que evita el error humano y reinicia los servicios.
+
+**Paso 1 (En tu Computadora - Entorno Local):**
+Sube los cambios a GitHub:
+```bash
+git add .
+git commit -m "Descripción de los cambios"
+git push
+```
+
+**Paso 2 (En el Servidor de Producción):**
+Conéctate por SSH a tu servidor y ejecuta el script de actualización:
+```bash
+cd ~/fiix-cmms
+./update.sh
+```
+El script automáticamente:
+1. Descargará los cambios de GitHub (`git pull`).
+2. Instalará nuevas dependencias si es necesario (`npm install`).
+3. Construirá las nuevas tablas de Prisma respetando la información existente (`npx prisma db push`).
+4. Reiniciará los servidores suavemente (`pm2 restart`).
