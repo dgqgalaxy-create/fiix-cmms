@@ -1,8 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield } from 'lucide-react';
+import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export const Sidebar = () => {
+export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const location = useLocation();
   const { user, logout, hasPermission } = useAuth();
 
@@ -28,12 +28,19 @@ export const Sidebar = () => {
   }
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col h-screen fixed top-0 left-0">
-      <div className="p-6 flex items-center gap-3 border-b border-slate-800">
-        <div className="w-8 h-8 rounded-lg bg-blue-800 shadow-inner flex items-center justify-center">
-          <span className="text-white font-bold text-lg leading-none">L</span>
+    <aside className={`w-64 bg-slate-900 text-slate-300 flex flex-col h-screen fixed top-0 left-0 z-40 transition-transform duration-300 ease-in-out md:translate-x-0 ${
+      isOpen ? 'translate-x-0' : '-translate-x-full'
+    }`}>
+      <div className="p-6 flex items-center justify-between border-b border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-blue-800 shadow-inner flex items-center justify-center">
+            <span className="text-white font-bold text-lg leading-none">L</span>
+          </div>
+          <span className="font-bold text-xl text-white tracking-tight">LPET CMMS</span>
         </div>
-        <span className="font-bold text-xl text-white tracking-tight">LPET CMMS</span>
+        <button onClick={onClose} className="md:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors" title="Cerrar menú">
+          <X size={20} />
+        </button>
       </div>
 
       <nav className="flex-1 px-4 py-6 space-y-2">
@@ -43,6 +50,7 @@ export const Sidebar = () => {
             <Link
               key={item.path}
               to={item.path}
+              onClick={onClose}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium ${
                 isActive 
                   ? 'bg-emerald-600/20 text-emerald-400' 

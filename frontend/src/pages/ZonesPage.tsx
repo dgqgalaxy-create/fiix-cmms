@@ -81,8 +81,8 @@ export const ZonesPage = () => {
       )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-          <form onSubmit={handleCreate} className="flex gap-4">
+        <div className="p-4 sm:p-6 border-b border-slate-100 bg-slate-50/50">
+          <form onSubmit={handleCreate} className="flex flex-col sm:flex-row gap-4">
             <input
               type="text"
               placeholder="Nombre de la nueva zona (ej. Almacén, Línea 1...)"
@@ -114,7 +114,7 @@ export const ZonesPage = () => {
         ) : (
           <ul className="divide-y divide-slate-100">
             {zones.map((zone) => (
-              <li key={zone.id} className="p-4 px-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
+              <li key={zone.id} className="p-3 px-4 sm:p-4 sm:px-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
                 <span className="font-medium text-slate-700 flex items-center gap-2">
                   <MapPin size={16} className="text-slate-400" />
                   {zone.name}

@@ -90,9 +90,9 @@ export const PermissionsPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="mb-8 flex justify-between items-end">
+      <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
             <Shield className="text-indigo-600" size={32} />
             Privilegios por Rol
           </h1>
@@ -136,7 +136,7 @@ export const PermissionsPage = () => {
                 const isLocked = rp.role === 'ADMINISTRADOR' && (perm.key === 'MANAGE_PERMISSIONS' || perm.key === 'MANAGE_USERS');
                 
                 return (
-                  <div key={perm.key} className="p-4 hover:bg-slate-50 rounded-2xl transition-colors flex items-start justify-between gap-4">
+                  <div key={perm.key} className="p-2.5 sm:p-4 hover:bg-slate-50 rounded-xl sm:rounded-2xl transition-colors flex items-start justify-between gap-4">
                     <div>
                       <div className="font-semibold text-sm text-slate-800">{perm.label}</div>
                       <div className="text-xs text-slate-500 mt-0.5">{perm.description}</div>

@@ -57,79 +57,130 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm text-slate-600">
-          <thead className="bg-slate-50/50 border-b border-slate-100 text-slate-500 font-medium">
-            <tr>
-              <th className="px-6 py-4">Orden</th>
-              <th className="px-6 py-4">Activo y Zona</th>
-              <th className="px-6 py-4">Tipo</th>
-              <th className="px-6 py-4">Estado</th>
-              <th className="px-6 py-4">Asignado A</th>
-              <th className="px-6 py-4">Fecha Creación</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {workOrders.map((wo) => (
-              <tr 
-                key={wo.id} 
-                onClick={() => onRowClick && onRowClick(wo)}
-                className={`transition-colors ${onRowClick ? 'cursor-pointer hover:bg-slate-50' : 'hover:bg-slate-50/50'}`}
-              >
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2 mb-1">
-                      <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs font-bold border border-slate-200">
-                        WO-{(wo.folio || 0).toString().padStart(4, '0')}
-                      </span>
-                      {wo.priority === 'URGENTE' && (
-                        <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold border border-red-200">
-                          URGENTE
-                        </span>
-                      )}
-                      <div className="font-medium text-slate-900">{wo.title}</div>
-                  </div>
-                  {wo.description && <div className="text-slate-500 text-xs line-clamp-1">{wo.description}</div>}
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">
-                      {wo.asset.name.substring(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <span className="font-medium text-slate-700 block">{wo.asset.name}</span>
-                      <span className="text-xs text-slate-500 block">{wo.zone?.name || 'Sin Zona'}</span>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="text-sm font-medium text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
-                    {wo.maintenance_type}
+    <div>
+      {/* Vista de Tarjetas para Celulares */}
+      <div className="block sm:hidden space-y-4">
+        {workOrders.map((wo) => (
+          <div 
+            key={wo.id} 
+            onClick={() => onRowClick && onRowClick(wo)}
+            className="bg-white p-4 rounded-2xl border border-slate-150 shadow-sm active:bg-slate-50 transition-colors cursor-pointer"
+          >
+            <div className="flex justify-between items-start mb-2 gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs font-bold border border-slate-200">
+                  WO-{(wo.folio || 0).toString().padStart(4, '0')}
+                </span>
+                {wo.priority === 'URGENTE' && (
+                  <span className="bg-red-150 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-200">
+                    URGENTE
                   </span>
-                </td>
-                <td className="px-6 py-4">
-                  {getStatusBadge(wo.status)}
-                </td>
-                <td className="px-6 py-4">
-                  {wo.assigned_technicians && wo.assigned_technicians.length > 0 ? (
-                    <div className="flex flex-col gap-0.5">
-                      {wo.assigned_technicians.map((t) => (
-                        <span key={t.id} className="text-slate-700 text-xs font-medium bg-slate-100 px-2 py-0.5 rounded-md inline-block w-fit">
-                          {t.name}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-slate-400 italic">Sin asignar</span>
-                  )}
-                </td>
-                <td className="px-6 py-4 text-slate-500">
-                  {new Date(wo.created_at).toLocaleDateString()}
-                </td>
+                )}
+              </div>
+              <div className="flex-shrink-0">
+                {getStatusBadge(wo.status)}
+              </div>
+            </div>
+            
+            <h3 className="font-bold text-slate-900 text-sm mb-1 leading-snug">{wo.title}</h3>
+            {wo.description && (
+              <p className="text-slate-500 text-xs line-clamp-2 mb-3 leading-relaxed">
+                {wo.description}
+              </p>
+            )}
+            
+            <div className="flex justify-between items-center text-[11px] border-t border-slate-100 pt-2.5 mt-2">
+              <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2">
+                <div className="w-5 h-5 rounded-md bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-[9px] shrink-0">
+                  {wo.asset.name.substring(0, 2).toUpperCase()}
+                </div>
+                <span className="font-medium text-slate-700 truncate" title={wo.asset.name}>{wo.asset.name}</span>
+                <span className="text-slate-300">|</span>
+                <span className="text-slate-500 truncate" title={wo.zone?.name || 'Sin Zona'}>{wo.zone?.name || 'Sin Zona'}</span>
+              </div>
+              <span className="text-slate-400 font-medium bg-slate-50 px-2 py-0.5 rounded border border-slate-150 shrink-0">
+                {wo.maintenance_type}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Vista de Tabla para Escritorio */}
+      <div className="hidden sm:block bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-600">
+            <thead className="bg-slate-50/50 border-b border-slate-100 text-slate-500 font-medium">
+              <tr>
+                <th className="px-6 py-4">Orden</th>
+                <th className="px-6 py-4">Activo y Zona</th>
+                <th className="px-6 py-4 hidden sm:table-cell">Tipo</th>
+                <th className="px-6 py-4">Estado</th>
+                <th className="px-6 py-4 hidden md:table-cell">Asignado A</th>
+                <th className="px-6 py-4 hidden md:table-cell">Fecha Creación</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {workOrders.map((wo) => (
+                <tr 
+                  key={wo.id} 
+                  onClick={() => onRowClick && onRowClick(wo)}
+                  className={`transition-colors ${onRowClick ? 'cursor-pointer hover:bg-slate-50' : 'hover:bg-slate-50/50'}`}
+                >
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs font-bold border border-slate-200">
+                          WO-{(wo.folio || 0).toString().padStart(4, '0')}
+                        </span>
+                        {wo.priority === 'URGENTE' && (
+                          <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold border border-red-200">
+                            URGENTE
+                          </span>
+                        )}
+                        <div className="font-medium text-slate-900">{wo.title}</div>
+                    </div>
+                    {wo.description && <div className="text-slate-500 text-xs line-clamp-1">{wo.description}</div>}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">
+                        {wo.asset.name.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <span className="font-medium text-slate-700 block">{wo.asset.name}</span>
+                        <span className="text-xs text-slate-500 block">{wo.zone?.name || 'Sin Zona'}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 hidden sm:table-cell">
+                    <span className="text-sm font-medium text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
+                      {wo.maintenance_type}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    {getStatusBadge(wo.status)}
+                  </td>
+                  <td className="px-6 py-4 hidden md:table-cell">
+                    {wo.assigned_technicians && wo.assigned_technicians.length > 0 ? (
+                      <div className="flex flex-col gap-0.5">
+                        {wo.assigned_technicians.map((t) => (
+                          <span key={t.id} className="text-slate-700 text-xs font-medium bg-slate-100 px-2 py-0.5 rounded-md inline-block w-fit">
+                            {t.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 italic">Sin asignar</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-slate-500 hidden md:table-cell">
+                    {new Date(wo.created_at).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

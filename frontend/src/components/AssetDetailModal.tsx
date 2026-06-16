@@ -1,5 +1,6 @@
 import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye } from 'lucide-react';
 import type { Asset } from '../api/assets';
+import { BACKEND_URL } from '../api/axios';
 
 interface Props {
   asset: Asset | null;
@@ -69,9 +70,9 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
             
             {/* Image */}
             {asset.image_url && (
-              <div className="w-full h-64 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0">
+              <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0">
                 <img 
-                  src={`http://localhost:3000${asset.image_url}`} 
+                  src={`${BACKEND_URL}${asset.image_url}`} 
                   alt={`Foto de ${asset.name}`} 
                   className="w-full h-full object-contain"
                 />
@@ -125,19 +126,19 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
 
             {/* Document / Manual */}
             {asset.document_url && (
-              <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-5 flex items-center justify-between">
+              <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
                     <FileText size={20} />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-800">Ficha Técnica / Manual</h4>
+                    <h4 className="text-sm font-bold text-slate-800 leading-snug">Ficha Técnica / Manual</h4>
                     <p className="text-xs text-slate-500 font-medium">Documento adjunto al equipo</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto [&>a]:flex-1 [&>a]:justify-center">
                   <a 
-                    href={`http://localhost:3000${asset.document_url}`}
+                    href={`${BACKEND_URL}${asset.document_url}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-4 py-2 bg-white hover:bg-blue-50 text-blue-700 text-sm font-medium rounded-xl border border-blue-200 transition-colors flex items-center gap-2 shadow-sm"
@@ -146,7 +147,7 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                     Ver
                   </a>
                   <a 
-                    href={`http://localhost:3000${asset.document_url}`}
+                    href={`${BACKEND_URL}${asset.document_url}`}
                     download
                     target="_blank"
                     rel="noopener noreferrer"

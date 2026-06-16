@@ -90,22 +90,22 @@ export const KPIPage = () => {
   const renderCard = (title: string, icon: any, metric: KPIMetric, isMoreBetter: boolean, formatter: (val: number) => string, currentUnit: string) => {
     const isGood = isMoreBetter ? metric.value >= metric.goal.targetValue : metric.value <= metric.goal.targetValue;
     return (
-      <div className={`p-6 rounded-2xl border shadow-sm relative overflow-hidden transition-all ${isGood ? 'border-emerald-100 bg-white' : 'border-red-100 bg-white'}`}>
-        <div className="flex justify-between items-start mb-4">
-          <h3 className="font-bold text-slate-700">{title}</h3>
-          <div className={`p-2 rounded-xl ${isGood ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+      <div className={`p-4 sm:p-6 rounded-2xl border shadow-sm relative overflow-hidden transition-all ${isGood ? 'border-emerald-100 bg-white' : 'border-red-100 bg-white'}`}>
+        <div className="flex justify-between items-start mb-3 sm:mb-4 gap-2">
+          <h3 className="font-bold text-slate-700 text-sm sm:text-base leading-snug">{title}</h3>
+          <div className={`p-1.5 sm:p-2 rounded-xl shrink-0 ${isGood ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
             {icon}
           </div>
         </div>
         <div className="mb-1">
-          <span className={`text-4xl font-black ${isGood ? 'text-emerald-600' : 'text-red-600'}`}>
+          <span className={`text-2xl sm:text-4xl font-black ${isGood ? 'text-emerald-600' : 'text-red-600'}`}>
             {formatter(metric.value)}
           </span>
-          <span className="text-sm font-medium text-slate-400 ml-1">{currentUnit}</span>
+          <span className="text-xs sm:text-sm font-medium text-slate-400 ml-1">{currentUnit}</span>
         </div>
-        <div className="flex items-center gap-2 mt-4 text-sm font-medium text-slate-500 bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
-          <Target size={16} className="text-slate-400" />
-          Meta: {formatter(metric.goal.targetValue)} {currentUnit}
+        <div className="flex items-center gap-2 mt-3 sm:mt-4 text-xs sm:text-sm font-medium text-slate-500 bg-slate-50 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg border border-slate-100">
+          <Target size={14} className="text-slate-400 shrink-0" />
+          <span>Meta: {formatter(metric.goal.targetValue)} {currentUnit}</span>
         </div>
       </div>
     );
@@ -113,9 +113,9 @@ export const KPIPage = () => {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Indicadores de Desempeño (KPIs)</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Indicadores de Desempeño (KPIs)</h1>
           <p className="text-slate-500 mt-1">Mide y analiza el rendimiento del departamento de mantenimiento.</p>
         </div>
         {hasPermission('MANAGE_KPIS') && (

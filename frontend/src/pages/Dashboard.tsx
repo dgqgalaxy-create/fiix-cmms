@@ -117,7 +117,7 @@ export const Dashboard = () => {
     <>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Órdenes de Trabajo</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Órdenes de Trabajo</h1>
           <p className="text-slate-500 mt-1">Gestiona y haz seguimiento del mantenimiento.</p>
         </div>
         
@@ -142,56 +142,56 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div 
           onClick={() => setStatusFilter(statusFilter === 'PENDIENTE' ? null : 'PENDIENTE')}
-          className={`cursor-pointer transition-all bg-white p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'PENDIENTE' ? 'ring-2 ring-amber-500 border-amber-500 shadow-md scale-[1.02]' : 'border-amber-100 shadow-sm shadow-amber-100/50 hover:shadow-md'}`}
+          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'PENDIENTE' ? 'ring-2 ring-amber-500 border-amber-500 shadow-md scale-[1.02]' : 'border-amber-100 shadow-sm shadow-amber-100/50 hover:shadow-md'}`}
         >
-          <div className="absolute -right-4 -top-4 text-amber-50 opacity-50 group-hover:scale-110 transition-transform">
-             <Clock size={80} />
+          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-amber-50 opacity-50 group-hover:scale-110 transition-transform">
+             <Clock className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
           <div className="relative z-10">
-            <span className="text-amber-600 text-sm font-bold uppercase tracking-wider">Pendientes</span>
-            <div className="text-4xl font-black text-slate-800 mt-2">{summary.PENDIENTE || 0}</div>
+            <span className="text-amber-600 text-xs sm:text-sm font-bold uppercase tracking-wider">Pendientes</span>
+            <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{summary.PENDIENTE || 0}</div>
           </div>
         </div>
 
         <div 
           onClick={() => setStatusFilter(statusFilter === 'EN_PROCESO' ? null : 'EN_PROCESO')}
-          className={`cursor-pointer transition-all bg-white p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'EN_PROCESO' ? 'ring-2 ring-blue-500 border-blue-500 shadow-md scale-[1.02]' : 'border-blue-100 shadow-sm shadow-blue-100/50 hover:shadow-md'}`}
+          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'EN_PROCESO' ? 'ring-2 ring-blue-500 border-blue-500 shadow-md scale-[1.02]' : 'border-blue-100 shadow-sm shadow-blue-100/50 hover:shadow-md'}`}
         >
-          <div className="absolute -right-4 -top-4 text-blue-50 opacity-50 group-hover:scale-110 transition-transform">
-             <Wrench size={80} />
+          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-blue-50 opacity-50 group-hover:scale-110 transition-transform">
+             <Wrench className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
           <div className="relative z-10">
-            <span className="text-blue-600 text-sm font-bold uppercase tracking-wider">En Proceso</span>
-            <div className="text-4xl font-black text-slate-800 mt-2">{summary.EN_PROCESO || 0}</div>
+            <span className="text-blue-600 text-xs sm:text-sm font-bold uppercase tracking-wider">En Proceso</span>
+            <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{summary.EN_PROCESO || 0}</div>
           </div>
         </div>
 
         <div 
           onClick={() => setStatusFilter(statusFilter === 'EN_ESPERA' ? null : 'EN_ESPERA')}
-          className={`cursor-pointer transition-all bg-white p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'EN_ESPERA' ? 'ring-2 ring-red-500 border-red-500 shadow-md scale-[1.02]' : 'border-red-100 shadow-sm shadow-red-100/50 hover:shadow-md'}`}
+          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'EN_ESPERA' ? 'ring-2 ring-red-500 border-red-500 shadow-md scale-[1.02]' : 'border-red-100 shadow-sm shadow-red-100/50 hover:shadow-md'}`}
         >
-          <div className="absolute -right-4 -top-4 text-red-50 opacity-50 group-hover:scale-110 transition-transform">
-             <AlertCircle size={80} />
+          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-red-50 opacity-50 group-hover:scale-110 transition-transform">
+             <AlertCircle className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
           <div className="relative z-10">
-            <span className="text-red-600 text-sm font-bold uppercase tracking-wider">En Espera</span>
-            <div className="text-4xl font-black text-slate-800 mt-2">{summary.EN_ESPERA || 0}</div>
+            <span className="text-red-600 text-xs sm:text-sm font-bold uppercase tracking-wider">En Espera</span>
+            <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{summary.EN_ESPERA || 0}</div>
           </div>
         </div>
 
         <div 
           onClick={() => setStatusFilter(statusFilter === 'FINALIZADO' ? null : 'FINALIZADO')}
-          className={`cursor-pointer transition-all bg-white p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'FINALIZADO' ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-md scale-[1.02]' : 'border-emerald-100 shadow-sm shadow-emerald-100/50 hover:shadow-md'}`}
+          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'FINALIZADO' ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-md scale-[1.02]' : 'border-emerald-100 shadow-sm shadow-emerald-100/50 hover:shadow-md'}`}
         >
-          <div className="absolute -right-4 -top-4 text-emerald-50 opacity-50 group-hover:scale-110 transition-transform">
-             <CheckCircle2 size={80} />
+          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-emerald-50 opacity-50 group-hover:scale-110 transition-transform">
+             <CheckCircle2 className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
           <div className="relative z-10">
-            <span className="text-emerald-600 text-sm font-bold uppercase tracking-wider">Finalizadas</span>
-            <div className="text-4xl font-black text-slate-800 mt-2">{summary.FINALIZADO || 0}</div>
+            <span className="text-emerald-600 text-xs sm:text-sm font-bold uppercase tracking-wider">Finalizadas</span>
+            <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{summary.FINALIZADO || 0}</div>
           </div>
         </div>
       </div>

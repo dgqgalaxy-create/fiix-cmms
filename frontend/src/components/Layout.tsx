@@ -1,11 +1,36 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Sidebar } from './Sidebar';
+import { Menu } from 'lucide-react';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900">
-      <Sidebar />
-      <div className="flex-1 ml-64 p-8 overflow-y-auto h-screen">
+      {/* Backdrop overlay for mobile when sidebar is open */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-950/60 z-30 md:hidden" 
+          onClick={() => setIsSidebarOpen(false)}
+        ></div>
+      )}
+
+      {/* Mobile Header */}
+      <header className="fixed top-0 left-0 right-0 h-14 bg-slate-900 text-white flex items-center justify-between px-4 z-30 md:hidden border-b border-slate-800">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+            title="Abrir menú"
+          >
+            <Menu size={20} />
+          </button>
+          <span className="font-bold text-lg tracking-tight">LPET CMMS</span>
+        </div>
+      </header>
+
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <div className="flex-1 md:ml-64 p-4 md:p-8 overflow-y-auto h-screen pt-20 md:pt-8">
         <div className="max-w-6xl mx-auto">
           {children}
         </div>

@@ -120,7 +120,7 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
           )}
 
           <form id="create-asset-form" onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Código Interno *</label>
                 <input type="text" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="Ej: BMB-001" value={internalCode} onChange={(e) => setInternalCode(e.target.value)} />
@@ -135,7 +135,7 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del Equipo *</label>
                 <input type="text" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="Bomba centrífuga..." value={name} onChange={(e) => setName(e.target.value)} />
@@ -155,7 +155,7 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Marca *</label>
                 <input type="text" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="Goulds" value={brand} onChange={(e) => setBrand(e.target.value)} />
@@ -166,14 +166,14 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Número de Serie (Opcional)</label>
                 <input type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="SN-12345" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Foto del Equipo (Opcional)</label>
                 <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 text-sm file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 transition-all cursor-pointer" />

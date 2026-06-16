@@ -91,7 +91,7 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}></div>
 
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
         <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <h2 className="text-xl font-bold text-slate-800">
             {isEditing ? 'Editar Usuario' : 'Nuevo Usuario'}
@@ -101,7 +101,7 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto">
           {error && (
             <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl text-sm font-medium border border-red-100">
               {error}

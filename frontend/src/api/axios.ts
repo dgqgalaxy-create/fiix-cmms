@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+export const BACKEND_URL = `http://${window.location.hostname}:3000`;
+
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api',
+  baseURL: `${BACKEND_URL}/api`,
 });
 
 // Interceptor para inyectar el token en cada petición

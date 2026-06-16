@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import type { WorkOrder } from '../api/workOrders';
+import { BACKEND_URL } from '../api/axios';
 
 const loadImgAsBase64 = (url: string): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -152,13 +153,13 @@ export const generateWorkOrderPDF = async (workOrder: WorkOrder) => {
     try {
       if (workOrder.before_image_url) {
         doc.text("Antes", 20, nextY);
-        const beforeBase64 = await loadImgAsBase64(`http://localhost:3000${workOrder.before_image_url}`);
+        const beforeBase64 = await loadImgAsBase64(`${BACKEND_URL}${workOrder.before_image_url}`);
         doc.addImage(beforeBase64, 'JPEG', 20, nextY + 5, 80, 60);
       }
       
       if (workOrder.after_image_url) {
         doc.text("Después", 110, nextY);
-        const afterBase64 = await loadImgAsBase64(`http://localhost:3000${workOrder.after_image_url}`);
+        const afterBase64 = await loadImgAsBase64(`${BACKEND_URL}${workOrder.after_image_url}`);
         doc.addImage(afterBase64, 'JPEG', 110, nextY + 5, 80, 60);
       }
     } catch (err) {

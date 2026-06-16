@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { X, Loader2, Save, Trash2, Ban, Clock } from 'lucide-react';
 import type { WorkOrder } from '../api/workOrders';
 import { useAuth } from '../context/AuthContext';
+import { getUsers } from '../api/users';
 import type { User } from '../api/users';
 import { SignatureField } from './SignatureField';
+import { BACKEND_URL } from '../api/axios';
 import type { SignatureFieldRef } from './SignatureField';
 import { useRef } from 'react';
 import { Download } from 'lucide-react';
@@ -365,14 +367,14 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
             {workOrder.request_image_url && (
               <div className="mt-4 border-t border-slate-100 pt-3">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">📸 Foto al reportar la falla</span>
-                <img src={`http://localhost:3000${workOrder.request_image_url}`} alt="Falla Reportada" className="w-full h-32 object-cover rounded-xl border border-slate-200" />
+                <img src={`${BACKEND_URL}${workOrder.request_image_url}`} alt="Falla Reportada" className="w-full h-32 object-cover rounded-xl border border-slate-200" />
               </div>
             )}
             
             {workOrder.before_image_url && (
               <div className="mt-4 border-t border-slate-100 pt-3">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">📸 Evidencia Técnica (Antes de reparar)</span>
-                <img src={`http://localhost:3000${workOrder.before_image_url}`} alt="Antes" className="w-full h-32 object-cover rounded-xl border border-slate-200" />
+                <img src={`${BACKEND_URL}${workOrder.before_image_url}`} alt="Antes" className="w-full h-32 object-cover rounded-xl border border-slate-200" />
               </div>
             )}
           </div>
@@ -380,10 +382,10 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
           {workOrder.after_image_url && (
             <div className="mb-8 bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
                <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider block mb-2">📸 Evidencia de Reparación (Después)</span>
-               <img src={`http://localhost:3000${workOrder.after_image_url}`} alt="Después" className="w-full h-48 object-cover rounded-xl border border-emerald-200" />
+               <img src={`${BACKEND_URL}${workOrder.after_image_url}`} alt="Después" className="w-full h-48 object-cover rounded-xl border border-emerald-200" />
                
                {workOrder.signature_clean_area && workOrder.signature_delivery && (
-                 <div className="mt-4 pt-4 border-t border-emerald-200/50 grid grid-cols-2 gap-4">
+                 <div className="mt-4 pt-4 border-t border-emerald-200/50 grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <div>
                      <span className="text-xs font-semibold text-emerald-700 block mb-1">Firma Liberación de Área:</span>
                      {typeof workOrder.signature_clean_area === 'string' && workOrder.signature_clean_area.startsWith('data:image') ? (
@@ -581,40 +583,40 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
           </form>
         </div>
 
-        <div className="px-6 py-5 border-t border-slate-100 flex justify-between items-center bg-slate-50/50 mt-auto">
-          <div className="flex gap-2">
+        <div className="px-4 py-4 sm:px-6 sm:py-5 border-t border-slate-100 flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center bg-slate-50/50 mt-auto">
+          <div className="flex gap-2 justify-stretch sm:justify-start [&>button]:flex-1 [&>button]:sm:flex-initial">
             {hasPermission('DELETE_WORK_ORDERS') && onDelete && (
               <>
-                <button type="button" onClick={() => onDelete(workOrder.id)} className="px-4 py-2.5 flex items-center gap-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors">
-                  <Trash2 size={16} /> Eliminar
+                <button type="button" onClick={() => onDelete(workOrder.id)} className="px-3 sm:px-4 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors">
+                  <Trash2 size={15} /> Eliminar
                 </button>
                 {workOrder.status !== 'ANULADO' && (
-                  <button type="button" onClick={handleVoid} disabled={isSubmitting} className="px-4 py-2.5 flex items-center gap-2 text-sm font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors disabled:opacity-70">
-                    <Ban size={16} /> Anular
+                  <button type="button" onClick={handleVoid} disabled={isSubmitting} className="px-3 sm:px-4 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors disabled:opacity-70">
+                    <Ban size={15} /> Anular
                   </button>
                 )}
               </>
             )}
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap sm:flex-nowrap gap-2 justify-stretch sm:justify-end [&>button]:flex-1 [&>button]:sm:flex-initial">
             {canDownloadPDF && (
               <button 
                 type="button" 
                 onClick={handleDownloadPDF} 
                 disabled={isSubmitting} 
-                className="px-5 py-2.5 flex items-center gap-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-colors shadow-sm"
+                className="px-3 sm:px-5 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-colors shadow-sm"
               >
-                {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
-                Descargar PDF
+                {isSubmitting ? <Loader2 className="animate-spin" size={14} /> : <Download size={14} />}
+                PDF
               </button>
             )}
-            <button type="button" onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors">
+            <button type="button" onClick={onClose} className="px-3 sm:px-5 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors">
               Cerrar
             </button>
             {!isClosed && (
-              <button type="submit" form="update-wo-form" disabled={isSubmitting} className="px-6 py-2.5 flex items-center justify-center gap-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-70 rounded-xl shadow-sm shadow-emerald-700/20 transition-colors">
-                {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-                Guardar Cambios
+              <button type="submit" form="update-wo-form" disabled={isSubmitting} className="px-4 sm:px-6 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-70 rounded-xl shadow-sm shadow-emerald-700/20 transition-colors">
+                {isSubmitting ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />}
+                Guardar
               </button>
             )}
           </div>
