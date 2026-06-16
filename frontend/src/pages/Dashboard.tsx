@@ -6,7 +6,8 @@ import { CreateWorkOrderModal } from '../components/CreateWorkOrderModal';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { getWorkOrders, getWorkOrdersSummary, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder } from '../api/workOrders';
-import { getInventorySummary, InventorySummary } from '../api/inventory';
+import { getInventorySummary } from '../api/inventory';
+import type { InventorySummary } from '../api/inventory';
 import type { WorkOrder } from '../api/workOrders';
 import { useNavigate } from 'react-router-dom';
 

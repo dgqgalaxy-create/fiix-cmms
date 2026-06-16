@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Upload, Package } from 'lucide-react';
 import { createItem, updateItem } from '../../api/inventory';
+import { ImageSearchModal } from '../inventory/ImageSearchModal';
 import type { Item, ItemCategory, ItemLocation, Vendor, InventoryTransaction } from '../../api/inventory';
 
 interface Props {
@@ -33,6 +34,7 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isImageSearchModalOpen, setIsImageSearchModalOpen] = useState(false);
 
   const filteredTransactions = React.useMemo(() => {
     if (!item || !transactions) return [];
@@ -202,6 +204,16 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
                     <input id="image-upload" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
                   )}
                 </div>
+
+                {!readOnly && (
+                  <button 
+                    type="button"
+                    onClick={() => setIsImageSearchModalOpen(true)}
+                    className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl font-medium transition-colors border border-blue-200"
+                  >
+                    🪄 Buscar en la Web
+                  </button>
+                )}
               </div>
 
               <div>
@@ -427,6 +439,16 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
           </div>
         </form>
       </div>
+
+      <ImageSearchModal 
+        isOpen={isImageSearchModalOpen}
+        onClose={() => setIsImageSearchModalOpen(false)}
+        initialQuery={formData.name}
+        onImageSelected={(file) => {
+          setImageFile(file);
+          setImagePreview(URL.createObjectURL(file));
+        }}
+      />
     </div>
   );
 };

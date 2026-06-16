@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { generateInventoryCode } from '../utils/codeGenerator';
+import * as google from 'googlethis';
+import axios from 'axios';
 
 // ==========================================
 // ITEM CATEGORY
@@ -339,5 +341,58 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
     res.status(201).json({ transaction, stock_actual: item.stock });
   } catch (error) {
     res.status(500).json({ error: 'Error al registrar transacción de inventario' });
+  }
+};
+// ==========================================
+// IMAGE SEARCH (WEB)
+// ==========================================
+export const searchImages = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { q } = req.query;
+    if (!q || typeof q !== 'string') {
+      res.status(400).json({ error: 'Falta el parámetro de búsqueda "q"' });
+      return;
+    }
+
+    const images = await google.image(q, { safe: false });
+    // Filter and return only top 10 URLs
+    const topImages = images.slice(0, 10).map((img: any) => ({
+      url: img.url,
+      width: img.width,
+      height: img.height,
+      title: img.origin?.title
+    }));
+
+    res.json(topImages);
+  } catch (error) {
+    console.error('Error al buscar imágenes:', error);
+    res.status(500).json({ error: 'Error al buscar imágenes en la web' });
+  }
+};
+
+export const proxyImage = async (req: Request, res: Response): Promise<void> => {
+  const { url } = req.query;
+  try {
+    if (!url || typeof url !== 'string') {
+      res.status(400).json({ error: 'Falta el parámetro "url"' });
+      return;
+    }
+
+    const response = await axios({
+      url,
+      method: 'GET',
+      responseType: 'stream',
+      headers: {
+        // Send generic user agent to prevent 403 blocks from CDNs
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+
+    res.set('Content-Type', response.headers['content-type'] as string);
+    res.set('Cache-Control', 'public, max-age=31557600'); // Cache for 1 year
+    response.data.pipe(res);
+  } catch (error) {
+    console.error('Error proxying image:', url);
+    res.status(500).json({ error: 'No se pudo descargar la imagen original' });
   }
 };

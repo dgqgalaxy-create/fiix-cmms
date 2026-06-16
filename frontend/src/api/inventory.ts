@@ -124,6 +124,14 @@ export const deleteVendor = async (id: string) => {
   await axiosInstance.delete(`/inventory/vendors/${id}`);
 };
 
+// ==========================================
+// IMAGE SEARCH (WEB)
+// ==========================================
+export const searchImagesWeb = async (query: string): Promise<Array<{url: string, title: string}>> => {
+  const response = await axiosInstance.get('/inventory/images/search', { params: { q: query } });
+  return response.data;
+};
+
 // Items
 export const getItems = async () => {
   const response = await axiosInstance.get<Item[]>('/inventory/items');

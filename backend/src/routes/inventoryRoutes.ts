@@ -5,7 +5,8 @@ import {
   getVendors, createVendor, updateVendor, deleteVendor,
   getItems, createItem, updateItem,
   getTransactions, createTransaction,
-  getInventorySummary
+  getInventorySummary,
+  searchImages, proxyImage
 } from '../controllers/inventoryController';
 import { authenticate, requirePermission } from '../middlewares/authMiddleware';
 import multer from 'multer';
@@ -36,7 +37,13 @@ router.use(authenticate);
 // ==========================================
 // RUTAS DE CATALOGOS Y RESUMEN
 // ==========================================
-router.get('/summary', getInventorySummary);
+// Summary
+router.get('/summary', authenticate, getInventorySummary);
+
+// Image Search
+router.get('/images/search', authenticate, requirePermission('MANAGE_INVENTORY'), searchImages);
+router.get('/images/proxy', authenticate, requirePermission('MANAGE_INVENTORY'), proxyImage);
+
 router.get('/categories', getCategories);
 router.post('/categories', requirePermission('MANAGE_INVENTORY'), createCategory);
 router.patch('/categories/:id', requirePermission('MANAGE_INVENTORY'), updateCategory);
