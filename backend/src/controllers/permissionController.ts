@@ -12,6 +12,7 @@ const defaultPermissions: Record<Role, any> = {
     EDIT_WORK_ORDERS: true,
     DELETE_WORK_ORDERS: true,
     MANAGE_PERMISSIONS: true,
+    MANAGE_INVENTORY: true,
   },
   GESTIONADOR: {
     MANAGE_USERS: false,
@@ -22,6 +23,7 @@ const defaultPermissions: Record<Role, any> = {
     EDIT_WORK_ORDERS: true,
     DELETE_WORK_ORDERS: false,
     MANAGE_PERMISSIONS: false,
+    MANAGE_INVENTORY: true,
   },
   TECNICO: {
     MANAGE_USERS: false,
@@ -32,22 +34,43 @@ const defaultPermissions: Record<Role, any> = {
     EDIT_WORK_ORDERS: true,
     DELETE_WORK_ORDERS: false,
     MANAGE_PERMISSIONS: false,
+    MANAGE_INVENTORY: false,
   },
 };
 
-// Seed defaults
 const getOrCreatePermissions = async (role: Role) => {
   let rolePerms = await prisma.rolePermission.findUnique({
     where: { role },
   });
 
+  const defaults = defaultPermissions[role] || {};
+
   if (!rolePerms) {
     rolePerms = await prisma.rolePermission.create({
       data: {
         role,
-        permissions: defaultPermissions[role],
+        permissions: defaults,
       },
     });
+  } else {
+    // Merge missing permissions for existing roles
+    let needsUpdate = false;
+    const currentPerms = rolePerms.permissions as Record<string, boolean>;
+    const updatedPerms = { ...currentPerms };
+
+    for (const key of Object.keys(defaults)) {
+      if (updatedPerms[key] === undefined) {
+        updatedPerms[key] = defaults[key];
+        needsUpdate = true;
+      }
+    }
+
+    if (needsUpdate) {
+      rolePerms = await prisma.rolePermission.update({
+        where: { role },
+        data: { permissions: updatedPerms },
+      });
+    }
   }
   return rolePerms;
 };

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { X, Loader2, Save, Trash2, Ban, Clock } from 'lucide-react';
+import { X, Loader2, Save, Trash2, Ban, Clock, Package } from 'lucide-react';
 import type { WorkOrder } from '../api/workOrders';
 import { useAuth } from '../context/AuthContext';
 import { getUsers } from '../api/users';
 import type { User } from '../api/users';
+import { getItems } from '../api/inventory';
+import type { Item } from '../api/inventory';
 import { SignatureField } from './SignatureField';
 import { BACKEND_URL } from '../api/axios';
 import type { SignatureFieldRef } from './SignatureField';
@@ -43,6 +45,11 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
   const [technicians, setTechnicians] = useState<User[]>([]);
   const [assignedTechniciansIds, setAssignedTechniciansIds] = useState<string[]>([]);
 
+  const [inventoryItems, setInventoryItems] = useState<Item[]>([]);
+  const [usedItems, setUsedItems] = useState<{item_id: string, name: string, amount: number, uom: string, max_stock: number}[]>([]);
+  const [selectedItemToAdd, setSelectedItemToAdd] = useState<string>('');
+  const [amountToAdd, setAmountToAdd] = useState<string>('');
+
   useEffect(() => {
     if (workOrder) {
       setStatus(workOrder.status);
@@ -54,12 +61,18 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
       setBeforeImage(null);
       setAfterImage(null);
       setError('');
+      setUsedItems([]);
+      setSelectedItemToAdd('');
+      setAmountToAdd('');
     }
   }, [workOrder]);
 
   useEffect(() => {
     if (isOpen && user?.role !== 'TECNICO') {
       getUsers('TECNICO').then(setTechnicians).catch(console.error);
+    }
+    if (isOpen) {
+      getItems().then(setInventoryItems).catch(console.error);
     }
   }, [isOpen, user]);
 
@@ -126,6 +139,8 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Prevenir submit accidental si el usuario dio Enter en el input de agregar repuesto
+    // Esto se maneja mejor en el botón de agregar, pero por si acaso.
     
     try {
       let finalStatus = status;
@@ -196,6 +211,9 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
       if (finalStatus === 'FINALIZADO') {
         updateData.signature_clean_area = cleanAreaBase64;
         updateData.signature_delivery = deliveryBase64;
+        if (usedItems.length > 0) {
+          updateData.used_items = usedItems.map(item => ({ item_id: item.item_id, amount: item.amount }));
+        }
       }
       
       if (beforeImage) updateData.before_image = beforeImage;
@@ -527,9 +545,88 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                     />
                     
                     {!isClosed && (
-                      <div className="mt-4 p-4 bg-emerald-100/50 border border-emerald-200 rounded-xl space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-emerald-800 mb-2">📸 Evidencia de Reparación (Después)</label>
+                      <div className="mt-4 space-y-6">
+                        {/* SECCION DE REPUESTOS */}
+                        <div className="p-4 bg-blue-50/50 border border-blue-200 rounded-xl">
+                          <label className="block text-sm font-medium text-blue-800 mb-3 flex items-center gap-2">
+                            <Package size={16} /> Repuestos Utilizados (Opcional)
+                          </label>
+                          
+                          <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                            <select 
+                              className="flex-1 px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white"
+                              value={selectedItemToAdd}
+                              onChange={(e) => setSelectedItemToAdd(e.target.value)}
+                            >
+                              <option value="">Selecciona un repuesto...</option>
+                              {inventoryItems.filter(i => i.is_active).map(item => (
+                                <option key={item.id} value={item.id}>
+                                  {item.internal_code} - {item.name} (Stock: {item.stock} {item.uom})
+                                </option>
+                              ))}
+                            </select>
+                            <input 
+                              type="number" 
+                              step="0.01" 
+                              min="0.01"
+                              placeholder="Cant." 
+                              className="w-full sm:w-24 px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white"
+                              value={amountToAdd}
+                              onChange={(e) => setAmountToAdd(e.target.value)}
+                            />
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                if (!selectedItemToAdd || !amountToAdd) return;
+                                const itemObj = inventoryItems.find(i => i.id === selectedItemToAdd);
+                                if (!itemObj) return;
+                                const qty = parseFloat(amountToAdd);
+                                if (qty > itemObj.stock) {
+                                  alert(`No hay suficiente stock. Stock actual: ${itemObj.stock}`);
+                                  return;
+                                }
+                                setUsedItems([...usedItems, { 
+                                  item_id: itemObj.id, 
+                                  name: itemObj.name, 
+                                  amount: qty, 
+                                  uom: itemObj.uom,
+                                  max_stock: itemObj.stock 
+                                }]);
+                                setSelectedItemToAdd('');
+                                setAmountToAdd('');
+                              }}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shrink-0"
+                            >
+                              Agregar
+                            </button>
+                          </div>
+
+                          {usedItems.length > 0 && (
+                            <div className="bg-white rounded-lg border border-blue-100 overflow-hidden">
+                              <ul className="divide-y divide-blue-50">
+                                {usedItems.map((item, idx) => (
+                                  <li key={idx} className="px-4 py-2.5 flex justify-between items-center text-sm">
+                                    <span className="font-medium text-slate-700">{item.name}</span>
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-slate-500">{item.amount} {item.uom}</span>
+                                      <button 
+                                        type="button" 
+                                        onClick={() => setUsedItems(usedItems.filter((_, i) => i !== idx))}
+                                        className="text-red-500 hover:text-red-700 p-1"
+                                      >
+                                        <X size={14} />
+                                      </button>
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="p-4 bg-emerald-100/50 border border-emerald-200 rounded-xl space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-emerald-800 mb-2">📸 Evidencia de Reparación (Después) *</label>
                           <input 
                             type="file" 
                             accept="image/*"
@@ -558,6 +655,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                           </div>
                         </div>
                       </div>
+                    </div>
                     )}
                   </div>
                 )}

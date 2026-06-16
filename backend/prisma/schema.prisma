@@ -47,6 +47,19 @@ enum ProductionGroup {
   NA
 }
 
+enum UnitOfMeasure {
+  PIEZAS
+  LITROS
+  METROS
+  KILOGRAMOS
+  KITS
+  CAJAS
+  PAQUETES
+  GALONES
+  JUEGOS
+  OTROS
+}
+
 model User {
   id              String      @id @default(uuid()) @db.Uuid
   name            String
@@ -58,6 +71,7 @@ model User {
 
   created_orders  WorkOrder[] @relation("CreatedOrders")
   assigned_orders WorkOrder[] @relation("AssignedOrders")
+  inventory_transactions InventoryTransaction[]
 }
 
 model Zone {
@@ -148,3 +162,77 @@ model RolePermission {
   permissions Json
   updated_at  DateTime @updatedAt
 }
+
+model ItemCategory {
+  id          String   @id @default(uuid()) @db.Uuid
+  internal_id String   @unique // Ej. "CAT001"
+  name        String
+  icon_url    String?
+  is_active   Boolean  @default(true)
+  
+  items       Item[]
+}
+
+model ItemLocation {
+  id          String   @id @default(uuid()) @db.Uuid
+  internal_id String   @unique // Ej. "LOC0001"
+  name        String
+  icon_url    String?
+  is_active   Boolean  @default(true)
+
+  items       Item[]
+}
+
+model Vendor {
+  id          String   @id @default(uuid()) @db.Uuid
+  internal_id String   @unique // Ej. "PROV001"
+  name        String
+  logo_url    String?
+  website_url String?
+  phone       String?
+  email       String?
+  address     String?
+  is_active   Boolean  @default(true)
+
+  items       Item[]
+}
+
+model Item {
+  id                 String          @id @default(uuid()) @db.Uuid
+  internal_code      String          @unique // Ej. "MTTO-0001"
+  name               String
+  description        String?
+  image_url          String?
+  
+  category_id        String?         @db.Uuid
+  category           ItemCategory?   @relation(fields: [category_id], references: [id])
+  
+  vendor_id          String?         @db.Uuid
+  vendor             Vendor?         @relation(fields: [vendor_id], references: [id])
+  
+  location_id        String?         @db.Uuid
+  location           ItemLocation?   @relation(fields: [location_id], references: [id])
+  
+  purchase_cost      Float?
+  stock              Float           @default(0)
+  minimum_inventory  Float           @default(0)
+  is_active          Boolean         @default(true)
+  uom                UnitOfMeasure   @default(PIEZAS)
+
+  inventory_transactions InventoryTransaction[]
+}
+
+model InventoryTransaction {
+  id          String   @id @default(uuid()) @db.Uuid
+  
+  item_id     String   @db.Uuid
+  item        Item     @relation(fields: [item_id], references: [id])
+  
+  user_id     String   @db.Uuid
+  user        User     @relation(fields: [user_id], references: [id])
+  
+  amount      Float    // Positivo para entradas, negativo para salidas
+  reason      String   // Texto libre
+  created_at  DateTime @default(now())
+}
+

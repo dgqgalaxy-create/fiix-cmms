@@ -69,6 +69,7 @@ export const updateWorkOrder = async (id: string, data: any) => {
     if (data.signature_delivery) formData.append('signature_delivery', data.signature_delivery);
     if (data.before_image) formData.append('before_image', data.before_image);
     if (data.after_image) formData.append('after_image', data.after_image);
+    if (data.used_items) formData.append('used_items', JSON.stringify(data.used_items));
 
     const response = await api.patch(`/work-orders/${id}`, formData);
     return response.data;

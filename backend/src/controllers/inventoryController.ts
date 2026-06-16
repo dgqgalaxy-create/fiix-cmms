@@ -1,0 +1,319 @@
+import { Request, Response } from 'express';
+import prisma from '../config/prisma';
+import { generateInventoryCode } from '../utils/codeGenerator';
+
+// ==========================================
+// ITEM CATEGORY
+// ==========================================
+export const getCategories = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const categories = await prisma.itemCategory.findMany();
+    res.json(categories);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener categorías' });
+  }
+};
+
+export const createCategory = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name, is_active } = req.body;
+    const internal_id = await generateInventoryCode('ItemCategory', 'CAT-', 3);
+    const category = await prisma.itemCategory.create({
+      data: { internal_id, name, is_active }
+    });
+    res.status(201).json(category);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al crear categoría' });
+  }
+};
+
+export const updateCategory = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const { name, is_active } = req.body;
+    const category = await prisma.itemCategory.update({
+      where: { id },
+      data: { name, is_active }
+    });
+    res.json(category);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al actualizar categoría' });
+  }
+};
+
+export const deleteCategory = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const itemsCount = await prisma.item.count({ where: { category_id: id } });
+    if (itemsCount > 0) {
+      res.status(400).json({ error: `No puedes eliminar esta categoría porque tiene ${itemsCount} repuesto(s) asociado(s). Reasígnalos primero.` });
+      return;
+    }
+    await prisma.itemCategory.delete({ where: { id } });
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar categoría' });
+  }
+};
+
+// ==========================================
+// ITEM LOCATION
+// ==========================================
+export const getLocations = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const locations = await prisma.itemLocation.findMany();
+    res.json(locations);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener ubicaciones' });
+  }
+};
+
+export const createLocation = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name, is_active } = req.body;
+    const internal_id = await generateInventoryCode('ItemLocation', 'LOC-', 3);
+    const location = await prisma.itemLocation.create({
+      data: { internal_id, name, is_active }
+    });
+    res.status(201).json(location);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al crear ubicación' });
+  }
+};
+
+export const updateLocation = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const { name, is_active } = req.body;
+    const location = await prisma.itemLocation.update({
+      where: { id },
+      data: { name, is_active }
+    });
+    res.json(location);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al actualizar ubicación' });
+  }
+};
+
+export const deleteLocation = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const itemsCount = await prisma.item.count({ where: { location_id: id } });
+    if (itemsCount > 0) {
+      res.status(400).json({ error: `No puedes eliminar esta ubicación porque tiene ${itemsCount} repuesto(s) asociado(s). Reasígnalos primero.` });
+      return;
+    }
+    await prisma.itemLocation.delete({ where: { id } });
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar ubicación' });
+  }
+};
+
+// ==========================================
+// VENDOR
+// ==========================================
+export const getVendors = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const vendors = await prisma.vendor.findMany();
+    res.json(vendors);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener proveedores' });
+  }
+};
+
+export const createVendor = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name, website_url, phone, email, address, is_active } = req.body;
+    const internal_id = await generateInventoryCode('Vendor', 'PROV-', 3);
+    const vendor = await prisma.vendor.create({
+      data: { internal_id, name, website_url, phone, email, address, is_active }
+    });
+    res.status(201).json(vendor);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al crear proveedor' });
+  }
+};
+
+export const updateVendor = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const { name, website_url, phone, email, address, is_active } = req.body;
+    const vendor = await prisma.vendor.update({
+      where: { id },
+      data: { name, website_url, phone, email, address, is_active }
+    });
+    res.json(vendor);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al actualizar proveedor' });
+  }
+};
+
+export const deleteVendor = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const itemsCount = await prisma.item.count({ where: { vendor_id: id } });
+    if (itemsCount > 0) {
+      res.status(400).json({ error: `No puedes eliminar este proveedor porque tiene ${itemsCount} repuesto(s) asociado(s). Reasígnalos primero.` });
+      return;
+    }
+    await prisma.vendor.delete({ where: { id } });
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar proveedor' });
+  }
+};
+
+// ==========================================
+// ITEM (REPUESTOS)
+// ==========================================
+export const getItems = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const items = await prisma.item.findMany({
+      include: {
+        category: true,
+        vendor: true,
+        location: true
+      }
+    });
+    res.json(items);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener repuestos' });
+  }
+};
+
+export const createItem = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { 
+      name, description, category_id, vendor_id, location_id,
+      purchase_cost, stock, minimum_inventory, is_active, uom
+    } = req.body;
+
+    const internal_code = await generateInventoryCode('Item', 'MTTO-', 4);
+
+    const itemData: any = {
+      internal_code,
+      name,
+      description,
+      purchase_cost: purchase_cost ? parseFloat(purchase_cost) : null,
+      stock: stock ? parseFloat(stock) : 0,
+      minimum_inventory: minimum_inventory ? parseFloat(minimum_inventory) : 0,
+      is_active: is_active === undefined ? true : (is_active === 'true' || is_active === true),
+      uom: uom || 'PIEZAS'
+    };
+
+    if (category_id) itemData.category = { connect: { id: category_id } };
+    if (vendor_id) itemData.vendor = { connect: { id: vendor_id } };
+    if (location_id) itemData.location = { connect: { id: location_id } };
+
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    if (files?.['image']) {
+      itemData.image_url = `/uploads/inventory/${files['image'][0].filename}`;
+    }
+
+    const newItem = await prisma.item.create({ data: itemData });
+    res.status(201).json(newItem);
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      res.status(400).json({ error: 'El internal_code ya existe' });
+      return;
+    }
+    res.status(500).json({ error: 'Error al crear repuesto' });
+  }
+};
+
+export const updateItem = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const { 
+      name, description, category_id, vendor_id, location_id,
+      purchase_cost, minimum_inventory, is_active, uom
+    } = req.body;
+
+    const itemData: any = {};
+    if (name) itemData.name = name;
+    if (description !== undefined) itemData.description = description || null;
+    if (purchase_cost !== undefined) itemData.purchase_cost = purchase_cost ? parseFloat(purchase_cost) : null;
+    if (minimum_inventory !== undefined) itemData.minimum_inventory = parseFloat(minimum_inventory);
+    if (is_active !== undefined) itemData.is_active = is_active === 'true' || is_active === true;
+    if (uom) itemData.uom = uom;
+
+    if (category_id) itemData.category = { connect: { id: category_id } };
+    if (vendor_id) itemData.vendor = { connect: { id: vendor_id } };
+    if (location_id) itemData.location = { connect: { id: location_id } };
+
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    if (files?.['image']) {
+      itemData.image_url = `/uploads/inventory/${files['image'][0].filename}`;
+    }
+
+    const updatedItem = await prisma.item.update({
+      where: { id },
+      data: itemData
+    });
+    res.json(updatedItem);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al actualizar repuesto' });
+  }
+};
+
+// ==========================================
+// TRANSACTIONS
+// ==========================================
+export const getTransactions = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const transactions = await prisma.inventoryTransaction.findMany({
+      include: {
+        item: true,
+        user: { select: { id: true, name: true, email: true } }
+      },
+      orderBy: { created_at: 'desc' }
+    });
+    res.json(transactions);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener transacciones' });
+  }
+};
+
+export const createTransaction = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { item_id, amount, reason } = req.body;
+    const user_id = (req as any).user.userId; // Tomamos el ID del usuario autenticado
+
+    const transactionAmount = parseFloat(amount);
+
+    if (!item_id || isNaN(transactionAmount) || !reason) {
+      res.status(400).json({ error: 'Faltan campos requeridos (item_id, amount, reason)' });
+      return;
+    }
+
+    // Usamos una transacción de Prisma para asegurar que el stock se descuente o sume de manera segura
+    const [transaction, item] = await prisma.$transaction(async (tx) => {
+      // 1. Crear el registro en el historial
+      const newTx = await tx.inventoryTransaction.create({
+        data: {
+          item_id,
+          user_id,
+          amount: transactionAmount,
+          reason
+        }
+      });
+
+      // 2. Actualizar el stock del Item
+      const updatedItem = await tx.item.update({
+        where: { id: item_id },
+        data: {
+          stock: {
+            increment: transactionAmount
+          }
+        }
+      });
+
+      return [newTx, updatedItem];
+    });
+
+    res.status(201).json({ transaction, stock_actual: item.stock });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al registrar transacción de inventario' });
+  }
+};

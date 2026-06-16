@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, RefreshCw, Clock, Wrench, AlertCircle, CheckCircle2, Search } from 'lucide-react';
+import { Plus, RefreshCw, Clock, Wrench, AlertCircle, CheckCircle2, Search, Download } from 'lucide-react';
 import { WorkOrdersTable } from '../components/WorkOrdersTable';
 import { CreateWorkOrderModal } from '../components/CreateWorkOrderModal';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
@@ -20,9 +20,57 @@ export const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   
-  const [activeTab, setActiveTab] = useState<'TODAS' | 'MIS_ORDENES' | 'PENDIENTES' | 'EN_PROCESO'>(
-    user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR' ? 'TODAS' : 'MIS_ORDENES'
+  const [activeTab, setActiveTab] = useState<'ACTIVAS' | 'MIS_ORDENES' | 'HISTORIAL'>(
+    user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR' ? 'ACTIVAS' : 'MIS_ORDENES'
   );
+
+  const [dateFilter, setDateFilter] = useState<string>('ALL');
+  const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
+  const [assetFilter, setAssetFilter] = useState<string>('ALL');
+
+  const uniqueAssets = Array.from(new Set(workOrders.map(wo => wo.asset?.name).filter(Boolean))) as string[];
+
+  const handleExportCSV = () => {
+    const list = getFilteredWorkOrders();
+    const headers = ['Folio', 'Titulo', 'Equipo', 'Zona', 'Prioridad', 'Estado', 'Fecha Creacion'];
+    const rows = list.map(wo => {
+      const folio = `WO-${(wo.folio || 0).toString().padStart(4, '0')}`;
+      const title = `"${wo.title?.replace(/"/g, '""') || ''}"`;
+      const asset = `"${wo.asset?.name?.replace(/"/g, '""') || ''}"`;
+      const zone = `"${wo.zone?.name?.replace(/"/g, '""') || ''}"`;
+      const priority = wo.priority || '';
+      const status = wo.status || '';
+      const date = new Date(wo.created_at).toLocaleDateString();
+      return [folio, title, asset, zone, priority, status, date].join(',');
+    });
+    
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `ordenes_trabajo_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleStatusClick = (status: string) => {
+    if (statusFilter === status) {
+      setStatusFilter(null);
+    } else {
+      setStatusFilter(status);
+      if (status === 'FINALIZADO') {
+        setActiveTab('HISTORIAL');
+      } else {
+        if (hasPermission('DELETE_WORK_ORDERS')) {
+          setActiveTab('ACTIVAS');
+        } else {
+          setActiveTab('MIS_ORDENES');
+        }
+      }
+    }
+  };
 
   const fetchWorkOrders = async () => {
     try {
@@ -78,24 +126,53 @@ export const Dashboard = () => {
   const getFilteredWorkOrders = () => {
     let list = workOrders;
 
-    if (activeTab === 'MIS_ORDENES') {
-      list = list.filter(wo => wo.assigned_technicians?.some(t => t.id === user?.userId || t.id === (user as any).id));
-    } else if (activeTab === 'PENDIENTES') {
-      if (hasPermission('DELETE_WORK_ORDERS')) {
-        list = list.filter(wo => wo.status === 'PENDIENTE');
-      } else {
-        list = list.filter(wo => !wo.assigned_technicians?.some(t => t.id === user?.userId || t.id === (user as any).id) && wo.status === 'PENDIENTE');
-      }
-    } else if (activeTab === 'EN_PROCESO') {
-      if (hasPermission('DELETE_WORK_ORDERS')) {
-        list = list.filter(wo => wo.status === 'EN_PROCESO' || wo.status === 'EN_ESPERA');
-      } else {
-        list = list.filter(wo => !wo.assigned_technicians?.some(t => t.id === user?.userId || t.id === (user as any).id) && (wo.status === 'EN_PROCESO' || wo.status === 'EN_ESPERA'));
-      }
+    if (activeTab === 'ACTIVAS') {
+      list = list.filter(wo => wo.status !== 'FINALIZADO' && wo.status !== 'ANULADO');
+    } else if (activeTab === 'MIS_ORDENES') {
+      list = list.filter(wo => wo.status !== 'FINALIZADO' && wo.status !== 'ANULADO' && wo.assigned_technicians?.some(t => t.id === user?.userId || t.id === (user as any).id));
+    } else if (activeTab === 'HISTORIAL') {
+      list = list.filter(wo => wo.status === 'FINALIZADO' || wo.status === 'ANULADO');
     }
 
     if (statusFilter) {
       list = list.filter(wo => wo.status === statusFilter);
+    }
+
+    if (priorityFilter !== 'ALL') {
+      list = list.filter(wo => wo.priority === priorityFilter);
+    }
+    
+    if (assetFilter !== 'ALL') {
+      list = list.filter(wo => wo.asset?.name === assetFilter);
+    }
+    
+    if (dateFilter !== 'ALL') {
+      const now = new Date();
+      list = list.filter(wo => {
+        const woDate = new Date(wo.created_at);
+        if (dateFilter === 'TODAY') {
+          return woDate.toDateString() === now.toDateString();
+        } else if (dateFilter === 'THIS_WEEK') {
+          const startOfWeek = new Date(now);
+          startOfWeek.setDate(now.getDate() - now.getDay());
+          startOfWeek.setHours(0,0,0,0);
+          return woDate >= startOfWeek;
+        } else if (dateFilter === 'LAST_WEEK') {
+          const startOfLastWeek = new Date(now);
+          startOfLastWeek.setDate(now.getDate() - now.getDay() - 7);
+          startOfLastWeek.setHours(0,0,0,0);
+          const endOfLastWeek = new Date(now);
+          endOfLastWeek.setDate(now.getDate() - now.getDay() - 1);
+          endOfLastWeek.setHours(23,59,59,999);
+          return woDate >= startOfLastWeek && woDate <= endOfLastWeek;
+        } else if (dateFilter === 'THIS_MONTH') {
+          return woDate.getMonth() === now.getMonth() && woDate.getFullYear() === now.getFullYear();
+        } else if (dateFilter === 'LAST_MONTH') {
+          const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          return woDate.getMonth() === lastMonth.getMonth() && woDate.getFullYear() === lastMonth.getFullYear();
+        }
+        return true;
+      });
     }
 
     if (searchTerm.trim() !== '') {
@@ -144,7 +221,7 @@ export const Dashboard = () => {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div 
-          onClick={() => setStatusFilter(statusFilter === 'PENDIENTE' ? null : 'PENDIENTE')}
+          onClick={() => handleStatusClick('PENDIENTE')}
           className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'PENDIENTE' ? 'ring-2 ring-amber-500 border-amber-500 shadow-md scale-[1.02]' : 'border-amber-100 shadow-sm shadow-amber-100/50 hover:shadow-md'}`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-amber-50 opacity-50 group-hover:scale-110 transition-transform">
@@ -157,7 +234,7 @@ export const Dashboard = () => {
         </div>
 
         <div 
-          onClick={() => setStatusFilter(statusFilter === 'EN_PROCESO' ? null : 'EN_PROCESO')}
+          onClick={() => handleStatusClick('EN_PROCESO')}
           className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'EN_PROCESO' ? 'ring-2 ring-blue-500 border-blue-500 shadow-md scale-[1.02]' : 'border-blue-100 shadow-sm shadow-blue-100/50 hover:shadow-md'}`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-blue-50 opacity-50 group-hover:scale-110 transition-transform">
@@ -170,7 +247,7 @@ export const Dashboard = () => {
         </div>
 
         <div 
-          onClick={() => setStatusFilter(statusFilter === 'EN_ESPERA' ? null : 'EN_ESPERA')}
+          onClick={() => handleStatusClick('EN_ESPERA')}
           className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'EN_ESPERA' ? 'ring-2 ring-red-500 border-red-500 shadow-md scale-[1.02]' : 'border-red-100 shadow-sm shadow-red-100/50 hover:shadow-md'}`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-red-50 opacity-50 group-hover:scale-110 transition-transform">
@@ -183,7 +260,7 @@ export const Dashboard = () => {
         </div>
 
         <div 
-          onClick={() => setStatusFilter(statusFilter === 'FINALIZADO' ? null : 'FINALIZADO')}
+          onClick={() => handleStatusClick('FINALIZADO')}
           className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'FINALIZADO' ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-md scale-[1.02]' : 'border-emerald-100 shadow-sm shadow-emerald-100/50 hover:shadow-md'}`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-emerald-50 opacity-50 group-hover:scale-110 transition-transform">
@@ -207,10 +284,10 @@ export const Dashboard = () => {
             <div className="flex flex-wrap gap-4">
               {hasPermission('DELETE_WORK_ORDERS') && (
                 <button 
-                  onClick={() => { setActiveTab('TODAS'); setStatusFilter(null); }}
-                  className={`pb-3 px-1 text-sm font-medium border-b-2 -mb-[17px] transition-colors ${activeTab === 'TODAS' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                  onClick={() => { setActiveTab('ACTIVAS'); setStatusFilter(null); }}
+                  className={`pb-3 px-1 text-sm font-medium border-b-2 -mb-[17px] transition-colors ${activeTab === 'ACTIVAS' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
                 >
-                  Todas
+                  Activas
                 </button>
               )}
               <button 
@@ -220,29 +297,69 @@ export const Dashboard = () => {
                 Mis Órdenes
               </button>
               <button 
-                onClick={() => { setActiveTab('PENDIENTES'); setStatusFilter(null); }}
-                className={`pb-3 px-1 text-sm font-medium border-b-2 -mb-[17px] transition-colors ${activeTab === 'PENDIENTES' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                onClick={() => { setActiveTab('HISTORIAL'); setStatusFilter(null); }}
+                className={`pb-3 px-1 text-sm font-medium border-b-2 -mb-[17px] transition-colors ${activeTab === 'HISTORIAL' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
               >
-                {hasPermission('DELETE_WORK_ORDERS') ? 'Pendientes' : 'Disponibles'}
-              </button>
-              <button 
-                onClick={() => { setActiveTab('EN_PROCESO'); setStatusFilter(null); }}
-                className={`pb-3 px-1 text-sm font-medium border-b-2 -mb-[17px] transition-colors ${activeTab === 'EN_PROCESO' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-              >
-                En Proceso
+                Historial
               </button>
             </div>
             
-            <div className="relative w-full md:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input 
-                type="text" 
-                placeholder="Buscar por equipo, folio, zona..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm"
-              />
+            <div className="relative w-full md:w-80 flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input 
+                  type="text" 
+                  placeholder="Buscar equipo, folio..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm"
+                />
+              </div>
+              <button
+                onClick={handleExportCSV}
+                title="Exportar a Excel (CSV)"
+                className="flex items-center justify-center p-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50 transition-colors shadow-sm"
+              >
+                <Download size={18} />
+              </button>
             </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3 mb-6 bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
+            >
+              <option value="ALL">Cualquier fecha</option>
+              <option value="TODAY">Hoy</option>
+              <option value="THIS_WEEK">Esta Semana</option>
+              <option value="LAST_WEEK">Semana Pasada</option>
+              <option value="THIS_MONTH">Este Mes</option>
+              <option value="LAST_MONTH">Mes Pasado</option>
+            </select>
+
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
+            >
+              <option value="ALL">Todas las prioridades</option>
+              <option value="URGENTE">Urgente</option>
+              <option value="NORMAL">Normal</option>
+              <option value="BAJO">Bajo</option>
+            </select>
+
+            <select
+              value={assetFilter}
+              onChange={(e) => setAssetFilter(e.target.value)}
+              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm max-w-[200px]"
+            >
+              <option value="ALL">Todos los equipos</option>
+              {uniqueAssets.map(asset => (
+                <option key={asset} value={asset}>{asset}</option>
+              ))}
+            </select>
           </div>
           
           <WorkOrdersTable 

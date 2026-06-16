@@ -9,6 +9,7 @@ import { UsersPage } from './pages/UsersPage';
 import { KPIPage } from './pages/KPIPage';
 import { PermissionsPage } from './pages/PermissionsPage';
 import { ZonesPage } from './pages/ZonesPage';
+import { InventoryPage } from './pages/InventoryPage';
 
 function App() {
   return (
@@ -39,6 +40,17 @@ function App() {
             } 
           />
           
+          <Route 
+            path="/inventory" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <InventoryPage />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+
           <Route 
             path="/users" 
             element={

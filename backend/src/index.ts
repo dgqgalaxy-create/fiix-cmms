@@ -21,6 +21,7 @@ import kpiRoutes from './routes/kpiRoutes';
 import permissionRoutes from './routes/permissionRoutes';
 import userRoutes from './routes/userRoutes';
 import zoneRoutes from './routes/zoneRoutes';
+import inventoryRoutes from './routes/inventoryRoutes';
 
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', message: 'CMMS API is running' });
@@ -34,6 +35,7 @@ app.use('/api/kpis', kpiRoutes);
 app.use('/api/permissions', permissionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/zones', zoneRoutes);
+app.use('/api/inventory', inventoryRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

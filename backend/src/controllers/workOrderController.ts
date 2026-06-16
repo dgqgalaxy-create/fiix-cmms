@@ -127,7 +127,7 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
 export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { title, description, asset_id, status, hold_reason, resolution_notes, assigned_technicians_ids, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group, signature_clean_area, signature_delivery } = req.body;
+    const { title, description, asset_id, status, hold_reason, resolution_notes, assigned_technicians_ids, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group, signature_clean_area, signature_delivery, used_items } = req.body;
     const userRole = req.user?.role;
     const userId = req.user?.userId;
 
@@ -197,6 +197,39 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
     
     if (status === 'FINALIZADO' && currentWorkOrder.status !== 'FINALIZADO') {
       updateData.completed_at = new Date();
+
+      // Parsear used_items si viene como string (ej. desde FormData)
+      let parsedUsedItems = used_items;
+      if (typeof used_items === 'string') {
+        try {
+          parsedUsedItems = JSON.parse(used_items);
+        } catch (e) {
+          parsedUsedItems = [];
+        }
+      }
+
+      // Descontar inventario si se enviaron repuestos usados
+      if (parsedUsedItems && Array.isArray(parsedUsedItems) && userId) {
+        for (const part of parsedUsedItems) {
+          if (part.item_id && part.amount) {
+            const amountToDeduct = Math.abs(Number(part.amount));
+            // 1. Crear transacción de salida
+            await prisma.inventoryTransaction.create({
+              data: {
+                item_id: part.item_id,
+                user_id: userId,
+                amount: -amountToDeduct,
+                reason: `Consumo OT WO-${currentWorkOrder.folio.toString().padStart(4, '0')}`
+              }
+            });
+            // 2. Descontar del stock
+            await prisma.item.update({
+              where: { id: part.item_id },
+              data: { stock: { decrement: amountToDeduct } }
+            });
+          }
+        }
+      }
     }
 
     if (status === 'EN_PROCESO' && currentWorkOrder.status !== 'EN_PROCESO') {
