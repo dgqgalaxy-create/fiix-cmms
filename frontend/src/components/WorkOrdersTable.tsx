@@ -76,6 +76,11 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
                     URGENTE
                   </span>
                 )}
+                {wo.maintenance_plan_id && (
+                  <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[10px] font-bold border border-purple-200">
+                    AUTOMÁTICO
+                  </span>
+                )}
               </div>
               <div className="flex-shrink-0">
                 {getStatusBadge(wo.status)}
@@ -135,6 +140,11 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
                         {wo.priority === 'URGENTE' && (
                           <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold border border-red-200">
                             URGENTE
+                          </span>
+                        )}
+                        {wo.maintenance_plan_id && (
+                          <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-bold border border-purple-200" title="Generado automáticamente por un Plan Preventivo">
+                            AUTOMÁTICO
                           </span>
                         )}
                         <div className="font-medium text-slate-900">{wo.title}</div>

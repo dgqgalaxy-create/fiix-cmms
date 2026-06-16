@@ -42,6 +42,7 @@ export interface WorkOrder {
   signature_clean_area?: string;
   signature_delivery?: string;
   resolution_notes?: string;
+  maintenance_plan_id?: string;
 }
 
 export const getWorkOrders = async (): Promise<WorkOrder[]> => {

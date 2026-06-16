@@ -101,3 +101,90 @@ export const updateGoals = async (req: AuthRequest, res: Response): Promise<void
     res.status(500).json({ error: 'Error al actualizar metas' });
   }
 };
+
+export const getChartData = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const now = new Date();
+    
+    // Generate an array of the last 6 months (e.g. ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'])
+    const months: { label: string; year: number; month: number }[] = [];
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        label: monthNames[d.getMonth()],
+        year: d.getFullYear(),
+        month: d.getMonth()
+      });
+    }
+
+    const startDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+    // Fetch relevant data
+    const workOrders = await prisma.workOrder.findMany({
+      where: {
+        created_at: { gte: startDate }
+      }
+    });
+
+    const inventoryTransactions = await prisma.inventoryTransaction.findMany({
+      where: {
+        created_at: { gte: startDate },
+        amount: { lt: 0 },
+        reason: { contains: 'Consumo OT' }
+      },
+      include: { item: true }
+    });
+
+    const totalAssets = await prisma.asset.count({ where: { status: 'OPERATIVO' } });
+
+    // Grouping data by month
+    const chartData = months.map(m => {
+      // Filter work orders for this month
+      const monthWOs = workOrders.filter(wo => {
+        const d = new Date(wo.created_at);
+        return d.getFullYear() === m.year && d.getMonth() === m.month;
+      });
+
+      // Filter transactions for this month
+      const monthTx = inventoryTransactions.filter(tx => {
+        const d = new Date(tx.created_at);
+        return d.getFullYear() === m.year && d.getMonth() === m.month;
+      });
+
+      // Calculate Costs
+      const costs = monthTx.reduce((sum, tx) => {
+        const costPerUnit = tx.item.purchase_cost || 0;
+        return sum + (Math.abs(tx.amount) * costPerUnit);
+      }, 0);
+
+      // Calculate MTTR (Horas)
+      const finalizedWOs = monthWOs.filter(wo => wo.status === 'FINALIZADO');
+      const mttrMs = finalizedWOs.length > 0 
+        ? finalizedWOs.reduce((sum, wo) => sum + wo.accumulated_time_ms, 0) / finalizedWOs.length
+        : 0;
+      const mttrHours = mttrMs / 3600000;
+
+      // Calculate MTBF (Horas)
+      // Estimate: (Total Hours in Month * Total Assets) / Number of CORRECTIVO WOs
+      const daysInMonth = new Date(m.year, m.month + 1, 0).getDate();
+      const totalOperationalHours = daysInMonth * 24 * totalAssets;
+      const correctiveWOs = monthWOs.filter(wo => wo.maintenance_type === 'CORRECTIVO').length;
+      
+      const mtbfHours = correctiveWOs > 0 ? (totalOperationalHours / correctiveWOs) : totalOperationalHours; // Si no hay correctivos, el MTBF es todo el mes
+
+      return {
+        month: m.label,
+        costos: Number(costs.toFixed(2)),
+        mttr: Number(mttrHours.toFixed(2)),
+        mtbf: Number(mtbfHours.toFixed(2))
+      };
+    });
+
+    res.json(chartData);
+  } catch (error) {
+    console.error('Error fetching chart data:', error);
+    res.status(500).json({ error: 'Error al calcular datos para gráficos' });
+  }
+};

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield, X, Package } from 'lucide-react';
+import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield, X, Package, CalendarClock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
@@ -11,6 +11,10 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     { name: 'Activos', path: '/assets', icon: <Database size={20} /> },
     { name: 'Inventario', path: '/inventory', icon: <Package size={20} /> },
   ];
+
+  if (hasPermission('MANAGE_MAINTENANCE_PLANS')) {
+    navItems.push({ name: 'Planes Preventivos', path: '/maintenance-plans', icon: <CalendarClock size={20} /> });
+  }
 
   if (hasPermission('MANAGE_ZONES')) {
     navItems.push({ name: 'Zonas', path: '/zones', icon: <MapPin size={20} /> });

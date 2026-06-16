@@ -60,6 +60,13 @@ enum UnitOfMeasure {
   OTROS
 }
 
+enum FrequencyType {
+  DIAS
+  SEMANAS
+  MESES
+  ANUAL
+}
+
 model User {
   id              String      @id @default(uuid()) @db.Uuid
   name            String
@@ -104,6 +111,7 @@ model Asset {
   zone            Zone?       @relation(fields: [zone_id], references: [id])
 
   work_orders     WorkOrder[]
+  maintenance_plans MaintenancePlan[]
 }
 
 model WorkOrder {
@@ -146,6 +154,9 @@ model WorkOrder {
   created_at       DateTime        @default(now())
   updated_at       DateTime        @updatedAt
   completed_at     DateTime?
+
+  maintenance_plan_id String?      @db.Uuid
+  maintenance_plan    MaintenancePlan? @relation("GeneratedOrders", fields: [maintenance_plan_id], references: [id])
 }
 
 model KPIGoal {
@@ -220,6 +231,7 @@ model Item {
   uom                UnitOfMeasure   @default(PIEZAS)
 
   inventory_transactions InventoryTransaction[]
+  maintenance_plans      PlanItem[]
 }
 
 model InventoryTransaction {
@@ -236,3 +248,37 @@ model InventoryTransaction {
   created_at  DateTime @default(now())
 }
 
+model MaintenancePlan {
+  id                String          @id @default(uuid()) @db.Uuid
+  title             String
+  description       String?
+  
+  asset_id          String          @db.Uuid
+  asset             Asset           @relation(fields: [asset_id], references: [id])
+  
+  frequency_type    FrequencyType
+  frequency_value   Int             
+  
+  last_triggered_at DateTime?
+  next_due_date     DateTime
+  days_in_advance   Int             @default(3)
+  
+  is_active         Boolean         @default(true)
+  
+  created_at        DateTime        @default(now())
+  updated_at        DateTime        @updatedAt
+
+  generated_orders  WorkOrder[]     @relation("GeneratedOrders")
+  required_items    PlanItem[]      
+}
+
+model PlanItem {
+  id                  String          @id @default(uuid()) @db.Uuid
+  maintenance_plan_id String          @db.Uuid
+  maintenance_plan    MaintenancePlan @relation(fields: [maintenance_plan_id], references: [id], onDelete: Cascade)
+  
+  item_id             String          @db.Uuid
+  item                Item            @relation(fields: [item_id], references: [id])
+  
+  quantity_required   Float
+}

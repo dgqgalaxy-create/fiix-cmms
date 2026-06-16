@@ -22,6 +22,8 @@ import permissionRoutes from './routes/permissionRoutes';
 import userRoutes from './routes/userRoutes';
 import zoneRoutes from './routes/zoneRoutes';
 import inventoryRoutes from './routes/inventoryRoutes';
+import maintenanceRoutes from './routes/maintenanceRoutes';
+import { initCronJobs } from './utils/cronJobs';
 
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', message: 'CMMS API is running' });
@@ -36,6 +38,10 @@ app.use('/api/permissions', permissionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/zones', zoneRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/maintenance', maintenanceRoutes);
+
+// Initialize Cron Jobs
+initCronJobs();
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

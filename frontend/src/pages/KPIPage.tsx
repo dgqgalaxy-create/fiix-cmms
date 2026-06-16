@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { getKPIs, updateKPIGoals } from '../api/kpis';
-import type { KPIResponse, KPIMetric } from '../api/kpis';
+import { getKPIs, updateKPIGoals, getChartData } from '../api/kpis';
+import type { KPIResponse, KPIMetric, ChartData } from '../api/kpis';
 import { useAuth } from '../context/AuthContext';
-import { Target, TrendingUp, Clock, AlertTriangle, CheckCircle, Database, Settings } from 'lucide-react';
+import { Target, TrendingUp, Clock, AlertTriangle, CheckCircle, Database, Settings, BarChart2 } from 'lucide-react';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export const KPIPage = () => {
   const { user, hasPermission } = useAuth();
   const [data, setData] = useState<KPIResponse | null>(null);
+  const [charts, setCharts] = useState<ChartData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -16,8 +18,12 @@ export const KPIPage = () => {
   const fetchKPIs = async () => {
     try {
       setIsLoading(true);
-      const res = await getKPIs();
+      const [res, chartRes] = await Promise.all([
+        getKPIs(),
+        getChartData()
+      ]);
       setData(res);
+      setCharts(chartRes);
       
       // Init form
       setGoalsForm({
@@ -220,6 +226,77 @@ export const KPIPage = () => {
           "%"
         )}
       </div>
+
+      {charts.length > 0 && (
+        <div className="mt-12 grid grid-cols-1 xl:grid-cols-2 gap-8">
+          {/* Gráfico de Costos */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex items-center gap-2 mb-6">
+              <BarChart2 className="text-indigo-600" size={24} />
+              <h2 className="text-lg font-bold text-slate-800">Costos de Mantenimiento</h2>
+            </div>
+            <div className="h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={charts}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dx={-10} tickFormatter={(val) => `$${val}`} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    formatter={(val: number) => [`$${val.toFixed(2)}`, 'Costo']}
+                  />
+                  <Line type="monotone" dataKey="costos" stroke="#4f46e5" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Gráfico MTBF */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex items-center gap-2 mb-6">
+              <TrendingUp className="text-emerald-600" size={24} />
+              <h2 className="text-lg font-bold text-slate-800">MTBF (Tiempo Medio Entre Fallas)</h2>
+            </div>
+            <div className="h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={charts}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dx={-10} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    formatter={(val: number) => [`${val.toFixed(1)} hrs`, 'MTBF']}
+                  />
+                  <Line type="monotone" dataKey="mtbf" stroke="#059669" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Gráfico MTTR */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm xl:col-span-2">
+            <div className="flex items-center gap-2 mb-6">
+              <Clock className="text-amber-500" size={24} />
+              <h2 className="text-lg font-bold text-slate-800">MTTR (Tiempo Medio de Reparación)</h2>
+            </div>
+            <div className="h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={charts} barSize={40}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dx={-10} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    formatter={(val: number) => [`${val.toFixed(1)} hrs`, 'MTTR']}
+                    cursor={{ fill: '#f1f5f9' }}
+                  />
+                  <Bar dataKey="mttr" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

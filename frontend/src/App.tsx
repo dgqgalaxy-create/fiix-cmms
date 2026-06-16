@@ -10,6 +10,7 @@ import { KPIPage } from './pages/KPIPage';
 import { PermissionsPage } from './pages/PermissionsPage';
 import { ZonesPage } from './pages/ZonesPage';
 import { InventoryPage } from './pages/InventoryPage';
+import { MaintenancePlansPage } from './pages/MaintenancePlansPage';
 
 function App() {
   return (
@@ -46,6 +47,17 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <InventoryPage />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/maintenance-plans" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <MaintenancePlansPage />
                 </Layout>
               </ProtectedRoute>
             } 

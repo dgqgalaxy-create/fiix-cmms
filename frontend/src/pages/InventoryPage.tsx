@@ -196,7 +196,11 @@ export const InventoryPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {transactions.filter(t => !searchTerm || (t.item?.name || '').toLowerCase().includes(searchTerm.toLowerCase())).map((tx) => (
+                  {transactions.filter(t => !searchTerm || 
+                    (t.item?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    (t.user?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    (t.reason || '').toLowerCase().includes(searchTerm.toLowerCase())
+                  ).map((tx) => (
                     <tr 
                       key={tx.id} 
                       className="hover:bg-slate-50/50 transition-colors cursor-pointer"

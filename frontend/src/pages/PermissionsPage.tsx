@@ -14,6 +14,7 @@ const AVAILABLE_PERMISSIONS = [
   { key: 'CREATE_WORK_ORDERS', label: 'Crear Órdenes', description: 'Generar nuevas solicitudes de mantenimiento.' },
   { key: 'EDIT_WORK_ORDERS', label: 'Editar Órdenes', description: 'Modificar estado y detalles de una orden.' },
   { key: 'DELETE_WORK_ORDERS', label: 'Eliminar Órdenes', description: 'Anular o eliminar permanentemente órdenes de trabajo.' },
+  { key: 'MANAGE_MAINTENANCE_PLANS', label: 'Mantenimiento Preventivo', description: 'Crear y editar planes de mantenimiento preventivo.' },
   { key: 'MANAGE_PERMISSIONS', label: 'Administrar Permisos', description: 'Acceso a esta pantalla de configuración.' },
 ];
 
