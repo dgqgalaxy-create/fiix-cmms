@@ -16,6 +16,11 @@ Un Sistema Computarizado de Gestión de Mantenimiento (CMMS / GMAO) de clase mun
 5. **Inventario de Repuestos:** Control de refacciones (Categorías, Ubicaciones, Proveedores).
 6. **Módulo de Reabastecimiento:** Alertas de stock crítico, paginación masiva, y generador automatizado de Órdenes de Compra en formato texto. Búsqueda inteligente de imágenes de refacciones en internet.
 
+## Estrategia de Migración de Datos (Día Cero)
+Existe una carpeta `data/` que almacena los archivos `.csv` exportados del sistema anterior (Fiix). Estos archivos alimentan al script migrador (`backend/src/seed_csv.ts`).
+**AVISO CRÍTICO PARA FUTURAS MIGRACIONES:**
+Faltan integrar los archivos base para migrar el **historial de Órdenes de Mantenimiento (Work Orders)**. Cuando el usuario provea estos archivos, se deberá alinear exhaustivamente el formato y las cabeceras del `.csv` para que sean 100% compatibles con el esquema de la base de datos actual antes de importarlos.
+
 ## Tecnologías
 - **Frontend:** React, TypeScript, TailwindCSS, Vite, Lucide React (Íconos).
 - **Backend:** Node.js, Express, TypeScript, Prisma ORM, PostgreSQL.

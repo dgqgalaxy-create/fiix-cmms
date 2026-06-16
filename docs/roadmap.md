@@ -18,6 +18,7 @@ Este documento contiene la lista de módulos y características pendientes de de
 - [ ] Alimentación automática del inventario al marcar un PO como "Recibido".
 
 ## [ ] Mejoras Transversales Futuras (Backlog)
+- [ ] **Migración de Órdenes de Mantenimiento:** Alinear el esquema y agregar la funcionalidad al `seed_csv.ts` para poder importar el historial de órdenes de mantenimiento de Fiix cuando se provean los archivos base.
 - [ ] **Checklists avanzados:** Pasos obligatorios dentro de la Orden de Trabajo (Ej. `[ ] Engrasar motor`).
 - [ ] **Notificaciones Push/Email:** Avisar al técnico de nuevas órdenes asignadas.
 - [ ] **Control de Medidores:** Registro histórico de horómetros de maquinaria.
