@@ -92,7 +92,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
               className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
             >
               <Info size={14} />
-              v1.1.0 - Info del Sistema
+              v1.2.0 - Info del Sistema
             </button>
           </div>
         </div>
