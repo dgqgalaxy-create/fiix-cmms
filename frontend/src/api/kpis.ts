@@ -74,6 +74,7 @@ export interface FailureOrder {
   created_at: string;
   status: string;
   accumulated_time_ms: number;
+  zone?: { name: string };
 }
 
 export const getAssetFailureOrders = async (assetId: string, period?: string): Promise<FailureOrder[]> => {

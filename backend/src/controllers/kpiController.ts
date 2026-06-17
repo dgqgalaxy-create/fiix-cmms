@@ -60,7 +60,10 @@ export const getAssetFailureOrders = async (req: AuthRequest, res: Response): Pr
         title: true,
         created_at: true,
         status: true,
-        accumulated_time_ms: true
+        accumulated_time_ms: true,
+        zone: {
+          select: { name: true }
+        }
       },
       orderBy: { created_at: 'desc' }
     });
