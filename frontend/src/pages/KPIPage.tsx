@@ -362,7 +362,7 @@ export const KPIPage = () => {
                   <strong className="block mb-1">Criterios de Reincidencia:</strong>
                   <ul className="list-disc pl-4 space-y-0.5">
                     <li>Es una falla Correctiva.</li>
-                    <li>Ocurre en el mismo equipo.</li>
+                    <li>Ocurre en el mismo equipo y la <strong>misma zona</strong>.</li>
                     <li>Se reportó a menos de <strong>3 días</strong> de haberse cerrado una reparación anterior.</li>
                   </ul>
                 </div>

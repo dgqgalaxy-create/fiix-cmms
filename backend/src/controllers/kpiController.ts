@@ -190,6 +190,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
       const previousFailure = await prisma.workOrder.findFirst({
         where: {
           asset_id: order.asset_id,
+          zone_id: order.zone_id ? order.zone_id : null,
           maintenance_type: 'CORRECTIVO',
           status: 'FINALIZADO',
           id: { not: order.id },
