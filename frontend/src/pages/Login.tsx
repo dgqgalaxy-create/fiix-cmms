@@ -33,11 +33,13 @@ export const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-900 p-4">
       <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-xl border border-slate-100 relative z-10">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-50 text-blue-800 mb-4 shadow-inner">
-            <Lock size={32} strokeWidth={1.5} />
-          </div>
-          <h1 className="text-3xl font-bold text-blue-900">
-            LPET CMMS
+          <img 
+            src="/lpet.png" 
+            alt="LPET Logo" 
+            className="mx-auto h-20 md:h-24 object-contain mb-4"
+          />
+          <h1 className="text-3xl font-bold text-slate-800">
+            CMMS
           </h1>
           <p className="text-slate-500 mt-2">Inicia sesión para gestionar el mantenimiento</p>
         </div>

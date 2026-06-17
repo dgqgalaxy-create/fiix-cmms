@@ -20,13 +20,14 @@ export interface KPIResponse {
   };
 }
 
-export const getKPIs = async (): Promise<KPIResponse> => {
-  const { data } = await api.get('/kpis');
-  return data;
+export const getKPIs = async (period?: string): Promise<KPIResponse> => {
+  const query = period ? `?period=${period}` : '';
+  const response = await api.get(`/kpis${query}`);
+  return response.data;
 };
 
-export const updateKPIGoals = async (goals: { metricKey: string; targetValue: number; unit: string }[]): Promise<void> => {
-  await api.put('/kpis/goals', { goals });
+export const updateKPIGoals = async (goals: { metricKey: string; targetValue: number; unit?: string }[]): Promise<void> => {
+  await api.post('/kpis/goals', { goals });
 };
 
 export interface ChartData {
@@ -36,7 +37,20 @@ export interface ChartData {
   mtbf: number;
 }
 
-export const getChartData = async (): Promise<ChartData[]> => {
-  const { data } = await api.get('/kpis/charts');
-  return data;
+export const getChartData = async (period?: string): Promise<ChartData[]> => {
+  const query = period ? `?period=${period}` : '';
+  const response = await api.get(`/kpis/charts${query}`);
+  return response.data;
+};
+
+export interface AssetCostData {
+  assetId: string;
+  assetName: string;
+  totalCost: number;
+}
+
+export const getCostsByAsset = async (period?: string): Promise<AssetCostData[]> => {
+  const query = period ? `?period=${period}` : '';
+  const response = await api.get(`/kpis/costs-by-asset${query}`);
+  return response.data;
 };

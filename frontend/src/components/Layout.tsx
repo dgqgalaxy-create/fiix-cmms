@@ -18,7 +18,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       )}
 
       {/* Mobile Header */}
-      <header className="fixed top-0 left-0 right-0 h-14 bg-slate-900 text-white flex items-center justify-between px-4 z-30 md:hidden border-b border-slate-800">
+      <header className="print:hidden fixed top-0 left-0 right-0 h-14 bg-slate-900 text-white flex items-center justify-between px-4 z-30 md:hidden border-b border-slate-800">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setIsSidebarOpen(true)}
@@ -32,7 +32,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       </header>
 
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      <div className="flex-1 md:ml-64 p-4 md:p-8 overflow-y-auto h-screen pt-20 md:pt-8 relative">
+      <div className="flex-1 md:ml-64 p-4 md:p-8 overflow-y-auto h-screen pt-20 md:pt-8 relative print:ml-0 print:p-0 print:h-auto print:overflow-visible print:pt-0">
         <div className="max-w-6xl mx-auto">
           {children}
         </div>
@@ -40,7 +40,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
         {/* Floating Action Button for Scanner */}
         <button
           onClick={() => setIsScannerOpen(true)}
-          className="fixed bottom-6 right-6 md:bottom-10 md:right-10 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 transition-colors z-30 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-indigo-500/30"
+          className="print:hidden fixed bottom-6 right-6 md:bottom-10 md:right-10 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 transition-colors z-30 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-indigo-500/30"
           title="Escáner Inteligente QR"
         >
           <Camera size={24} />

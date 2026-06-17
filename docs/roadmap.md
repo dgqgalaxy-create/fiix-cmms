@@ -2,15 +2,15 @@
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 
-## [ ] Módulo 7: Mantenimiento Preventivo (PMs)
-- [ ] Crear interfaz para definir "Rutinas de Mantenimiento" o plantillas.
-- [ ] Implementar disparadores basados en tiempo (ej. cada 30 días) o medidores.
-- [ ] Tarea en el servidor (Cron Job) que revise diariamente qué mantenimientos deben generarse y los cree como Órdenes de Trabajo automáticamente.
+## [x] Módulo 7: Mantenimiento Preventivo (PMs)
+- [x] Crear interfaz para definir "Rutinas de Mantenimiento" o plantillas.
+- [x] Implementar disparadores basados en tiempo (ej. cada 30 días) o medidores.
+- [x] Tarea en el servidor (Cron Job) que revise diariamente qué mantenimientos deben generarse y los cree como Órdenes de Trabajo automáticamente.
 
-## [ ] Módulo 8: Analíticas y Reportes Gráficos (Dashboard Avanzado)
-- [ ] Gráficas de Tiempo Medio de Reparación (MTTR) y Tiempo Medio Entre Fallas (MTBF).
-- [ ] Reportes de Costos de Mantenimiento desglosados por Máquina y por Fecha.
-- [ ] Exportación de reportes gerenciales en PDF/Excel.
+## [x] Módulo 8: Analíticas y Reportes Gráficos (Dashboard Avanzado)
+- [x] Gráficas de Tiempo Medio de Reparación (MTTR) y Tiempo Medio Entre Fallas (MTBF).
+- [x] Reportes de Costos de Mantenimiento desglosados por Máquina y por Fecha.
+- [x] Exportación de reportes gerenciales en PDF/Excel.
 
 ## [ ] Módulo 9: Sistema Integral de Órdenes de Compra (POs)
 - [ ] Convertir la actual "Lista de compras .txt" en Órdenes de Compra digitales reales guardadas en la base de datos.

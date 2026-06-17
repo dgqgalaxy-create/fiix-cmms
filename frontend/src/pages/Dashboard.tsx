@@ -60,6 +60,10 @@ export const Dashboard = () => {
     document.body.removeChild(link);
   };
 
+  const handleExportPDF = () => {
+    window.print();
+  };
+
   const handleStatusClick = (status: string) => {
     if (statusFilter === status) {
       setStatusFilter(null);
@@ -199,7 +203,19 @@ export const Dashboard = () => {
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      {/* Encabezado exclusivo para impresión */}
+      <div className="hidden print:flex justify-between items-end border-b-2 border-slate-800 pb-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Reporte de Órdenes de Trabajo</h1>
+          <p className="text-slate-500 mt-1">LPET CMMS - Listado y Resumen</p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-bold text-slate-700">Fecha de Generación:</p>
+          <p className="text-slate-500 text-sm">{new Date().toLocaleDateString()}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 print:hidden">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Órdenes de Trabajo</h1>
           <p className="text-slate-500 mt-1">Gestiona y haz seguimiento del mantenimiento.</p>
@@ -226,10 +242,10 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      <div className={`grid grid-cols-2 md:grid-cols-${hasPermission('VIEW_INVENTORY') ? '5' : '4'} gap-3 sm:gap-4 mb-6 sm:mb-8`}>
+      <div className={`grid grid-cols-2 md:grid-cols-${hasPermission('VIEW_INVENTORY') ? '5' : '4'} print:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8`}>
         <div 
           onClick={() => handleStatusClick('PENDIENTE')}
-          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'PENDIENTE' ? 'ring-2 ring-amber-500 border-amber-500 shadow-md scale-[1.02]' : 'border-amber-100 shadow-sm shadow-amber-100/50 hover:shadow-md'}`}
+          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'PENDIENTE' ? 'ring-2 ring-amber-500 border-amber-500 shadow-md scale-[1.02]' : 'border-amber-100 shadow-sm shadow-amber-100/50 hover:shadow-md'}`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-amber-50 opacity-50 group-hover:scale-110 transition-transform">
              <Clock className="w-14 h-14 sm:w-20 sm:h-20" />
@@ -242,7 +258,7 @@ export const Dashboard = () => {
 
         <div 
           onClick={() => handleStatusClick('EN_PROCESO')}
-          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'EN_PROCESO' ? 'ring-2 ring-blue-500 border-blue-500 shadow-md scale-[1.02]' : 'border-blue-100 shadow-sm shadow-blue-100/50 hover:shadow-md'}`}
+          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'EN_PROCESO' ? 'ring-2 ring-blue-500 border-blue-500 shadow-md scale-[1.02]' : 'border-blue-100 shadow-sm shadow-blue-100/50 hover:shadow-md'}`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-blue-50 opacity-50 group-hover:scale-110 transition-transform">
              <Wrench className="w-14 h-14 sm:w-20 sm:h-20" />
@@ -255,7 +271,7 @@ export const Dashboard = () => {
 
         <div 
           onClick={() => handleStatusClick('EN_ESPERA')}
-          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'EN_ESPERA' ? 'ring-2 ring-purple-500 border-purple-500 shadow-md scale-[1.02]' : 'border-purple-100 shadow-sm shadow-purple-100/50 hover:shadow-md'}`}
+          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'EN_ESPERA' ? 'ring-2 ring-purple-500 border-purple-500 shadow-md scale-[1.02]' : 'border-purple-100 shadow-sm shadow-purple-100/50 hover:shadow-md'}`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-purple-50 opacity-50 group-hover:scale-110 transition-transform">
              <AlertCircle className="w-14 h-14 sm:w-20 sm:h-20" />
@@ -268,7 +284,7 @@ export const Dashboard = () => {
 
         <div 
           onClick={() => handleStatusClick('FINALIZADO')}
-          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group ${statusFilter === 'FINALIZADO' ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-md scale-[1.02]' : 'border-emerald-100 shadow-sm shadow-emerald-100/50 hover:shadow-md'}`}
+          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'FINALIZADO' ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-md scale-[1.02]' : 'border-emerald-100 shadow-sm shadow-emerald-100/50 hover:shadow-md'}`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-emerald-50 opacity-50 group-hover:scale-110 transition-transform">
              <CheckCircle2 className="w-14 h-14 sm:w-20 sm:h-20" />
@@ -282,7 +298,7 @@ export const Dashboard = () => {
         {hasPermission('VIEW_INVENTORY') && invSummary && (
           <div 
             onClick={() => navigate('/inventory?filter=low_stock')}
-            className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group border-rose-100 shadow-sm shadow-rose-100/50 hover:shadow-md col-span-2 md:col-span-1`}
+            className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group border-rose-100 shadow-sm shadow-rose-100/50 hover:shadow-md col-span-2 md:col-span-1 print:hidden`}
           >
             <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-rose-50 opacity-50 group-hover:scale-110 transition-transform">
                <AlertCircle className="w-14 h-14 sm:w-20 sm:h-20" />
@@ -308,7 +324,7 @@ export const Dashboard = () => {
         </div>
       ) : (
         <>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 border-b border-slate-200 pb-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 border-b border-slate-200 pb-4 print:hidden">
             <div className="flex flex-wrap gap-4">
               {hasPermission('DELETE_WORK_ORDERS') && (
                 <button 
@@ -332,8 +348,8 @@ export const Dashboard = () => {
               </button>
             </div>
             
-            <div className="relative w-full md:w-80 flex gap-2">
-              <div className="relative flex-1">
+            <div className="relative w-full md:w-auto flex flex-col md:flex-row gap-2">
+              <div className="relative flex-1 min-w-[240px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
                   type="text" 
@@ -343,17 +359,28 @@ export const Dashboard = () => {
                   className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm"
                 />
               </div>
-              <button
-                onClick={handleExportCSV}
-                title="Exportar a Excel (CSV)"
-                className="flex items-center justify-center p-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50 transition-colors shadow-sm"
-              >
-                <Download size={18} />
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleExportCSV}
+                  title="Exportar a Excel (CSV)"
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50 transition-colors shadow-sm text-sm font-medium"
+                >
+                  <Download size={16} />
+                  CSV
+                </button>
+                <button
+                  onClick={handleExportPDF}
+                  title="Exportar a PDF"
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors shadow-sm text-sm font-medium"
+                >
+                  <Download size={16} />
+                  PDF
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3 mb-6 bg-slate-50 p-3 rounded-xl border border-slate-100">
+          <div className="flex flex-wrap gap-3 mb-6 bg-slate-50 p-3 rounded-xl border border-slate-100 print:hidden">
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
