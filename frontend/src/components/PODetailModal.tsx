@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Calendar, Package, ArrowRight, Loader2, CheckCircle2, User, Building2 } from 'lucide-react';
+import { X, Calendar, Package, ArrowRight, Loader2, CheckCircle2, User, Building2, Printer } from 'lucide-react';
 import { type PurchaseOrder, updatePurchaseOrderStatus } from '../api/purchaseOrders';
 import { useAuth } from '../context/AuthContext';
 
@@ -164,12 +164,20 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
           </div>
         </div>
 
-        <div className="p-6 border-t border-slate-100 bg-white flex flex-wrap justify-end gap-3">
+        <div className="p-6 border-t border-slate-100 bg-white flex flex-wrap justify-end gap-3 print:hidden">
+          <button 
+            onClick={() => window.print()}
+            className="flex items-center gap-2 px-5 py-2.5 text-indigo-700 font-bold hover:bg-indigo-50 border border-indigo-200 rounded-xl transition-colors mr-auto"
+          >
+            <Printer size={18} />
+            Descargar PDF / Imprimir
+          </button>
+
           {order.status !== 'RECIBIDA' && order.status !== 'CANCELADA' && (
             <button 
               onClick={() => handleUpdateStatus('CANCELADA')}
               disabled={isSubmitting}
-              className="px-5 py-2.5 text-red-600 font-medium hover:bg-red-50 rounded-xl transition-colors mr-auto"
+              className="px-5 py-2.5 text-red-600 font-medium hover:bg-red-50 rounded-xl transition-colors"
             >
               Cancelar Orden
             </button>
@@ -211,6 +219,80 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
               {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : 'Recibir y Sumar a Inventario'}
             </button>
           )}
+        </div>
+      </div>
+
+      {/* --- PRINTABLE FORMAT (HIDDEN ON SCREEN) --- */}
+      <div className="hidden print:block fixed inset-0 z-[100000] bg-white p-8 w-full h-full text-black">
+        <div className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-start">
+          <div className="flex items-center gap-4">
+            <img src="/lpet.png" alt="Logo" className="h-16 object-contain" />
+            <div>
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight">ORDEN DE COMPRA</h1>
+              <p className="text-slate-500 font-medium">Departamento de Mantenimiento</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-bold text-indigo-700 mb-1">PO-{order.folio.toString().padStart(4, '0')}</p>
+            <p className="text-sm text-slate-500">Fecha: {new Date(order.created_at).toLocaleDateString()}</p>
+            <p className="text-sm font-bold mt-2 px-3 py-1 bg-slate-100 rounded-lg inline-block">Estado: {order.status}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-12 mb-10">
+          <div>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-200 pb-1">Datos del Proveedor</h3>
+            <p className="font-bold text-lg text-slate-800 mb-1">{order.vendor?.name}</p>
+            <p className="text-sm text-slate-600">Contacto principal</p>
+          </div>
+          <div>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-200 pb-1">Detalles de Entrega</h3>
+            <p className="font-bold text-slate-800">Fecha Esperada: {order.expected_date ? new Date(order.expected_date).toLocaleDateString() : 'A convenir'}</p>
+            <p className="text-sm text-slate-600 mt-1">Solicitado por: {order.created_by?.name}</p>
+          </div>
+        </div>
+
+        <div className="mb-10">
+          <table className="w-full text-left text-sm border-collapse">
+            <thead className="bg-slate-100 border-y border-slate-300">
+              <tr>
+                <th className="px-4 py-3 font-bold text-slate-700">Código</th>
+                <th className="px-4 py-3 font-bold text-slate-700">Descripción del Artículo</th>
+                <th className="px-4 py-3 font-bold text-slate-700 text-center">Cant.</th>
+                <th className="px-4 py-3 font-bold text-slate-700 text-right">P. Unitario</th>
+                <th className="px-4 py-3 font-bold text-slate-700 text-right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 border-b border-slate-300">
+              {order.items.map((oi) => (
+                <tr key={oi.id}>
+                  <td className="px-4 py-3 font-medium text-slate-500">{oi.item?.internal_code}</td>
+                  <td className="px-4 py-3 font-bold text-slate-800">{oi.item?.name}</td>
+                  <td className="px-4 py-3 text-center">{oi.quantity} {oi.item?.uom}</td>
+                  <td className="px-4 py-3 text-right">${oi.unit_cost.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right font-bold">${(oi.quantity * oi.unit_cost).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="flex justify-end mt-4">
+            <div className="w-1/3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-right">
+              <span className="text-sm font-bold text-slate-500 mr-4">Gran Total:</span>
+              <span className="text-xl font-black text-indigo-700">${total.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-20 grid grid-cols-2 gap-20">
+          <div className="text-center">
+            <div className="border-b border-slate-400 mb-2"></div>
+            <p className="text-sm font-bold text-slate-600">Firma de Autorización</p>
+            <p className="text-xs text-slate-400 mt-1">{order.created_by?.name} - {order.created_by?.role}</p>
+          </div>
+          <div className="text-center">
+            <div className="border-b border-slate-400 mb-2"></div>
+            <p className="text-sm font-bold text-slate-600">Firma del Proveedor / Recibido</p>
+          </div>
         </div>
       </div>
     </div>
