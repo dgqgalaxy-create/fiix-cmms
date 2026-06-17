@@ -221,7 +221,7 @@ export const KPIPage = () => {
         {renderCard("Cumplimiento SLA", <Target size={24} />, m.SLA, true, (v) => v.toFixed(1), "%", "Porcentaje de reparaciones que se terminaron a tiempo de acuerdo con la meta establecida para el MTTR.")}
         {renderCard("Backlog", <AlertTriangle size={24} />, m.BACKLOG, false, (v) => v.toString(), "órdenes", "Cantidad de órdenes de trabajo que aún no se han finalizado (Pendientes o En Espera).")}
         {renderCard("Disponibilidad Activos", <Database size={24} />, m.ASSET_AVAILABILITY, true, (v) => v.toFixed(1), "%", "Porcentaje actual de equipos operativos sin fallas críticas vs. el total de equipos registrados en el inventario.")}
-        {m.REINCIDENCIA && renderCard("Reincidencia (Fallas Repetidas)", <RefreshCw size={24} />, m.REINCIDENCIA, false, (v) => v.toFixed(1), "%", "Porcentaje de órdenes correctivas creadas para equipos que ya habían sido reparados en los últimos 3 días. Mide la calidad del retrabajo.")}
+        {m.REINCIDENCIA && renderCard("Reincidencia (Fallas Repetidas)", <RefreshCw size={24} />, m.REINCIDENCIA, false, (v) => v.toFixed(1), "%", "Porcentaje de órdenes correctivas creadas para equipos que ya habían sido reparados en los últimos 2 días. Mide la calidad del retrabajo.")}
       </div>
 
       {charts.length > 0 && (
@@ -363,7 +363,7 @@ export const KPIPage = () => {
                   <ul className="list-disc pl-4 space-y-0.5">
                     <li>Es una falla Correctiva.</li>
                     <li>Ocurre en el mismo equipo y la <strong>misma zona</strong>.</li>
-                    <li>Se reportó a menos de <strong>3 días</strong> de haberse cerrado una reparación anterior.</li>
+                    <li>Se reportó a menos de <strong>2 días</strong> de haberse cerrado una reparación anterior.</li>
                   </ul>
                 </div>
               </div>

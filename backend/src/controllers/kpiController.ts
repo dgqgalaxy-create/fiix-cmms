@@ -176,7 +176,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
       ? (operationalAssets.length / allAssets.length) * 100 
       : 100;
 
-    // KPI 7: Reincidencia (Tasa de Retrabajo en 3 días)
+    // KPI 7: Reincidencia (Tasa de Retrabajo en 2 días)
     const correctiveOrders = allWorkOrders.filter(wo => wo.maintenance_type === 'CORRECTIVO' && wo.asset_id);
     let recurrentCount = 0;
     const recurrentAssetsMap = new Map<string, { id: string; name: string; count: number }>();
@@ -185,7 +185,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
       if (!order.asset_id) continue;
       
       const windowDaysBefore = new Date(order.created_at);
-      windowDaysBefore.setDate(windowDaysBefore.getDate() - 3);
+      windowDaysBefore.setDate(windowDaysBefore.getDate() - 2);
 
       const previousFailure = await prisma.workOrder.findFirst({
         where: {
