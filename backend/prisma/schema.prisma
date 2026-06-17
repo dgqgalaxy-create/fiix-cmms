@@ -79,6 +79,7 @@ model User {
   created_orders  WorkOrder[] @relation("CreatedOrders")
   assigned_orders WorkOrder[] @relation("AssignedOrders")
   inventory_transactions InventoryTransaction[]
+  created_purchase_orders PurchaseOrder[] @relation("CreatedPurchaseOrders")
 }
 
 model Zone {
@@ -206,6 +207,7 @@ model Vendor {
   is_active   Boolean  @default(true)
 
   items       Item[]
+  purchase_orders PurchaseOrder[]
 }
 
 model Item {
@@ -232,6 +234,7 @@ model Item {
 
   inventory_transactions InventoryTransaction[]
   maintenance_plans      PlanItem[]
+  purchase_order_items   PurchaseOrderItem[]
 }
 
 model InventoryTransaction {
@@ -281,4 +284,45 @@ model PlanItem {
   item                Item            @relation(fields: [item_id], references: [id])
   
   quantity_required   Float
+}
+
+enum PurchaseOrderStatus {
+  BORRADOR
+  APROBADA
+  ENVIADA
+  RECIBIDA
+  CANCELADA
+}
+
+model PurchaseOrder {
+  id              String   @id @default(uuid()) @db.Uuid
+  folio           Int      @default(autoincrement())
+  
+  vendor_id       String   @db.Uuid
+  vendor          Vendor   @relation(fields: [vendor_id], references: [id])
+  
+  status          PurchaseOrderStatus @default(BORRADOR)
+  
+  created_by_id   String   @db.Uuid
+  created_by      User     @relation("CreatedPurchaseOrders", fields: [created_by_id], references: [id])
+  
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  expected_date   DateTime?
+  received_at     DateTime?
+
+  items           PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id                 String   @id @default(uuid()) @db.Uuid
+  
+  purchase_order_id  String   @db.Uuid
+  purchase_order     PurchaseOrder @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade)
+  
+  item_id            String   @db.Uuid
+  item               Item     @relation(fields: [item_id], references: [id])
+  
+  quantity           Float
+  unit_cost          Float    // Precio capturado al crear la orden
 }

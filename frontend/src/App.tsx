@@ -11,6 +11,7 @@ import { PermissionsPage } from './pages/PermissionsPage';
 import { ZonesPage } from './pages/ZonesPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { MaintenancePlansPage } from './pages/MaintenancePlansPage';
+import { PurchaseOrdersPage } from './pages/PurchaseOrdersPage';
 
 function App() {
   return (
@@ -58,6 +59,17 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <MaintenancePlansPage />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/purchase-orders" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PurchaseOrdersPage />
                 </Layout>
               </ProtectedRoute>
             } 

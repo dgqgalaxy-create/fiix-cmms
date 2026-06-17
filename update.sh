@@ -6,9 +6,10 @@ export NVM_DIR="$HOME/.nvm"
 
 echo "=== Iniciando actualización del CMMS ==="
 
-# 1. Descargar el código más reciente
-echo "Descargando nuevos cambios..."
+# 1. Preparar el terreno y descargar el código más reciente
+echo "Limpiando archivos locales y descargando nuevos cambios..."
 cd ~/fiix-cmms
+git restore .
 git pull
 
 # 2. Actualizar el cerebro (Backend)

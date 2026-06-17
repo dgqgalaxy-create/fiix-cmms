@@ -1,0 +1,50 @@
+import api from './axios';
+
+export interface PurchaseOrderItem {
+  id: string;
+  item_id: string;
+  quantity: number;
+  unit_cost: number;
+  item?: {
+    id: string;
+    internal_code: string;
+    name: string;
+    uom: string;
+  };
+}
+
+export interface PurchaseOrder {
+  id: string;
+  folio: number;
+  vendor_id: string;
+  status: 'BORRADOR' | 'APROBADA' | 'ENVIADA' | 'RECIBIDA' | 'CANCELADA';
+  created_by_id: string;
+  created_at: string;
+  expected_date?: string;
+  received_at?: string;
+  vendor?: {
+    id: string;
+    name: string;
+  };
+  created_by?: {
+    id: string;
+    name: string;
+    role: string;
+  };
+  items: PurchaseOrderItem[];
+}
+
+export const getPurchaseOrders = async (): Promise<PurchaseOrder[]> => {
+  const { data } = await api.get('/purchase-orders');
+  return data;
+};
+
+export const createPurchaseOrder = async (orderData: { vendor_id: string; expected_date?: string; items: { item_id: string; quantity: number; unit_cost: number }[] }): Promise<PurchaseOrder> => {
+  const { data } = await api.post('/purchase-orders', orderData);
+  return data;
+};
+
+export const updatePurchaseOrderStatus = async (id: string, status: string): Promise<PurchaseOrder> => {
+  const { data } = await api.patch(`/purchase-orders/${id}/status`, { status });
+  return data;
+};

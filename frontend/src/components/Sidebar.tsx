@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield, X, Package, CalendarClock } from 'lucide-react';
+import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield, X, Package, CalendarClock, ShoppingCart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
@@ -10,6 +10,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     { name: 'Órdenes de Trabajo', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
     { name: 'Activos', path: '/assets', icon: <Database size={20} /> },
     { name: 'Inventario', path: '/inventory', icon: <Package size={20} /> },
+    { name: 'Compras', path: '/purchase-orders', icon: <ShoppingCart size={20} /> },
   ];
 
   if (hasPermission('MANAGE_MAINTENANCE_PLANS')) {
