@@ -70,17 +70,11 @@ export const KPIPage = () => {
     }
   };
 
-  const handleBarClick = async (data: any) => {
-    let assetData = data;
-    if (data && data.activePayload && data.activePayload.length > 0) {
-      assetData = data.activePayload[0].payload;
-    }
-    if (!assetData || !assetData.assetId) return;
-
-    setSelectedFailureAsset({ id: assetData.assetId, name: assetData.assetName });
+  const handleAssetClick = async (assetId: string, assetName: string) => {
+    setSelectedFailureAsset({ id: assetId, name: assetName });
     setIsFetchingOrders(true);
     try {
-      const orders = await getAssetFailureOrders(assetData.assetId, period);
+      const orders = await getAssetFailureOrders(assetId, period);
       setFailureOrders(orders);
     } catch (error) {
       console.error(error);
@@ -88,6 +82,16 @@ export const KPIPage = () => {
     } finally {
       setIsFetchingOrders(false);
     }
+  };
+
+  const handleBarClick = async (data: any) => {
+    let assetData = data;
+    if (data && data.activePayload && data.activePayload.length > 0) {
+      assetData = data.activePayload[0].payload;
+    }
+    if (!assetData || !assetData.assetId) return;
+    
+    handleAssetClick(assetData.assetId, assetData.assetName);
   };
 
   const handleExportPDF = () => {
@@ -365,7 +369,12 @@ export const KPIPage = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {m.REINCIDENCIA.details.map((asset: any) => (
-                        <tr key={asset.id} className="hover:bg-slate-50">
+                        <tr 
+                          key={asset.id} 
+                          className="hover:bg-slate-100 cursor-pointer transition-colors"
+                          onClick={() => handleAssetClick(asset.id, asset.name)}
+                          title="Haga clic para ver el desglose de fallas"
+                        >
                           <td className="px-4 py-3 font-medium text-slate-700">{asset.name}</td>
                           <td className="px-4 py-3">
                             <span className="bg-rose-100 text-rose-700 font-bold px-2.5 py-1 rounded-full text-xs">
