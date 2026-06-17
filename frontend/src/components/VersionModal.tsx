@@ -8,24 +8,29 @@ interface VersionModalProps {
 export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
-  const version = "1.1.0";
+  const version = "1.2.0";
   const updateDate = "17 de Junio, 2026";
   const modules = [
     "Panel Principal (Dashboard)",
     "Gestión de Activos (Equipos)",
     "Catálogo de Inventario",
     "Planes Preventivos",
-    "Módulo de Compras (Nuevo)",
+    "Módulo de Compras",
     "Zonas y Permisos",
     "KPIs y Metas"
+  ];
+  const changelog = [
+    "Integración de cámara nativa para fotos de evidencia",
+    "Autocompletado dinámico de solicitantes de producción",
+    "Migración histórica de inventario completada"
   ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
         
         {/* Header */}
-        <div className="bg-slate-900 p-6 flex flex-col items-center justify-center relative">
+        <div className="bg-slate-900 p-6 flex flex-col items-center justify-center relative shrink-0">
           <button 
             onClick={onClose} 
             className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors"
@@ -42,17 +47,28 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 overflow-y-auto">
           
           <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
             <Info className="text-blue-500 shrink-0 mt-0.5" size={20} />
             <div>
               <p className="text-sm font-bold text-slate-800">Última Actualización</p>
               <p className="text-sm text-slate-600 mt-1">{updateDate}</p>
-              <p className="text-xs text-slate-500 mt-2">
-                Sistema de gestión de mantenimiento asistido por computadora. Desarrollado a la medida para el control de la planta.
-              </p>
             </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wider flex items-center gap-2">
+              <span className="text-amber-500 text-lg">✨</span> Novedades (v{version})
+            </h3>
+            <ul className="space-y-2">
+              {changelog.map((change, idx) => (
+                <li key={idx} className="flex items-start gap-2 text-sm text-slate-600">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+                  {change}
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div>
