@@ -2,6 +2,45 @@ import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
 
+export const getTopFailingAssets = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const period = req.query.period as string;
+    const { start, end } = getDateRange(period);
+
+    const workOrders = await prisma.workOrder.findMany({
+      where: {
+        created_at: { gte: start, lte: end },
+        maintenance_type: 'CORRECTIVO', // Assuming CORRECTIVO = Falla
+        status: { not: 'ANULADO' } // Ignore cancelled ones
+      },
+      select: {
+        asset_id: true,
+        asset: {
+          select: { name: true }
+        }
+      }
+    });
+
+    const failureCount: Record<string, { assetId: string; assetName: string; count: number }> = {};
+
+    workOrders.forEach(wo => {
+      if (wo.asset_id && wo.asset) {
+        if (!failureCount[wo.asset_id]) {
+          failureCount[wo.asset_id] = { assetId: wo.asset_id, assetName: wo.asset.name, count: 0 };
+        }
+        failureCount[wo.asset_id].count += 1;
+      }
+    });
+
+    const sortedAssets = Object.values(failureCount).sort((a, b) => b.count - a.count).slice(0, 10);
+
+    res.json(sortedAssets);
+  } catch (error) {
+    console.error('Error fetching top failing assets:', error);
+    res.status(500).json({ error: 'Error al obtener equipos con más fallas' });
+  }
+};
+
 const DEFAULT_GOALS = {
   COMPLETED_MONTHLY: { targetValue: 50, unit: 'órdenes' },
   MTTR: { targetValue: 14400000, unit: 'ms' }, // 4 horas

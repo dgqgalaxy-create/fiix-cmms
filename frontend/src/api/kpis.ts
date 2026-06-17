@@ -54,3 +54,15 @@ export const getCostsByAsset = async (period?: string): Promise<AssetCostData[]>
   const response = await api.get(`/kpis/costs-by-asset${query}`);
   return response.data;
 };
+
+export interface TopFailingAsset {
+  assetId: string;
+  assetName: string;
+  count: number;
+}
+
+export const getTopFailingAssets = async (period?: string): Promise<TopFailingAsset[]> => {
+  const query = period ? `?period=${period}` : '';
+  const response = await api.get(`/kpis/top-failures${query}`);
+  return response.data;
+};

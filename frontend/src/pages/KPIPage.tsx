@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getKPIs, updateKPIGoals, getChartData, getCostsByAsset } from '../api/kpis';
-import type { KPIResponse, KPIMetric, ChartData, AssetCostData } from '../api/kpis';
+import { getKPIs, updateKPIGoals, getChartData, getCostsByAsset, getTopFailingAssets } from '../api/kpis';
+import type { KPIResponse, KPIMetric, ChartData, AssetCostData, TopFailingAsset } from '../api/kpis';
 import { useAuth } from '../context/AuthContext';
 import { Target, TrendingUp, Clock, AlertTriangle, CheckCircle, Database, Settings, BarChart2, Download } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -10,6 +10,7 @@ export const KPIPage = () => {
   const [data, setData] = useState<KPIResponse | null>(null);
   const [charts, setCharts] = useState<ChartData[]>([]);
   const [assetCosts, setAssetCosts] = useState<AssetCostData[]>([]);
+  const [topFailingAssets, setTopFailingAssets] = useState<TopFailingAsset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [period, setPeriod] = useState<string>('THIS_MONTH');
@@ -20,14 +21,16 @@ export const KPIPage = () => {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const [kpiData, chartData, costData] = await Promise.all([
+      const [kpiData, chartData, costData, topFailingData] = await Promise.all([
         getKPIs(period),
         getChartData(period),
-        getCostsByAsset(period)
+        getCostsByAsset(period),
+        getTopFailingAssets(period)
       ]);
       setData(kpiData);
       setCharts(chartData);
       setAssetCosts(costData);
+      setTopFailingAssets(topFailingData);
       
       const formState: Record<string, number> = {};
       Object.entries(kpiData.metrics).forEach(([key, metric]) => {
@@ -237,6 +240,34 @@ export const KPIPage = () => {
             ) : (
               <div className="h-72 w-full flex items-center justify-center text-slate-400">
                 No hay consumos registrados en los últimos 6 meses.
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white p-6 print:p-4 rounded-2xl border border-slate-200 shadow-sm xl:col-span-2 print:col-span-2 print:shadow-none print:break-inside-avoid">
+            <div className="flex items-center gap-2 mb-6">
+              <AlertTriangle className="text-amber-500" size={24} />
+              <h2 className="text-lg font-bold text-slate-800">Equipos con Más Fallas (Mantenimiento Correctivo)</h2>
+            </div>
+            {topFailingAssets.length > 0 ? (
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={topFailingAssets} layout="vertical" margin={{ left: 80 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={true} vertical={false} />
+                    <XAxis type="number" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} allowDecimals={false} />
+                    <YAxis type="category" dataKey="assetName" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} width={100} />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      formatter={(val: number) => [`${val}`, 'Fallas (Órdenes)'] }
+                      cursor={{ fill: '#f1f5f9' }}
+                    />
+                    <Bar dataKey="count" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={24} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-72 w-full flex items-center justify-center text-slate-400">
+                No hay fallas correctivas registradas en el periodo seleccionado.
               </div>
             )}
           </div>
