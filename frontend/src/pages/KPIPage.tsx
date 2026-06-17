@@ -343,6 +343,48 @@ export const KPIPage = () => {
               </ResponsiveContainer>
             </div>
           </div>
+
+          {/* Vista General Reincidentes */}
+          {m.REINCIDENCIA && (
+            <div className="bg-white/80 backdrop-blur-md p-6 print:p-4 rounded-3xl border border-slate-200/50 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:shadow-slate-200/50 transition-shadow xl:col-span-2 print:col-span-2 print:shadow-none print:break-inside-avoid">
+              <div className="flex items-center gap-2 mb-6">
+                <RefreshCw className="text-rose-600" size={24} />
+                <h2 className="text-lg font-bold text-slate-800" title="Equipos que volvieron a fallar menos de 14 días después de una reparación">
+                  Equipos con Fallas Recurrentes (Últimos 14 días)
+                </h2>
+              </div>
+              
+              {m.REINCIDENCIA.details && m.REINCIDENCIA.details.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-xs font-bold">
+                      <tr>
+                        <th className="px-4 py-3 rounded-tl-lg">Equipo</th>
+                        <th className="px-4 py-3 rounded-tr-lg">Reincidencias</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {m.REINCIDENCIA.details.map((asset: any) => (
+                        <tr key={asset.id} className="hover:bg-slate-50">
+                          <td className="px-4 py-3 font-medium text-slate-700">{asset.name}</td>
+                          <td className="px-4 py-3">
+                            <span className="bg-rose-100 text-rose-700 font-bold px-2.5 py-1 rounded-full text-xs">
+                              {asset.count} {asset.count === 1 ? 'vez' : 'veces'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="h-32 w-full flex flex-col items-center justify-center text-slate-400">
+                  <CheckCircle className="text-emerald-400 mb-2" size={32} />
+                  <p className="font-medium">Excelente: No hay equipos con fallas recurrentes en este periodo.</p>
+                </div>
+              )}
+            </div>
+          )}
           </div>
         )}
       </div>
