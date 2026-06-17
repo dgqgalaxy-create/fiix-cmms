@@ -1,0 +1,13 @@
+name: Despliegue a Ubuntu Server (Tailscale)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Ejecutar script de actualización
+        run: bash ~/fiix-cmms/update.sh

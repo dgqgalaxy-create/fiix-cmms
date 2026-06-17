@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Cargar el entorno de Node.js (necesario si usas NVM)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
 echo "=== Iniciando actualización del CMMS ==="
 
 # 1. Descargar el código más reciente
