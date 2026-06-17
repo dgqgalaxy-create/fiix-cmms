@@ -179,6 +179,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
     // KPI 7: Reincidencia (Tasa de Retrabajo en 14 días)
     const correctiveOrders = allWorkOrders.filter(wo => wo.maintenance_type === 'CORRECTIVO' && wo.asset_id);
     let recurrentCount = 0;
+    const recurrentAssetsMap = new Map<string, { id: string; name: string; count: number }>();
 
     for (const order of correctiveOrders) {
       if (!order.asset_id) continue;
@@ -196,17 +197,26 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
             gte: fourteenDaysBefore,
             lte: new Date(order.created_at)
           }
-        }
+        },
+        include: { asset: true }
       });
 
       if (previousFailure) {
         recurrentCount++;
+        const assetName = previousFailure.asset?.name || 'Desconocido';
+        if (recurrentAssetsMap.has(order.asset_id)) {
+          recurrentAssetsMap.get(order.asset_id)!.count++;
+        } else {
+          recurrentAssetsMap.set(order.asset_id, { id: order.asset_id, name: assetName, count: 1 });
+        }
       }
     }
 
     const reincidencia = correctiveOrders.length > 0 
       ? (recurrentCount / correctiveOrders.length) * 100 
       : 0;
+
+    const recurrentAssetsList = Array.from(recurrentAssetsMap.values()).sort((a, b) => b.count - a.count);
 
     res.json({
       totalOrders: allWorkOrders.length,
@@ -217,7 +227,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
         SLA: { value: sla, goal: goals.SLA },
         BACKLOG: { value: backlog, goal: goals.BACKLOG },
         ASSET_AVAILABILITY: { value: assetAvailability, goal: goals.ASSET_AVAILABILITY },
-        REINCIDENCIA: { value: reincidencia, goal: goals.REINCIDENCIA },
+        REINCIDENCIA: { value: reincidencia, goal: goals.REINCIDENCIA, details: recurrentAssetsList },
       }
     });
 

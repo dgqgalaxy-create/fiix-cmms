@@ -6,6 +6,7 @@ export interface KPIMetric {
     targetValue: number;
     unit: string;
   };
+  details?: any[];
 }
 
 export interface KPIResponse {

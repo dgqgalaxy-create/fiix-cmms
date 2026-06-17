@@ -114,10 +114,10 @@ export const KPIPage = () => {
 
   const m = data.metrics;
 
-  const renderCard = (title: string, icon: any, metric: KPIMetric, isMoreBetter: boolean, formatter: (val: number) => string, currentUnit: string) => {
+  const renderCard = (title: string, icon: any, metric: KPIMetric, isMoreBetter: boolean, formatter: (val: number) => string, currentUnit: string, tooltipText: string) => {
     const isGood = isMoreBetter ? metric.value >= metric.goal.targetValue : metric.value <= metric.goal.targetValue;
     return (
-      <div className={`p-4 sm:p-6 rounded-3xl border backdrop-blur-md relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl print:shadow-none print:break-inside-avoid ${isGood ? 'bg-gradient-to-br from-emerald-50/90 to-white border-emerald-100/50 shadow-emerald-500/10' : 'bg-gradient-to-br from-red-50/90 to-white border-red-100/50 shadow-red-500/10'}`}>
+      <div title={tooltipText} className={`p-4 sm:p-6 rounded-3xl border backdrop-blur-md relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl print:shadow-none print:break-inside-avoid ${isGood ? 'bg-gradient-to-br from-emerald-50/90 to-white border-emerald-100/50 shadow-emerald-500/10' : 'bg-gradient-to-br from-red-50/90 to-white border-red-100/50 shadow-red-500/10'}`}>
         <div className="absolute -right-6 -top-6 w-24 h-24 bg-gradient-to-br opacity-20 rounded-full blur-2xl pointer-events-none" style={{ backgroundImage: `linear-gradient(to bottom right, ${isGood ? '#10b981, #fff' : '#ef4444, #fff'})`}}></div>
         <div className="flex justify-between items-start mb-3 sm:mb-4 gap-2 relative z-10">
           <h3 className="font-bold text-slate-700 text-sm sm:text-base leading-snug">{title}</h3>
@@ -211,13 +211,13 @@ export const KPIPage = () => {
       ) : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 print:grid-cols-3 gap-6 print:gap-4 print:mb-8">
-        {renderCard("Órdenes Completadas", <CheckCircle size={24} />, m.COMPLETED_MONTHLY, true, (v) => v.toString(), "órdenes")}
-        {renderCard("MTTR (Reparación)", <TrendingUp size={24} />, m.MTTR, false, (v) => (v / 3600000).toFixed(1), "horas")}
-        {renderCard("Tiempo Respuesta", <Clock size={24} />, m.RESPONSE_TIME, false, (v) => (v / 3600000).toFixed(1), "horas")}
-        {renderCard("Cumplimiento SLA", <Target size={24} />, m.SLA, true, (v) => v.toFixed(1), "%")}
-        {renderCard("Backlog", <AlertTriangle size={24} />, m.BACKLOG, false, (v) => v.toString(), "órdenes")}
-        {renderCard("Disponibilidad Activos", <Database size={24} />, m.ASSET_AVAILABILITY, true, (v) => v.toFixed(1), "%")}
-        {m.REINCIDENCIA && renderCard("Reincidencia (Fallas Repetidas)", <RefreshCw size={24} />, m.REINCIDENCIA, false, (v) => v.toFixed(1), "%")}
+        {renderCard("Órdenes Completadas", <CheckCircle size={24} />, m.COMPLETED_MONTHLY, true, (v) => v.toString(), "órdenes", "Total de órdenes de trabajo finalizadas en el periodo actual. Refleja la productividad general.")}
+        {renderCard("MTTR (Reparación)", <TrendingUp size={24} />, m.MTTR, false, (v) => (v / 3600000).toFixed(1), "horas", "Tiempo Medio de Reparación. Cuánto tiempo en promedio tarda el equipo en reparar una falla desde que inician los trabajos.")}
+        {renderCard("Tiempo Respuesta", <Clock size={24} />, m.RESPONSE_TIME, false, (v) => (v / 3600000).toFixed(1), "horas", "Tiempo promedio que transcurre desde que se crea una solicitud hasta que un técnico comienza a trabajar en ella.")}
+        {renderCard("Cumplimiento SLA", <Target size={24} />, m.SLA, true, (v) => v.toFixed(1), "%", "Porcentaje de reparaciones que se terminaron a tiempo de acuerdo con la meta establecida para el MTTR.")}
+        {renderCard("Backlog", <AlertTriangle size={24} />, m.BACKLOG, false, (v) => v.toString(), "órdenes", "Cantidad de órdenes de trabajo que aún no se han finalizado (Pendientes o En Espera).")}
+        {renderCard("Disponibilidad Activos", <Database size={24} />, m.ASSET_AVAILABILITY, true, (v) => v.toFixed(1), "%", "Porcentaje actual de equipos operativos sin fallas críticas vs. el total de equipos registrados en el inventario.")}
+        {m.REINCIDENCIA && renderCard("Reincidencia (Fallas Repetidas)", <RefreshCw size={24} />, m.REINCIDENCIA, false, (v) => v.toFixed(1), "%", "Porcentaje de órdenes correctivas creadas para equipos que ya habían sido reparados en los últimos 14 días. Mide la calidad del retrabajo.")}
       </div>
 
       {charts.length > 0 && (
