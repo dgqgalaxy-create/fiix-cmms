@@ -6,6 +6,7 @@ import { getZones } from '../api/zones';
 import type { Zone } from '../api/zones';
 import { getUsers } from '../api/users';
 import type { User } from '../api/users';
+import { getUniqueRequesters } from '../api/workOrders';
 
 interface Props {
   isOpen: boolean;
@@ -29,7 +30,7 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [requesters, setRequesters] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -45,16 +46,16 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
   const loadAssetsAndTechs = async () => {
     try {
       setIsLoading(true);
-      const [assetsData, techsData, zonesData, allUsersData] = await Promise.all([
+      const [assetsData, techsData, zonesData, requestersData] = await Promise.all([
         getAssets(),
         getUsers('TECNICO'),
         getZones(),
-        getUsers()
+        getUniqueRequesters()
       ]);
       setAssets(assetsData);
       setTechnicians(techsData);
       setZones(zonesData);
-      setAllUsers(allUsersData);
+      setRequesters(requestersData);
       setAssetId('');
       setZoneId('');
     } catch (err) {
@@ -273,8 +274,8 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
                   autoComplete="off"
                 />
                 <datalist id="users-list">
-                  {allUsers.map((u) => (
-                    <option key={u.id} value={u.name} />
+                  {requesters.map((reqName) => (
+                    <option key={reqName} value={reqName} />
                   ))}
                 </datalist>
               </div>

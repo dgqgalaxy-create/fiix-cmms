@@ -55,6 +55,11 @@ export const getWorkOrdersSummary = async (): Promise<Record<string, number>> =>
   return response.data;
 };
 
+export const getUniqueRequesters = async (): Promise<string[]> => {
+  const response = await api.get('/work-orders/requesters');
+  return response.data;
+};
+
 export const createWorkOrder = async (data: any) => {
   const response = await api.post('/work-orders', data);
   return response.data;

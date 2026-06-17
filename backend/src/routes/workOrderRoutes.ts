@@ -1,11 +1,13 @@
 import { Router } from 'express';
-import { getWorkOrders, getWorkOrdersSummary, getWorkOrderById, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder } from '../controllers/workOrderController';
+import { getWorkOrders, getWorkOrdersSummary, getWorkOrderById, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder, getRequesters } from '../controllers/workOrderController';
 import { authenticate, requirePermission } from '../middlewares/authMiddleware';
 import { upload } from '../middlewares/upload';
 
 const router = Router();
 
 router.get('/', authenticate, getWorkOrders);
+
+router.get('/requesters', authenticate, getRequesters);
 
 router.get('/summary', authenticate, getWorkOrdersSummary);
 router.get('/:id', authenticate, getWorkOrderById);

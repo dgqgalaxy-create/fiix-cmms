@@ -2,6 +2,21 @@ import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
 
+export const getRequesters = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const requesters = await prisma.workOrder.findMany({
+      where: { requester_name: { not: null } },
+      select: { requester_name: true },
+      distinct: ['requester_name']
+    });
+    const names = requesters.map(r => r.requester_name).filter(Boolean);
+    res.json(names);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener solicitantes' });
+  }
+};
+
 export const getWorkOrders = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userRole = req.user?.role;
