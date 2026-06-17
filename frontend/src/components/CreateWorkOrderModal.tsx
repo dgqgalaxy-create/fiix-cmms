@@ -336,17 +336,36 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">📸 Foto de la Falla (Opcional)</label>
-              <input 
-                type="file" 
-                accept="image/*"
-                onChange={(e) => setRequestImage(e.target.files?.[0] || null)}
-                className="block w-full text-sm text-slate-500
-                  file:mr-4 file:py-2 file:px-4
-                  file:rounded-full file:border-0
-                  file:text-sm file:font-semibold
-                  file:bg-slate-100 file:text-slate-700
-                  hover:file:bg-slate-200 transition-colors cursor-pointer border border-slate-200 rounded-xl p-1"
-              />
+              <div className="flex gap-2">
+                <label className="flex-1 flex flex-col items-center justify-center py-3 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors text-slate-600">
+                  <span className="text-xl mb-1">📷</span>
+                  <span className="text-xs font-semibold">Tomar Foto</span>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    capture="environment"
+                    onChange={(e) => setRequestImage(e.target.files?.[0] || null)}
+                    className="hidden"
+                  />
+                </label>
+                
+                <label className="flex-1 flex flex-col items-center justify-center py-3 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors text-slate-600">
+                  <span className="text-xl mb-1">🖼️</span>
+                  <span className="text-xs font-semibold">Subir Archivo</span>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={(e) => setRequestImage(e.target.files?.[0] || null)}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              {requestImage && (
+                <div className="mt-2 text-xs text-emerald-600 font-medium px-2 flex justify-between items-center">
+                  <span className="truncate max-w-[80%]">✓ {requestImage.name}</span>
+                  <button type="button" onClick={() => setRequestImage(null)} className="text-red-500 hover:text-red-700 font-semibold p-1">Quitar</button>
+                </div>
+              )}
             </div>
           </form>
         </div>

@@ -627,18 +627,36 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                         <div className="p-4 bg-emerald-100/50 border border-emerald-200 rounded-xl space-y-4">
                           <div>
                             <label className="block text-sm font-medium text-emerald-800 mb-2">📸 Evidencia de Reparación (Después) *</label>
-                          <input 
-                            type="file" 
-                            accept="image/*"
-                            onChange={(e) => setAfterImage(e.target.files?.[0] || null)}
-                            className="block w-full text-sm text-emerald-700
-                              file:mr-4 file:py-2 file:px-4
-                              file:rounded-full file:border-0
-                              file:text-sm file:font-semibold
-                              file:bg-emerald-600 file:text-white
-                              hover:file:bg-emerald-700 transition-colors cursor-pointer"
-                          />
-                        </div>
+                            <div className="flex gap-2">
+                              <label className="flex-1 flex flex-col items-center justify-center py-3 border border-emerald-200 rounded-xl bg-emerald-50/50 hover:bg-emerald-100 cursor-pointer transition-colors text-emerald-700">
+                                <span className="text-xl mb-1">📷</span>
+                                <span className="text-xs font-semibold">Tomar Foto</span>
+                                <input 
+                                  type="file" 
+                                  accept="image/*"
+                                  capture="environment"
+                                  onChange={(e) => setAfterImage(e.target.files?.[0] || null)}
+                                  className="hidden"
+                                />
+                              </label>
+                              <label className="flex-1 flex flex-col items-center justify-center py-3 border border-emerald-200 rounded-xl bg-emerald-50/50 hover:bg-emerald-100 cursor-pointer transition-colors text-emerald-700">
+                                <span className="text-xl mb-1">🖼️</span>
+                                <span className="text-xs font-semibold">Subir Archivo</span>
+                                <input 
+                                  type="file" 
+                                  accept="image/*"
+                                  onChange={(e) => setAfterImage(e.target.files?.[0] || null)}
+                                  className="hidden"
+                                />
+                              </label>
+                            </div>
+                            {afterImage && (
+                              <div className="mt-2 text-xs text-emerald-700 font-medium px-2 flex justify-between items-center">
+                                <span className="truncate max-w-[80%]">✓ {afterImage.name}</span>
+                                <button type="button" onClick={() => setAfterImage(null)} className="text-red-500 hover:text-red-700 font-semibold p-1">Quitar</button>
+                              </div>
+                            )}
+                          </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-emerald-200/50">
                           <div>
@@ -663,17 +681,35 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                 {status === 'EN_PROCESO' && workOrder.status === 'PENDIENTE' && (
                   <div className="pt-4 mt-2 border-t border-slate-100">
                     <label className="block text-sm font-medium text-slate-700 mb-2">📸 Evidencia del Problema (Antes)</label>
-                    <input 
-                      type="file" 
-                      accept="image/*"
-                      onChange={(e) => setBeforeImage(e.target.files?.[0] || null)}
-                      className="block w-full text-sm text-slate-500
-                        file:mr-4 file:py-2 file:px-4
-                        file:rounded-full file:border-0
-                        file:text-sm file:font-semibold
-                        file:bg-slate-100 file:text-slate-700
-                        hover:file:bg-slate-200 transition-colors cursor-pointer"
-                    />
+                    <div className="flex gap-2">
+                      <label className="flex-1 flex flex-col items-center justify-center py-3 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors text-slate-600">
+                        <span className="text-xl mb-1">📷</span>
+                        <span className="text-xs font-semibold">Tomar Foto</span>
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          capture="environment"
+                          onChange={(e) => setBeforeImage(e.target.files?.[0] || null)}
+                          className="hidden"
+                        />
+                      </label>
+                      <label className="flex-1 flex flex-col items-center justify-center py-3 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors text-slate-600">
+                        <span className="text-xl mb-1">🖼️</span>
+                        <span className="text-xs font-semibold">Subir Archivo</span>
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={(e) => setBeforeImage(e.target.files?.[0] || null)}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    {beforeImage && (
+                      <div className="mt-2 text-xs text-emerald-600 font-medium px-2 flex justify-between items-center">
+                        <span className="truncate max-w-[80%]">✓ {beforeImage.name}</span>
+                        <button type="button" onClick={() => setBeforeImage(null)} className="text-red-500 hover:text-red-700 font-semibold p-1">Quitar</button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
