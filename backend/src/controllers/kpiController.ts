@@ -63,6 +63,9 @@ export const getAssetFailureOrders = async (req: AuthRequest, res: Response): Pr
         accumulated_time_ms: true,
         zone: {
           select: { name: true }
+        },
+        assigned_technicians: {
+          select: { name: true }
         }
       },
       orderBy: { created_at: 'desc' }

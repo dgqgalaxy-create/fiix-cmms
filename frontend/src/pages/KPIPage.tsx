@@ -444,6 +444,7 @@ export const KPIPage = () => {
                         <th className="px-4 py-3">Fecha</th>
                         <th className="px-4 py-3">Zona</th>
                         <th className="px-4 py-3">Descripción de la Falla</th>
+                        <th className="px-4 py-3">Técnico</th>
                         <th className="px-4 py-3">Estado</th>
                       </tr>
                     </thead>
@@ -454,6 +455,11 @@ export const KPIPage = () => {
                           <td className="px-4 py-3 text-slate-600">{new Date(order.created_at).toLocaleDateString()}</td>
                           <td className="px-4 py-3 text-slate-600 font-medium">{order.zone?.name || 'N/A'}</td>
                           <td className="px-4 py-3 text-slate-700">{order.title}</td>
+                          <td className="px-4 py-3 text-slate-600">
+                            {order.assigned_technicians && order.assigned_technicians.length > 0 
+                              ? order.assigned_technicians.map(t => t.name).join(', ') 
+                              : 'Sin asignar'}
+                          </td>
                           <td className="px-4 py-3">
                             <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold border border-slate-200">
                               {order.status}
