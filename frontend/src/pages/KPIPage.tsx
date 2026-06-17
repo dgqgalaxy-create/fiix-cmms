@@ -71,8 +71,12 @@ export const KPIPage = () => {
   };
 
   const handleBarClick = async (data: any) => {
-    if (!data || !data.activePayload || data.activePayload.length === 0) return;
-    const assetData = data.activePayload[0].payload as TopFailingAsset;
+    let assetData = data;
+    if (data && data.activePayload && data.activePayload.length > 0) {
+      assetData = data.activePayload[0].payload;
+    }
+    if (!assetData || !assetData.assetId) return;
+
     setSelectedFailureAsset({ id: assetData.assetId, name: assetData.assetName });
     setIsFetchingOrders(true);
     try {
@@ -273,7 +277,7 @@ export const KPIPage = () => {
             {topFailingAssets.length > 0 ? (
               <div className="h-72 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={topFailingAssets} layout="vertical" margin={{ left: 80 }} onClick={handleBarClick} className="cursor-pointer">
+                  <BarChart data={topFailingAssets} layout="vertical" margin={{ left: 80 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={true} vertical={false} />
                     <XAxis type="number" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} allowDecimals={false} />
                     <YAxis type="category" dataKey="assetName" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} width={100} />
@@ -282,7 +286,7 @@ export const KPIPage = () => {
                       formatter={(val: number) => [`${val}`, 'Fallas (Órdenes)'] }
                       cursor={{ fill: '#f1f5f9' }}
                     />
-                    <Bar dataKey="count" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={24} />
+                    <Bar dataKey="count" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={24} onClick={handleBarClick} className="cursor-pointer hover:opacity-80 transition-opacity" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
