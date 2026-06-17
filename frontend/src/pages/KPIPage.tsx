@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { getKPIs, updateKPIGoals, getChartData, getCostsByAsset, getTopFailingAssets } from '../api/kpis';
-import type { KPIResponse, KPIMetric, ChartData, AssetCostData, TopFailingAsset } from '../api/kpis';
+import { getKPIs, updateKPIGoals, getChartData, getCostsByAsset, getTopFailingAssets, getAssetFailureOrders } from '../api/kpis';
+import type { KPIResponse, KPIMetric, ChartData, AssetCostData, TopFailingAsset, FailureOrder } from '../api/kpis';
 import { useAuth } from '../context/AuthContext';
-import { Target, TrendingUp, Clock, AlertTriangle, CheckCircle, Database, Settings, BarChart2, Download } from 'lucide-react';
+import { Target, TrendingUp, Clock, AlertTriangle, CheckCircle, Database, Settings, BarChart2, Download, X } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export const KPIPage = () => {
@@ -14,6 +14,11 @@ export const KPIPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [period, setPeriod] = useState<string>('THIS_MONTH');
+
+  // Modal states for Top Failures
+  const [selectedFailureAsset, setSelectedFailureAsset] = useState<{ id: string; name: string } | null>(null);
+  const [failureOrders, setFailureOrders] = useState<FailureOrder[]>([]);
+  const [isFetchingOrders, setIsFetchingOrders] = useState(false);
 
   // Form state for editing goals
   const [goalsForm, setGoalsForm] = useState<Record<string, number>>({});
@@ -62,6 +67,22 @@ export const KPIPage = () => {
     } catch (error) {
       console.error(error);
       alert('Error al guardar las metas');
+    }
+  };
+
+  const handleBarClick = async (data: any) => {
+    if (!data || !data.activePayload || data.activePayload.length === 0) return;
+    const assetData = data.activePayload[0].payload as TopFailingAsset;
+    setSelectedFailureAsset({ id: assetData.assetId, name: assetData.assetName });
+    setIsFetchingOrders(true);
+    try {
+      const orders = await getAssetFailureOrders(assetData.assetId, period);
+      setFailureOrders(orders);
+    } catch (error) {
+      console.error(error);
+      alert('Error al obtener el detalle de fallas');
+    } finally {
+      setIsFetchingOrders(false);
     }
   };
 
@@ -252,7 +273,7 @@ export const KPIPage = () => {
             {topFailingAssets.length > 0 ? (
               <div className="h-72 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={topFailingAssets} layout="vertical" margin={{ left: 80 }}>
+                  <BarChart data={topFailingAssets} layout="vertical" margin={{ left: 80 }} onClick={handleBarClick} className="cursor-pointer">
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={true} vertical={false} />
                     <XAxis type="number" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} allowDecimals={false} />
                     <YAxis type="category" dataKey="assetName" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} width={100} />
@@ -316,9 +337,71 @@ export const KPIPage = () => {
               </ResponsiveContainer>
             </div>
           </div>
+          </div>
+        )}
+      </div>
+
+      {/* Failure Orders Modal */}
+      {selectedFailureAsset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm print:hidden">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex justify-between items-start p-6 border-b border-slate-100 bg-slate-50">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  <AlertTriangle className="text-amber-500" size={24} />
+                  Desglose de Fallas
+                </h2>
+                <p className="text-slate-500 text-sm mt-1">
+                  Equipo: <span className="font-bold text-slate-700">{selectedFailureAsset.name}</span>
+                </p>
+              </div>
+              <button 
+                onClick={() => setSelectedFailureAsset(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-full transition-colors shadow-sm"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1">
+              {isFetchingOrders ? (
+                <div className="py-20 text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                  <p className="text-slate-400 mt-4 text-sm font-medium">Obteniendo registro de eventos...</p>
+                </div>
+              ) : failureOrders.length > 0 ? (
+                <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-medium">
+                      <tr>
+                        <th className="px-4 py-3">Folio</th>
+                        <th className="px-4 py-3">Fecha</th>
+                        <th className="px-4 py-3">Descripción de la Falla</th>
+                        <th className="px-4 py-3">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {failureOrders.map(order => (
+                        <tr key={order.id} className="hover:bg-slate-50">
+                          <td className="px-4 py-3 font-bold text-slate-800">WO-{order.folio.toString().padStart(4, '0')}</td>
+                          <td className="px-4 py-3 text-slate-600">{new Date(order.created_at).toLocaleDateString()}</td>
+                          <td className="px-4 py-3 text-slate-700">{order.title}</td>
+                          <td className="px-4 py-3">
+                            <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold border border-slate-200">
+                              {order.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="py-10 text-center text-slate-400">No se encontraron órdenes de trabajo.</div>
+              )}
+            </div>
+          </div>
         </div>
       )}
-      </div>
     </div>
   );
 };

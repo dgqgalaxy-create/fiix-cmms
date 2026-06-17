@@ -10,6 +10,8 @@ export const PurchaseOrdersPage = () => {
   const [filteredOrders, setFilteredOrders] = useState<PurchaseOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('TODOS');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
 
@@ -35,14 +37,13 @@ export const PurchaseOrdersPage = () => {
   useEffect(() => {
     const term = searchTerm.toLowerCase();
     setFilteredOrders(
-      orders.filter(
-        o =>
-          `po-${o.folio}`.includes(term) ||
-          o.vendor?.name.toLowerCase().includes(term) ||
-          o.status.toLowerCase().includes(term)
-      )
+      orders.filter(o => {
+        const matchesSearch = `po-${o.folio}`.includes(term) || o.vendor?.name.toLowerCase().includes(term) || o.status.toLowerCase().includes(term);
+        const matchesFilter = filterStatus === 'TODOS' || o.status === filterStatus;
+        return matchesSearch && matchesFilter;
+      })
     );
-  }, [searchTerm, orders]);
+  }, [searchTerm, filterStatus, orders]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -91,10 +92,31 @@ export const PurchaseOrdersPage = () => {
               className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm"
             />
           </div>
-          <button className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm">
-            <Filter size={18} />
-            Filtros
-          </button>
+          <div className="relative">
+            <button 
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm h-full"
+            >
+              <Filter size={18} />
+              Filtros {filterStatus !== 'TODOS' && <span className="w-2 h-2 rounded-full bg-indigo-600"></span>}
+            </button>
+            {isFilterOpen && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200 z-50 overflow-hidden">
+                <div className="p-2">
+                  <div className="text-xs font-bold text-slate-400 uppercase px-3 py-2">Estado de Orden</div>
+                  {['TODOS', 'BORRADOR', 'APROBADA', 'ENVIADA', 'RECIBIDA', 'CANCELADA'].map(status => (
+                    <button
+                      key={status}
+                      onClick={() => { setFilterStatus(status); setIsFilterOpen(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${filterStatus === status ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="overflow-x-auto">

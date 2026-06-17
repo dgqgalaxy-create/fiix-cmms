@@ -66,3 +66,18 @@ export const getTopFailingAssets = async (period?: string): Promise<TopFailingAs
   const response = await api.get(`/kpis/top-failures${query}`);
   return response.data;
 };
+
+export interface FailureOrder {
+  id: string;
+  folio: number;
+  title: string;
+  created_at: string;
+  status: string;
+  accumulated_time_ms: number;
+}
+
+export const getAssetFailureOrders = async (assetId: string, period?: string): Promise<FailureOrder[]> => {
+  const query = period ? `?period=${period}` : '';
+  const response = await api.get(`/kpis/top-failures/${assetId}/orders${query}`);
+  return response.data;
+};

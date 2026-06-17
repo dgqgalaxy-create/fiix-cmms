@@ -41,6 +41,37 @@ export const getTopFailingAssets = async (req: AuthRequest, res: Response): Prom
   }
 };
 
+export const getAssetFailureOrders = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const assetId = req.params.assetId;
+    const period = req.query.period as string;
+    const { start, end } = getDateRange(period);
+
+    const workOrders = await prisma.workOrder.findMany({
+      where: {
+        asset_id: assetId,
+        created_at: { gte: start, lte: end },
+        maintenance_type: 'CORRECTIVO',
+        status: { not: 'ANULADO' }
+      },
+      select: {
+        id: true,
+        folio: true,
+        title: true,
+        created_at: true,
+        status: true,
+        accumulated_time_ms: true
+      },
+      orderBy: { created_at: 'desc' }
+    });
+
+    res.json(workOrders);
+  } catch (error) {
+    console.error('Error fetching asset failure orders:', error);
+    res.status(500).json({ error: 'Error al obtener órdenes de fallas del equipo' });
+  }
+};
+
 const DEFAULT_GOALS = {
   COMPLETED_MONTHLY: { targetValue: 50, unit: 'órdenes' },
   MTTR: { targetValue: 14400000, unit: 'ms' }, // 4 horas
