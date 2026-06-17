@@ -44,7 +44,14 @@ export const UsersTable = ({ users, onRowClick }: Props) => {
                 <Pencil size={15} />
               </button>
             </div>
-            <h3 className="font-bold text-slate-900 text-sm leading-snug">{user.name}</h3>
+            <h3 className="font-bold text-slate-900 text-sm leading-snug flex items-center gap-2">
+              {user.name}
+              {!user.is_active && (
+                <span className="bg-red-100 text-red-700 text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase border border-red-200">
+                  Baja
+                </span>
+              )}
+            </h3>
             <p className="text-slate-500 text-xs mt-0.5">{user.email}</p>
           </div>
         ))}
@@ -71,7 +78,14 @@ export const UsersTable = ({ users, onRowClick }: Props) => {
                   className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
                 >
                   <td className="px-6 py-4">
-                    <div className="font-semibold text-slate-800">{user.name}</div>
+                    <div className="font-semibold text-slate-800 flex items-center gap-2">
+                      {user.name}
+                      {!user.is_active && (
+                        <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase border border-red-200">
+                          Dado de Baja
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-slate-600 text-sm hidden sm:table-cell">
                     {user.email}

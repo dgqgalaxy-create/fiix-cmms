@@ -18,6 +18,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    if (!user.is_active) {
+      res.status(403).json({ error: 'Esta cuenta ha sido dada de baja. Contacta a un administrador.' });
+      return;
+    }
+
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
     if (!passwordMatch) {
       res.status(401).json({ error: 'Credenciales inválidas' });

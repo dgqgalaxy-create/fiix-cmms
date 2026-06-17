@@ -17,6 +17,7 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('TECNICO');
+  const [isActive, setIsActive] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,11 +31,13 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
         setName(user.name);
         setEmail(user.email);
         setRole(user.role);
+        setIsActive(user.is_active);
         setPassword(''); // Password empty on edit unless they want to change it
       } else {
         setName('');
         setEmail('');
         setRole('TECNICO');
+        setIsActive(true);
         setPassword('');
       }
       setError('');
@@ -54,7 +57,7 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
       setIsSubmitting(true);
       setError('');
       
-      const data: any = { name, email, role };
+      const data: any = { name, email, role, is_active: isActive };
       if (password) {
         data.password = password;
       }
@@ -169,6 +172,31 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
                 <option value="ADMINISTRADOR">ADMINISTRADOR (Control total del sistema)</option>
               </select>
             </div>
+
+            {isEditing && (
+              <div className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="flex items-center h-5">
+                  <input
+                    id="is_active"
+                    type="checkbox"
+                    className="w-5 h-5 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                    checked={isActive}
+                    onChange={(e) => setIsActive(e.target.checked)}
+                    disabled={user?.id === currentUser?.userId}
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <label htmlFor="is_active" className={`text-sm font-bold cursor-pointer ${isActive ? 'text-emerald-700' : 'text-red-600'}`}>
+                    {isActive ? 'Usuario Activo' : 'Dado de Baja'}
+                  </label>
+                  <p className="text-xs text-slate-500">
+                    {isActive 
+                      ? 'Puede acceder al sistema y ser asignado a órdenes.' 
+                      : 'No podrá iniciar sesión ni ser asignado a nuevas órdenes, pero se conservará su historial.'}
+                  </p>
+                </div>
+              </div>
+            )}
           </form>
         </div>
 

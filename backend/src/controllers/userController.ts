@@ -19,6 +19,7 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
         name: true,
         email: true,
         role: true,
+        is_active: true,
         created_at: true
       }
     });
@@ -60,9 +61,12 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
 export const updateUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, is_active } = req.body;
     
     const updateData: any = { name, email, role };
+    if (is_active !== undefined) {
+      updateData.is_active = is_active;
+    }
     if (password && password.trim() !== '') {
        updateData.password_hash = await bcrypt.hash(password, 10);
     }

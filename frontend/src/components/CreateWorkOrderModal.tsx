@@ -323,7 +323,7 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
                   {technicians.length === 0 ? (
                     <div className="text-sm text-slate-500 italic">No hay técnicos disponibles</div>
                   ) : (
-                    technicians.map((tech) => (
+                    technicians.filter(tech => tech.is_active !== false).map((tech) => (
                       <label key={tech.id} className="flex items-center gap-3 p-2 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors">
                         <input
                           type="checkbox"

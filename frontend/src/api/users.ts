@@ -5,6 +5,7 @@ export interface User {
   name: string;
   email: string;
   role: 'ADMINISTRADOR' | 'GESTIONADOR' | 'TECNICO';
+  is_active: boolean;
   created_at: string;
 }
 
