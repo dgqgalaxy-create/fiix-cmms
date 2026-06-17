@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getKPIs, updateKPIGoals, getChartData, getCostsByAsset, getTopFailingAssets, getAssetFailureOrders } from '../api/kpis';
 import type { KPIResponse, KPIMetric, ChartData, AssetCostData, TopFailingAsset, FailureOrder } from '../api/kpis';
 import { useAuth } from '../context/AuthContext';
-import { Target, TrendingUp, Clock, AlertTriangle, CheckCircle, Database, Settings, BarChart2, Download, X } from 'lucide-react';
+import { Target, TrendingUp, Clock, AlertTriangle, CheckCircle, Database, Settings, BarChart2, Download, X, RefreshCw } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export const KPIPage = () => {
@@ -217,6 +217,7 @@ export const KPIPage = () => {
         {renderCard("Cumplimiento SLA", <Target size={24} />, m.SLA, true, (v) => v.toFixed(1), "%")}
         {renderCard("Backlog", <AlertTriangle size={24} />, m.BACKLOG, false, (v) => v.toString(), "órdenes")}
         {renderCard("Disponibilidad Activos", <Database size={24} />, m.ASSET_AVAILABILITY, true, (v) => v.toFixed(1), "%")}
+        {m.REINCIDENCIA && renderCard("Reincidencia (Fallas Repetidas)", <RefreshCw size={24} />, m.REINCIDENCIA, false, (v) => v.toFixed(1), "%")}
       </div>
 
       {charts.length > 0 && (

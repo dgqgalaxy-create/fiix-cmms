@@ -81,7 +81,8 @@ const DEFAULT_GOALS = {
   RESPONSE_TIME: { targetValue: 3600000, unit: 'ms' }, // 1 hora
   SLA: { targetValue: 90, unit: '%' },
   BACKLOG: { targetValue: 10, unit: 'órdenes' },
-  ASSET_AVAILABILITY: { targetValue: 95, unit: '%' }
+  ASSET_AVAILABILITY: { targetValue: 95, unit: '%' },
+  REINCIDENCIA: { targetValue: 10, unit: '%' }
 };
 
 const getDateRange = (period: string | undefined): { start: Date; end: Date } => {
@@ -175,6 +176,38 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
       ? (operationalAssets.length / allAssets.length) * 100 
       : 100;
 
+    // KPI 7: Reincidencia (Tasa de Retrabajo en 14 días)
+    const correctiveOrders = allWorkOrders.filter(wo => wo.maintenance_type === 'CORRECTIVO' && wo.asset_id);
+    let recurrentCount = 0;
+
+    for (const order of correctiveOrders) {
+      if (!order.asset_id) continue;
+      
+      const fourteenDaysBefore = new Date(order.created_at);
+      fourteenDaysBefore.setDate(fourteenDaysBefore.getDate() - 14);
+
+      const previousFailure = await prisma.workOrder.findFirst({
+        where: {
+          asset_id: order.asset_id,
+          maintenance_type: 'CORRECTIVO',
+          status: 'FINALIZADO',
+          id: { not: order.id },
+          completed_at: {
+            gte: fourteenDaysBefore,
+            lte: new Date(order.created_at)
+          }
+        }
+      });
+
+      if (previousFailure) {
+        recurrentCount++;
+      }
+    }
+
+    const reincidencia = correctiveOrders.length > 0 
+      ? (recurrentCount / correctiveOrders.length) * 100 
+      : 0;
+
     res.json({
       totalOrders: allWorkOrders.length,
       metrics: {
@@ -184,6 +217,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
         SLA: { value: sla, goal: goals.SLA },
         BACKLOG: { value: backlog, goal: goals.BACKLOG },
         ASSET_AVAILABILITY: { value: assetAvailability, goal: goals.ASSET_AVAILABILITY },
+        REINCIDENCIA: { value: reincidencia, goal: goals.REINCIDENCIA },
       }
     });
 

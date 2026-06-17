@@ -17,6 +17,7 @@ export interface KPIResponse {
     SLA: KPIMetric;
     BACKLOG: KPIMetric;
     ASSET_AVAILABILITY: KPIMetric;
+    REINCIDENCIA: KPIMetric;
   };
 }
 
