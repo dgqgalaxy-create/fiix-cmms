@@ -23,6 +23,7 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
   // Item search state
   const [itemSearch, setItemSearch] = useState('');
   const [showItemDropdown, setShowItemDropdown] = useState(false);
+  const [showAllItems, setShowAllItems] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -35,14 +36,11 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
     }
   }, [isOpen]);
 
+  // ... (rest of methods) ...
+
   const handleAddItem = (item: Item) => {
-    // Check if already added
     if (orderItems.some(oi => oi.item_id === item.id)) return;
-    
-    setOrderItems([
-      ...orderItems, 
-      { item_id: item.id, quantity: 1, unit_cost: item.purchase_cost || 0 }
-    ]);
+    setOrderItems([...orderItems, { item_id: item.id, quantity: 1, unit_cost: item.purchase_cost || 0 }]);
     setItemSearch('');
     setShowItemDropdown(false);
   };
@@ -58,29 +56,17 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    // ... same submit logic ...
     e.preventDefault();
     setError('');
-
-    if (!selectedVendor) {
-      setError('Debes seleccionar un proveedor.');
-      return;
-    }
-
-    if (orderItems.length === 0) {
-      setError('Debes agregar al menos un ítem a la orden.');
-      return;
-    }
-
+    if (!selectedVendor) { setError('Debes seleccionar un proveedor.'); return; }
+    if (orderItems.length === 0) { setError('Debes agregar al menos un ítem a la orden.'); return; }
     setIsSubmitting(true);
     try {
-      await createPurchaseOrder({
-        vendor_id: selectedVendor,
-        expected_date: expectedDate || undefined,
-        items: orderItems
-      });
+      await createPurchaseOrder({ vendor_id: selectedVendor, expected_date: expectedDate || undefined, items: orderItems });
       onSuccess();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al crear la orden de compra');
+      setError(err.response?.data?.error || 'Error al crear la orden');
     } finally {
       setIsSubmitting(false);
     }
@@ -88,10 +74,12 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
 
   if (!isOpen) return null;
 
-  const filteredItems = items.filter(i => 
-    i.name.toLowerCase().includes(itemSearch.toLowerCase()) || 
-    i.internal_code.toLowerCase().includes(itemSearch.toLowerCase())
-  );
+  const filteredItems = items.filter(i => {
+    const matchesSearch = i.name.toLowerCase().includes(itemSearch.toLowerCase()) || 
+                          i.internal_code.toLowerCase().includes(itemSearch.toLowerCase());
+    const matchesVendor = (selectedVendor && !showAllItems) ? i.vendor_id === selectedVendor : true;
+    return matchesSearch && matchesVendor;
+  });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
@@ -157,6 +145,21 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
                   className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 
+                {selectedVendor && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <input 
+                      type="checkbox" 
+                      id="showAll" 
+                      checked={showAllItems}
+                      onChange={(e) => setShowAllItems(e.target.checked)}
+                      className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                    />
+                    <label htmlFor="showAll" className="text-sm text-slate-600 cursor-pointer">
+                      Mostrar ítems de otros proveedores
+                    </label>
+                  </div>
+                )}
+
                 {showItemDropdown && itemSearch && (
                   <div className="absolute z-10 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
                     {filteredItems.length === 0 ? (
