@@ -43,7 +43,7 @@ export const getTopFailingAssets = async (req: AuthRequest, res: Response): Prom
 
 export const getAssetFailureOrders = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const assetId = req.params.assetId;
+    const assetId = req.params.assetId as string;
     const period = req.query.period as string;
     const { start, end } = getDateRange(period);
 
