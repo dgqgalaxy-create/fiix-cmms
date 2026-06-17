@@ -29,6 +29,7 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -44,14 +45,16 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
   const loadAssetsAndTechs = async () => {
     try {
       setIsLoading(true);
-      const [assetsData, techsData, zonesData] = await Promise.all([
+      const [assetsData, techsData, zonesData, allUsersData] = await Promise.all([
         getAssets(),
         getUsers('TECNICO'),
-        getZones()
+        getZones(),
+        getUsers()
       ]);
       setAssets(assetsData);
       setTechnicians(techsData);
       setZones(zonesData);
+      setAllUsers(allUsersData);
       setAssetId('');
       setZoneId('');
     } catch (err) {
@@ -262,11 +265,18 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
                 <input
                   type="text"
                   required
+                  list="users-list"
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all"
                   placeholder="Ej: Juan Pérez"
                   value={requesterName}
                   onChange={(e) => setRequesterName(e.target.value)}
+                  autoComplete="off"
                 />
+                <datalist id="users-list">
+                  {allUsers.map((u) => (
+                    <option key={u.id} value={u.name} />
+                  ))}
+                </datalist>
               </div>
 
               <div>
