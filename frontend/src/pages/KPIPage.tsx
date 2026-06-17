@@ -117,21 +117,22 @@ export const KPIPage = () => {
   const renderCard = (title: string, icon: any, metric: KPIMetric, isMoreBetter: boolean, formatter: (val: number) => string, currentUnit: string) => {
     const isGood = isMoreBetter ? metric.value >= metric.goal.targetValue : metric.value <= metric.goal.targetValue;
     return (
-      <div className={`p-4 sm:p-6 rounded-2xl border shadow-sm print:shadow-none print:break-inside-avoid relative overflow-hidden transition-all ${isGood ? 'border-emerald-100 bg-white print:border-emerald-200' : 'border-red-100 bg-white print:border-red-200'}`}>
-        <div className="flex justify-between items-start mb-3 sm:mb-4 gap-2">
+      <div className={`p-4 sm:p-6 rounded-3xl border backdrop-blur-md relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl print:shadow-none print:break-inside-avoid ${isGood ? 'bg-gradient-to-br from-emerald-50/90 to-white border-emerald-100/50 shadow-emerald-500/10' : 'bg-gradient-to-br from-red-50/90 to-white border-red-100/50 shadow-red-500/10'}`}>
+        <div className="absolute -right-6 -top-6 w-24 h-24 bg-gradient-to-br opacity-20 rounded-full blur-2xl pointer-events-none" style={{ backgroundImage: `linear-gradient(to bottom right, ${isGood ? '#10b981, #fff' : '#ef4444, #fff'})`}}></div>
+        <div className="flex justify-between items-start mb-3 sm:mb-4 gap-2 relative z-10">
           <h3 className="font-bold text-slate-700 text-sm sm:text-base leading-snug">{title}</h3>
-          <div className={`p-1.5 sm:p-2 rounded-xl shrink-0 ${isGood ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+          <div className={`p-2 rounded-xl shrink-0 shadow-md ${isGood ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-emerald-200' : 'bg-gradient-to-br from-red-400 to-red-600 text-white shadow-red-200'}`}>
             {icon}
           </div>
         </div>
-        <div className="mb-1">
+        <div className="mb-1 relative z-10">
           <span className={`text-2xl sm:text-4xl font-black ${isGood ? 'text-emerald-600' : 'text-red-600'}`}>
             {formatter(metric.value)}
           </span>
           <span className="text-xs sm:text-sm font-medium text-slate-400 ml-1">{currentUnit}</span>
         </div>
-        <div className="flex items-center gap-2 mt-3 sm:mt-4 text-xs sm:text-sm font-medium text-slate-500 bg-slate-50 print:bg-white print:border-slate-300 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg border border-slate-100">
-          <Target size={14} className="text-slate-400 shrink-0" />
+        <div className="flex items-center gap-2 mt-3 sm:mt-4 text-xs sm:text-sm font-medium text-slate-500 bg-white/60 print:bg-white print:border-slate-300 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl border border-slate-100/50 relative z-10">
+          <Target size={14} className={isGood ? "text-emerald-500" : "text-red-500"} />
           <span>Meta: {formatter(metric.goal.targetValue)} {currentUnit}</span>
         </div>
       </div>
@@ -151,16 +152,16 @@ export const KPIPage = () => {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 print:hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 print:hidden relative z-10">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Indicadores de Desempeño (KPIs)</h1>
-          <p className="text-slate-500 mt-1">Mide y analiza el rendimiento del departamento de mantenimiento.</p>
+          <h1 className="text-2xl sm:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-indigo-600 pb-1">Indicadores de Desempeño</h1>
+          <p className="text-slate-500 mt-1 font-medium">Mide y analiza el rendimiento del departamento de mantenimiento.</p>
         </div>
         <div className="flex items-center gap-3 print:hidden">
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
-            className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 font-medium focus:outline-none focus:border-indigo-500 shadow-sm"
+            className="px-4 py-2.5 bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-xl text-sm text-slate-700 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all"
           >
             <option value="THIS_WEEK">Esta Semana</option>
             <option value="THIS_MONTH">Este Mes</option>
@@ -219,8 +220,8 @@ export const KPIPage = () => {
       </div>
 
       {charts.length > 0 && (
-        <div className="mt-12 print:mt-4 grid grid-cols-1 xl:grid-cols-2 print:grid-cols-2 gap-8 print:gap-4">
-          <div className="bg-white p-6 print:p-4 rounded-2xl border border-slate-200 shadow-sm print:shadow-none print:break-inside-avoid">
+        <div className="mt-12 print:mt-4 grid grid-cols-1 xl:grid-cols-2 print:grid-cols-2 gap-8 print:gap-4 relative z-10">
+          <div className="bg-white/80 backdrop-blur-md p-6 print:p-4 rounded-3xl border border-slate-200/50 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:shadow-slate-200/50 transition-shadow print:shadow-none print:break-inside-avoid">
             <div className="flex items-center gap-2 mb-6">
               <BarChart2 className="text-indigo-600" size={24} />
               <h2 className="text-lg font-bold text-slate-800">Costos de Mantenimiento</h2>
@@ -241,7 +242,7 @@ export const KPIPage = () => {
             </div>
           </div>
 
-          <div className="bg-white p-6 print:p-4 rounded-2xl border border-slate-200 shadow-sm xl:col-span-2 print:col-span-2 print:shadow-none print:break-inside-avoid">
+          <div className="bg-white/80 backdrop-blur-md p-6 print:p-4 rounded-3xl border border-slate-200/50 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:shadow-slate-200/50 transition-shadow xl:col-span-2 print:col-span-2 print:shadow-none print:break-inside-avoid">
             <div className="flex items-center gap-2 mb-6">
               <Database className="text-rose-600" size={24} />
               <h2 className="text-lg font-bold text-slate-800">Top Equipos por Costo de Mantenimiento</h2>
@@ -269,7 +270,7 @@ export const KPIPage = () => {
             )}
           </div>
 
-          <div className="bg-white p-6 print:p-4 rounded-2xl border border-slate-200 shadow-sm xl:col-span-2 print:col-span-2 print:shadow-none print:break-inside-avoid">
+          <div className="bg-white/80 backdrop-blur-md p-6 print:p-4 rounded-3xl border border-slate-200/50 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:shadow-slate-200/50 transition-shadow xl:col-span-2 print:col-span-2 print:shadow-none print:break-inside-avoid">
             <div className="flex items-center gap-2 mb-6">
               <AlertTriangle className="text-amber-500" size={24} />
               <h2 className="text-lg font-bold text-slate-800">Equipos con Más Fallas (Mantenimiento Correctivo)</h2>
@@ -298,7 +299,7 @@ export const KPIPage = () => {
           </div>
 
           {/* Gráfico MTBF */}
-          <div className="bg-white p-6 print:p-4 rounded-2xl border border-slate-200 shadow-sm print:shadow-none print:break-inside-avoid">
+          <div className="bg-white/80 backdrop-blur-md p-6 print:p-4 rounded-3xl border border-slate-200/50 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:shadow-slate-200/50 transition-shadow print:shadow-none print:break-inside-avoid">
             <div className="flex items-center gap-2 mb-6">
               <TrendingUp className="text-emerald-600" size={24} />
               <h2 className="text-lg font-bold text-slate-800">MTBF (Tiempo Medio Entre Fallas)</h2>
