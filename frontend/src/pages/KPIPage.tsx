@@ -221,7 +221,7 @@ export const KPIPage = () => {
         {renderCard("Cumplimiento SLA", <Target size={24} />, m.SLA, true, (v) => v.toFixed(1), "%", "Porcentaje de reparaciones que se terminaron a tiempo de acuerdo con la meta establecida para el MTTR.")}
         {renderCard("Backlog", <AlertTriangle size={24} />, m.BACKLOG, false, (v) => v.toString(), "órdenes", "Cantidad de órdenes de trabajo que aún no se han finalizado (Pendientes o En Espera).")}
         {renderCard("Disponibilidad Activos", <Database size={24} />, m.ASSET_AVAILABILITY, true, (v) => v.toFixed(1), "%", "Porcentaje actual de equipos operativos sin fallas críticas vs. el total de equipos registrados en el inventario.")}
-        {m.REINCIDENCIA && renderCard("Reincidencia (Fallas Repetidas)", <RefreshCw size={24} />, m.REINCIDENCIA, false, (v) => v.toFixed(1), "%", "Porcentaje de órdenes correctivas creadas para equipos que ya habían sido reparados en los últimos 14 días. Mide la calidad del retrabajo.")}
+        {m.REINCIDENCIA && renderCard("Reincidencia (Fallas Repetidas)", <RefreshCw size={24} />, m.REINCIDENCIA, false, (v) => v.toFixed(1), "%", "Porcentaje de órdenes correctivas creadas para equipos que ya habían sido reparados en los últimos 3 días. Mide la calidad del retrabajo.")}
       </div>
 
       {charts.length > 0 && (
@@ -351,11 +351,21 @@ export const KPIPage = () => {
           {/* Vista General Reincidentes */}
           {m.REINCIDENCIA && (
             <div className="bg-white/80 backdrop-blur-md p-6 print:p-4 rounded-3xl border border-slate-200/50 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:shadow-slate-200/50 transition-shadow xl:col-span-2 print:col-span-2 print:shadow-none print:break-inside-avoid">
-              <div className="flex items-center gap-2 mb-6">
-                <RefreshCw className="text-rose-600" size={24} />
-                <h2 className="text-lg font-bold text-slate-800" title="Equipos que volvieron a fallar menos de 14 días después de una reparación">
-                  Equipos con Fallas Recurrentes (Últimos 14 días)
-                </h2>
+              <div className="flex flex-col md:flex-row md:items-center gap-2 mb-6 justify-between">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="text-rose-600" size={24} />
+                  <h2 className="text-lg font-bold text-slate-800">
+                    Equipos con Fallas Recurrentes
+                  </h2>
+                </div>
+                <div className="bg-rose-50 border border-rose-100 p-3 rounded-xl text-xs text-rose-800 shadow-sm max-w-sm">
+                  <strong className="block mb-1">Criterios de Reincidencia:</strong>
+                  <ul className="list-disc pl-4 space-y-0.5">
+                    <li>Es una falla Correctiva.</li>
+                    <li>Ocurre en el mismo equipo.</li>
+                    <li>Se reportó a menos de <strong>3 días</strong> de haberse cerrado una reparación anterior.</li>
+                  </ul>
+                </div>
               </div>
               
               {m.REINCIDENCIA.details && m.REINCIDENCIA.details.length > 0 ? (
