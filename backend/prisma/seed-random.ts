@@ -7,9 +7,13 @@ async function main() {
 
   // 1. Limpieza de datos antiguos en orden de relaciones
   console.log('🗑️ Limpiando datos existentes...');
+  await prisma.inventoryTransaction.deleteMany();
+  await prisma.maintenancePlan.deleteMany();
   await prisma.workOrder.deleteMany();
   await prisma.asset.deleteMany();
   await prisma.zone.deleteMany();
+  // No borramos Users para no romper auth si hay sesiones activas, o podemos borrarlos:
+  // await prisma.user.deleteMany(); // comentado para que no falle con los ya existentes
 
   // 2. Crear/Verificar usuarios principales
   console.log('👥 Creando usuarios...');
