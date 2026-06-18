@@ -3,6 +3,7 @@ import { X, Save, Upload, Package } from 'lucide-react';
 import { createItem, updateItem } from '../../api/inventory';
 import { ImageSearchModal } from '../inventory/ImageSearchModal';
 import type { Item, ItemCategory, ItemLocation, Vendor, InventoryTransaction } from '../../api/inventory';
+import { BACKEND_URL } from '../../api/axios';
 
 interface Props {
   isOpen: boolean;
@@ -88,7 +89,7 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
         uom: item.uom || 'PIEZAS',
         is_active: item.is_active,
       });
-      setImagePreview(item.image_url ? `http://localhost:3000${item.image_url}` : null);
+      setImagePreview(item.image_url ? `${BACKEND_URL}${item.image_url}` : null);
       setDateFilter('all');
     } else {
       setFormData({

@@ -4,6 +4,7 @@ import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, 
 import { 
   getItems, getTransactions, getCategories, getLocations, getVendors
 } from '../api/inventory';
+import { BACKEND_URL } from '../api/axios';
 import type { Item, InventoryTransaction, ItemCategory, ItemLocation, Vendor } from '../api/inventory';
 import { useAuth } from '../context/AuthContext';
 import { ItemModal } from '../components/inventory/ItemModal';
@@ -246,7 +247,7 @@ export const InventoryPage = () => {
                   <div className="flex gap-3 items-center mb-3">
                     <div className="flex-shrink-0">
                       {item.image_url ? (
-                        <img src={`http://localhost:3000${item.image_url}`} alt={item.name} className="w-12 h-12 object-cover rounded-xl border border-slate-200" />
+                        <img src={`${BACKEND_URL}${item.image_url}`} alt={item.name} className="w-12 h-12 object-cover rounded-xl border border-slate-200" />
                       ) : (
                         <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400">
                           <Package size={20} />
@@ -327,7 +328,7 @@ export const InventoryPage = () => {
                           <div className="flex items-center gap-3">
                             <div className="flex-shrink-0">
                               {item.image_url ? (
-                                <img src={`http://localhost:3000${item.image_url}`} alt={item.name} className="w-10 h-10 object-cover rounded border border-slate-200" />
+                                <img src={`${BACKEND_URL}${item.image_url}`} alt={item.name} className="w-10 h-10 object-cover rounded border border-slate-200" />
                               ) : (
                                 <div className="w-10 h-10 bg-slate-100 rounded flex items-center justify-center text-slate-400">
                                   <Package size={20} />
