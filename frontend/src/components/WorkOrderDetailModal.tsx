@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Loader2, Save, Trash2, Ban, Clock, Package } from 'lucide-react';
+import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch } from 'lucide-react';
 import type { WorkOrder } from '../api/workOrders';
 import { useAuth } from '../context/AuthContext';
 import { getUsers } from '../api/users';
@@ -7,7 +7,7 @@ import type { User } from '../api/users';
 import { getItems } from '../api/inventory';
 import type { Item } from '../api/inventory';
 import { SignatureField } from './SignatureField';
-import { BACKEND_URL } from '../api/axios';
+import api, { BACKEND_URL } from '../api/axios';
 import type { SignatureFieldRef } from './SignatureField';
 import { useRef } from 'react';
 import { Download } from 'lucide-react';
@@ -48,7 +48,14 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
   const [inventoryItems, setInventoryItems] = useState<Item[]>([]);
   const [usedItems, setUsedItems] = useState<{item_id: string, name: string, amount: number, uom: string, max_stock: number}[]>([]);
   const [selectedItemToAdd, setSelectedItemToAdd] = useState<string>('');
+  const [itemSearchText, setItemSearchText] = useState<string>('');
+  const [showDropdown, setShowDropdown] = useState(false);
   const [amountToAdd, setAmountToAdd] = useState<string>('');
+
+  const [rcaTree, setRcaTree] = useState<any[]>([]);
+  const [failureProblemId, setFailureProblemId] = useState<string>('');
+  const [failureCauseId, setFailureCauseId] = useState<string>('');
+  const [failureRemedyId, setFailureRemedyId] = useState<string>('');
 
   useEffect(() => {
     if (workOrder) {
@@ -63,7 +70,13 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
       setError('');
       setUsedItems([]);
       setSelectedItemToAdd('');
+      setItemSearchText('');
+      setShowDropdown(false);
       setAmountToAdd('');
+      
+      setFailureProblemId((workOrder as any).failure_problem_id || '');
+      setFailureCauseId((workOrder as any).failure_cause_id || '');
+      setFailureRemedyId((workOrder as any).failure_remedy_id || '');
     }
   }, [workOrder]);
 
@@ -73,6 +86,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
     }
     if (isOpen) {
       getItems().then(setInventoryItems).catch(console.error);
+      api.get('/rca/tree').then(res => setRcaTree(res.data)).catch(console.error);
     }
   }, [isOpen, user]);
 
@@ -185,6 +199,11 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
           setError('Debes ingresar las firmas de liberación de área y entrega de trabajo para finalizar.');
           return;
         }
+        
+        if (workOrder.maintenance_type === 'CORRECTIVO' && (!failureProblemId || !failureCauseId || !failureRemedyId)) {
+          setError('Al finalizar un mantenimiento CORRECTIVO, es obligatorio llenar el Árbol de Fallas (RCA).');
+          return;
+        }
       }
 
       if (finalStatus === 'EN_ESPERA' && !holdReason?.trim()) {
@@ -214,6 +233,9 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
         if (usedItems.length > 0) {
           updateData.used_items = usedItems.map(item => ({ item_id: item.item_id, amount: item.amount }));
         }
+        if (failureProblemId) updateData.failure_problem_id = failureProblemId;
+        if (failureCauseId) updateData.failure_cause_id = failureCauseId;
+        if (failureRemedyId) updateData.failure_remedy_id = failureRemedyId;
       }
       
       if (beforeImage) updateData.before_image = beforeImage;
@@ -544,6 +566,70 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                       disabled={isClosed}
                     />
                     
+                    {!isClosed && status === 'FINALIZADO' && workOrder.maintenance_type === 'CORRECTIVO' && (
+                      <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+                        <label className="block text-sm font-bold text-orange-800 mb-3 flex items-center gap-2">
+                          <GitBranch size={16} /> Árbol de Fallas (RCA) *
+                        </label>
+                        <div className="space-y-3">
+                          <div>
+                            <span className="text-xs font-semibold text-orange-700 block mb-1">Problema Encontrado</span>
+                            <select 
+                              className="w-full px-3 py-2 border border-orange-200 rounded-lg text-sm bg-white"
+                              value={failureProblemId}
+                              onChange={(e) => {
+                                setFailureProblemId(e.target.value);
+                                setFailureCauseId('');
+                                setFailureRemedyId('');
+                              }}
+                            >
+                              <option value="">Selecciona el Problema...</option>
+                              {rcaTree.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          
+                          {failureProblemId && (
+                            <div className="animate-in fade-in duration-200">
+                              <span className="text-xs font-semibold text-orange-700 block mb-1">Causa Raíz</span>
+                              <select 
+                                className="w-full px-3 py-2 border border-orange-200 rounded-lg text-sm bg-white"
+                                value={failureCauseId}
+                                onChange={(e) => {
+                                  setFailureCauseId(e.target.value);
+                                  setFailureRemedyId('');
+                                }}
+                              >
+                                <option value="">Selecciona la Causa...</option>
+                                {rcaTree.find(p => p.id === failureProblemId)?.causes?.map((c: any) => (
+                                  <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                          
+                          {failureCauseId && (
+                            <div className="animate-in fade-in duration-200">
+                              <span className="text-xs font-semibold text-orange-700 block mb-1">Remedio / Acción Tomada</span>
+                              <select 
+                                className="w-full px-3 py-2 border border-orange-200 rounded-lg text-sm bg-white"
+                                value={failureRemedyId}
+                                onChange={(e) => setFailureRemedyId(e.target.value)}
+                              >
+                                <option value="">Selecciona el Remedio...</option>
+                                {rcaTree.find(p => p.id === failureProblemId)
+                                  ?.causes?.find((c: any) => c.id === failureCauseId)
+                                  ?.remedies?.map((r: any) => (
+                                    <option key={r.id} value={r.id}>{r.name}</option>
+                                  ))}
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
                     {!isClosed && (
                       <div className="mt-4 space-y-6">
                         {/* SECCION DE REPUESTOS */}
@@ -553,18 +639,45 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                           </label>
                           
                           <div className="flex flex-col sm:flex-row gap-2 mb-4">
-                            <select 
-                              className="flex-1 px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white"
-                              value={selectedItemToAdd}
-                              onChange={(e) => setSelectedItemToAdd(e.target.value)}
-                            >
-                              <option value="">Selecciona un repuesto...</option>
-                              {inventoryItems.filter(i => i.is_active).map(item => (
-                                <option key={item.id} value={item.id}>
-                                  {item.internal_code} - {item.name} (Stock: {item.stock} {item.uom})
-                                </option>
-                              ))}
-                            </select>
+                            <div className="flex-1 relative">
+                              <input 
+                                type="text"
+                                className="w-full px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                placeholder="Teclea para buscar repuesto..."
+                                value={itemSearchText}
+                                onChange={(e) => {
+                                  setItemSearchText(e.target.value);
+                                  setShowDropdown(true);
+                                  setSelectedItemToAdd('');
+                                }}
+                                onFocus={() => setShowDropdown(true)}
+                                onBlur={() => setShowDropdown(false)}
+                              />
+                              {showDropdown && (
+                                <ul className="absolute z-50 w-full bg-white border border-blue-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto text-xs divide-y divide-slate-100">
+                                  {inventoryItems
+                                    .filter(i => i.is_active && `${i.internal_code} ${i.name}`.toLowerCase().includes(itemSearchText.toLowerCase()))
+                                    .map(item => (
+                                      <li 
+                                        key={item.id} 
+                                        className="px-3 py-2.5 hover:bg-blue-50 cursor-pointer text-slate-700 transition-colors"
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => {
+                                          setSelectedItemToAdd(item.id);
+                                          setItemSearchText(`${item.internal_code} - ${item.name} (Stock: ${item.stock} ${item.uom})`);
+                                          setShowDropdown(false);
+                                        }}
+                                      >
+                                        <span className="font-semibold text-slate-900">{item.internal_code}</span> - {item.name} <span className="text-slate-400 font-medium ml-1">(Stock: {item.stock} {item.uom})</span>
+                                      </li>
+                                    ))
+                                  }
+                                  {inventoryItems.filter(i => i.is_active && `${i.internal_code} ${i.name}`.toLowerCase().includes(itemSearchText.toLowerCase())).length === 0 && (
+                                    <li className="px-3 py-3 text-slate-400 text-center italic">No hay resultados</li>
+                                  )}
+                                </ul>
+                              )}
+                            </div>
                             <input 
                               type="number" 
                               step="0.01" 
@@ -593,6 +706,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                                   max_stock: itemObj.stock 
                                 }]);
                                 setSelectedItemToAdd('');
+                                setItemSearchText('');
                                 setAmountToAdd('');
                               }}
                               className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shrink-0"

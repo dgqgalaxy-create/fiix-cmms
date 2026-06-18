@@ -159,6 +159,15 @@ model WorkOrder {
 
   maintenance_plan_id String?      @db.Uuid
   maintenance_plan    MaintenancePlan? @relation("GeneratedOrders", fields: [maintenance_plan_id], references: [id])
+
+  failure_problem_id  String?      @db.Uuid
+  failure_problem     FailureProblem? @relation(fields: [failure_problem_id], references: [id])
+
+  failure_cause_id    String?      @db.Uuid
+  failure_cause       FailureCause?   @relation(fields: [failure_cause_id], references: [id])
+
+  failure_remedy_id   String?      @db.Uuid
+  failure_remedy      FailureRemedy?  @relation(fields: [failure_remedy_id], references: [id])
 }
 
 model KPIGoal {
@@ -326,4 +335,37 @@ model PurchaseOrderItem {
   
   quantity           Float
   unit_cost          Float    // Precio capturado al crear la orden
+}
+
+model FailureProblem {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+
+  causes      FailureCause[]
+  work_orders WorkOrder[]
+}
+
+model FailureCause {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  problem_id  String   @db.Uuid
+  problem     FailureProblem @relation(fields: [problem_id], references: [id], onDelete: Cascade)
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+
+  remedies    FailureRemedy[]
+  work_orders WorkOrder[]
+}
+
+model FailureRemedy {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  cause_id    String   @db.Uuid
+  cause       FailureCause @relation(fields: [cause_id], references: [id], onDelete: Cascade)
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+
+  work_orders WorkOrder[]
 }

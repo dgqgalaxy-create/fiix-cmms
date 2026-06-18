@@ -24,6 +24,7 @@ import zoneRoutes from './routes/zoneRoutes';
 import inventoryRoutes from './routes/inventoryRoutes';
 import maintenanceRoutes from './routes/maintenanceRoutes';
 import purchaseOrderRoutes from './routes/purchaseOrderRoutes';
+import rcaRoutes from './routes/rcaRoutes';
 import { initCronJobs } from './utils/cronJobs';
 
 app.get('/api/health', (req: Request, res: Response) => {
@@ -41,6 +42,7 @@ app.use('/api/zones', zoneRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
+app.use('/api/rca', rcaRoutes);
 
 // Initialize Cron Jobs
 initCronJobs();

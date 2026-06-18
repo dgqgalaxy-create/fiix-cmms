@@ -29,7 +29,10 @@ export const getWorkOrders = async (req: AuthRequest, res: Response): Promise<vo
         asset: true,
         zone: true,
         created_by: { select: { id: true, name: true } },
-        assigned_technicians: { select: { id: true, name: true } }
+        assigned_technicians: { select: { id: true, name: true } },
+        failure_problem: true,
+        failure_cause: true,
+        failure_remedy: true
       },
       orderBy: { created_at: 'desc' } // Opcional, pero bueno para ordenar las más recientes primero
     });
@@ -80,7 +83,10 @@ export const getWorkOrderById = async (req: AuthRequest, res: Response): Promise
         asset: true,
         zone: true,
         created_by: { select: { id: true, name: true } },
-        assigned_technicians: { select: { id: true, name: true } }
+        assigned_technicians: { select: { id: true, name: true } },
+        failure_problem: true,
+        failure_cause: true,
+        failure_remedy: true
       }
     });
     if (!workOrder) {
@@ -142,7 +148,7 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
 export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { title, description, asset_id, status, hold_reason, resolution_notes, assigned_technicians_ids, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group, signature_clean_area, signature_delivery, used_items } = req.body;
+    const { title, description, asset_id, status, hold_reason, resolution_notes, assigned_technicians_ids, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group, signature_clean_area, signature_delivery, used_items, failure_problem_id, failure_cause_id, failure_remedy_id } = req.body;
     const userRole = req.user?.role;
     const userId = req.user?.userId;
 
@@ -193,6 +199,9 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
     if (production_group !== undefined) updateData.production_group = production_group;
     if (signature_clean_area !== undefined) updateData.signature_clean_area = signature_clean_area;
     if (signature_delivery !== undefined) updateData.signature_delivery = signature_delivery;
+    if (failure_problem_id !== undefined) updateData.failure_problem_id = failure_problem_id;
+    if (failure_cause_id !== undefined) updateData.failure_cause_id = failure_cause_id;
+    if (failure_remedy_id !== undefined) updateData.failure_remedy_id = failure_remedy_id;
     
     // Auto-asignación: Si un técnico la cambia a EN_PROCESO, se auto-asigna si la lista estaba vacía
     if (userRole === 'TECNICO' && status === 'EN_PROCESO' && currentWorkOrder.status === 'PENDIENTE') {

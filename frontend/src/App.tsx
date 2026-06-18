@@ -12,6 +12,7 @@ import { ZonesPage } from './pages/ZonesPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { MaintenancePlansPage } from './pages/MaintenancePlansPage';
 import { PurchaseOrdersPage } from './pages/PurchaseOrdersPage';
+import { RCAPage } from './pages/RCAPage';
 
 function App() {
   return (
@@ -114,6 +115,17 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <PermissionsPage />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/rca" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RCAPage />
                 </Layout>
               </ProtectedRoute>
             } 
