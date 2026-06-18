@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from './src/config/prisma';
 
 async function main() {
   console.log("⚠️  Iniciando el borrado de la base de datos de inventario...");
