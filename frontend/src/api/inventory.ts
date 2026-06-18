@@ -139,16 +139,12 @@ export const getItems = async () => {
 };
 
 export const createItem = async (formData: FormData) => {
-  const response = await axiosInstance.post<Item>('/inventory/items', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  });
+  const response = await axiosInstance.post<Item>('/inventory/items', formData);
   return response.data;
 };
 
 export const updateItem = async (id: string, formData: FormData) => {
-  const response = await axiosInstance.patch<Item>(`/inventory/items/${id}`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  });
+  const response = await axiosInstance.patch<Item>(`/inventory/items/${id}`, formData);
   return response.data;
 };
 
