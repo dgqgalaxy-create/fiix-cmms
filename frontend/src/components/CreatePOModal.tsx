@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Loader2, Search } from 'lucide-react';
 import { createPurchaseOrder } from '../api/purchaseOrders';
 import { getVendors, getItems, type Vendor, type Item } from '../api/inventory';
+import { BACKEND_URL } from '../api/axios';
 
 interface CreatePOModalProps {
   isOpen: boolean;
@@ -173,7 +174,7 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
                         >
                           <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
                             {item.image_url ? (
-                              <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                              <img src={`${BACKEND_URL}${item.image_url}`} alt={item.name} className="w-full h-full object-cover" />
                             ) : (
                               <span className="text-xs font-bold text-slate-400">{item.internal_code.substring(0,2)}</span>
                             )}
