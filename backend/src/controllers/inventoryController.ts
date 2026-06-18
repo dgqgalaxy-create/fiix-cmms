@@ -354,7 +354,7 @@ export const searchImages = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const images = await imageSearch({ query: q, moderate: false });
+    const images = await imageSearch({ query: q, safeSearch: 'Off' } as any);
     // Filter and return only top 10 URLs
     const topImages = images.slice(0, 10).map((img: any) => ({
       url: img.image,

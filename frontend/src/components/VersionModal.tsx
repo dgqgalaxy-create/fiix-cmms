@@ -1,6 +1,6 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2 } from 'lucide-react';
 
-export const APP_VERSION = "1.2.2";
+export const APP_VERSION = "1.2.3";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -11,7 +11,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "17 de Junio, 2026";
+  const updateDate = "18 de Junio, 2026";
   const modules = [
     "Panel Principal (Dashboard)",
     "Gestión de Activos (Equipos)",
@@ -22,10 +22,10 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "KPIs y Metas"
   ];
   const changelog = [
+    "Reemplazo de Google por DuckDuckGo para evitar bloqueos del servidor (Error 502)",
     "Integración de cámara nativa para fotos de evidencia",
     "Autocompletado dinámico de solicitantes de producción",
     "Migración histórica de inventario completada",
-    "Corrección en el guardado de imágenes web de repuestos",
     "Corrección de errores menores de tipado (TypeScript) en buscador de imágenes"
   ];
 
