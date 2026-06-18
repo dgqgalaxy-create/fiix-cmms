@@ -19,7 +19,12 @@ Este documento contiene la lista de módulos y características pendientes de de
 
 ## [ ] Mejoras Transversales Futuras (Backlog)
 - [x] **Migración de Órdenes e Inventario:** Importación exitosa de los archivos CSV históricos.
-- [ ] **Checklists avanzados:** Pasos obligatorios dentro de la Orden de Trabajo (Ej. `[ ] Engrasar motor`).
-- [ ] **Notificaciones Push/Email:** Avisar al técnico de nuevas órdenes asignadas.
-- [ ] **Control de Medidores:** Registro histórico de horómetros de maquinaria.
-- [ ] **Soporte PWA:** Que la app funcione offline para sótanos sin conexión.
+- [ ] **Checklists avanzados y LOTO:** Pasos obligatorios dentro de la Orden de Trabajo y firmas de bloqueo de energías peligrosas.
+- [ ] **Notificaciones y Escalamiento:** Avisar por Email/Push/WhatsApp a técnicos y escalar SLAs vencidos a gerentes.
+- [ ] **Control de Medidores (CBM):** Registro histórico de horómetros y detonación automática de PMs por uso real.
+- [ ] **Soporte PWA (Offline):** Que la app funcione sin conexión a internet y sincronice datos en segundo plano.
+- [ ] **Gestión con Códigos QR:** Escaneo físico en máquinas para abrir historiales y escaneo en estantes para el control rápido de refacciones.
+- [ ] **Árbol de Fallas (RCA):** Clasificación obligatoria de Problema -> Causa -> Remedio para generar análisis Pareto de fallas comunes.
+- [ ] **Calendario de Carga de Trabajo (Gantt):** Vista interactiva para los supervisores para balancear la carga semanal de los técnicos.
+- [ ] **Portal de Contratistas:** Acceso limitado para proveedores externos donde puedan reportar sus trabajos sin ver datos sensibles.
+- [ ] **Multiplanta / Multisítio:** Segregación de información para empresas con múltiples fábricas con un dashboard corporativo global.
