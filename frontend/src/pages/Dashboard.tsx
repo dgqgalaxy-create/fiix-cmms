@@ -271,6 +271,32 @@ export const Dashboard = () => {
         </div>
       </div>
 
+      {paretoData.length > 0 && (
+        <div className="mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm print:hidden">
+          <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <Activity size={20} className="text-orange-600" />
+            Top Problemas Frecuentes (Correctivo)
+          </h2>
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={paretoData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="left" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="right" orientation="right" stroke="#f97316" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `${val}%`} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
+                  formatter={(value: any, name: any) => [name === 'PorcentajeAcumulado' ? `${Number(value).toFixed(1)}%` : value, name === 'PorcentajeAcumulado' ? '% Acumulado' : name]}
+                />
+                <Legend />
+                <Bar yAxisId="left" dataKey="Frecuencia" barSize={40} fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Line yAxisId="right" type="monotone" dataKey="PorcentajeAcumulado" stroke="#f97316" strokeWidth={3} dot={{ r: 4, fill: '#f97316', strokeWidth: 2, stroke: '#fff' }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
       <div className={`grid grid-cols-2 md:grid-cols-${hasPermission('VIEW_INVENTORY') ? '5' : '4'} print:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8`}>
         <div 
           onClick={() => handleStatusClick('PENDIENTE')}
@@ -446,32 +472,6 @@ export const Dashboard = () => {
             </select>
           </div>
 
-          {paretoData.length > 0 && (
-            <div className="mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm print:hidden">
-              <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <Activity size={20} className="text-orange-600" />
-                Top Problemas Frecuentes (Correctivo)
-              </h2>
-              <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={paretoData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                    <YAxis yAxisId="left" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                    <YAxis yAxisId="right" orientation="right" stroke="#f97316" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `${val}%`} />
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
-                      formatter={(value: any, name: any) => [name === 'PorcentajeAcumulado' ? `${Number(value).toFixed(1)}%` : value, name === 'PorcentajeAcumulado' ? '% Acumulado' : name]}
-                    />
-                    <Legend />
-                    <Bar yAxisId="left" dataKey="Frecuencia" barSize={40} fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                    <Line yAxisId="right" type="monotone" dataKey="PorcentajeAcumulado" stroke="#f97316" strokeWidth={3} dot={{ r: 4, fill: '#f97316', strokeWidth: 2, stroke: '#fff' }} />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          )}
-          
           <WorkOrdersTable 
             workOrders={getFilteredWorkOrders()} 
             onRowClick={setSelectedWorkOrder}
