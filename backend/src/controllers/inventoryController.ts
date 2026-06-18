@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { generateInventoryCode } from '../utils/codeGenerator';
-import * as google from 'googlethis';
+import { imageSearch } from '@mudbill/duckduckgo-images-api';
 import axios from 'axios';
 
 // ==========================================
@@ -354,13 +354,13 @@ export const searchImages = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const images = await google.image(q, { safe: false });
+    const images = await imageSearch({ query: q, moderate: false });
     // Filter and return only top 10 URLs
     const topImages = images.slice(0, 10).map((img: any) => ({
-      url: img.url,
+      url: img.image,
       width: img.width,
       height: img.height,
-      title: img.origin?.title
+      title: img.title
     }));
 
     res.json(topImages);
