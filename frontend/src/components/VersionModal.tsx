@@ -1,5 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2 } from 'lucide-react';
 
+export const APP_VERSION = "1.2.1";
+
 interface VersionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -8,7 +10,7 @@ interface VersionModalProps {
 export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
-  const version = "1.2.1";
+  const version = APP_VERSION;
   const updateDate = "17 de Junio, 2026";
   const modules = [
     "Panel Principal (Dashboard)",

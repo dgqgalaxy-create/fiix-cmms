@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield, X, Package, CalendarClock, ShoppingCart, Info } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { VersionModal } from './VersionModal';
+import { VersionModal, APP_VERSION } from './VersionModal';
 
 export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const location = useLocation();
@@ -92,7 +92,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
               className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
             >
               <Info size={14} />
-              v1.2.0 - Info del Sistema
+              v{APP_VERSION} - Info del Sistema
             </button>
           </div>
         </div>
