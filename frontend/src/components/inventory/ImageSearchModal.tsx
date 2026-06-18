@@ -63,7 +63,8 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({ isOpen, onCl
       const blob = response.data;
       
       // Determine extension from content-type or default to jpg
-      const contentType = response.headers['content-type'] || 'image/jpeg';
+      const contentTypeHeader = response.headers['content-type'];
+      const contentType = (typeof contentTypeHeader === 'string' ? contentTypeHeader : 'image/jpeg');
       const extension = contentType.split('/')[1] || 'jpg';
       const fileName = `web_image_${Date.now()}.${extension}`;
       

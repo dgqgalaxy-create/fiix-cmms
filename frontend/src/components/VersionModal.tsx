@@ -1,6 +1,6 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2 } from 'lucide-react';
 
-export const APP_VERSION = "1.2.1";
+export const APP_VERSION = "1.2.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -25,7 +25,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Integración de cámara nativa para fotos de evidencia",
     "Autocompletado dinámico de solicitantes de producción",
     "Migración histórica de inventario completada",
-    "Corrección en el guardado de imágenes web de repuestos"
+    "Corrección en el guardado de imágenes web de repuestos",
+    "Corrección de errores menores de tipado (TypeScript) en buscador de imágenes"
   ];
 
   return (
