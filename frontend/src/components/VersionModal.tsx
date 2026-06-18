@@ -8,7 +8,7 @@ interface VersionModalProps {
 export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
-  const version = "1.2.0";
+  const version = "1.2.1";
   const updateDate = "17 de Junio, 2026";
   const modules = [
     "Panel Principal (Dashboard)",
@@ -22,7 +22,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   const changelog = [
     "Integración de cámara nativa para fotos de evidencia",
     "Autocompletado dinámico de solicitantes de producción",
-    "Migración histórica de inventario completada"
+    "Migración histórica de inventario completada",
+    "Corrección en el guardado de imágenes web de repuestos"
   ];
 
   return (
