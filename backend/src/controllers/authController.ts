@@ -24,6 +24,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
+    console.log(`[LOGIN DEBUG] user: ${user.email}, providedPass: ${password}, hash: ${user.password_hash}, match: ${passwordMatch}`);
+    
     if (!passwordMatch) {
       res.status(401).json({ error: 'Credenciales inválidas' });
       return;

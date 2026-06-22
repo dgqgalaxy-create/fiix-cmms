@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldAlert, Download, Upload, Trash2, KeyRound, AlertTriangle, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import axios from '../api/axios';
+import axios, { BACKEND_URL } from '../api/axios';
 
 export const DeveloperOptions = () => {
   const [password, setPassword] = useState('');
@@ -14,15 +14,12 @@ export const DeveloperOptions = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Usa axios normal o la instancia exportada
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
     try {
-      await axios.post(`${API_URL}/dev/verify`, {}, {
+      await axios.post(`/dev/verify`, {}, {
         headers: { 'x-dev-password': password }
       });
       setIsAuthenticated(true);
@@ -37,7 +34,9 @@ export const DeveloperOptions = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_URL}/dev/export`, {
+      // Export requires fetch since we handle a blob response
+      const response = await fetch(`${BACKEND_URL}/api/dev/export`, {
+        method: 'GET',
         headers: { 'x-dev-password': password }
       });
       if (!response.ok) throw new Error('Error al exportar');
@@ -70,7 +69,7 @@ export const DeveloperOptions = () => {
     formData.append('backupFile', file);
 
     try {
-      await axios.post(`${API_URL}/dev/import`, formData, {
+      await axios.post(`/dev/import`, formData, {
         headers: { 
           'x-dev-password': password,
           'Content-Type': 'multipart/form-data'
@@ -100,7 +99,7 @@ export const DeveloperOptions = () => {
     }
 
     try {
-      const res = await axios.post(`${API_URL}/dev/import-csv`, formData, {
+      const res = await axios.post(`/dev/import-csv`, formData, {
         headers: { 
           'x-dev-password': password,
           'Content-Type': 'multipart/form-data'
@@ -128,7 +127,7 @@ export const DeveloperOptions = () => {
     setLoadingMessage('Vaciando la base de datos de manera segura...');
     setError(null);
     try {
-      await axios.post(`${API_URL}/dev/delete`, {}, {
+      await axios.post(`/dev/delete`, {}, {
         headers: { 'x-dev-password': password }
       });
       setSuccessMsg('Base de datos vaciada con éxito.');
