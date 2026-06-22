@@ -74,7 +74,7 @@ export const Dashboard = () => {
   });
 
   const techPhrases = Object.entries(techAssignments).map(([name, count]) => 
-    `${count} solicitud${count !== 1 ? 'es' : ''} ${name}`
+    `${count} Solicitud${count !== 1 ? 'es' : ''} ${name}`
   );
 
   let activeTechsText = '';
