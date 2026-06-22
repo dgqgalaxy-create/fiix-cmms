@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, Search, Calendar, PackageOpen, ChevronRight, Filter } from 'lucide-react';
+import { ShoppingCart, Plus, Search, Calendar, PackageOpen, ChevronRight, Filter, ExternalLink } from 'lucide-react';
 import { getPurchaseOrders, type PurchaseOrder } from '../api/purchaseOrders';
 import { CreatePOModal } from '../components/CreatePOModal';
 import { PODetailModal } from '../components/PODetailModal';
@@ -71,13 +71,24 @@ export const PurchaseOrdersPage = () => {
           <p className="text-slate-500 mt-1">Gestiona los pedidos de refacciones a proveedores</p>
         </div>
         
-        <button 
-          onClick={() => setIsCreateModalOpen(true)}
-          className="w-full md:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all font-medium shadow-sm shadow-indigo-200"
-        >
-          <Plus size={20} />
-          Nueva Orden
-        </button>
+        <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3">
+          <a 
+            href="http://lpet.tscloud.mx" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-sky-50 text-sky-700 border border-sky-200 rounded-xl hover:bg-sky-100 transition-all font-medium shadow-sm"
+          >
+            <ExternalLink size={18} />
+            Acceder a SAP
+          </a>
+          <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all font-medium shadow-sm shadow-indigo-200"
+          >
+            <Plus size={20} />
+            Nueva Orden
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">

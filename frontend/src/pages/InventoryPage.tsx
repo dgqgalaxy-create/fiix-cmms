@@ -641,8 +641,21 @@ export const InventoryPage = () => {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Inventario</h1>
-          <p className="text-slate-500 mt-1">Gestiona repuestos, movimientos y catálogos.</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Inventario</h1>
+            {!isLoading && items.length > 0 && (
+              <div className="flex gap-2 mt-1 sm:mt-0">
+                <span className="bg-blue-50 text-blue-700 text-xs sm:text-sm font-semibold px-2.5 py-1 rounded-full border border-blue-100 flex items-center gap-1.5 shadow-sm">
+                  <Package size={14} /> {items.length} Únicos
+                </span>
+                <span className="bg-emerald-50 text-emerald-700 text-xs sm:text-sm font-semibold px-2.5 py-1 rounded-full border border-emerald-100 flex items-center gap-1.5 shadow-sm">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  {items.reduce((acc, i) => acc + (i.stock || 0), 0)} Unidades Totales
+                </span>
+              </div>
+            )}
+          </div>
+          <p className="text-slate-500 mt-2">Gestiona repuestos, movimientos y catálogos.</p>
         </div>
 
         <div className="flex items-center gap-3 w-full md:w-auto">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, RefreshCw, Clock, Wrench, AlertCircle, CheckCircle2, Search, Download, Activity } from 'lucide-react';
+import { Plus, RefreshCw, Clock, Wrench, AlertCircle, CheckCircle2, Search, Download, Activity, XCircle } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { WorkOrdersTable } from '../components/WorkOrdersTable';
 import { CreateWorkOrderModal } from '../components/CreateWorkOrderModal';
@@ -70,7 +70,7 @@ export const Dashboard = () => {
       setStatusFilter(null);
     } else {
       setStatusFilter(status);
-      if (status === 'FINALIZADO') {
+      if (status === 'FINALIZADO' || status === 'ANULADO') {
         setActiveTab('HISTORIAL');
       } else {
         if (hasPermission('DELETE_WORK_ORDERS')) {
@@ -297,17 +297,23 @@ export const Dashboard = () => {
         </div>
       )}
 
-      <div className={`grid grid-cols-2 md:grid-cols-${hasPermission('VIEW_INVENTORY') ? '5' : '4'} print:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8`}>
+      <div className={`grid grid-cols-2 lg:grid-cols-${hasPermission('VIEW_INVENTORY') ? '6' : '5'} md:grid-cols-3 print:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8`}>
         <div 
           onClick={() => handleStatusClick('PENDIENTE')}
-          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'PENDIENTE' ? 'ring-2 ring-amber-500 border-amber-500 shadow-md scale-[1.02]' : 'border-amber-100 shadow-sm shadow-amber-100/50 hover:shadow-md'}`}
+          className={`cursor-pointer transition-all p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'PENDIENTE' ? 'bg-amber-600 text-white shadow-lg ring-2 ring-amber-400 ring-offset-2 scale-[1.02] border-transparent' : 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md hover:shadow-lg border-transparent'}`}
         >
-          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-amber-50 opacity-50 group-hover:scale-110 transition-transform">
+          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-white opacity-20 group-hover:scale-110 transition-transform">
              <Clock className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
           <div className="relative z-10">
-            <span className="text-amber-600 text-xs sm:text-sm font-bold uppercase tracking-wider">Pendientes</span>
-            <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{summary.PENDIENTE || 0}</div>
+            <span className="text-amber-50 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-1.5">
+              Pendientes
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+              </span>
+            </span>
+            <div className="text-2xl sm:text-4xl font-black text-white mt-1.5 sm:mt-2">{summary.PENDIENTE || 0}</div>
           </div>
         </div>
 
@@ -332,7 +338,7 @@ export const Dashboard = () => {
              <AlertCircle className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
           <div className="relative z-10">
-            <span className="text-purple-600 text-xs sm:text-sm font-bold uppercase tracking-wider">En Espera</span>
+            <span className="text-purple-600 text-xs sm:text-sm font-bold uppercase tracking-wider">Pausadas</span>
             <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{summary.EN_ESPERA || 0}</div>
           </div>
         </div>
@@ -347,6 +353,19 @@ export const Dashboard = () => {
           <div className="relative z-10">
             <span className="text-emerald-600 text-xs sm:text-sm font-bold uppercase tracking-wider">Finalizadas</span>
             <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{summary.FINALIZADO || 0}</div>
+          </div>
+        </div>
+
+        <div 
+          onClick={() => handleStatusClick('ANULADO')}
+          className={`cursor-pointer transition-all bg-slate-50 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'ANULADO' ? 'ring-2 ring-slate-400 border-slate-400 shadow-md scale-[1.02]' : 'border-slate-200 shadow-sm shadow-slate-200/50 hover:shadow-md hover:bg-slate-100'}`}
+        >
+          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-slate-100 opacity-70 group-hover:scale-110 transition-transform">
+             <XCircle className="w-14 h-14 sm:w-20 sm:h-20" />
+          </div>
+          <div className="relative z-10">
+            <span className="text-slate-500 text-xs sm:text-sm font-bold uppercase tracking-wider">Invalidadas</span>
+            <div className="text-2xl sm:text-4xl font-black text-slate-600 mt-1.5 sm:mt-2">{summary.ANULADO || 0}</div>
           </div>
         </div>
 

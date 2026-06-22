@@ -407,6 +407,10 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
                else if (st.includes('ANULADO')) status = WorkOrderStatus.ANULADO;
             }
 
+            if (row['INVALIDA'] && (row['INVALIDA'].toUpperCase() === 'TRUE' || row['INVALIDA'].toUpperCase() === 'SI' || row['INVALIDA'].toUpperCase() === 'SÍ')) {
+               status = WorkOrderStatus.ANULADO;
+            }
+
             let techEmails = row['EMAIL DEL TÉCNICO'] ? row['EMAIL DEL TÉCNICO'].split(',').map((e: string) => e.trim()) : [];
             let assignedUserIds = allUsers.filter(u => techEmails.includes(u.email)).map(u => ({ id: u.id }));
 
@@ -429,6 +433,11 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
 
             let existingWO = await prisma.workOrder.findFirst({ where: { folio: folioCsv } });
             
+            let resolutionNotes = row['ACTIVIDAD REALIZADA'];
+            if (status === WorkOrderStatus.ANULADO && (!resolutionNotes || resolutionNotes.trim() === '')) {
+               resolutionNotes = 'Anulada según registro histórico (CSV).';
+            }
+
             const woData = {
                title: row['Descripción de la falla:']?.substring(0, 100) || 'Sin título',
                description: row['Descripción de la falla:'],
@@ -440,11 +449,11 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
                requester_name,
                production_group: pGroup,
                status,
-               resolution_notes: row['ACTIVIDAD REALIZADA'],
+               resolution_notes: resolutionNotes,
                created_by_id: adminUser.id,
                created_at,
                started_at,
-               completed_at,
+               completed_at: status === WorkOrderStatus.ANULADO && !completed_at ? new Date() : completed_at,
                accumulated_time_ms: row['TIEMPO REPARACIÓN'] ? Math.floor(parseFloat(row['TIEMPO REPARACIÓN']) * 60000) : 0,
                assigned_technicians: { connect: assignedUserIds }
             };

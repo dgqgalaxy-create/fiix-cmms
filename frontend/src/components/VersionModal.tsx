@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.2.3";
+export const APP_VERSION = "1.3.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "18 de Junio, 2026";
+  const updateDate = "22 de Junio, 2026";
   const modules = [
     "Panel Principal (Dashboard)",
     "Gestión de Activos (Equipos)",
@@ -20,14 +20,16 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Planes Preventivos",
     "Módulo de Compras",
     "Zonas y Permisos",
-    "KPIs y Metas"
+    "KPIs y Metas",
+    "Opciones de Desarrollador"
   ];
   const changelog = [
-    "Reemplazo de Google por DuckDuckGo para evitar bloqueos del servidor (Error 502)",
-    "Integración de cámara nativa para fotos de evidencia",
-    "Autocompletado dinámico de solicitantes de producción",
-    "Migración histórica de inventario completada",
-    "Corrección de errores menores de tipado (TypeScript) en buscador de imágenes"
+    "Importación masiva de datos y migración (7 archivos CSV) habilitada",
+    "Restauración segura y backup completo en formato JSON",
+    "Mejoras visuales y nueva clasificación de órdenes 'Invalidadas' en Dashboard",
+    "Indicadores visuales en vivo de volúmenes totales en Inventario",
+    "Acceso rápido a plataforma SAP desde Órdenes de Compra",
+    "Pausas y anulaciones automáticas implementadas en base a registros CSV"
   ];
 
   return (

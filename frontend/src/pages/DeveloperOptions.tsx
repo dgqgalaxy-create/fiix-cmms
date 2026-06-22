@@ -9,6 +9,7 @@ export const DeveloperOptions = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const navigate = useNavigate();
@@ -63,6 +64,7 @@ export const DeveloperOptions = () => {
     if (!file) return;
 
     setIsLoading(true);
+    setLoadingMessage('Importando respaldo JSON. Esto puede tardar unos momentos...');
     setError(null);
     const formData = new FormData();
     formData.append('backupFile', file);
@@ -80,6 +82,7 @@ export const DeveloperOptions = () => {
       setError('Fallo al importar la base de datos.');
     } finally {
       setIsLoading(false);
+      setLoadingMessage(null);
       e.target.value = ''; // Reset input
     }
   };
@@ -89,6 +92,7 @@ export const DeveloperOptions = () => {
     if (!files || files.length === 0) return;
 
     setIsLoading(true);
+    setLoadingMessage('Procesando archivos CSV. Por favor, no cierres esta ventana...');
     setError(null);
     const formData = new FormData();
     for (let i = 0; i < files.length; i++) {
@@ -109,6 +113,7 @@ export const DeveloperOptions = () => {
       setError('Fallo al importar archivos CSV.');
     } finally {
       setIsLoading(false);
+      setLoadingMessage(null);
       e.target.value = ''; // Reset input
     }
   };
@@ -120,6 +125,7 @@ export const DeveloperOptions = () => {
     }
 
     setIsLoading(true);
+    setLoadingMessage('Vaciando la base de datos de manera segura...');
     setError(null);
     try {
       await axios.post(`${API_URL}/dev/delete`, {}, {
@@ -133,6 +139,7 @@ export const DeveloperOptions = () => {
       setError('Fallo al vaciar la base de datos.');
     } finally {
       setIsLoading(false);
+      setLoadingMessage(null);
     }
   };
 
@@ -335,6 +342,17 @@ export const DeveloperOptions = () => {
                 {isLoading ? 'Vaciando...' : 'Confirmar Borrado'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading Modal */}
+      {loadingMessage && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center">
+            <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+            <h3 className="text-xl font-bold text-slate-800 mb-2">Procesando...</h3>
+            <p className="text-slate-500 text-sm">{loadingMessage}</p>
           </div>
         </div>
       )}
