@@ -151,7 +151,10 @@ export const Dashboard = () => {
         getWorkOrders(),
         getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined),
         hasPermission('VIEW_INVENTORY') ? getInventorySummary() : Promise.resolve(null),
-        getUsers('TECNICO').catch(() => [])
+        getUsers().catch(err => {
+          console.error('Error fetching users:', err);
+          return [];
+        })
       ]);
       setWorkOrders(data);
       setSummary(summaryData);
@@ -309,7 +312,9 @@ export const Dashboard = () => {
   const paretoData = getParetoData();
   const filteredList = getFilteredWorkOrders();
 
-  const techPerformanceData = technicians.map(tech => {
+  const techPerformanceData = technicians
+    .filter(tech => tech.role !== 'ADMINISTRADOR')
+    .map(tech => {
     const assignedOrders = workOrders.filter(wo => {
       if (summaryStartDate && summaryEndDate) {
         const created = new Date(wo.created_at);
