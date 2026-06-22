@@ -2,8 +2,12 @@ import { useState, useEffect } from 'react';
 import { getKPIs, updateKPIGoals, getChartData, getCostsByAsset, getTopFailingAssets, getAssetFailureOrders } from '../api/kpis';
 import type { KPIResponse, KPIMetric, ChartData, AssetCostData, TopFailingAsset, FailureOrder } from '../api/kpis';
 import { useAuth } from '../context/AuthContext';
-import { Target, TrendingUp, Clock, AlertTriangle, CheckCircle, Database, Settings, BarChart2, Download, X, RefreshCw } from 'lucide-react';
+import { Target, TrendingUp, Clock, AlertTriangle, CheckCircle, Database, Settings, BarChart2, Download, X, RefreshCw, Users } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { getWorkOrders } from '../api/workOrders';
+import { getUsers } from '../api/users';
+import type { WorkOrder } from '../api/workOrders';
+import type { User } from '../api/users';
 
 export const KPIPage = () => {
   const { user, hasPermission } = useAuth();
@@ -11,6 +15,8 @@ export const KPIPage = () => {
   const [charts, setCharts] = useState<ChartData[]>([]);
   const [assetCosts, setAssetCosts] = useState<AssetCostData[]>([]);
   const [topFailingAssets, setTopFailingAssets] = useState<TopFailingAsset[]>([]);
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [technicians, setTechnicians] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [period, setPeriod] = useState<string>('THIS_MONTH');
@@ -26,16 +32,20 @@ export const KPIPage = () => {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const [kpiData, chartData, costData, topFailingData] = await Promise.all([
+      const [kpiData, chartData, costData, topFailingData, woData, usersData] = await Promise.all([
         getKPIs(period),
         getChartData(period),
         getCostsByAsset(period),
-        getTopFailingAssets(period)
+        getTopFailingAssets(period),
+        getWorkOrders().catch(() => []),
+        getUsers().catch(() => [])
       ]);
       setData(kpiData);
       setCharts(chartData);
       setAssetCosts(costData);
       setTopFailingAssets(topFailingData);
+      setWorkOrders(woData);
+      setTechnicians(usersData);
       
       const formState: Record<string, number> = {};
       Object.entries(kpiData.metrics).forEach(([key, metric]) => {
@@ -143,6 +153,55 @@ export const KPIPage = () => {
     );
   };
 
+  const getDatesFromPeriod = (p: string) => {
+    const now = new Date();
+    let start = new Date(now.getFullYear(), now.getMonth(), 1);
+    let end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+    if (p === 'THIS_WEEK') {
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      start = new Date(now.setDate(diff));
+      start.setHours(0, 0, 0, 0);
+      end = new Date(start);
+      end.setDate(end.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+    } else if (p === 'LAST_MONTH') {
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    } else if (p === 'THIS_YEAR') {
+      start = new Date(now.getFullYear(), 0, 1);
+      end = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+    } else if (p === 'LAST_12_MONTHS') {
+      start = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+      end = new Date();
+    } else if (p === 'ALL') {
+      start = new Date(2000, 0, 1);
+      end = new Date(2100, 0, 1);
+    }
+    return { start, end };
+  };
+
+  const { start, end } = getDatesFromPeriod(period);
+
+  const techPerformanceData = technicians
+    .filter(tech => tech.role !== 'ADMINISTRADOR')
+    .map(tech => {
+      const assignedOrders = workOrders.filter(wo => {
+        const created = new Date(wo.created_at);
+        if (created < start || created > end) return false;
+        return wo.assigned_technicians?.some(t => t.id === tech.id);
+      });
+
+      return {
+        name: tech.name.split(' ')[0],
+        Finalizadas: assignedOrders.filter(wo => wo.status === 'FINALIZADO').length,
+        EnProceso: assignedOrders.filter(wo => wo.status === 'EN_PROCESO').length,
+        Pendientes: assignedOrders.filter(wo => wo.status === 'PENDIENTE' || wo.status === 'EN_ESPERA').length,
+        Total: assignedOrders.length
+      };
+    }).sort((a, b) => b.Total - a.Total);
+
   return (
     <div>
       <div className="hidden print:flex justify-between items-end border-b-2 border-slate-800 pb-4 mb-6">
@@ -245,6 +304,35 @@ export const KPIPage = () => {
                 </BarChart>
               </ResponsiveContainer>
             </div>
+          </div>
+
+          <div className="bg-white/80 backdrop-blur-md p-6 print:p-4 rounded-3xl border border-slate-200/50 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:shadow-slate-200/50 transition-shadow print:shadow-none print:break-inside-avoid">
+            <div className="flex items-center gap-2 mb-6">
+              <Users className="text-blue-600" size={24} />
+              <h2 className="text-lg font-bold text-slate-800">Desempeño de Técnicos</h2>
+            </div>
+            {techPerformanceData.length > 0 ? (
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={techPerformanceData} margin={{ top: 20, right: 20, bottom: 20, left: -20 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    />
+                    <Legend />
+                    <Bar dataKey="Finalizadas" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="EnProceso" name="En Proceso" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="Pendientes" stackId="a" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-72 w-full flex items-center justify-center text-slate-400">
+                No hay técnicos registrados.
+              </div>
+            )}
           </div>
 
           <div className="bg-white/80 backdrop-blur-md p-6 print:p-4 rounded-3xl border border-slate-200/50 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:shadow-slate-200/50 transition-shadow xl:col-span-2 print:col-span-2 print:shadow-none print:break-inside-avoid">

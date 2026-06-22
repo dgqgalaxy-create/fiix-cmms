@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, RefreshCw, Clock, Wrench, AlertCircle, CheckCircle2, Search, Download, Activity, XCircle, CalendarClock, LayoutDashboard, Users } from 'lucide-react';
-import { ResponsiveContainer, ComposedChart, BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { Plus, RefreshCw, Clock, Wrench, AlertCircle, CheckCircle2, Search, Download, Activity, XCircle, CalendarClock, LayoutDashboard } from 'lucide-react';
+import { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { WorkOrdersTable } from '../components/WorkOrdersTable';
 import { CreateWorkOrderModal } from '../components/CreateWorkOrderModal';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
@@ -10,8 +10,6 @@ import { getWorkOrders, getWorkOrdersSummary, createWorkOrder, updateWorkOrder, 
 import { getInventorySummary } from '../api/inventory';
 import type { InventorySummary } from '../api/inventory';
 import type { WorkOrder } from '../api/workOrders';
-import { getUsers } from '../api/users';
-import type { User } from '../api/users';
 import { useNavigate } from 'react-router-dom';
 
 export const Dashboard = () => {
@@ -20,7 +18,6 @@ export const Dashboard = () => {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [summary, setSummary] = useState<Record<string, number>>({});
   const [invSummary, setInvSummary] = useState<InventorySummary | null>(null);
-  const [technicians, setTechnicians] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -147,19 +144,14 @@ export const Dashboard = () => {
   const fetchWorkOrders = async () => {
     try {
       setIsLoading(true);
-      const [data, summaryData, invSumData, techsData] = await Promise.all([
+      const [data, summaryData, invSumData] = await Promise.all([
         getWorkOrders(),
         getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined),
-        hasPermission('VIEW_INVENTORY') ? getInventorySummary() : Promise.resolve(null),
-        getUsers().catch(err => {
-          console.error('Error fetching users:', err);
-          return [];
-        })
+        hasPermission('VIEW_INVENTORY') ? getInventorySummary() : Promise.resolve(null)
       ]);
       setWorkOrders(data);
       setSummary(summaryData);
       setInvSummary(invSumData);
-      setTechnicians(techsData);
     } catch (error) {
       console.error('Error fetching work orders', error);
     } finally {
@@ -312,28 +304,6 @@ export const Dashboard = () => {
   const paretoData = getParetoData();
   const filteredList = getFilteredWorkOrders();
 
-  const techPerformanceData = technicians
-    .filter(tech => tech.role !== 'ADMINISTRADOR')
-    .map(tech => {
-    const assignedOrders = workOrders.filter(wo => {
-      if (summaryStartDate && summaryEndDate) {
-        const created = new Date(wo.created_at);
-        const start = new Date(summaryStartDate);
-        const end = new Date(summaryEndDate);
-        if (created < start || created > end) return false;
-      }
-      return wo.assigned_technicians?.some(t => t.id === tech.id);
-    });
-
-    return {
-      name: tech.name.split(' ')[0],
-      Finalizadas: assignedOrders.filter(wo => wo.status === 'FINALIZADO').length,
-      EnProceso: assignedOrders.filter(wo => wo.status === 'EN_PROCESO').length,
-      Pendientes: assignedOrders.filter(wo => wo.status === 'PENDIENTE' || wo.status === 'EN_ESPERA').length,
-      Total: assignedOrders.length
-    };
-  }).sort((a, b) => b.Total - a.Total);
-
   return (
     <>
       {/* Encabezado exclusivo para impresión */}
@@ -375,58 +345,31 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 print:hidden">
-        {paretoData.length > 0 && (
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2 shrink-0">
-              <Activity size={20} className="text-orange-600" />
-              Top Problemas Frecuentes (Correctivo)
-            </h2>
-            <div className="h-72 w-full flex-1">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={paretoData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis yAxisId="left" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis yAxisId="right" orientation="right" stroke="#f97316" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `${val}%`} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
-                    formatter={(value: any, name: any) => [name === 'PorcentajeAcumulado' ? `${Number(value).toFixed(1)}%` : value, name === 'PorcentajeAcumulado' ? '% Acumulado' : name]}
-                  />
-                  <Legend />
-                  <Bar yAxisId="left" dataKey="Frecuencia" barSize={40} fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  <Line yAxisId="right" type="monotone" dataKey="PorcentajeAcumulado" stroke="#f97316" strokeWidth={3} dot={{ r: 4, fill: '#f97316', strokeWidth: 2, stroke: '#fff' }} />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
+      {paretoData.length > 0 && (
+        <div className="mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm print:hidden">
+          <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <Activity size={20} className="text-orange-600" />
+            Top Problemas Frecuentes (Correctivo)
+          </h2>
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={paretoData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="left" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="right" orientation="right" stroke="#f97316" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `${val}%`} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
+                  formatter={(value: any, name: any) => [name === 'PorcentajeAcumulado' ? `${Number(value).toFixed(1)}%` : value, name === 'PorcentajeAcumulado' ? '% Acumulado' : name]}
+                />
+                <Legend />
+                <Bar yAxisId="left" dataKey="Frecuencia" barSize={40} fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Line yAxisId="right" type="monotone" dataKey="PorcentajeAcumulado" stroke="#f97316" strokeWidth={3} dot={{ r: 4, fill: '#f97316', strokeWidth: 2, stroke: '#fff' }} />
+              </ComposedChart>
+            </ResponsiveContainer>
           </div>
-        )}
-
-        {techPerformanceData.length > 0 && (
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2 shrink-0">
-              <Users size={20} className="text-blue-600" />
-              Desempeño de Técnicos
-            </h2>
-            <div className="h-72 w-full flex-1">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={techPerformanceData} margin={{ top: 20, right: 20, bottom: 20, left: -20 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Legend />
-                  <Bar dataKey="Finalizadas" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="EnProceso" name="En Proceso" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="Pendientes" stackId="a" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-4 items-center mb-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm print:hidden">
         <div className="flex items-center gap-2">
