@@ -55,35 +55,39 @@ export const Dashboard = () => {
     return true;
   }).length;
 
-  const techAssignments: Record<string, number> = {};
-  
-  workOrders.filter(wo => {
-    if (wo.status !== 'EN_PROCESO') return false;
-    if (summaryStartDate && summaryEndDate) {
-      const created = new Date(wo.created_at);
-      const start = new Date(summaryStartDate);
-      const end = new Date(summaryEndDate);
-      if (created < start || created > end) return false;
-    }
-    return true;
-  }).forEach(wo => {
-    wo.assigned_technicians?.forEach(tech => {
-      const firstName = tech.name.split(' ')[0];
-      techAssignments[firstName] = (techAssignments[firstName] || 0) + 1;
+  const getTechsTextByStatus = (statusToMatch: string) => {
+    const techAssignments: Record<string, number> = {};
+    
+    workOrders.filter(wo => {
+      if (wo.status !== statusToMatch) return false;
+      if (summaryStartDate && summaryEndDate) {
+        const created = new Date(wo.created_at);
+        const start = new Date(summaryStartDate);
+        const end = new Date(summaryEndDate);
+        if (created < start || created > end) return false;
+      }
+      return true;
+    }).forEach(wo => {
+      wo.assigned_technicians?.forEach(tech => {
+        const firstName = tech.name.split(' ')[0];
+        techAssignments[firstName] = (techAssignments[firstName] || 0) + 1;
+      });
     });
-  });
 
-  const techPhrases = Object.entries(techAssignments).map(([name, count]) => 
-    `${count} Solicitud${count !== 1 ? 'es' : ''} ${name}`
-  );
+    const techPhrases = Object.entries(techAssignments).map(([name, count]) => 
+      `${count} Solicitud${count !== 1 ? 'es' : ''} ${name}`
+    );
 
-  let activeTechsText = '';
-  if (techPhrases.length === 1) {
-    activeTechsText = techPhrases[0];
-  } else if (techPhrases.length > 1) {
-    const last = techPhrases.pop();
-    activeTechsText = `${techPhrases.join(', ')} & ${last}`;
-  }
+    if (techPhrases.length === 1) return techPhrases[0];
+    if (techPhrases.length > 1) {
+      const last = techPhrases.pop();
+      return `${techPhrases.join(', ')} & ${last}`;
+    }
+    return '';
+  };
+
+  const activeTechsText = getTechsTextByStatus('EN_PROCESO');
+  const pausedTechsText = getTechsTextByStatus('EN_ESPERA');
 
   const uniqueAssets = Array.from(new Set(workOrders.map(wo => wo.asset?.name).filter(Boolean))) as string[];
 
@@ -472,9 +476,16 @@ export const Dashboard = () => {
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-purple-50 opacity-50 group-hover:scale-110 transition-transform">
              <AlertCircle className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
-          <div className="relative z-10">
-            <span className="text-purple-600 text-xs sm:text-sm font-bold uppercase tracking-wider">Pausadas</span>
-            <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{summary.EN_ESPERA || 0}</div>
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            <div>
+              <span className="text-purple-600 text-xs sm:text-sm font-bold uppercase tracking-wider">Pausadas</span>
+              <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{summary.EN_ESPERA || 0}</div>
+            </div>
+            {pausedTechsText && (
+              <div className="mt-2 text-[10px] sm:text-xs text-purple-700/80 font-semibold leading-tight line-clamp-2" title={pausedTechsText}>
+                👤 {pausedTechsText}
+              </div>
+            )}
           </div>
         </div>
 
