@@ -33,7 +33,7 @@ const verifyDevPassword = async (req: Request, res: Response, next: express.Next
 
     let isValid = false;
     for (const admin of admins) {
-      const match = await bcrypt.compare(password, admin.password);
+      const match = await bcrypt.compare(password, admin.password_hash);
       if (match) {
         isValid = true;
         break;
@@ -71,7 +71,7 @@ router.post('/delete', verifyDevPassword, async (req: Request, res: Response) =>
       data: {
         name: 'Administrador',
         email: 'admin',
-        password: defaultPassword,
+        password_hash: defaultPassword,
         role: 'ADMINISTRATOR',
         employee_id: 'ADMIN-001',
         is_active: true
