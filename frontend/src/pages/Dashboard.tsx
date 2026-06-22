@@ -55,24 +55,35 @@ export const Dashboard = () => {
     return true;
   }).length;
 
-  const activeTechNames = Array.from(
-    new Set(
-      workOrders.filter(wo => {
-        if (wo.status !== 'EN_PROCESO') return false;
-        if (summaryStartDate && summaryEndDate) {
-          const created = new Date(wo.created_at);
-          const start = new Date(summaryStartDate);
-          const end = new Date(summaryEndDate);
-          if (created < start || created > end) return false;
-        }
-        return true;
-      })
-      .flatMap(wo => wo.assigned_technicians || [])
-      .map(tech => tech.name.split(' ')[0])
-    )
-  );
+  const techAssignments: Record<string, number> = {};
   
-  const activeTechsText = activeTechNames.length > 0 ? activeTechNames.join(', ') : '';
+  workOrders.filter(wo => {
+    if (wo.status !== 'EN_PROCESO') return false;
+    if (summaryStartDate && summaryEndDate) {
+      const created = new Date(wo.created_at);
+      const start = new Date(summaryStartDate);
+      const end = new Date(summaryEndDate);
+      if (created < start || created > end) return false;
+    }
+    return true;
+  }).forEach(wo => {
+    wo.assigned_technicians?.forEach(tech => {
+      const firstName = tech.name.split(' ')[0];
+      techAssignments[firstName] = (techAssignments[firstName] || 0) + 1;
+    });
+  });
+
+  const techPhrases = Object.entries(techAssignments).map(([name, count]) => 
+    `${count} solicitud${count !== 1 ? 'es' : ''} ${name}`
+  );
+
+  let activeTechsText = '';
+  if (techPhrases.length === 1) {
+    activeTechsText = techPhrases[0];
+  } else if (techPhrases.length > 1) {
+    const last = techPhrases.pop();
+    activeTechsText = `${techPhrases.join(', ')} & ${last}`;
+  }
 
   const uniqueAssets = Array.from(new Set(workOrders.map(wo => wo.asset?.name).filter(Boolean))) as string[];
 
