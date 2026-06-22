@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.3.0";
+export const APP_VERSION = "1.3.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -24,12 +24,13 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Uso de contraseña personal del Administrador para desbloquear herramientas de desarrollador",
+    "Inyección automática de administrador de rescate al vaciar la base de datos",
+    "Corrección de validación estricta de Roles en el backend (ADMINISTRADOR)",
     "Importación masiva de datos y migración (7 archivos CSV) habilitada",
-    "Restauración segura y backup completo en formato JSON",
-    "Mejoras visuales y nueva clasificación de órdenes 'Invalidadas' en Dashboard",
     "Indicadores visuales en vivo de volúmenes totales en Inventario",
     "Acceso rápido a plataforma SAP desde Órdenes de Compra",
-    "Pausas y anulaciones automáticas implementadas en base a registros CSV"
+    "Mejoras visuales y nueva clasificación de órdenes 'Invalidadas' en Dashboard"
   ];
 
   return (
