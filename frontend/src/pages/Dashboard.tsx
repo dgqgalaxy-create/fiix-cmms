@@ -368,9 +368,12 @@ export const Dashboard = () => {
         </div>
         <div 
           onClick={() => handleStatusClick('PENDIENTE')}
-          className={`cursor-pointer transition-all p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'PENDIENTE' ? 'bg-amber-600 text-white shadow-lg ring-2 ring-amber-400 ring-offset-2 scale-[1.02] border-transparent' : 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md hover:shadow-lg border-transparent'}`}
+          className={`cursor-pointer transition-all duration-300 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative group print:shadow-none print:break-inside-avoid ${statusFilter === 'PENDIENTE' ? 'bg-amber-600 text-white shadow-lg ring-4 ring-amber-400 ring-offset-2 scale-[1.02] border-transparent' : 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.5)] hover:shadow-[0_0_25px_rgba(245,158,11,0.8)] hover:scale-[1.03] hover:-translate-y-1 border-transparent'}`}
         >
-          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-white opacity-20 group-hover:scale-110 transition-transform">
+          {statusFilter !== 'PENDIENTE' && (
+            <div className="absolute -inset-0.5 rounded-2xl ring-2 ring-amber-300 opacity-50 animate-pulse pointer-events-none"></div>
+          )}
+          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-white opacity-20 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500 overflow-hidden rounded-2xl">
              <Clock className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
           <div className="relative z-10">
@@ -381,7 +384,7 @@ export const Dashboard = () => {
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
               </span>
             </span>
-            <div className="text-2xl sm:text-4xl font-black text-white mt-1.5 sm:mt-2">{summary.PENDIENTE || 0}</div>
+            <div className="text-2xl sm:text-4xl font-black text-white mt-1.5 sm:mt-2 drop-shadow-md">{summary.PENDIENTE || 0}</div>
           </div>
         </div>
 
