@@ -37,8 +37,8 @@ export const Dashboard = () => {
   const [summaryStartDate, setSummaryStartDate] = useState<string>('');
   const [summaryEndDate, setSummaryEndDate] = useState<string>('');
 
-  const totalRecibidas = Object.entries(summary).reduce((acc, [key, val]) => {
-    if (key !== 'ANULADO') return acc + val;
+  const totalRecibidas = Object.entries(summary || {}).reduce((acc, [key, val]) => {
+    if (key !== 'ANULADO') return acc + (val || 0);
     return acc;
   }, 0);
 
