@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, RefreshCw, Clock, Wrench, AlertCircle, CheckCircle2, Search, Download, Activity, XCircle } from 'lucide-react';
+import { Plus, RefreshCw, Clock, Wrench, AlertCircle, CheckCircle2, Search, Download, Activity, XCircle, CalendarClock, LayoutDashboard } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { WorkOrdersTable } from '../components/WorkOrdersTable';
 import { CreateWorkOrderModal } from '../components/CreateWorkOrderModal';
