@@ -52,16 +52,16 @@ export const Login = () => {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1 ml-1">Correo Electrónico</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1 ml-1">Usuario</label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
                 <Mail size={18} />
               </div>
               <input
-                type="email"
+                type="text"
                 required
                 className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all outline-none"
-                placeholder="tu@email.com"
+                placeholder="usuario"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -106,7 +106,7 @@ export const Login = () => {
         </form>
         
         <div className="mt-8 text-center text-sm text-slate-500">
-          Usa <span className="font-medium text-slate-700">admin@fiix.com</span> y <span className="font-medium text-slate-700">password123</span> para probar.
+          Usa <span className="font-medium text-slate-700">admin</span> y <span className="font-medium text-slate-700">password123</span> para probar.
         </div>
       </div>
     </div>
