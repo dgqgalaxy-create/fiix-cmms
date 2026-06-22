@@ -1,4 +1,5 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export const APP_VERSION = "1.2.3";
 
@@ -93,11 +94,14 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
         </div>
 
         {/* Footer */}
-        <div className="bg-slate-50 p-4 border-t border-slate-100 text-center">
+        <div className="bg-slate-50 p-4 border-t border-slate-100 text-center flex flex-col items-center gap-3">
           <p className="text-xs text-slate-400 flex items-center justify-center gap-1.5">
             <Shield size={14} />
             Conexión segura y encriptada
           </p>
+          <Link to="/developer-options" onClick={onClose} className="text-[10px] text-slate-300 hover:text-slate-500 transition-colors font-semibold uppercase tracking-widest">
+            Opciones de desarrollador
+          </Link>
         </div>
 
       </div>

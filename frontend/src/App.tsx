@@ -13,6 +13,7 @@ import { InventoryPage } from './pages/InventoryPage';
 import { MaintenancePlansPage } from './pages/MaintenancePlansPage';
 import { PurchaseOrdersPage } from './pages/PurchaseOrdersPage';
 import { RCAPage } from './pages/RCAPage';
+import { DeveloperOptions } from './pages/DeveloperOptions';
 
 function App() {
   return (
@@ -130,6 +131,8 @@ function App() {
               </ProtectedRoute>
             } 
           />
+
+          <Route path="/developer-options" element={<DeveloperOptions />} />
           
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
