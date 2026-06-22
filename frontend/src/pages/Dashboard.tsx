@@ -444,21 +444,21 @@ export const Dashboard = () => {
               {summary.PENDIENTE || 0}
             </div>
             
-            <div className="absolute right-0 bottom-0 flex flex-col items-end">
+            <div className="absolute right-2 bottom-2 flex flex-col items-end gap-1.5">
               {urgentesCount > 0 && (
-                <div className={`bg-rose-600 text-white text-xs font-bold px-2.5 py-1 rounded-tl-xl ${(normalesCount > 0 || bajasCount > 0) ? '' : 'rounded-br-2xl'} flex items-center gap-1.5 shadow-lg animate-pulse border-l border-t border-rose-500/50`}>
+                <div className="bg-rose-600 text-white text-xs font-bold px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-lg animate-pulse border border-rose-500/50">
                   <AlertCircle size={12} className="animate-bounce" />
                   {urgentesCount} URGENTE{urgentesCount > 1 ? 'S' : ''}
                 </div>
               )}
-              {(normalesCount > 0 || bajasCount > 0) && (
-                <div className={`flex items-center gap-2 px-2 py-0.5 bg-black/20 ${urgentesCount === 0 ? 'rounded-tl-xl border-l border-t border-white/20' : ''} rounded-br-2xl`}>
-                  {normalesCount > 0 && (
-                    <span className="text-amber-100 text-[10px] font-bold">{normalesCount} NORM</span>
-                  )}
-                  {bajasCount > 0 && (
-                    <span className="text-emerald-200 text-[10px] font-bold">{bajasCount} BAJ</span>
-                  )}
+              {normalesCount > 0 && (
+                <div className="bg-amber-700/80 text-amber-50 text-[10px] font-bold px-2 py-0.5 rounded-sm shadow-sm border border-amber-500/30">
+                  {normalesCount} NORM
+                </div>
+              )}
+              {bajasCount > 0 && (
+                <div className="bg-emerald-700/80 text-emerald-50 text-[10px] font-bold px-2 py-0.5 rounded-sm shadow-sm border border-emerald-500/30">
+                  {bajasCount} BAJ
                 </div>
               )}
             </div>
