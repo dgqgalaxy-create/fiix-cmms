@@ -42,6 +42,19 @@ export const Dashboard = () => {
     return acc;
   }, 0);
 
+  const urgentesCount = workOrders.filter(wo => {
+    if (wo.status !== 'PENDIENTE' || wo.priority !== 'URGENTE') return false;
+    if (summaryStartDate && summaryEndDate) {
+      const created = new Date(wo.created_at);
+      const start = new Date(summaryStartDate);
+      const end = new Date(summaryEndDate);
+      // Ajustamos end al final del día para ser consistentes con filtros típicos si es necesario, 
+      // pero new Date() coincidirá con lo que hace el backend.
+      if (created < start || created > end) return false;
+    }
+    return true;
+  }).length;
+
   const uniqueAssets = Array.from(new Set(workOrders.map(wo => wo.asset?.name).filter(Boolean))) as string[];
 
   const handleExportCSV = () => {
@@ -384,7 +397,16 @@ export const Dashboard = () => {
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
               </span>
             </span>
-            <div className="text-2xl sm:text-4xl font-black text-white mt-1.5 sm:mt-2 drop-shadow-md">{summary.PENDIENTE || 0}</div>
+            <div className="text-2xl sm:text-4xl font-black text-white mt-1.5 sm:mt-2 drop-shadow-md">
+              {summary.PENDIENTE || 0}
+            </div>
+            
+            {urgentesCount > 0 && (
+              <div className="absolute right-0 bottom-0 bg-rose-600 text-white text-xs font-bold px-2.5 py-1 rounded-tl-xl rounded-br-2xl flex items-center gap-1.5 shadow-lg animate-pulse border-l border-t border-rose-500/50">
+                <AlertCircle size={12} className="animate-bounce" />
+                {urgentesCount} URGENTE{urgentesCount > 1 ? 'S' : ''}
+              </div>
+            )}
           </div>
         </div>
 
