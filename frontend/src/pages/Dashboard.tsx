@@ -55,6 +55,25 @@ export const Dashboard = () => {
     return true;
   }).length;
 
+  const activeTechNames = Array.from(
+    new Set(
+      workOrders.filter(wo => {
+        if (wo.status !== 'EN_PROCESO') return false;
+        if (summaryStartDate && summaryEndDate) {
+          const created = new Date(wo.created_at);
+          const start = new Date(summaryStartDate);
+          const end = new Date(summaryEndDate);
+          if (created < start || created > end) return false;
+        }
+        return true;
+      })
+      .flatMap(wo => wo.assigned_technicians || [])
+      .map(tech => tech.name.split(' ')[0])
+    )
+  );
+  
+  const activeTechsText = activeTechNames.length > 0 ? activeTechNames.join(', ') : '';
+
   const uniqueAssets = Array.from(new Set(workOrders.map(wo => wo.asset?.name).filter(Boolean))) as string[];
 
   const handleExportCSV = () => {
@@ -422,9 +441,16 @@ export const Dashboard = () => {
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-blue-50 opacity-50 group-hover:scale-110 transition-transform">
              <Wrench className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
-          <div className="relative z-10">
-            <span className="text-blue-600 text-xs sm:text-sm font-bold uppercase tracking-wider">En Proceso</span>
-            <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{summary.EN_PROCESO || 0}</div>
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            <div>
+              <span className="text-blue-600 text-xs sm:text-sm font-bold uppercase tracking-wider">En Proceso</span>
+              <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{summary.EN_PROCESO || 0}</div>
+            </div>
+            {activeTechsText && (
+              <div className="mt-2 text-[10px] sm:text-xs text-blue-700/80 font-semibold leading-tight line-clamp-2" title={activeTechsText}>
+                👤 {activeTechsText}
+              </div>
+            )}
           </div>
         </div>
 
