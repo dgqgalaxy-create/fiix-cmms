@@ -28,7 +28,7 @@ const verifyDevPassword = async (req: Request, res: Response, next: express.Next
     }
 
     const admins = await prisma.user.findMany({
-      where: { role: 'ADMINISTRATOR', is_active: true }
+      where: { role: 'ADMINISTRADOR', is_active: true }
     });
 
     let isValid = false;
@@ -72,7 +72,7 @@ router.post('/delete', verifyDevPassword, async (req: Request, res: Response) =>
         name: 'Administrador',
         email: 'admin',
         password_hash: defaultPassword,
-        role: 'ADMINISTRATOR',
+        role: 'ADMINISTRADOR',
         employee_id: 'ADMIN-001',
         is_active: true
       }
