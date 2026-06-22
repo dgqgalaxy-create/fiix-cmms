@@ -33,6 +33,14 @@ export const Dashboard = () => {
   const [dateFilter, setDateFilter] = useState<string>('ALL');
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [assetFilter, setAssetFilter] = useState<string>('ALL');
+  
+  const [summaryStartDate, setSummaryStartDate] = useState<string>('');
+  const [summaryEndDate, setSummaryEndDate] = useState<string>('');
+
+  const totalRecibidas = Object.entries(summary).reduce((acc, [key, val]) => {
+    if (key !== 'ANULADO') return acc + val;
+    return acc;
+  }, 0);
 
   const uniqueAssets = Array.from(new Set(workOrders.map(wo => wo.asset?.name).filter(Boolean))) as string[];
 
@@ -87,7 +95,7 @@ export const Dashboard = () => {
       setIsLoading(true);
       const [data, summaryData, invSumData] = await Promise.all([
         getWorkOrders(),
-        getWorkOrdersSummary(),
+        getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined),
         hasPermission('VIEW_INVENTORY') ? getInventorySummary() : Promise.resolve(null)
       ]);
       setWorkOrders(data);
@@ -103,6 +111,20 @@ export const Dashboard = () => {
   useEffect(() => {
     fetchWorkOrders();
   }, []);
+
+  useEffect(() => {
+    const fetchSummaryOnly = async () => {
+      try {
+        const summaryData = await getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined);
+        setSummary(summaryData);
+      } catch (error) {
+        console.error('Error fetching summary only', error);
+      }
+    };
+    if (summaryStartDate || summaryEndDate || workOrders.length > 0) {
+      fetchSummaryOnly();
+    }
+  }, [summaryStartDate, summaryEndDate]);
 
   const handleCreateWorkOrder = async (data: any) => {
     await createWorkOrder(data);
@@ -298,7 +320,52 @@ export const Dashboard = () => {
         </div>
       )}
 
-      <div className={`grid grid-cols-2 lg:grid-cols-${hasPermission('VIEW_INVENTORY') ? '6' : '5'} md:grid-cols-3 print:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8`}>
+      <div className="flex flex-wrap gap-4 items-center mb-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm print:hidden">
+        <div className="flex items-center gap-2">
+          <CalendarClock size={18} className="text-slate-500" />
+          <span className="text-sm font-semibold text-slate-700">Filtro para resumen superior:</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500 font-medium">Desde:</span>
+          <input 
+            type="date" 
+            value={summaryStartDate} 
+            onChange={(e) => setSummaryStartDate(e.target.value)}
+            className="text-sm px-2 py-1.5 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-emerald-500"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500 font-medium">Hasta:</span>
+          <input 
+            type="date" 
+            value={summaryEndDate} 
+            onChange={(e) => setSummaryEndDate(e.target.value)}
+            className="text-sm px-2 py-1.5 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-emerald-500"
+          />
+        </div>
+        {(summaryStartDate || summaryEndDate) && (
+          <button 
+            onClick={() => { setSummaryStartDate(''); setSummaryEndDate(''); }}
+            className="text-xs text-rose-500 hover:text-rose-700 font-medium px-2 py-1 bg-rose-50 rounded-lg transition-colors"
+          >
+            Limpiar filtro
+          </button>
+        )}
+      </div>
+
+      <div className={`grid grid-cols-2 lg:grid-cols-${hasPermission('VIEW_INVENTORY') ? '7' : '6'} md:grid-cols-4 print:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8`}>
+        <div 
+          onClick={() => { setActiveTab('ACTIVAS'); setStatusFilter(null); }}
+          className={`cursor-pointer transition-all bg-slate-900 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid shadow-lg col-span-2 md:col-span-1`}
+        >
+          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-slate-700 opacity-50 group-hover:scale-110 transition-transform">
+             <LayoutDashboard className="w-14 h-14 sm:w-20 sm:h-20" />
+          </div>
+          <div className="relative z-10">
+            <span className="text-slate-300 text-xs sm:text-sm font-bold uppercase tracking-wider">Recibidas</span>
+            <div className="text-2xl sm:text-4xl font-black text-white mt-1.5 sm:mt-2">{totalRecibidas}</div>
+          </div>
+        </div>
         <div 
           onClick={() => handleStatusClick('PENDIENTE')}
           className={`cursor-pointer transition-all p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'PENDIENTE' ? 'bg-amber-600 text-white shadow-lg ring-2 ring-amber-400 ring-offset-2 scale-[1.02] border-transparent' : 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md hover:shadow-lg border-transparent'}`}

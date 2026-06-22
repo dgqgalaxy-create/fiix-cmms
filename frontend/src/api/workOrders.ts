@@ -50,8 +50,12 @@ export const getWorkOrders = async (): Promise<WorkOrder[]> => {
   return response.data;
 };
 
-export const getWorkOrdersSummary = async (): Promise<Record<string, number>> => {
-  const response = await api.get('/work-orders/summary');
+export const getWorkOrdersSummary = async (startDate?: string, endDate?: string): Promise<Record<string, number>> => {
+  let url = '/work-orders/summary';
+  if (startDate && endDate) {
+    url += `?startDate=${startDate}&endDate=${endDate}`;
+  }
+  const response = await api.get(url);
   return response.data;
 };
 

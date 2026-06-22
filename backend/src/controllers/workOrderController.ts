@@ -45,8 +45,16 @@ export const getWorkOrders = async (req: AuthRequest, res: Response): Promise<vo
 
 export const getWorkOrdersSummary = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const user = req.user;
+    const { startDate, endDate } = req.query;
     let whereClause: any = {};
+
+    if (startDate && endDate) {
+      whereClause.created_at = {
+        gte: new Date(startDate as string),
+        lte: new Date(endDate as string),
+      };
+    }
+
     const groupResult = await prisma.workOrder.groupBy({
       by: ['status'],
       _count: {
