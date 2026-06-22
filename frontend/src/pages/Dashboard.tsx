@@ -356,13 +356,18 @@ export const Dashboard = () => {
             className="text-sm px-2 py-1.5 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-emerald-500"
           />
         </div>
-        {(summaryStartDate || summaryEndDate) && (
+        {(summaryStartDate || summaryEndDate) ? (
           <button 
             onClick={() => { setSummaryStartDate(''); setSummaryEndDate(''); }}
             className="text-xs text-rose-500 hover:text-rose-700 font-medium px-2 py-1 bg-rose-50 rounded-lg transition-colors"
           >
             Limpiar filtro
           </button>
+        ) : (
+          <span className="text-xs px-2.5 py-1 bg-blue-50 text-blue-700 font-bold rounded-lg border border-blue-200 flex items-center gap-1.5 shadow-sm ml-auto sm:ml-0">
+            <Activity size={14} />
+            Modo Histórico (Viendo Todo)
+          </span>
         )}
       </div>
 
