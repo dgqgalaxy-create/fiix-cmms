@@ -432,35 +432,33 @@ export const Dashboard = () => {
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-white opacity-20 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500 overflow-hidden rounded-2xl">
              <Clock className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
-          <div className="relative z-10 h-full flex flex-col justify-between">
-            <div>
-              <span className="text-amber-50 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-1.5">
-                Pendientes
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
-                </span>
+          <div className="relative z-10">
+            <span className="text-amber-50 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-1.5">
+              Pendientes
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
               </span>
-              <div className="text-2xl sm:text-4xl font-black text-white mt-1.5 sm:mt-2 drop-shadow-md">
-                {summary.PENDIENTE || 0}
-              </div>
+            </span>
+            <div className="text-2xl sm:text-4xl font-black text-white mt-1.5 sm:mt-2 drop-shadow-md">
+              {summary.PENDIENTE || 0}
             </div>
             
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="absolute right-0 bottom-0 flex flex-col items-end">
               {urgentesCount > 0 && (
-                <div className="bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-md animate-pulse border border-rose-500/50">
-                  <AlertCircle size={10} className="animate-bounce" />
-                  {urgentesCount} URG
+                <div className={`bg-rose-600 text-white text-xs font-bold px-2.5 py-1 rounded-tl-xl ${(normalesCount > 0 || bajasCount > 0) ? '' : 'rounded-br-2xl'} flex items-center gap-1.5 shadow-lg animate-pulse border-l border-t border-rose-500/50`}>
+                  <AlertCircle size={12} className="animate-bounce" />
+                  {urgentesCount} URGENTE{urgentesCount > 1 ? 'S' : ''}
                 </div>
               )}
-              {normalesCount > 0 && (
-                <div className="bg-amber-600/80 text-amber-50 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm border border-amber-400/30">
-                  {normalesCount} NORM
-                </div>
-              )}
-              {bajasCount > 0 && (
-                <div className="bg-emerald-600/80 text-emerald-50 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm border border-emerald-400/30">
-                  {bajasCount} BAJ
+              {(normalesCount > 0 || bajasCount > 0) && (
+                <div className={`flex items-center gap-2 px-2 py-0.5 bg-black/20 ${urgentesCount === 0 ? 'rounded-tl-xl border-l border-t border-white/20' : ''} rounded-br-2xl`}>
+                  {normalesCount > 0 && (
+                    <span className="text-amber-100 text-[10px] font-bold">{normalesCount} NORM</span>
+                  )}
+                  {bajasCount > 0 && (
+                    <span className="text-emerald-200 text-[10px] font-bold">{bajasCount} BAJ</span>
+                  )}
                 </div>
               )}
             </div>
