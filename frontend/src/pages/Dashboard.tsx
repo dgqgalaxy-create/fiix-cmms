@@ -380,7 +380,7 @@ export const Dashboard = () => {
              <LayoutDashboard className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
           <div className="relative z-10">
-            <span className="text-slate-300 text-xs sm:text-sm font-bold uppercase tracking-wider">Recibidas</span>
+            <span className="text-slate-300 text-xs sm:text-sm font-bold uppercase tracking-wider">Totales Recibidas</span>
             <div className="text-2xl sm:text-4xl font-black text-white mt-1.5 sm:mt-2">{totalRecibidas}</div>
           </div>
         </div>
