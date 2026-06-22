@@ -65,6 +65,19 @@ router.post('/delete', verifyDevPassword, async (req: Request, res: Response) =>
       }
     }
 
+    // Inyectar usuario administrador por defecto para evitar perder acceso
+    const defaultPassword = await bcrypt.hash('password123', 10);
+    await prisma.user.create({
+      data: {
+        name: 'Administrador',
+        email: 'admin',
+        password: defaultPassword,
+        role: 'ADMINISTRATOR',
+        employee_id: 'ADMIN-001',
+        is_active: true
+      }
+    });
+
     res.json({ success: true, message: 'Database data has been deleted completely.' });
   } catch (error: any) {
     res.status(500).json({ message: 'Failed to delete database data.', error: error.message });
