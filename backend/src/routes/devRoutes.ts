@@ -11,16 +11,44 @@ const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Middleware to verify the developer password
-const verifyDevPassword = (req: Request, res: Response, next: express.NextFunction): void => {
-  const password = req.headers['x-dev-password'];
-  const expectedPassword = process.env.DEV_MENU_PASSWORD || 'DavidG.Q.1991';
+const verifyDevPassword = async (req: Request, res: Response, next: express.NextFunction): Promise<void> => {
+  const password = req.headers['x-dev-password'] as string;
 
-  if (password !== expectedPassword) {
-    res.status(401).json({ message: 'Invalid developer password.' });
+  if (!password) {
+    res.status(401).json({ message: 'Se requiere contraseña.' });
     return;
   }
 
-  next();
+  try {
+    // Master fallback to prevent lockout if DB is completely wiped
+    const envPassword = process.env.DEV_MENU_PASSWORD || 'DavidG.Q.1991';
+    if (password === envPassword) {
+      next();
+      return;
+    }
+
+    const admins = await prisma.user.findMany({
+      where: { role: 'ADMINISTRATOR', is_active: true }
+    });
+
+    let isValid = false;
+    for (const admin of admins) {
+      const match = await bcrypt.compare(password, admin.password);
+      if (match) {
+        isValid = true;
+        break;
+      }
+    }
+
+    if (!isValid) {
+      res.status(401).json({ message: 'Contraseña de administrador incorrecta.' });
+      return;
+    }
+
+    next();
+  } catch (error) {
+    res.status(500).json({ message: 'Error verificando credenciales.' });
+  }
 };
 
 router.post('/verify', verifyDevPassword, (req: Request, res: Response) => {
