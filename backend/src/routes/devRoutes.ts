@@ -73,7 +73,6 @@ router.post('/delete', verifyDevPassword, async (req: Request, res: Response) =>
         email: 'admin',
         password_hash: defaultPassword,
         role: 'ADMINISTRADOR',
-        employee_id: 'ADMIN-001',
         is_active: true
       }
     });
