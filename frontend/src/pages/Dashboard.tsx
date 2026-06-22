@@ -557,6 +557,22 @@ export const Dashboard = () => {
                 <option key={asset} value={asset}>{asset}</option>
               ))}
             </select>
+
+            {(dateFilter !== 'ALL' || priorityFilter !== 'ALL' || assetFilter !== 'ALL' || searchTerm !== '' || statusFilter !== null) && (
+              <button 
+                onClick={() => {
+                  setDateFilter('ALL');
+                  setPriorityFilter('ALL');
+                  setAssetFilter('ALL');
+                  setSearchTerm('');
+                  setStatusFilter(null);
+                }}
+                className="px-3 py-2 bg-white text-rose-600 hover:bg-rose-50 hover:text-rose-700 border border-rose-200 rounded-lg text-sm font-medium focus:outline-none shadow-sm transition-colors flex items-center gap-2 ml-auto"
+              >
+                <XCircle size={16} />
+                Limpiar filtros
+              </button>
+            )}
           </div>
 
           <div className="mb-4 flex items-center justify-between bg-emerald-50 border border-emerald-100 p-4 rounded-xl print:hidden">
