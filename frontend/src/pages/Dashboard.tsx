@@ -229,6 +229,7 @@ export const Dashboard = () => {
   };
 
   const paretoData = getParetoData();
+  const filteredList = getFilteredWorkOrders();
 
   return (
     <>
@@ -491,8 +492,23 @@ export const Dashboard = () => {
             </select>
           </div>
 
+          <div className="mb-4 flex items-center justify-between bg-emerald-50 border border-emerald-100 p-4 rounded-xl print:hidden">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
+                <Search size={20} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-emerald-900">Total filtradas</p>
+                <p className="text-xs text-emerald-700">Órdenes recibidas según los filtros actuales</p>
+              </div>
+            </div>
+            <div className="text-2xl font-black text-emerald-700">
+              {filteredList.length}
+            </div>
+          </div>
+
           <WorkOrdersTable 
-            workOrders={getFilteredWorkOrders()} 
+            workOrders={filteredList} 
             onRowClick={setSelectedWorkOrder}
           />
         </>
