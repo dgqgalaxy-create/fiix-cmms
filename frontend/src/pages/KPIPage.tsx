@@ -306,27 +306,29 @@ export const KPIPage = () => {
             </div>
           </div>
 
-          <div className="bg-white/80 backdrop-blur-md p-6 print:p-4 rounded-3xl border border-slate-200/50 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:shadow-slate-200/50 transition-shadow print:shadow-none print:break-inside-avoid">
-            <div className="flex items-center gap-2 mb-6">
+          <div className="bg-white/80 backdrop-blur-md p-6 print:p-4 rounded-3xl border border-slate-200/50 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:shadow-slate-200/50 transition-shadow print:shadow-none print:break-inside-avoid flex flex-col">
+            <div className="flex items-center gap-2 mb-6 shrink-0">
               <Users className="text-blue-600" size={24} />
               <h2 className="text-lg font-bold text-slate-800">Desempeño de Técnicos</h2>
             </div>
             {techPerformanceData.length > 0 ? (
-              <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={techPerformanceData} margin={{ top: 20, right: 20, bottom: 20, left: -20 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                    <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    />
-                    <Legend />
-                    <Bar dataKey="Finalizadas" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="EnProceso" name="En Proceso" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="Pendientes" stackId="a" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="w-full overflow-y-auto pr-2" style={{ maxHeight: '400px' }}>
+                <div style={{ height: `${Math.max(288, techPerformanceData.length * 45)}px`, width: '100%' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={techPerformanceData} layout="vertical" margin={{ top: 0, right: 20, bottom: 0, left: 10 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
+                      <XAxis type="number" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                      <YAxis type="category" dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} width={80} interval={0} />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      />
+                      <Legend verticalAlign="top" height={36} />
+                      <Bar dataKey="Finalizadas" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} barSize={24} />
+                      <Bar dataKey="EnProceso" name="En Proceso" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} barSize={24} />
+                      <Bar dataKey="Pendientes" stackId="a" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={24} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             ) : (
               <div className="h-72 w-full flex items-center justify-center text-slate-400">
