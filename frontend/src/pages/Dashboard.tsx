@@ -590,7 +590,7 @@ export const Dashboard = () => {
                   onClick={() => { setActiveTab('ACTIVAS'); setStatusFilter(null); }}
                   className={`pb-3 px-1 text-sm font-medium border-b-2 -mb-[17px] transition-colors ${activeTab === 'ACTIVAS' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
                 >
-                  Activas
+                  Vista General
                 </button>
               )}
               <button 
