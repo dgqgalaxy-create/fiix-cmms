@@ -10,6 +10,7 @@ import { getWorkOrders, getWorkOrdersSummary, createWorkOrder, updateWorkOrder, 
 import { getInventorySummary } from '../api/inventory';
 import type { InventorySummary } from '../api/inventory';
 import type { WorkOrder } from '../api/workOrders';
+import { socket } from '../api/socket';
 import { useNavigate } from 'react-router-dom';
 
 export const Dashboard = () => {
@@ -166,6 +167,17 @@ export const Dashboard = () => {
 
   useEffect(() => {
     fetchWorkOrders();
+
+    const handleRefresh = () => {
+      console.log('[Socket.io] Actualización en tiempo real recibida para órdenes de trabajo');
+      fetchWorkOrders();
+    };
+
+    socket.on('refresh_work_orders', handleRefresh);
+
+    return () => {
+      socket.off('refresh_work_orders', handleRefresh);
+    };
   }, []);
 
   useEffect(() => {

@@ -12,6 +12,7 @@ import { TransactionModal } from '../components/inventory/TransactionModal';
 import { TransactionDetailModal } from '../components/inventory/TransactionDetailModal';
 import { CatalogModal } from '../components/inventory/CatalogModal';
 import { QRDisplayModal } from '../components/common/QRDisplayModal';
+import { socket } from '../api/socket';
 
 export const InventoryPage = () => {
   const { hasPermission } = useAuth();
@@ -74,6 +75,17 @@ export const InventoryPage = () => {
 
   useEffect(() => {
     fetchData();
+
+    const handleRefresh = () => {
+      console.log('[Socket.io] Actualización en tiempo real recibida para inventario');
+      fetchData();
+    };
+
+    socket.on('refresh_inventory', handleRefresh);
+
+    return () => {
+      socket.off('refresh_inventory', handleRefresh);
+    };
   }, []);
 
   // Handle URL parameters (scan & filters)

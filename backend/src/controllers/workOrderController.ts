@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
+import { getIO } from '../utils/socket';
 
 export const getRequesters = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -147,6 +148,8 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
           : undefined
       }
     });
+
+    getIO().emit('refresh_work_orders');
     res.status(201).json(newWorkOrder);
   } catch (error) {
     res.status(500).json({ error: 'Error al crear orden de trabajo' });
@@ -292,6 +295,7 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
       data: updateData
     });
 
+    getIO().emit('refresh_work_orders');
     res.json(updated);
   } catch (error) {
     console.error(error);
@@ -311,6 +315,7 @@ export const deleteWorkOrder = async (req: AuthRequest, res: Response): Promise<
     }
 
     await prisma.workOrder.delete({ where: { id } });
+    getIO().emit('refresh_work_orders');
     res.json({ message: 'Orden eliminada con éxito' });
   } catch (error) {
     console.error(error);
@@ -359,6 +364,7 @@ export const joinWorkOrder = async (req: AuthRequest, res: Response): Promise<vo
       }
     });
 
+    getIO().emit('refresh_work_orders');
     res.json(updated);
   } catch (error) {
     console.error(error);

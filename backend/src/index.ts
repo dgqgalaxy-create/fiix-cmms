@@ -2,12 +2,19 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 import dotenv from 'dotenv';
+import http from 'http';
+import { initSocket } from './utils/socket';
 
 dotenv.config();
 
 // Restart trigger
 
 const app = express();
+const server = http.createServer(app);
+
+// Inicializar WebSockets
+initSocket(server);
+
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
@@ -49,6 +56,6 @@ app.use('/api/dev', devRoutes);
 // Initialize Cron Jobs
 initCronJobs();
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
