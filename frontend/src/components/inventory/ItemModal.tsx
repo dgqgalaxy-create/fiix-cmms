@@ -155,9 +155,9 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
   const uomOptions = ['PIEZAS', 'LITROS', 'METROS', 'KILOGRAMOS', 'KITS', 'CAJAS', 'PAQUETES', 'GALONES', 'JUEGOS', 'OTROS'];
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden my-8">
-        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+    <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[95vh] flex flex-col overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
           <div className="flex items-center gap-4">
             <h2 className="text-xl font-bold text-slate-900">
               {readOnly ? 'Detalles del Repuesto' : item ? 'Editar Repuesto' : 'Nuevo Repuesto'}
@@ -177,7 +177,8 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6">
+        <div className="overflow-y-auto flex-1">
+          <form onSubmit={handleSubmit} className="p-6">
           {error && (
             <div className="mb-6 p-4 bg-rose-50 text-rose-600 rounded-xl text-sm border border-rose-100">
               {error}
@@ -450,7 +451,8 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
               </button>
             )}
           </div>
-        </form>
+          </form>
+        </div>
       </div>
 
       <ImageSearchModal 
