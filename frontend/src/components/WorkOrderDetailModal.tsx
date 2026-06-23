@@ -588,8 +588,6 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                         Unirme a esta orden
                       </button>
                     )}
-                  </div>
-                )}
 
                 {status === 'EN_ESPERA' && (
                   <div className="animate-in fade-in slide-in-from-top-2 duration-300">
@@ -598,10 +596,10 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                       type="text" 
                       required
                       placeholder="Ej: Faltan refacciones..."
-                      className={`w-full px-4 py-3 bg-red-50/50 border border-red-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-red-500 outline-none transition-all ${isClosed ? 'opacity-70 cursor-not-allowed' : ''}`}
+                      className={`w-full px-4 py-3 bg-red-50/50 border border-red-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-red-500 outline-none transition-all ${isClosed || workOrder.status === 'EN_ESPERA' ? 'opacity-70 cursor-not-allowed' : ''}`}
                       value={holdReason}
                       onChange={(e) => setHoldReason(e.target.value)}
-                      disabled={isClosed}
+                      disabled={isClosed || workOrder.status === 'EN_ESPERA'}
                     />
                   </div>
                 )}
