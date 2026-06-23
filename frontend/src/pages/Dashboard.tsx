@@ -147,9 +147,9 @@ export const Dashboard = () => {
     }
   };
 
-  const fetchWorkOrders = async () => {
+  const fetchWorkOrders = async (backgroundFetch: boolean = false) => {
     try {
-      setIsLoading(true);
+      if (!backgroundFetch) setIsLoading(true);
       const [data, summaryData, invSumData] = await Promise.all([
         getWorkOrders(),
         getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined),
@@ -161,7 +161,7 @@ export const Dashboard = () => {
     } catch (error) {
       console.error('Error fetching work orders', error);
     } finally {
-      setIsLoading(false);
+      if (!backgroundFetch) setIsLoading(false);
     }
   };
 
@@ -170,7 +170,7 @@ export const Dashboard = () => {
 
     const handleRefresh = () => {
       console.log('[Socket.io] Actualización en tiempo real recibida para órdenes de trabajo');
-      fetchWorkOrders();
+      fetchWorkOrders(true);
     };
 
     socket.on('refresh_work_orders', handleRefresh);

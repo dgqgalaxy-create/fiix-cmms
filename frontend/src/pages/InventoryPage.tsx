@@ -51,8 +51,8 @@ export const InventoryPage = () => {
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<any>(undefined);
   const [isCatalogReadOnly, setIsCatalogReadOnly] = useState(false);
 
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchData = async (backgroundFetch: boolean = false) => {
+    if (!backgroundFetch) setIsLoading(true);
     try {
       const [fetchedItems, fetchedTrans, fetchedCats, fetchedLocs, fetchedVends] = await Promise.all([
         getItems(),
@@ -69,7 +69,7 @@ export const InventoryPage = () => {
     } catch (error) {
       console.error('Error fetching inventory data', error);
     } finally {
-      setIsLoading(false);
+      if (!backgroundFetch) setIsLoading(false);
     }
   };
 
@@ -78,7 +78,7 @@ export const InventoryPage = () => {
 
     const handleRefresh = () => {
       console.log('[Socket.io] Actualización en tiempo real recibida para inventario');
-      fetchData();
+      fetchData(true);
     };
 
     socket.on('refresh_inventory', handleRefresh);
