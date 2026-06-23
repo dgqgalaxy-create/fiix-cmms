@@ -851,9 +851,9 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                   </div>
                 )}
                 
-                {status === 'EN_PROCESO' && workOrder.status === 'PENDIENTE' && (
+                {status === 'EN_PROCESO' && !workOrder.before_image_url && (
                   <div className="pt-4 mt-2 border-t border-slate-100">
-                    <label className="block text-sm font-medium text-slate-700 mb-2">📸 Evidencia del Problema (Antes)</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">📸 Evidencia del Problema (Antes) *</label>
                     <div className="flex gap-2">
                       <label className="flex-1 flex flex-col items-center justify-center py-3 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors text-slate-600">
                         <span className="text-xl mb-1">📷</span>
