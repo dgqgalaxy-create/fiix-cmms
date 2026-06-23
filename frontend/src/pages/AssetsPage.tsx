@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw, Search, QrCode } from 'lucide-react';
 import { AssetsTable } from '../components/AssetsTable';
 import { CreateAssetModal } from '../components/CreateAssetModal';
 import { AssetDetailModal } from '../components/AssetDetailModal';
 import { QRDisplayModal } from '../components/common/QRDisplayModal';
+import { QRScannerModal } from '../components/common/QRScannerModal';
 import { getAssets, createAsset, deleteAsset, updateAsset } from '../api/assets';
 import type { Asset } from '../api/assets';
 
@@ -14,10 +15,11 @@ export const AssetsPage = () => {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [detailAsset, setDetailAsset] = useState<Asset | null>(null);
   const [qrAsset, setQrAsset] = useState<Asset | null>(null);
-  const [searchParams, setSearchParams] = useSearchParams();
 
   const fetchAssets = async () => {
     try {
@@ -35,22 +37,21 @@ export const AssetsPage = () => {
     fetchAssets();
   }, []);
 
-  // Handle URL scanning parameter
-  useEffect(() => {
-    const scanId = searchParams.get('scan');
-    if (scanId && assets.length > 0) {
-      // Find exactly by ID or internal code
-      const scannedAsset = assets.find(a => a.id === scanId || a.internal_code === scanId);
-      if (scannedAsset) {
-        setDetailAsset(scannedAsset);
-      } else {
-        alert("El QR escaneado pertenece a un Activo que no fue encontrado en el sistema.");
-      }
-      // Clear the search param after processing
-      searchParams.delete('scan');
-      setSearchParams(searchParams, { replace: true });
+  // (Removed URL scan logic based on UX redesign)
+
+  const filteredAssets = assets.filter(a => 
+    a.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    a.internal_code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleScan = (scannedId: string) => {
+    const asset = assets.find(a => a.id === scannedId || a.internal_code === scannedId);
+    if (asset) {
+      setSearchTerm(asset.internal_code || asset.name);
+    } else {
+      alert("No se encontró ningún activo con el código escaneado.");
     }
-  }, [searchParams, assets, setSearchParams]);
+  };
 
   const handleSubmitAsset = async (data: Partial<Asset>) => {
     if (editingAsset) {
@@ -109,14 +110,35 @@ export const AssetsPage = () => {
           <p className="text-slate-500 font-medium">Cargando inventario...</p>
         </div>
       ) : (
-        <AssetsTable 
-          assets={assets} 
-          onDelete={handleDeleteAsset} 
-          onEdit={(asset) => { setEditingAsset(asset); setIsModalOpen(true); }}
-          onRowClick={(asset) => setDetailAsset(asset)}
-          onPrintQR={(asset) => setQrAsset(asset)}
-          canManage={canManage} 
-        />
+        <div className="space-y-4">
+          <div className="flex-1 bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex items-center mb-6">
+            <div className="pl-3 pr-2 text-slate-400">
+              <Search size={20} />
+            </div>
+            <input
+              type="text"
+              placeholder="Buscar activos por nombre o código..."
+              className="w-full bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 px-2 py-1.5 outline-none"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <button
+              onClick={() => setIsScannerOpen(true)}
+              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+              title="Escanear QR para buscar"
+            >
+              <QrCode size={20} />
+            </button>
+          </div>
+          <AssetsTable 
+            assets={filteredAssets} 
+            onDelete={handleDeleteAsset} 
+            onEdit={(asset) => { setEditingAsset(asset); setIsModalOpen(true); }}
+            onRowClick={(asset) => setDetailAsset(asset)}
+            onPrintQR={(asset) => setQrAsset(asset)}
+            canManage={canManage} 
+          />
+        </div>
       )}
 
       <CreateAssetModal 
@@ -138,6 +160,12 @@ export const AssetsPage = () => {
         title={qrAsset?.name || ''}
         subtitle={qrAsset?.internal_code || ''}
         value={qrAsset ? `FIIX-ASSET:${qrAsset.id}` : ''}
+      />
+
+      <QRScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={handleScan}
       />
     </>
   );

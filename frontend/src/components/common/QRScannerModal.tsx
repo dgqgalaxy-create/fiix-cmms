@@ -6,13 +6,13 @@ import { useNavigate } from 'react-router-dom';
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  onScan: (data: string) => void;
 }
 
-export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose }) => {
+export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose, onScan }) => {
   const [error, setError] = useState<string>('');
   const [isScanning, setIsScanning] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (isOpen) {
@@ -58,14 +58,13 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose }) => {
       if (data.startsWith('FIIX-ASSET:')) {
         const id = data.replace('FIIX-ASSET:', '').trim();
         onClose();
-        navigate(`/assets?scan=${id}`);
+        onScan(id);
       } else if (data.startsWith('FIIX-ITEM:')) {
         const id = data.replace('FIIX-ITEM:', '').trim();
         onClose();
-        navigate(`/inventory?scan=${id}`);
+        onScan(id);
       } else {
         setError("Código QR no reconocido por FIIX CMMS.");
-        // We pause the scanner temporarily
         if (scannerRef.current) {
             scannerRef.current.pause(true);
             setTimeout(() => {
@@ -74,76 +73,6 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose }) => {
             }, 3000);
         }
       }
-    }
-  };
-
-  const processImageFile = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = async () => {
-        const canvas = document.createElement('canvas');
-        const MAX_SIZE = 1000;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height && width > MAX_SIZE) {
-          height *= MAX_SIZE / width;
-          width = MAX_SIZE;
-        } else if (height > MAX_SIZE) {
-          width *= MAX_SIZE / height;
-          height = MAX_SIZE;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return reject("No 2d context");
-        
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // Try native BarcodeDetector first (extremely fast on Android Chrome)
-        if ('BarcodeDetector' in window) {
-          try {
-            const barcodeDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
-            const barcodes = await barcodeDetector.detect(canvas);
-            if (barcodes.length > 0) {
-              return resolve(barcodes[0].rawValue);
-            }
-          } catch (e) {
-            console.log("BarcodeDetector failed, falling back to html5-qrcode", e);
-          }
-        }
-
-        // Fallback to html5QrCode
-        canvas.toBlob((blob) => {
-          if (!blob) return reject("Canvas to blob failed");
-          const resizedFile = new File([blob], file.name, { type: 'image/jpeg' });
-          
-          if (scannerRef.current) {
-            scannerRef.current.scanFile(resizedFile, true).then(resolve).catch(reject);
-          } else {
-            const html5QrCode = new Html5Qrcode("qr-reader");
-            html5QrCode.scanFile(resizedFile, true).then(resolve).catch(reject);
-          }
-        }, 'image/jpeg', 0.9);
-      };
-      img.onerror = () => reject("Image load error");
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setError('Procesando imagen (puede tomar unos segundos)...');
-    
-    try {
-      const decodedText = await processImageFile(file);
-      handleScan(decodedText);
-    } catch (err) {
-      console.error("Error al escanear archivo:", err);
-      setError("No se encontró ningún código QR en la foto. Intenta enfocar mejor o acercarte más.");
     }
   };
 
@@ -191,21 +120,8 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose }) => {
           
           <div className="mt-4 flex flex-col gap-3">
             <p className="text-center text-slate-500 text-sm">
-              Apunta la cámara al código QR de una máquina o repuesto.
+              Apunta la cámara al código QR de una máquina o repuesto. Se agregará automáticamente a la barra de búsqueda.
             </p>
-            {error && (
-              <label className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-50 text-indigo-700 font-bold rounded-xl cursor-pointer hover:bg-indigo-100 transition-colors border border-indigo-200">
-                <Upload size={18} />
-                <span className="text-sm">Tomar Foto Manual (Alternativa)</span>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  capture="environment" 
-                  className="hidden" 
-                  onChange={handleFileUpload} 
-                />
-              </label>
-            )}
           </div>
         </div>
       </div>

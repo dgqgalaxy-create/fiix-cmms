@@ -12,6 +12,7 @@ import { TransactionModal } from '../components/inventory/TransactionModal';
 import { TransactionDetailModal } from '../components/inventory/TransactionDetailModal';
 import { CatalogModal } from '../components/inventory/CatalogModal';
 import { QRDisplayModal } from '../components/common/QRDisplayModal';
+import { QRScannerModal } from '../components/common/QRScannerModal';
 import { socket } from '../api/socket';
 
 export const InventoryPage = () => {
@@ -37,6 +38,7 @@ export const InventoryPage = () => {
   const ITEMS_PER_PAGE = 20;
 
   // Modals state
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | undefined>(undefined);
   const [qrItem, setQrItem] = useState<Item | null>(null);
@@ -88,22 +90,9 @@ export const InventoryPage = () => {
     };
   }, []);
 
-  // Handle URL parameters (scan & filters)
+  // Handle URL parameters (filters)
   useEffect(() => {
     let shouldReplaceUrl = false;
-    
-    const scanId = searchParams.get('scan');
-    if (scanId && items.length > 0) {
-      const scannedItem = items.find(i => i.id === scanId || i.internal_code === scanId);
-      if (scannedItem) {
-        setSelectedItem(scannedItem);
-        setIsItemModalOpen(true);
-      } else {
-        alert("El QR escaneado pertenece a un Repuesto que no fue encontrado en el sistema.");
-      }
-      shouldReplaceUrl = true;
-      searchParams.delete('scan');
-    }
 
     const filter = searchParams.get('filter');
     if (filter === 'low_stock') {
@@ -232,6 +221,15 @@ export const InventoryPage = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleScan = (scannedId: string) => {
+    const item = items.find(i => i.id === scannedId || i.internal_code === scannedId);
+    if (item) {
+      setSearchTerm(item.internal_code || item.name);
+    } else {
+      alert("No se encontró ningún repuesto con el código escaneado.");
+    }
   };
 
   const renderContent = () => {
@@ -751,10 +749,17 @@ export const InventoryPage = () => {
                 <input
                   type="text"
                   placeholder="Buscar en repuestos..."
-                  className="w-full bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 px-2 py-1.5"
+                  className="w-full bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 px-2 py-1.5 outline-none"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
+                <button
+                  onClick={() => setIsScannerOpen(true)}
+                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                  title="Escanear QR para buscar"
+                >
+                  <QrCode size={20} />
+                </button>
               </div>
 
               <div className="flex flex-wrap gap-3">
@@ -860,6 +865,12 @@ export const InventoryPage = () => {
         title={qrItem?.name || ''}
         subtitle={qrItem?.internal_code || ''}
         value={qrItem ? `FIIX-ITEM:${qrItem.id}` : ''}
+      />
+
+      <QRScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={handleScan}
       />
     </div>
   );

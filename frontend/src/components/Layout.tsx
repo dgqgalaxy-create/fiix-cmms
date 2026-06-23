@@ -1,12 +1,10 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { sendHeartbeat } from '../api/users';
-import { Menu, Camera } from 'lucide-react';
-import { QRScannerModal } from './common/QRScannerModal';
+import { Menu } from 'lucide-react';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   useEffect(() => {
     // Send initial heartbeat
@@ -50,20 +48,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
           {children}
         </div>
 
-        {/* Floating Action Button for Scanner */}
-        <button
-          onClick={() => setIsScannerOpen(true)}
-          className="print:hidden fixed bottom-6 right-6 md:bottom-10 md:right-10 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 transition-colors z-30 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-indigo-500/30"
-          title="Escáner Inteligente QR"
-        >
-          <Camera size={24} />
-        </button>
       </div>
-
-      <QRScannerModal 
-        isOpen={isScannerOpen} 
-        onClose={() => setIsScannerOpen(false)} 
-      />
     </div>
   );
 };
