@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch } from 'lucide-react';
+import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, ChevronDown } from 'lucide-react';
 import type { WorkOrder } from '../api/workOrders';
 import { useAuth } from '../context/AuthContext';
 import { getUsers } from '../api/users';
@@ -483,34 +483,57 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
 
           <form id="update-wo-form" onSubmit={handleSubmit} className="space-y-5">
             <div className="border-t border-slate-100 pt-6">
-              <h3 className="text-sm font-bold text-slate-800 mb-4">Actualización (Técnico / Admin)</h3>
+              <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                Actualización (Técnico / Admin)
+                {!isClosed && <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest font-black">Área Editable</span>}
+              </h3>
               
               <div className="grid grid-cols-1 gap-5">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Estado de la Orden</label>
-                  <select 
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-800 outline-none transition-all appearance-none font-medium"
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    disabled={isClosed}
-                  >
-                    <option value={workOrder.status}>{workOrder.status}</option>
-                    
-                    {workOrder.status === 'PENDIENTE' && (
-                      <option value="EN_PROCESO">EN_PROCESO (Aceptar Orden)</option>
+                <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 relative overflow-hidden">
+                  {/* Decorative background element */}
+                  {!isClosed && <div className="absolute -right-4 -top-4 w-16 h-16 bg-indigo-500/10 rounded-full blur-xl pointer-events-none"></div>}
+                  
+                  <label className="flex items-center gap-2 text-sm font-bold text-indigo-900 mb-2">
+                    Estado de la Orden
+                    {!isClosed && (
+                      <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider animate-pulse flex items-center gap-1 font-bold">
+                        👉 Haz clic para cambiar
+                      </span>
                     )}
-                    
-                    {workOrder.status === 'EN_PROCESO' && (
-                      <>
-                        <option value="EN_ESPERA">EN_ESPERA (Pausar)</option>
-                        <option value="FINALIZADO">FINALIZADO (Completar)</option>
-                      </>
-                    )}
-                    
-                    {workOrder.status === 'EN_ESPERA' && (
-                      <option value="EN_PROCESO">EN_PROCESO (Reanudar)</option>
-                    )}
-                  </select>
+                  </label>
+                  
+                  <div className="relative">
+                    <select 
+                      className={`w-full px-4 py-3.5 border rounded-xl outline-none transition-all appearance-none font-bold text-base shadow-sm ${
+                        isClosed 
+                          ? 'bg-white border-slate-200 text-slate-500 cursor-not-allowed' 
+                          : 'bg-white border-indigo-300 text-indigo-900 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500'
+                      }`}
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value)}
+                      disabled={isClosed}
+                    >
+                      <option value={workOrder.status}>{workOrder.status}</option>
+                      
+                      {workOrder.status === 'PENDIENTE' && (
+                        <option value="EN_PROCESO">EN_PROCESO (Aceptar Orden)</option>
+                      )}
+                      
+                      {workOrder.status === 'EN_PROCESO' && (
+                        <>
+                          <option value="EN_ESPERA">EN_ESPERA (Pausar)</option>
+                          <option value="FINALIZADO">FINALIZADO (Completar)</option>
+                        </>
+                      )}
+                      
+                      {workOrder.status === 'EN_ESPERA' && (
+                        <option value="EN_PROCESO">EN_PROCESO (Reanudar)</option>
+                      )}
+                    </select>
+                    <div className={`absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none ${isClosed ? 'text-slate-400' : 'text-indigo-600'}`}>
+                      <ChevronDown size={20} />
+                    </div>
+                  </div>
                 </div>
 
                 {user?.role !== 'TECNICO' ? (
