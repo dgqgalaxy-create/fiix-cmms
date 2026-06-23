@@ -588,6 +588,8 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                         Unirme a esta orden
                       </button>
                     )}
+                  </div>
+                )}
 
                 {status === 'EN_ESPERA' && (
                   <div className="animate-in fade-in slide-in-from-top-2 duration-300">
