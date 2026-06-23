@@ -42,6 +42,9 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [error, setError] = useState('');
   
+  const [sigCleanAreaEmpty, setSigCleanAreaEmpty] = useState(true);
+  const [sigDeliveryEmpty, setSigDeliveryEmpty] = useState(true);
+  
   const [technicians, setTechnicians] = useState<User[]>([]);
   const [assignedTechniciansIds, setAssignedTechniciansIds] = useState<string[]>([]);
 
@@ -73,6 +76,8 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
       setItemSearchText('');
       setShowDropdown(false);
       setAmountToAdd('');
+      setSigCleanAreaEmpty(!workOrder.signature_clean_area);
+      setSigDeliveryEmpty(!workOrder.signature_delivery);
       
       setFailureProblemId((workOrder as any).failure_problem_id || '');
       setFailureCauseId((workOrder as any).failure_cause_id || '');
@@ -151,18 +156,38 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
     return `${minutes}m`;
   };
 
+  let finalStatus = status;
+  if (user?.role === 'TECNICO' && workOrder.status === 'PENDIENTE' && status === 'PENDIENTE') {
+    finalStatus = 'EN_PROCESO';
+  }
+
   const isDirty = status !== workOrder.status ||
     holdReason !== (workOrder.hold_reason || '') ||
     resolutionNotes !== (workOrder.resolution_notes || '') ||
-    signatureCleanArea !== (workOrder.signature_clean_area || '') ||
-    signatureDelivery !== (workOrder.signature_delivery || '') ||
     beforeImage !== null ||
     afterImage !== null ||
     usedItems.length > 0 ||
     failureProblemId !== ((workOrder as any).failure_problem_id || '') ||
     failureCauseId !== ((workOrder as any).failure_cause_id || '') ||
     failureRemedyId !== ((workOrder as any).failure_remedy_id || '') ||
+    !sigCleanAreaEmpty !== !!workOrder.signature_clean_area ||
+    !sigDeliveryEmpty !== !!workOrder.signature_delivery ||
     (user?.role !== 'TECNICO' && JSON.stringify([...assignedTechniciansIds].sort()) !== JSON.stringify([...(workOrder.assigned_technicians?.map(t => t.id) || [])].sort()));
+
+  let canSave = isDirty;
+  if (canSave) {
+    if (finalStatus === 'EN_PROCESO') {
+      if (user?.role !== 'TECNICO' && assignedTechniciansIds.length === 0) canSave = false;
+      if (!beforeImage && !workOrder.before_image_url) canSave = false;
+    } else if (finalStatus === 'FINALIZADO') {
+      if (!resolutionNotes?.trim()) canSave = false;
+      if (!afterImage && !workOrder.after_image_url) canSave = false;
+      if (sigCleanAreaEmpty || sigDeliveryEmpty) canSave = false;
+      if (workOrder.maintenance_type === 'CORRECTIVO' && (!failureProblemId || !failureCauseId || !failureRemedyId)) canSave = false;
+    } else if (finalStatus === 'EN_ESPERA') {
+      if (!holdReason?.trim()) canSave = false;
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,14 +195,8 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
     if (!window.confirm("¿Estás seguro de que deseas guardar los cambios realizados en esta orden?")) {
       return;
     }
-    
-    try {
-      let finalStatus = status;
-      // Si la orden está PENDIENTE y el técnico le da guardar, pasarla a EN_PROCESO automáticamente
-      if (user?.role === 'TECNICO' && workOrder.status === 'PENDIENTE' && status === 'PENDIENTE') {
-        finalStatus = 'EN_PROCESO';
-      }
 
+    try {
       if (finalStatus === 'EN_PROCESO' && user?.role !== 'TECNICO' && assignedTechniciansIds.length === 0) {
         setError('Debes asignar al menos un técnico para poder poner la orden en proceso.');
         return;
@@ -792,12 +811,14 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                             <SignatureField 
                               ref={sigCleanAreaRef}
                               label="Firma: Liberación de Área Limpia *"
+                              onChange={() => setSigCleanAreaEmpty(sigCleanAreaRef.current?.isEmpty() ?? true)}
                             />
                           </div>
                           <div>
                             <SignatureField 
                               ref={sigDeliveryRef}
                               label="Firma: Entrega de Trabajo *"
+                              onChange={() => setSigDeliveryEmpty(sigDeliveryRef.current?.isEmpty() ?? true)}
                             />
                           </div>
                         </div>
@@ -876,7 +897,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
             <button type="button" onClick={onClose} className="px-3 sm:px-5 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors">
               Cerrar
             </button>
-            {!isClosed && isDirty && (
+            {!isClosed && canSave && (
               <button type="submit" form="update-wo-form" disabled={isSubmitting} className="px-4 sm:px-6 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-70 rounded-xl shadow-sm shadow-emerald-700/20 transition-colors animate-in fade-in zoom-in-95 duration-200">
                 {isSubmitting ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />}
                 Guardar

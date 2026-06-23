@@ -4,6 +4,7 @@ import { Eraser } from 'lucide-react';
 
 interface Props {
   label: string;
+  onChange?: () => void;
 }
 
 export interface SignatureFieldRef {
@@ -12,7 +13,7 @@ export interface SignatureFieldRef {
   clear: () => void;
 }
 
-export const SignatureField = forwardRef<SignatureFieldRef, Props>(({ label }, ref) => {
+export const SignatureField = forwardRef<SignatureFieldRef, Props>(({ label, onChange }, ref) => {
   const sigPad = useRef<SignatureCanvas>(null);
 
   useImperativeHandle(ref, () => ({
@@ -26,6 +27,7 @@ export const SignatureField = forwardRef<SignatureFieldRef, Props>(({ label }, r
 
   const clear = () => {
     sigPad.current?.clear();
+    if (onChange) onChange();
   };
 
   return (
@@ -43,6 +45,7 @@ export const SignatureField = forwardRef<SignatureFieldRef, Props>(({ label }, r
       <div className="border border-emerald-200 rounded-xl overflow-hidden bg-white shadow-inner">
         <SignatureCanvas
           ref={sigPad}
+          onEnd={() => { if (onChange) onChange(); }}
           penColor="#064e3b" // emerald-900
           canvasProps={{ className: 'w-full h-32 cursor-crosshair touch-none' }}
         />
