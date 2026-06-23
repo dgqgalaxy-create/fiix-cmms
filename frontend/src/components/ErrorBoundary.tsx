@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from "react";
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children?: ReactNode;
@@ -22,22 +22,46 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
-    this.setState({ errorInfo });
+    console.error('Uncaught error:', error, errorInfo);
+    this.setState({
+      error: error,
+      errorInfo: errorInfo
+    });
   }
 
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="p-4 bg-red-50 text-red-900 border border-red-200 rounded-lg max-w-full overflow-auto">
-          <h1 className="font-bold mb-2">Error Crítico de Renderizado</h1>
-          <p className="mb-2 text-sm">Ocurrió un error inesperado al intentar mostrar esta pantalla. Por favor, reporta el siguiente código:</p>
-          <pre className="text-xs bg-white p-2 border border-red-100 rounded mb-2 overflow-x-auto">
-            {this.state.error?.toString()}
-          </pre>
-          <pre className="text-xs bg-white p-2 border border-red-100 rounded overflow-x-auto whitespace-pre-wrap max-h-[300px]">
-            {this.state.errorInfo?.componentStack}
-          </pre>
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-slate-900">
+          <div className="bg-white rounded-3xl p-8 shadow-xl max-w-3xl w-full border border-red-100">
+            <h1 className="text-2xl font-bold text-red-600 mb-4 flex items-center gap-2">
+              <span className="text-3xl">⚠️</span> Algo salió mal en la aplicación
+            </h1>
+            <p className="text-slate-600 mb-6 font-medium">
+              Ocurrió un error inesperado. Por favor, copia el texto de abajo y envíaselo a tu asistente para solucionarlo de inmediato:
+            </p>
+            <div className="bg-slate-900 rounded-xl p-4 overflow-x-auto mb-6">
+              <pre className="text-red-400 text-sm whitespace-pre-wrap font-mono">
+                {this.state.error && this.state.error.toString()}
+                <br />
+                {this.state.errorInfo && this.state.errorInfo.componentStack}
+              </pre>
+            </div>
+            <div className="flex gap-4">
+              <button
+                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors"
+                onClick={() => window.location.href = '/'}
+              >
+                Volver al Inicio
+              </button>
+              <button
+                className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors"
+                onClick={() => window.location.reload()}
+              >
+                Recargar Página
+              </button>
+            </div>
+          </div>
         </div>
       );
     }

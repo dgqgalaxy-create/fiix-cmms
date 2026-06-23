@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.4.1";
+export const APP_VERSION = "1.4.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -24,12 +24,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
-    "Mejora radical en Escáner QR: Lector nativo súper rápido y compresión de fotos de alta resolución",
-    "Prevención de errores: Botón 'Guardar' oculto hasta hacer cambios en la Orden de Trabajo, más confirmación final",
-    "Mejora UI: Dashboard con pestañas estilo barra y navegación directa al inicio para técnicos",
-    "Búsqueda ampliada de QR: Soporte para escanear IDs internos o códigos visibles",
-    "Sincronización en Tiempo Real (Auto-refresco silencioso vía WebSockets)",
-    "Importación masiva de datos y migración habilitada"
+    "Protección anti-errores (ErrorBoundary): Si ocurre un error fatal, mostrará un reporte en lugar de pantalla en blanco.",
+    "Solucionado error de pantalla en blanco al escanear repuestos con datos omitidos de stock.",
+    "Corrección al reanudar Órdenes en Espera: Aparece caja para evidencia inicial si faltaba.",
+    "Mejora en QR: Redireccionamiento más rápido y seguro.",
+    "Prevención de edición del campo 'Motivo de Espera' cuando la orden ya está pausada."
   ];
 
   return (
