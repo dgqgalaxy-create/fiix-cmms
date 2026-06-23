@@ -85,8 +85,8 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
         location_id: item.location_id || '',
         vendor_id: item.vendor_id || '',
         purchase_cost: item.purchase_cost?.toString() || '0',
-        stock: item.stock.toString(),
-        minimum_inventory: item.minimum_inventory.toString(),
+        stock: item.stock?.toString() || '0',
+        minimum_inventory: item.minimum_inventory?.toString() || '0',
         uom: item.uom || 'PIEZAS',
         is_active: item.is_active,
       });
