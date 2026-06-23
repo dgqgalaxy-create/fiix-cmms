@@ -12,6 +12,7 @@ const AVAILABLE_PERMISSIONS = [
   { key: 'VIEW_KPIS', label: 'Visualizar KPIs', description: 'Permite acceder a la pantalla de métricas y ver los resultados.' },
   { key: 'MANAGE_KPIS', label: 'Administrar Metas KPI', description: 'Modificar metas e indicadores de desempeño.' },
   { key: 'CREATE_WORK_ORDERS', label: 'Crear Órdenes', description: 'Generar nuevas solicitudes de mantenimiento.' },
+  { key: 'VIEW_ALL_WORK_ORDERS', label: 'Ver Todas las Órdenes', description: 'Permite visualizar el historial y lista completa de órdenes de todos.' },
   { key: 'EDIT_WORK_ORDERS', label: 'Editar Órdenes', description: 'Modificar estado y detalles de una orden.' },
   { key: 'DELETE_WORK_ORDERS', label: 'Eliminar Órdenes', description: 'Anular o eliminar permanentemente órdenes de trabajo.' },
   { key: 'MANAGE_MAINTENANCE_PLANS', label: 'Mantenimiento Preventivo', description: 'Crear y editar planes de mantenimiento preventivo.' },

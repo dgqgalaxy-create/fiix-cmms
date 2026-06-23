@@ -30,7 +30,7 @@ export const Dashboard = () => {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   
   const [activeTab, setActiveTab] = useState<'ACTIVAS' | 'MIS_ORDENES' | 'HISTORIAL'>(
-    user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR' ? 'ACTIVAS' : 'MIS_ORDENES'
+    hasPermission('VIEW_ALL_WORK_ORDERS') ? 'ACTIVAS' : 'MIS_ORDENES'
   );
 
   const [dateFilter, setDateFilter] = useState<string>('ALL');
@@ -135,7 +135,7 @@ export const Dashboard = () => {
       if (status === 'FINALIZADO' || status === 'ANULADO') {
         setActiveTab('HISTORIAL');
       } else {
-        if (hasPermission('DELETE_WORK_ORDERS')) {
+        if (hasPermission('VIEW_ALL_WORK_ORDERS')) {
           setActiveTab('ACTIVAS');
         } else {
           setActiveTab('MIS_ORDENES');
@@ -585,7 +585,7 @@ export const Dashboard = () => {
         <div ref={tableContainerRef}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 border-b border-slate-200 pb-4 print:hidden">
             <div className="flex flex-wrap gap-4">
-              {hasPermission('DELETE_WORK_ORDERS') && (
+              {hasPermission('VIEW_ALL_WORK_ORDERS') && (
                 <button 
                   onClick={() => { setActiveTab('ACTIVAS'); setStatusFilter(null); }}
                   className={`pb-3 px-1 text-sm font-medium border-b-2 -mb-[17px] transition-colors ${activeTab === 'ACTIVAS' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}

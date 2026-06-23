@@ -14,6 +14,7 @@ const defaultPermissions: Record<Role, any> = {
     MANAGE_PERMISSIONS: true,
     MANAGE_INVENTORY: true,
     MANAGE_MAINTENANCE_PLANS: true,
+    VIEW_ALL_WORK_ORDERS: true,
   },
   GESTIONADOR: {
     MANAGE_USERS: false,
@@ -26,6 +27,7 @@ const defaultPermissions: Record<Role, any> = {
     MANAGE_PERMISSIONS: false,
     MANAGE_INVENTORY: true,
     MANAGE_MAINTENANCE_PLANS: true,
+    VIEW_ALL_WORK_ORDERS: true,
   },
   TECNICO: {
     MANAGE_USERS: false,
@@ -38,6 +40,7 @@ const defaultPermissions: Record<Role, any> = {
     MANAGE_PERMISSIONS: false,
     MANAGE_INVENTORY: false,
     MANAGE_MAINTENANCE_PLANS: false,
+    VIEW_ALL_WORK_ORDERS: false,
   },
 };
 
