@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.4.0";
+export const APP_VERSION = "1.4.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -24,12 +24,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora radical en Escáner QR: Lector nativo súper rápido y compresión de fotos de alta resolución",
+    "Prevención de errores: Botón 'Guardar' oculto hasta hacer cambios en la Orden de Trabajo, más confirmación final",
+    "Mejora UI: Dashboard con pestañas estilo barra y navegación directa al inicio para técnicos",
+    "Búsqueda ampliada de QR: Soporte para escanear IDs internos o códigos visibles",
     "Sincronización en Tiempo Real (Auto-refresco silencioso vía WebSockets)",
-    "Mejora de experiencia de usuario: Auto-scroll al filtrar órdenes de trabajo",
-    "Ajustes de responsividad y scroll en ventanas modales para celulares",
-    "Uso de contraseña personal del Administrador para desbloquear herramientas",
-    "Inyección automática de administrador de rescate al vaciar la base de datos",
-    "Corrección de validación estricta de Roles en el backend (ADMINISTRADOR)",
     "Importación masiva de datos y migración habilitada"
   ];
 
