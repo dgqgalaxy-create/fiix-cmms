@@ -29,9 +29,16 @@ export const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   
-  const [activeTab, setActiveTab] = useState<'ACTIVAS' | 'MIS_ORDENES' | 'HISTORIAL'>(
-    hasPermission('VIEW_ALL_WORK_ORDERS') ? 'ACTIVAS' : 'MIS_ORDENES'
-  );
+  const [activeTab, setActiveTab] = useState<'ACTIVAS' | 'MIS_ORDENES' | 'HISTORIAL'>('MIS_ORDENES');
+
+  // Evaluar permisos de forma reactiva al cargar la página
+  useEffect(() => {
+    if (hasPermission('VIEW_ALL_WORK_ORDERS')) {
+      setActiveTab('ACTIVAS');
+    } else {
+      setActiveTab('MIS_ORDENES');
+    }
+  }, [hasPermission('VIEW_ALL_WORK_ORDERS')]);
 
   const [dateFilter, setDateFilter] = useState<string>('ALL');
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
@@ -584,24 +591,24 @@ export const Dashboard = () => {
       ) : (
         <div ref={tableContainerRef}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 border-b border-slate-200 pb-4 print:hidden">
-            <div className="flex flex-wrap gap-4">
+            <div className="flex bg-slate-100/80 p-1.5 rounded-xl shadow-inner overflow-x-auto min-w-[320px] max-w-full hide-scrollbar">
               {hasPermission('VIEW_ALL_WORK_ORDERS') && (
                 <button 
                   onClick={() => { setActiveTab('ACTIVAS'); setStatusFilter(null); }}
-                  className={`pb-3 px-1 text-sm font-medium border-b-2 -mb-[17px] transition-colors ${activeTab === 'ACTIVAS' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                  className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === 'ACTIVAS' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
                 >
                   Vista General
                 </button>
               )}
               <button 
                 onClick={() => { setActiveTab('MIS_ORDENES'); setStatusFilter(null); }}
-                className={`pb-3 px-1 text-sm font-medium border-b-2 -mb-[17px] transition-colors ${activeTab === 'MIS_ORDENES' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === 'MIS_ORDENES' ? 'bg-amber-100 text-amber-800 shadow-sm border border-amber-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
               >
                 Mis Órdenes
               </button>
               <button 
                 onClick={() => { setActiveTab('HISTORIAL'); setStatusFilter(null); }}
-                className={`pb-3 px-1 text-sm font-medium border-b-2 -mb-[17px] transition-colors ${activeTab === 'HISTORIAL' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === 'HISTORIAL' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
               >
                 Historial
               </button>

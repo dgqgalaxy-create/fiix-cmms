@@ -81,15 +81,28 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose }) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setError('');
-    const html5QrCode = new Html5Qrcode("qr-reader");
-    html5QrCode.scanFile(file, true)
-      .then(decodedText => {
-        handleScan(decodedText);
-      })
-      .catch(err => {
-        setError("No se encontró ningún código QR en la imagen. Intenta de nuevo.");
-      });
+    setError('Procesando imagen...');
+    
+    if (scannerRef.current) {
+      scannerRef.current.scanFile(file, true)
+        .then(decodedText => {
+          handleScan(decodedText);
+        })
+        .catch(err => {
+          setError("No se encontró ningún código QR en la imagen. Intenta acercarte más o enfocar mejor.");
+          console.error("Error al escanear archivo:", err);
+        });
+    } else {
+      // Fallback in case ref is null
+      const html5QrCode = new Html5Qrcode("qr-reader");
+      html5QrCode.scanFile(file, true)
+        .then(decodedText => {
+          handleScan(decodedText);
+        })
+        .catch(err => {
+          setError("No se encontró ningún código QR en la imagen. Intenta acercarte más o enfocar mejor.");
+        });
+    }
   };
 
   if (!isOpen) return null;
