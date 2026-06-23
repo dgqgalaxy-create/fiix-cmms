@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Upload, Package } from 'lucide-react';
+import { X, Save, Upload, Package, ArrowRightLeft } from 'lucide-react';
 import { createItem, updateItem } from '../../api/inventory';
 import { ImageSearchModal } from '../inventory/ImageSearchModal';
 import type { Item, ItemCategory, ItemLocation, Vendor, InventoryTransaction } from '../../api/inventory';
@@ -15,9 +15,10 @@ interface Props {
   vendors: Vendor[];
   transactions?: InventoryTransaction[];
   readOnly?: boolean;
+  onQuickTransaction?: (itemId: string) => void;
 }
 
-export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, locations, vendors, transactions, readOnly }: Props) => {
+export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, locations, vendors, transactions, readOnly, onQuickTransaction }: Props) => {
   const [dateFilter, setDateFilter] = useState<'all' | 'this_week' | 'last_week' | 'this_month' | 'last_3_months'>('all');
   const [formData, setFormData] = useState({
     internal_code: '',
@@ -157,9 +158,20 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
     <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden my-8">
         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <h2 className="text-xl font-bold text-slate-900">
-            {readOnly ? 'Detalles del Repuesto' : item ? 'Editar Repuesto' : 'Nuevo Repuesto'}
-          </h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-bold text-slate-900">
+              {readOnly ? 'Detalles del Repuesto' : item ? 'Editar Repuesto' : 'Nuevo Repuesto'}
+            </h2>
+            {item && onQuickTransaction && (
+              <button
+                type="button"
+                onClick={() => onQuickTransaction(item.id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200"
+              >
+                <ArrowRightLeft size={14} /> Movimiento
+              </button>
+            )}
+          </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
             <X size={20} />
           </button>

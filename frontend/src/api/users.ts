@@ -7,7 +7,17 @@ export interface User {
   role: 'ADMINISTRADOR' | 'GESTIONADOR' | 'TECNICO';
   is_active: boolean;
   created_at: string;
+  last_active?: string;
 }
+
+export const sendHeartbeat = async (): Promise<void> => {
+  await api.post('/users/heartbeat');
+};
+
+export const getOnlineUsers = async (): Promise<User[]> => {
+  const response = await api.get('/users/online');
+  return response.data;
+};
 
 export const getUsers = async (role?: string): Promise<User[]> => {
   const url = role ? `/users?role=${role}` : '/users';

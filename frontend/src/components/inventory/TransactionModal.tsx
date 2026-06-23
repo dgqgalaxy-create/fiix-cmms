@@ -8,9 +8,10 @@ interface Props {
   onClose: () => void;
   onSaved: () => void;
   items: Item[];
+  defaultItemId?: string;
 }
 
-export const TransactionModal = ({ isOpen, onClose, onSaved, items }: Props) => {
+export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemId }: Props) => {
   const [formData, setFormData] = useState({
     item_id: '',
     amount: '',
@@ -22,6 +23,21 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items }: Props) => 
   
   const [searchQuery, setSearchQuery] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      if (defaultItemId) {
+        const item = items.find(i => i.id === defaultItemId);
+        setFormData({ item_id: defaultItemId, amount: '', reason: '', type: 'IN' });
+        setSearchQuery(item ? `${item.internal_code} - ${item.name}` : '');
+      } else {
+        setFormData({ item_id: '', amount: '', reason: '', type: 'IN' });
+        setSearchQuery('');
+      }
+      setIsSubmitting(false);
+      setError(null);
+    }
+  }, [isOpen, defaultItemId, items]);
 
   if (!isOpen) return null;
 

@@ -1,8 +1,13 @@
 import { Router } from 'express';
-import { getUsers, createUser, updateUser, deleteUser } from '../controllers/userController';
+import { getUsers, createUser, updateUser, deleteUser, heartbeat, getOnlineUsers } from '../controllers/userController';
 import { authenticate, requirePermission } from '../middlewares/authMiddleware';
 
 const router = Router();
+
+// Heartbeat for online status
+router.post('/heartbeat', authenticate, heartbeat);
+router.get('/online', authenticate, getOnlineUsers);
+
 // Only authenticated users can fetch users.
 router.get('/', authenticate, getUsers);
 router.post('/', authenticate, requirePermission('MANAGE_USERS'), createUser);

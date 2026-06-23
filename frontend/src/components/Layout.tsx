@@ -1,11 +1,24 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
+import { sendHeartbeat } from '../api/users';
 import { Menu, Camera } from 'lucide-react';
 import { QRScannerModal } from './common/QRScannerModal';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+  useEffect(() => {
+    // Send initial heartbeat
+    sendHeartbeat().catch(console.error);
+    
+    // Set up polling every 2 minutes
+    const interval = setInterval(() => {
+      sendHeartbeat().catch(console.error);
+    }, 2 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900">

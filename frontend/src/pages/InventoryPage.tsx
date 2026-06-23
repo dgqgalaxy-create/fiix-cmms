@@ -41,6 +41,7 @@ export const InventoryPage = () => {
   const [qrItem, setQrItem] = useState<Item | null>(null);
 
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+  const [preselectedTransactionItemId, setPreselectedTransactionItemId] = useState<string | undefined>(undefined);
   const [isTransactionDetailModalOpen, setIsTransactionDetailModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<InventoryTransaction | null>(null);
 
@@ -113,6 +114,11 @@ export const InventoryPage = () => {
   const handleOpenItemModal = (item?: Item) => {
     setSelectedItem(item);
     setIsItemModalOpen(true);
+  };
+
+  const handleOpenTransactionModal = (itemId?: string) => {
+    setPreselectedTransactionItemId(itemId);
+    setIsTransactionModalOpen(true);
   };
 
   const handleOpenTransactionDetail = (tx: InventoryTransaction) => {
@@ -281,6 +287,12 @@ export const InventoryPage = () => {
                   {canManage && (
                     <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-slate-100" onClick={(e) => e.stopPropagation()}>
                       <button 
+                        onClick={(e) => { e.stopPropagation(); handleOpenTransactionModal(item.id); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+                      >
+                        <ArrowRightLeft size={14} /> Movimiento
+                      </button>
+                      <button 
                         onClick={() => setQrItem(item)}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
                       >
@@ -367,6 +379,13 @@ export const InventoryPage = () => {
                         {canManage && (
                           <td className="px-6 py-4 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleOpenTransactionModal(item.id); }}
+                                className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-100"
+                                title="Realizar Movimiento"
+                              >
+                                <ArrowRightLeft size={18} />
+                              </button>
                               <button 
                                 onClick={() => setQrItem(item)}
                                 className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-100"
@@ -669,7 +688,7 @@ export const InventoryPage = () => {
           )}
           {activeTab === 'transactions' && (
             <button 
-              onClick={() => setIsTransactionModalOpen(true)}
+              onClick={() => handleOpenTransactionModal()}
               className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors w-full md:w-auto shadow-sm shadow-blue-600/20"
             >
               <Plus size={18} /> Registrar Movimiento
@@ -794,6 +813,7 @@ export const InventoryPage = () => {
         vendors={vendors}
         transactions={transactions}
         readOnly={!canManage}
+        onQuickTransaction={canManage ? handleOpenTransactionModal : undefined}
       />
       
       <TransactionModal
@@ -801,6 +821,7 @@ export const InventoryPage = () => {
         onClose={() => setIsTransactionModalOpen(false)}
         onSaved={fetchData}
         items={items}
+        defaultItemId={preselectedTransactionItemId}
       />
 
       <TransactionDetailModal

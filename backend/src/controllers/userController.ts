@@ -101,3 +101,52 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
     res.status(500).json({ error: 'Error al eliminar usuario' });
   }
 };
+
+export const heartbeat = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      res.status(401).json({ error: 'No autenticado' });
+      return;
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { last_active: new Date() }
+    });
+
+    res.json({ message: 'Heartbeat registrado' });
+  } catch (error) {
+    console.error('Error in heartbeat:', error);
+    res.status(500).json({ error: 'Error registrando heartbeat' });
+  }
+};
+
+export const getOnlineUsers = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+    const onlineUsers = await prisma.user.findMany({
+      where: {
+        last_active: {
+          gte: fiveMinutesAgo
+        },
+        is_active: true
+      },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        last_active: true
+      },
+      orderBy: {
+        last_active: 'desc'
+      }
+    });
+
+    res.json(onlineUsers);
+  } catch (error) {
+    console.error('Error fetching online users:', error);
+    res.status(500).json({ error: 'Error al obtener usuarios en línea' });
+  }
+};

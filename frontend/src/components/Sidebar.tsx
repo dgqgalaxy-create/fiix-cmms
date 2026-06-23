@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield, X, Package, CalendarClock, ShoppingCart, Info, GitBranch } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { VersionModal, APP_VERSION } from './VersionModal';
+import { OnlineUsersBadge } from './common/OnlineUsersBadge';
 
 export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const location = useLocation();
@@ -82,6 +83,9 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
             <p className="text-xs text-blue-400 font-medium truncate">{user?.email}</p>
             <p className="text-[10px] uppercase tracking-wider text-slate-500 mt-2">{user?.role}</p>
           </div>
+          
+          <OnlineUsersBadge />
+
           <button 
             onClick={logout}
             className="flex items-center justify-center w-full gap-2 px-4 py-3 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors mb-4"
