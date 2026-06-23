@@ -108,6 +108,54 @@ export const getWorkOrderById = async (req: AuthRequest, res: Response): Promise
   }
 };
 
+export const createPublicWorkOrder = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { asset_id, zone_id, requester_name, title, description, machine_stopped, production_group, maintenance_type, priority, location } = req.body;
+
+    if (!asset_id || !title) {
+      res.status(400).json({ error: 'asset_id and title are required' });
+      return;
+    }
+
+    const fullDescription = location ? `Ubicación: ${location}\n\n${description || ''}` : description;
+
+    // We need a created_by_id because the schema requires it. We assign it to an admin.
+    const adminUser = await prisma.user.findFirst({ where: { role: 'ADMINISTRADOR' } });
+    if (!adminUser) {
+      res.status(500).json({ error: 'No admin user found to assign as creator' });
+      return;
+    }
+
+    const newWorkOrder = await prisma.workOrder.create({
+      data: {
+        title,
+        description: fullDescription,
+        asset_id,
+        zone_id,
+        machine_stopped: machine_stopped ?? false,
+        requester_name,
+        created_by_id: adminUser.id,
+        status: 'PENDIENTE' as any,
+        priority: (priority || 'NORMAL') as any,
+        maintenance_type: (maintenance_type || 'CORRECTIVO') as any,
+        production_group: (production_group || 'NA') as any,
+      },
+      include: {
+        asset: true,
+        zone: true,
+      }
+    });
+
+    const io = getIO();
+    io.emit('new_work_order', newWorkOrder);
+
+    res.status(201).json(newWorkOrder);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al crear la orden de trabajo pública' });
+  }
+};
+
 export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { title, description, asset_id, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group } = req.body;

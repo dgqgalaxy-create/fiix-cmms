@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.4.3";
+export const APP_VERSION = "1.4.4";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -24,11 +24,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
-    "Soporte PWA (Nivel 2): Instalable como app nativa, carga ultra-rápida y navegación offline.",
-    "Escáner QR integrado directamente en las barras de búsqueda (Adiós al botón flotante).",
-    "Nuevo permiso 'Usar Escáner QR' configurable desde el módulo de Privilegios.",
-    "Indicador de estado de red (Online/Offline) en la barra superior.",
-    "Protección anti-errores (ErrorBoundary) mejorada."
+    "Portal Público de Solicitudes (/request) para reportes sin cuenta.",
+    "Formulario adaptado con campos específicos: Grupo, Prioridad, Tipo de Mantenimiento.",
+    "Búsqueda predictiva de solicitantes (Creatable Select).",
+    "Integración en tiempo real (Socket.io) para recibir órdenes nuevas en el Dashboard.",
+    "Validaciones Offline y UI minimalista enfocada al usuario final."
   ];
 
   return (

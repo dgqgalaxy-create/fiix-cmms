@@ -14,6 +14,7 @@ import { MaintenancePlansPage } from './pages/MaintenancePlansPage';
 import { PurchaseOrdersPage } from './pages/PurchaseOrdersPage';
 import { RCAPage } from './pages/RCAPage';
 import { DeveloperOptions } from './pages/DeveloperOptions';
+import { RequestPortal } from './pages/RequestPortal';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/request" element={<RequestPortal />} />
           
           <Route 
             path="/dashboard" 
