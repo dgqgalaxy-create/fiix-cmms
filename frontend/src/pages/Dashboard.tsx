@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Plus, RefreshCw, Clock, Wrench, AlertCircle, CheckCircle2, Search, Download, Activity, XCircle, CalendarClock, LayoutDashboard } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
@@ -22,6 +22,8 @@ export const Dashboard = () => {
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
+  
+  const tableContainerRef = useRef<HTMLDivElement>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
@@ -138,6 +140,9 @@ export const Dashboard = () => {
           setActiveTab('MIS_ORDENES');
         }
       }
+      setTimeout(() => {
+        tableContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
     }
   };
 
@@ -411,7 +416,11 @@ export const Dashboard = () => {
 
       <div className={`grid grid-cols-2 lg:grid-cols-${hasPermission('VIEW_INVENTORY') ? '7' : '6'} md:grid-cols-4 print:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8`}>
         <div 
-          onClick={() => { setActiveTab('ACTIVAS'); setStatusFilter(null); }}
+          onClick={() => { 
+            setActiveTab('ACTIVAS'); 
+            setStatusFilter(null); 
+            setTimeout(() => tableContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+          }}
           className={`cursor-pointer transition-all bg-slate-900 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid shadow-lg col-span-2 md:col-span-1`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-slate-700 opacity-50 group-hover:scale-110 transition-transform">
@@ -562,7 +571,7 @@ export const Dashboard = () => {
           <p className="text-slate-500 font-medium">Cargando órdenes de trabajo...</p>
         </div>
       ) : (
-        <>
+        <div ref={tableContainerRef}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 border-b border-slate-200 pb-4 print:hidden">
             <div className="flex flex-wrap gap-4">
               {hasPermission('DELETE_WORK_ORDERS') && (
@@ -691,7 +700,7 @@ export const Dashboard = () => {
             workOrders={filteredList} 
             onRowClick={setSelectedWorkOrder}
           />
-        </>
+        </div>
       )}
 
       <CreateWorkOrderModal 
