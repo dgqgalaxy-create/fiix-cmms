@@ -77,31 +77,73 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const processImageFile = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 1000;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height && width > MAX_SIZE) {
+          height *= MAX_SIZE / width;
+          width = MAX_SIZE;
+        } else if (height > MAX_SIZE) {
+          width *= MAX_SIZE / height;
+          height = MAX_SIZE;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject("No 2d context");
+        
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Try native BarcodeDetector first (extremely fast on Android Chrome)
+        if ('BarcodeDetector' in window) {
+          try {
+            const barcodeDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+            const barcodes = await barcodeDetector.detect(canvas);
+            if (barcodes.length > 0) {
+              return resolve(barcodes[0].rawValue);
+            }
+          } catch (e) {
+            console.log("BarcodeDetector failed, falling back to html5-qrcode", e);
+          }
+        }
+
+        // Fallback to html5QrCode
+        canvas.toBlob((blob) => {
+          if (!blob) return reject("Canvas to blob failed");
+          const resizedFile = new File([blob], file.name, { type: 'image/jpeg' });
+          
+          if (scannerRef.current) {
+            scannerRef.current.scanFile(resizedFile, true).then(resolve).catch(reject);
+          } else {
+            const html5QrCode = new Html5Qrcode("qr-reader");
+            html5QrCode.scanFile(resizedFile, true).then(resolve).catch(reject);
+          }
+        }, 'image/jpeg', 0.9);
+      };
+      img.onerror = () => reject("Image load error");
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setError('Procesando imagen...');
+    setError('Procesando imagen (puede tomar unos segundos)...');
     
-    if (scannerRef.current) {
-      scannerRef.current.scanFile(file, true)
-        .then(decodedText => {
-          handleScan(decodedText);
-        })
-        .catch(err => {
-          setError("No se encontró ningún código QR en la imagen. Intenta acercarte más o enfocar mejor.");
-          console.error("Error al escanear archivo:", err);
-        });
-    } else {
-      // Fallback in case ref is null
-      const html5QrCode = new Html5Qrcode("qr-reader");
-      html5QrCode.scanFile(file, true)
-        .then(decodedText => {
-          handleScan(decodedText);
-        })
-        .catch(err => {
-          setError("No se encontró ningún código QR en la imagen. Intenta acercarte más o enfocar mejor.");
-        });
+    try {
+      const decodedText = await processImageFile(file);
+      handleScan(decodedText);
+    } catch (err) {
+      console.error("Error al escanear archivo:", err);
+      setError("No se encontró ningún código QR en la foto. Intenta enfocar mejor o acercarte más.");
     }
   };
 
