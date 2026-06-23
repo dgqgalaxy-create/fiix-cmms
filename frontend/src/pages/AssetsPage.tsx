@@ -12,6 +12,8 @@ import type { Asset } from '../api/assets';
 
 export const AssetsPage = () => {
   const { user, hasPermission } = useAuth();
+  const canManage = hasPermission('MANAGE_ASSETS');
+  const canUseScanner = hasPermission('USE_QR_SCANNER');
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -73,8 +75,6 @@ export const AssetsPage = () => {
     }
   };
 
-  const canManage = hasPermission('MANAGE_ASSETS');
-
   return (
     <>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
@@ -122,13 +122,15 @@ export const AssetsPage = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <button
-              onClick={() => setIsScannerOpen(true)}
-              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
-              title="Escanear QR para buscar"
-            >
-              <QrCode size={20} />
-            </button>
+            {canUseScanner && (
+              <button
+                onClick={() => setIsScannerOpen(true)}
+                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                title="Escanear QR para buscar"
+              >
+                <QrCode size={20} />
+              </button>
+            )}
           </div>
           <AssetsTable 
             assets={filteredAssets} 

@@ -18,6 +18,7 @@ import { socket } from '../api/socket';
 export const InventoryPage = () => {
   const { hasPermission } = useAuth();
   const canManage = hasPermission('MANAGE_INVENTORY');
+  const canUseScanner = hasPermission('USE_QR_SCANNER');
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [activeTab, setActiveTab] = useState<'items' | 'transactions' | 'categories' | 'locations' | 'vendors'>('items');
@@ -753,13 +754,15 @@ export const InventoryPage = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                <button
-                  onClick={() => setIsScannerOpen(true)}
-                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
-                  title="Escanear QR para buscar"
-                >
-                  <QrCode size={20} />
-                </button>
+                {canUseScanner && (
+                  <button
+                    onClick={() => setIsScannerOpen(true)}
+                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                    title="Escanear QR para buscar"
+                  >
+                    <QrCode size={20} />
+                  </button>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-3">

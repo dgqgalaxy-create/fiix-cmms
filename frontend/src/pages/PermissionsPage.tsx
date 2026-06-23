@@ -16,6 +16,7 @@ const AVAILABLE_PERMISSIONS = [
   { key: 'EDIT_WORK_ORDERS', label: 'Editar Órdenes', description: 'Modificar estado y detalles de una orden.' },
   { key: 'DELETE_WORK_ORDERS', label: 'Eliminar Órdenes', description: 'Anular o eliminar permanentemente órdenes de trabajo.' },
   { key: 'MANAGE_MAINTENANCE_PLANS', label: 'Mantenimiento Preventivo', description: 'Crear y editar planes de mantenimiento preventivo.' },
+  { key: 'USE_QR_SCANNER', label: 'Usar Escáner QR', description: 'Permite abrir la cámara para escanear repuestos o equipos desde las búsquedas.' },
   { key: 'MANAGE_PERMISSIONS', label: 'Administrar Permisos', description: 'Acceso a esta pantalla de configuración.' },
 ];
 

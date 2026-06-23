@@ -1,21 +1,36 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { sendHeartbeat } from '../api/users';
-import { Menu } from 'lucide-react';
+import { Menu, Wifi, WifiOff } from 'lucide-react';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
     // Send initial heartbeat
-    sendHeartbeat().catch(console.error);
+    if (navigator.onLine) {
+      sendHeartbeat().catch(console.error);
+    }
     
     // Set up polling every 2 minutes
     const interval = setInterval(() => {
-      sendHeartbeat().catch(console.error);
+      if (navigator.onLine) {
+        sendHeartbeat().catch(console.error);
+      }
     }, 2 * 60 * 1000);
 
-    return () => clearInterval(interval);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   return (
@@ -38,12 +53,37 @@ export const Layout = ({ children }: { children: ReactNode }) => {
           >
             <Menu size={20} />
           </button>
-          <span className="font-bold text-lg tracking-tight">LPET CMMS</span>
+          <span className="font-bold text-lg tracking-tight flex items-center gap-2">
+            LPET CMMS
+          </span>
+        </div>
+        <div className="flex items-center">
+          {isOnline ? (
+            <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-full" title="Conectado a Internet">
+              <Wifi size={14} />
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-xs font-medium text-red-400 bg-red-400/10 px-2 py-1 rounded-full animate-pulse" title="Sin Conexión">
+              <WifiOff size={14} />
+              Offline
+            </div>
+          )}
         </div>
       </header>
 
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <div className="flex-1 md:ml-64 p-4 md:p-8 overflow-y-auto h-screen pt-20 md:pt-8 relative print:ml-0 print:p-0 print:h-auto print:overflow-visible print:pt-0">
+        
+        {/* Desktop Online/Offline Indicator */}
+        <div className="hidden md:flex absolute top-4 right-8 z-20">
+          {!isOnline && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-full shadow-sm text-sm font-medium animate-pulse">
+              <WifiOff size={16} />
+              Modo Offline (Solo Lectura)
+            </div>
+          )}
+        </div>
+
         <div className="max-w-6xl mx-auto">
           {children}
         </div>
