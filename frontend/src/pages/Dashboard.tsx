@@ -466,7 +466,13 @@ export const Dashboard = () => {
                 {summary.PENDIENTE || 0}
               </div>
               
-              <div className="flex flex-col items-start gap-1.5 mt-2">
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                {urgentesCount > 0 && (
+                  <div className="bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-sm shadow-lg animate-pulse flex items-center gap-1">
+                    <AlertCircle size={10} />
+                    {urgentesCount} URGENTE{urgentesCount > 1 ? 'S' : ''}
+                  </div>
+                )}
                 {normalesCount > 0 && (
                   <div className="bg-amber-700/80 text-amber-50 text-[10px] font-bold px-2 py-0.5 rounded-sm shadow-sm border border-amber-400/30">
                     {normalesCount} NORMALES
@@ -479,13 +485,6 @@ export const Dashboard = () => {
                 )}
               </div>
             </div>
-            
-            {urgentesCount > 0 && (
-              <div className="absolute right-0 bottom-0 bg-rose-600 text-white text-xs font-bold px-2.5 py-1 rounded-tl-xl rounded-br-2xl flex items-center gap-1.5 shadow-lg animate-pulse border-l border-t border-rose-500/50">
-                <AlertCircle size={12} className="animate-bounce" />
-                {urgentesCount} URGENTE{urgentesCount > 1 ? 'S' : ''}
-              </div>
-            )}
           </div>
         </div>
 

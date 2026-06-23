@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, Camera, AlertCircle } from 'lucide-react';
+import { X, Camera, AlertCircle, Upload } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useNavigate } from 'react-router-dom';
 
@@ -77,6 +77,21 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setError('');
+    const html5QrCode = new Html5Qrcode("qr-reader");
+    html5QrCode.scanFile(file, true)
+      .then(decodedText => {
+        handleScan(decodedText);
+      })
+      .catch(err => {
+        setError("No se encontró ningún código QR en la imagen. Intenta de nuevo.");
+      });
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -118,9 +133,25 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose }) => {
                </div>
              )}
           </div>
-          <p className="text-center text-slate-500 text-sm mt-4">
-            Apunta la cámara al código QR de una máquina o repuesto.
-          </p>
+          
+          <div className="mt-4 flex flex-col gap-3">
+            <p className="text-center text-slate-500 text-sm">
+              Apunta la cámara al código QR de una máquina o repuesto.
+            </p>
+            {error && (
+              <label className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-50 text-indigo-700 font-bold rounded-xl cursor-pointer hover:bg-indigo-100 transition-colors border border-indigo-200">
+                <Upload size={18} />
+                <span className="text-sm">Tomar Foto Manual (Alternativa)</span>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  capture="environment" 
+                  className="hidden" 
+                  onChange={handleFileUpload} 
+                />
+              </label>
+            )}
+          </div>
         </div>
       </div>
     </div>
