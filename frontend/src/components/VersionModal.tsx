@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.3.1";
+export const APP_VERSION = "1.4.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "22 de Junio, 2026";
+  const updateDate = "23 de Junio, 2026";
   const modules = [
     "Panel Principal (Dashboard)",
     "Gestión de Activos (Equipos)",
@@ -24,13 +24,13 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
-    "Uso de contraseña personal del Administrador para desbloquear herramientas de desarrollador",
+    "Sincronización en Tiempo Real (Auto-refresco silencioso vía WebSockets)",
+    "Mejora de experiencia de usuario: Auto-scroll al filtrar órdenes de trabajo",
+    "Ajustes de responsividad y scroll en ventanas modales para celulares",
+    "Uso de contraseña personal del Administrador para desbloquear herramientas",
     "Inyección automática de administrador de rescate al vaciar la base de datos",
     "Corrección de validación estricta de Roles en el backend (ADMINISTRADOR)",
-    "Importación masiva de datos y migración (7 archivos CSV) habilitada",
-    "Indicadores visuales en vivo de volúmenes totales en Inventario",
-    "Acceso rápido a plataforma SAP desde Órdenes de Compra",
-    "Mejoras visuales y nueva clasificación de órdenes 'Invalidadas' en Dashboard"
+    "Importación masiva de datos y migración habilitada"
   ];
 
   return (
