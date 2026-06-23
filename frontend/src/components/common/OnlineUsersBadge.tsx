@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users } from 'lucide-react';
-import { getOnlineUsers, User } from '../../api/users';
+import { getOnlineUsers } from '../../api/users';
+import type { User } from '../../api/users';
 
 export const OnlineUsersBadge = () => {
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
