@@ -151,10 +151,25 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
     return `${minutes}m`;
   };
 
+  const isDirty = status !== workOrder.status ||
+    holdReason !== (workOrder.hold_reason || '') ||
+    resolutionNotes !== (workOrder.resolution_notes || '') ||
+    signatureCleanArea !== (workOrder.signature_clean_area || '') ||
+    signatureDelivery !== (workOrder.signature_delivery || '') ||
+    beforeImage !== null ||
+    afterImage !== null ||
+    usedItems.length > 0 ||
+    failureProblemId !== ((workOrder as any).failure_problem_id || '') ||
+    failureCauseId !== ((workOrder as any).failure_cause_id || '') ||
+    failureRemedyId !== ((workOrder as any).failure_remedy_id || '') ||
+    (user?.role !== 'TECNICO' && JSON.stringify([...assignedTechniciansIds].sort()) !== JSON.stringify([...(workOrder.assigned_technicians?.map(t => t.id) || [])].sort()));
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Prevenir submit accidental si el usuario dio Enter en el input de agregar repuesto
-    // Esto se maneja mejor en el botón de agregar, pero por si acaso.
+    
+    if (!window.confirm("¿Estás seguro de que deseas guardar los cambios realizados en esta orden?")) {
+      return;
+    }
     
     try {
       let finalStatus = status;
@@ -861,8 +876,8 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
             <button type="button" onClick={onClose} className="px-3 sm:px-5 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors">
               Cerrar
             </button>
-            {!isClosed && (
-              <button type="submit" form="update-wo-form" disabled={isSubmitting} className="px-4 sm:px-6 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-70 rounded-xl shadow-sm shadow-emerald-700/20 transition-colors">
+            {!isClosed && isDirty && (
+              <button type="submit" form="update-wo-form" disabled={isSubmitting} className="px-4 sm:px-6 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-70 rounded-xl shadow-sm shadow-emerald-700/20 transition-colors animate-in fade-in zoom-in-95 duration-200">
                 {isSubmitting ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />}
                 Guardar
               </button>

@@ -39,9 +39,12 @@ export const AssetsPage = () => {
   useEffect(() => {
     const scanId = searchParams.get('scan');
     if (scanId && assets.length > 0) {
-      const scannedAsset = assets.find(a => a.id === scanId);
+      // Find exactly by ID or internal code
+      const scannedAsset = assets.find(a => a.id === scanId || a.internal_code === scanId);
       if (scannedAsset) {
         setDetailAsset(scannedAsset);
+      } else {
+        alert("El QR escaneado pertenece a un Activo que no fue encontrado en el sistema.");
       }
       // Clear the search param after processing
       searchParams.delete('scan');

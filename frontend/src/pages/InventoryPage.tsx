@@ -94,13 +94,15 @@ export const InventoryPage = () => {
     
     const scanId = searchParams.get('scan');
     if (scanId && items.length > 0) {
-      const scannedItem = items.find(i => i.id === scanId);
+      const scannedItem = items.find(i => i.id === scanId || i.internal_code === scanId);
       if (scannedItem) {
         setSelectedItem(scannedItem);
         setIsItemModalOpen(true);
+      } else {
+        alert("El QR escaneado pertenece a un Repuesto que no fue encontrado en el sistema.");
       }
-      searchParams.delete('scan');
       shouldReplaceUrl = true;
+      searchParams.delete('scan');
     }
 
     const filter = searchParams.get('filter');

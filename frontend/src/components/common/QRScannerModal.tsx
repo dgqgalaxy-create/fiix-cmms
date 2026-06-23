@@ -56,11 +56,11 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const handleScan = (data: string | null) => {
     if (data) {
       if (data.startsWith('FIIX-ASSET:')) {
-        const id = data.replace('FIIX-ASSET:', '');
+        const id = data.replace('FIIX-ASSET:', '').trim();
         onClose();
         navigate(`/assets?scan=${id}`);
       } else if (data.startsWith('FIIX-ITEM:')) {
-        const id = data.replace('FIIX-ITEM:', '');
+        const id = data.replace('FIIX-ITEM:', '').trim();
         onClose();
         navigate(`/inventory?scan=${id}`);
       } else {
