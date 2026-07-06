@@ -34,6 +34,8 @@ import purchaseOrderRoutes from './routes/purchaseOrderRoutes';
 import rcaRoutes from './routes/rcaRoutes';
 import devRoutes from './routes/devRoutes';
 import publicRoutes from './routes/publicRoutes';
+import settingsRoutes from './routes/settingsRoutes';
+import notificationRoutes from './routes/notificationRoutes';
 import { initCronJobs } from './utils/cronJobs';
 
 app.get('/api/health', (req: Request, res: Response) => {
@@ -54,6 +56,8 @@ app.use('/api/purchase-orders', purchaseOrderRoutes);
 app.use('/api/rca', rcaRoutes);
 app.use('/api/dev', devRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Initialize Cron Jobs
 initCronJobs();

@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.4.4";
+export const APP_VERSION = "1.5.0";
 
 interface VersionModalProps {
   isOpen: boolean;

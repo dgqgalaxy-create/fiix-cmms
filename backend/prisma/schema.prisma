@@ -82,6 +82,7 @@ model User {
   assigned_orders WorkOrder[] @relation("AssignedOrders")
   inventory_transactions InventoryTransaction[]
   created_purchase_orders PurchaseOrder[] @relation("CreatedPurchaseOrders")
+  notifications   AppNotification[]
 }
 
 model Zone {
@@ -369,4 +370,22 @@ model FailureRemedy {
   created_at  DateTime @default(now())
 
   work_orders WorkOrder[]
+}
+
+model SystemSettings {
+  id               String   @id @default(uuid()) @db.Uuid
+  telegram_enabled Boolean  @default(true)
+  email_enabled    Boolean  @default(false)
+  updated_at       DateTime @updatedAt
+}
+
+model AppNotification {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  title      String
+  message    String
+  link       String?
+  is_read    Boolean  @default(false)
+  created_at DateTime @default(now())
 }

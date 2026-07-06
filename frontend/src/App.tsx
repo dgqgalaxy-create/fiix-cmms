@@ -15,6 +15,7 @@ import { PurchaseOrdersPage } from './pages/PurchaseOrdersPage';
 import { RCAPage } from './pages/RCAPage';
 import { DeveloperOptions } from './pages/DeveloperOptions';
 import { RequestPortal } from './pages/RequestPortal';
+import { SettingsPage } from './pages/SettingsPage';
 
 function App() {
   return (
@@ -129,6 +130,17 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <RCAPage />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/settings" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <SettingsPage />
                 </Layout>
               </ProtectedRoute>
             } 

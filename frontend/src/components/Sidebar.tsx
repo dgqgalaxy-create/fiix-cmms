@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield, X, Package, CalendarClock, ShoppingCart, Info, GitBranch } from 'lucide-react';
+import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { VersionModal, APP_VERSION } from './VersionModal';
 import { OnlineUsersBadge } from './common/OnlineUsersBadge';
@@ -39,6 +39,10 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   if (user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR') {
     navItems.push({ name: 'Árbol de Fallas', path: '/rca', icon: <GitBranch size={20} /> });
+  }
+
+  if (user?.role === 'ADMINISTRADOR') {
+    navItems.push({ name: 'Configuración', path: '/settings', icon: <Settings size={20} /> });
   }
 
   return (

@@ -2,6 +2,7 @@ import { ReactNode, useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { sendHeartbeat } from '../api/users';
 import { Menu, Wifi, WifiOff } from 'lucide-react';
+import { NotificationsBell } from './NotificationsBell';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -57,7 +58,8 @@ export const Layout = ({ children }: { children: ReactNode }) => {
             LPET CMMS
           </span>
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
+          <NotificationsBell />
           {isOnline ? (
             <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-full" title="Conectado a Internet">
               <Wifi size={14} />
@@ -74,8 +76,11 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <div className="flex-1 md:ml-64 p-4 md:p-8 overflow-y-auto h-screen pt-20 md:pt-8 relative print:ml-0 print:p-0 print:h-auto print:overflow-visible print:pt-0">
         
-        {/* Desktop Online/Offline Indicator */}
-        <div className="hidden md:flex absolute top-4 right-8 z-20">
+        {/* Desktop Online/Offline Indicator & Notifications */}
+        <div className="hidden md:flex justify-end items-center gap-4 mb-6 z-20 print:hidden">
+          <div className="bg-white rounded-full shadow-sm border border-slate-100">
+            <NotificationsBell />
+          </div>
           {!isOnline && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-full shadow-sm text-sm font-medium animate-pulse">
               <WifiOff size={16} />

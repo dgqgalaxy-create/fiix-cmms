@@ -1,6 +1,7 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
+*(Última actualización: 06 de Julio de 2026)*
 
 ## [x] Módulo 7: Mantenimiento Preventivo (PMs)
 - [x] Crear interfaz para definir "Rutinas de Mantenimiento" o plantillas.
@@ -20,7 +21,7 @@ Este documento contiene la lista de módulos y características pendientes de de
 ## [ ] Mejoras Transversales Futuras (Backlog)
 - [x] **Migración de Órdenes e Inventario:** Importación exitosa de los archivos CSV históricos.
 - [ ] **Checklists avanzados y LOTO:** Pasos obligatorios dentro de la Orden de Trabajo y firmas de bloqueo de energías peligrosas.
-- [ ] **Notificaciones y Escalamiento:** Avisar por Email/Push/WhatsApp a técnicos y escalar SLAs vencidos a gerentes.
+- [x] **Notificaciones y Escalamiento:** Avisar por Email/Push/WhatsApp a técnicos y escalar SLAs vencidos a gerentes.
 - [ ] **Control de Medidores (CBM):** Registro histórico de horómetros y detonación automática de PMs por uso real.
 - [ ] **Soporte PWA (Offline):** Que la app funcione sin conexión a internet y sincronice datos en segundo plano.
 - [x] **Gestión con Códigos QR:** Escaneo físico en máquinas para abrir historiales y escaneo en estantes para el control rápido de refacciones.

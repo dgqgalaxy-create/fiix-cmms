@@ -15,21 +15,14 @@ interface Asset {
   internal_code: string;
 }
 
-interface Location {
-  id: string;
-  name: string;
-}
-
 export const RequestPortal = () => {
   const [zones, setZones] = useState<Zone[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [requesters, setRequesters] = useState<{ value: string; label: string }[]>([]);
 
   // Form State
   const [requesterName, setRequesterName] = useState<{ value: string; label: string } | null>(null);
   const [productionGroup, setProductionGroup] = useState<{ value: string; label: string } | null>(null);
-  const [selectedLocation, setSelectedLocation] = useState<{ value: string; label: string } | null>(null);
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
   const [machineStopped, setMachineStopped] = useState(false);
   const [maintenanceType, setMaintenanceType] = useState<{ value: string; label: string } | null>(null);
@@ -60,13 +53,11 @@ export const RequestPortal = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [zonesRes, reqsRes, locsRes] = await Promise.all([
+        const [zonesRes, reqsRes] = await Promise.all([
           axios.get('http://localhost:3000/api/public/zones'),
-          axios.get('http://localhost:3000/api/public/requesters'),
-          axios.get('http://localhost:3000/api/public/locations')
+          axios.get('http://localhost:3000/api/public/requesters')
         ]);
         setZones(zonesRes.data);
-        setLocations(locsRes.data);
         setRequesters(reqsRes.data.map((name: string) => ({ value: name, label: name })));
       } catch (err) {
         console.error('Error fetching initial data', err);
@@ -105,7 +96,6 @@ export const RequestPortal = () => {
       await axios.post('http://localhost:3000/api/public/requests', {
         requester_name: requesterName.value,
         production_group: productionGroup.value,
-        location: selectedLocation ? selectedLocation.label : '',
         zone_id: selectedZone.id,
         machine_stopped: machineStopped,
         maintenance_type: maintenanceType.value,
@@ -151,7 +141,6 @@ export const RequestPortal = () => {
   }
 
   const zoneOptions = zones.map(z => ({ value: z, label: z.name }));
-  const locationOptions = locations.map(l => ({ value: l.id, label: l.name }));
   const assetOptions = assets.map(a => ({ value: a, label: `${a.internal_code} - ${a.name}` }));
   
   const groupOptions = [
@@ -246,19 +235,6 @@ export const RequestPortal = () => {
                   classNamePrefix="react-select"
                 />
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Ubicación Especifica</label>
-              <Select 
-                options={locationOptions}
-                value={selectedLocation}
-                onChange={(opt) => setSelectedLocation(opt)}
-                placeholder="Selecciona la ubicación..."
-                className="react-select-container"
-                classNamePrefix="react-select"
-                isClearable
-              />
             </div>
 
             <div>

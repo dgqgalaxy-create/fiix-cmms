@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import { getIO } from '../utils/socket';
+import { triggerNewWorkOrderNotification } from '../services/NotificationService';
 
 export const getRequesters = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -148,6 +149,9 @@ export const createPublicWorkOrder = async (req: Request, res: Response): Promis
 
     const io = getIO();
     io.emit('new_work_order', newWorkOrder);
+    
+    // Disparar notificaciones
+    await triggerNewWorkOrderNotification(newWorkOrder);
 
     res.status(201).json(newWorkOrder);
   } catch (error) {
@@ -198,6 +202,10 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
     });
 
     getIO().emit('refresh_work_orders');
+    
+    // Disparar notificaciones
+    await triggerNewWorkOrderNotification(newWorkOrder);
+    
     res.status(201).json(newWorkOrder);
   } catch (error) {
     res.status(500).json({ error: 'Error al crear orden de trabajo' });
