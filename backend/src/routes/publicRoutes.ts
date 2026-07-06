@@ -8,6 +8,18 @@ const router = Router();
 router.post('/requests', createPublicWorkOrder);
 
 // Endpoints to populate the public form dropdowns without auth
+router.get('/locations', async (req, res) => {
+  try {
+    const locations = await prisma.itemLocation.findMany({
+      where: { is_active: true },
+      orderBy: { name: 'asc' }
+    });
+    res.json(locations);
+  } catch (error) {
+    res.status(500).json({ error: 'Error fetching locations' });
+  }
+});
+
 router.get('/zones', async (req, res) => {
   try {
     const zones = await prisma.zone.findMany({
