@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings } from 'lucide-react';
+import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { VersionModal, APP_VERSION } from './VersionModal';
 import { OnlineUsersBadge } from './common/OnlineUsersBadge';
@@ -21,13 +21,15 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     navItems.push({ name: 'Planes Preventivos', path: '/maintenance-plans', icon: <CalendarClock size={20} /> });
   }
 
+  if (hasPermission('VIEW_CALENDAR')) {
+    navItems.push({ name: 'Calendario', path: '/calendar', icon: <Calendar size={20} /> });
+  }
+
   if (hasPermission('MANAGE_ZONES')) {
     navItems.push({ name: 'Zonas', path: '/zones', icon: <MapPin size={20} /> });
   }
 
-  if (hasPermission('MANAGE_PERMISSIONS')) {
-    navItems.push({ name: 'Permisos', path: '/permissions', icon: <Shield size={20} /> });
-  }
+
 
   if (hasPermission('MANAGE_USERS')) {
     navItems.push({ name: 'Personal', path: '/users', icon: <Users size={20} /> });
@@ -47,7 +49,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   return (
     <>
-      <aside className={`print:hidden w-64 bg-slate-900 text-slate-300 flex flex-col h-screen fixed top-0 left-0 z-40 transition-transform duration-300 ease-in-out md:translate-x-0 ${
+      <aside className={`print:hidden w-64 bg-slate-900 dark:bg-slate-950 text-slate-300 flex flex-col h-screen fixed top-0 left-0 z-40 transition-transform duration-300 ease-in-out md:translate-x-0 border-r border-transparent dark:border-slate-800 ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="p-6 flex flex-col items-center justify-center border-b border-slate-800 relative">

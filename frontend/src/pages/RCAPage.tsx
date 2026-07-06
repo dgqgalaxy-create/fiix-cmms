@@ -155,11 +155,11 @@ export const RCAPage = () => {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <GitBranch className="text-blue-600" />
             Árbol de Fallas (RCA)
           </h1>
-          <p className="text-slate-500 mt-1">Configura las categorías para el Análisis de Causa Raíz.</p>
+          <p className="text-slate-500 mt-1">Configura las categorías dark:text-slate-300 para el Análisis de Causa Raíz.</p>
         </div>
       </div>
 

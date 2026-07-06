@@ -138,6 +138,8 @@ model WorkOrder {
 
   status           WorkOrderStatus
   hold_reason      String?
+  scheduled_date      DateTime?
+  due_date            DateTime?
   started_at          DateTime?
   paused_at           DateTime?
   last_resumed_at     DateTime?

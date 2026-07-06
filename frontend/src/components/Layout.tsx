@@ -7,6 +7,7 @@ import { NotificationsBell } from './NotificationsBell';
 export const Layout = ({ children }: { children: ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     // Send initial heartbeat
@@ -21,7 +22,12 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       }
     }, 2 * 60 * 1000);
 
-    const handleOnline = () => setIsOnline(true);
+    const handleOnline = () => {
+      setIsOnline(true);
+      // Simulate sync UI for 3 seconds when coming back online
+      setIsSyncing(true);
+      setTimeout(() => setIsSyncing(false), 3000);
+    };
     const handleOffline = () => setIsOnline(false);
 
     window.addEventListener('online', handleOnline);
@@ -35,7 +41,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-900">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-200">
       {/* Backdrop overlay for mobile when sidebar is open */}
       {isSidebarOpen && (
         <div 
@@ -45,7 +51,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       )}
 
       {/* Mobile Header */}
-      <header className="print:hidden fixed top-0 left-0 right-0 h-14 bg-slate-900 text-white flex items-center justify-between px-4 z-30 md:hidden border-b border-slate-800">
+      <header className="print:hidden fixed top-0 left-0 right-0 h-14 bg-slate-900 dark:bg-slate-950 text-white flex items-center justify-between px-4 z-30 md:hidden border-b border-slate-800 dark:border-slate-900 transition-colors duration-200">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setIsSidebarOpen(true)}
@@ -78,13 +84,19 @@ export const Layout = ({ children }: { children: ReactNode }) => {
         
         {/* Desktop Online/Offline Indicator & Notifications */}
         <div className="hidden md:flex justify-end items-center gap-4 mb-6 z-20 print:hidden">
-          <div className="bg-white rounded-full shadow-sm border border-slate-100">
+          <div className="bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 transition-colors duration-200">
             <NotificationsBell />
           </div>
           {!isOnline && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-full shadow-sm text-sm font-medium animate-pulse">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded-full shadow-sm text-sm font-medium animate-pulse">
               <WifiOff size={16} />
-              Modo Offline (Solo Lectura)
+              Offline (Guardando localmente)
+            </div>
+          )}
+          {isOnline && isSyncing && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-full shadow-sm text-sm font-medium animate-pulse">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 dark:border-blue-400"></div>
+              Sincronizando...
             </div>
           )}
         </div>

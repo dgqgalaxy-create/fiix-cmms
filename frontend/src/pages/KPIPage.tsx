@@ -206,7 +206,7 @@ export const KPIPage = () => {
     <div>
       <div className="hidden print:flex justify-between items-end border-b-2 border-slate-800 pb-4 mb-6">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Reporte Gerencial de Mantenimiento</h1>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Reporte Gerencial de Mantenimiento</h1>
           <p className="text-slate-500 mt-1">LPET CMMS - Indicadores de Desempeño</p>
         </div>
         <div className="text-right">
@@ -218,7 +218,7 @@ export const KPIPage = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 print:hidden relative z-10">
         <div>
           <h1 className="text-2xl sm:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-indigo-600 pb-1">Indicadores de Desempeño</h1>
-          <p className="text-slate-500 mt-1 font-medium">Mide y analiza el rendimiento del departamento de mantenimiento.</p>
+          <p className="text-slate-500 mt-1 font-medium">Mide y analiza dark:text-slate-300 el rendimiento del departamento de mantenimiento.</p>
         </div>
         <div className="flex items-center gap-3 print:hidden">
           <select

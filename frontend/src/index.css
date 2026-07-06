@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@variant dark (&:where(.dark, .dark *));
 
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -13,10 +14,12 @@
 
 body {
   margin: 0;
-  padding: 0;
-  width: 100%;
-  min-height: 100vh;
   background-color: #f8fafc; /* slate-50 */
+}
+
+.dark body {
+  background-color: #0f172a; /* slate-900 */
+  color: #f1f5f9; /* slate-100 */
 }
 
 #root {
@@ -34,4 +37,13 @@ body {
     print-color-adjust: exact;
     background-color: white;
   }
+}
+
+/* Calendar Today Highlight */
+.rbc-today {
+  background-color: #eff6ff !important; /* bg-blue-50 */
+}
+.rbc-month-view .rbc-today .rbc-date-cell {
+  font-weight: bold;
+  color: #1d4ed8; /* text-blue-700 */
 }

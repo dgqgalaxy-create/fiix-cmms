@@ -16,6 +16,7 @@ const AVAILABLE_PERMISSIONS = [
   { key: 'EDIT_WORK_ORDERS', label: 'Editar Órdenes', description: 'Modificar estado y detalles de una orden.' },
   { key: 'DELETE_WORK_ORDERS', label: 'Eliminar Órdenes', description: 'Anular o eliminar permanentemente órdenes de trabajo.' },
   { key: 'MANAGE_MAINTENANCE_PLANS', label: 'Mantenimiento Preventivo', description: 'Crear y editar planes de mantenimiento preventivo.' },
+  { key: 'VIEW_CALENDAR', label: 'Ver Calendario', description: 'Acceso a la vista de calendario de las órdenes de trabajo.' },
   { key: 'USE_QR_SCANNER', label: 'Usar Escáner QR', description: 'Permite abrir la cámara para escanear repuestos o equipos desde las búsquedas.' },
   { key: 'MANAGE_PERMISSIONS', label: 'Administrar Permisos', description: 'Acceso a esta pantalla de configuración.' },
 ];
@@ -95,11 +96,11 @@ export const PermissionsPage = () => {
     <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
-            <Shield className="text-indigo-600" size={32} />
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <Shield className="text-indigo-600 dark:text-indigo-400" size={28} />
             Privilegios por Rol
           </h1>
-          <p className="text-slate-500 mt-1">Configura qué acciones puede realizar cada tipo de usuario en el sistema.</p>
+          <p className="text-slate-500 dark:text-slate-300 mt-1">Configura qué acciones puede realizar cada tipo de usuario en el sistema.</p>
         </div>
       </div>
 
@@ -115,13 +116,13 @@ export const PermissionsPage = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {rolePermissions.map((rp) => (
-          <div key={rp.role} className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-            <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center gap-3">
+          <div key={rp.role} className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 flex justify-between items-center gap-3">
               <div className="min-w-0">
-                <h3 className="text-base sm:text-lg font-bold text-slate-800 truncate" title={rp.role}>{rp.role}</h3>
-                <p className="text-xs text-slate-500 font-medium truncate">Configuración de acceso</p>
+                <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 truncate" title={rp.role}>{rp.role}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Configuración de acceso</p>
               </div>
               <button
                 onClick={() => handleSave(rp.role)}
@@ -139,10 +140,10 @@ export const PermissionsPage = () => {
                 const isLocked = rp.role === 'ADMINISTRADOR' && (perm.key === 'MANAGE_PERMISSIONS' || perm.key === 'MANAGE_USERS');
                 
                 return (
-                  <div key={perm.key} className="p-2.5 sm:p-4 hover:bg-slate-50 rounded-xl sm:rounded-2xl transition-colors flex items-start justify-between gap-4">
+                  <div key={perm.key} className="p-2.5 sm:p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl sm:rounded-2xl transition-colors flex items-start justify-between gap-4">
                     <div>
-                      <div className="font-semibold text-sm text-slate-800">{perm.label}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">{perm.description}</div>
+                      <div className="font-semibold text-sm text-slate-800 dark:text-slate-200">{perm.label}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{perm.description}</div>
                     </div>
                     <label className={`relative inline-flex items-center ${isLocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
                       <input

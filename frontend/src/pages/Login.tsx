@@ -38,7 +38,7 @@ export const Login = () => {
             alt="LPET Logo" 
             className="mx-auto h-20 md:h-24 object-contain mb-4"
           />
-          <h1 className="text-3xl font-bold text-slate-800">
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">
             CMMS
           </h1>
           <p className="text-slate-500 mt-2">Inicia sesión para gestionar el mantenimiento</p>

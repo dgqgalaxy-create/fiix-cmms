@@ -55,11 +55,11 @@ export const UsersPage = () => {
     <>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-3">
             <Users size={32} className="text-blue-800" />
             Directorio de Personal
           </h1>
-          <p className="text-slate-500 mt-1">Gestiona técnicos, gestionadores y administradores del sistema.</p>
+          <p className="text-slate-500 mt-1">Gestiona técnicos dark:text-slate-300, gestionadores y administradores del sistema.</p>
         </div>
         
         <div className="flex items-center gap-3 w-full sm:w-auto">

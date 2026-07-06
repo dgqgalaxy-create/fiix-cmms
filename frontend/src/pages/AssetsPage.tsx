@@ -79,8 +79,8 @@ export const AssetsPage = () => {
     <>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Activos</h1>
-          <p className="text-slate-500 mt-1">Inventario de equipos y maquinaria para mantenimiento.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Activos</h1>
+          <p className="text-slate-500 mt-1">Inventario de equipos dark:text-slate-300 y maquinaria para mantenimiento.</p>
         </div>
         
         <div className="flex items-center gap-3 w-full sm:w-auto">

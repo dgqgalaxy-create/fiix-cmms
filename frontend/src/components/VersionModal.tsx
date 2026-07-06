@@ -1,7 +1,7 @@
-import { X, Info, Rocket, Server, Shield, CheckCircle2 } from 'lucide-react';
+import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.5.0";
+export const APP_VERSION = "1.6.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "23 de Junio, 2026";
+  const updateDate = "06 de Julio, 2026";
   const modules = [
     "Panel Principal (Dashboard)",
     "Gestión de Activos (Equipos)",
@@ -24,11 +24,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
-    "Portal Público de Solicitudes (/request) para reportes sin cuenta.",
-    "Formulario adaptado con campos específicos: Grupo, Prioridad, Tipo de Mantenimiento.",
-    "Búsqueda predictiva de solicitantes (Creatable Select).",
-    "Integración en tiempo real (Socket.io) para recibir órdenes nuevas en el Dashboard.",
-    "Validaciones Offline y UI minimalista enfocada al usuario final."
+    "Soporte Offline Completo (PWA) con cola de sincronización IndexedDB.",
+    "Restauración y mejora del módulo Opciones de Desarrollador protegidas por contraseña.",
+    "Ajuste visual del Calendario (altura completa adaptable al monitor).",
+    "Correcciones globales al Modo Oscuro (legibilidad de textos grises).",
+    "Navegación del Manual de Usuario mejorada con retroceso en historial."
   ];
 
   return (
@@ -95,14 +95,19 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
         </div>
 
         {/* Footer */}
-        <div className="bg-slate-50 p-4 border-t border-slate-100 text-center flex flex-col items-center gap-3">
-          <p className="text-xs text-slate-400 flex items-center justify-center gap-1.5">
+        <div className="bg-slate-50 p-4 border-t border-slate-100 flex flex-col items-center gap-3">
+          <Link 
+            to="/manual" 
+            onClick={onClose}
+            className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-50 text-blue-700 font-bold rounded-xl hover:bg-blue-100 transition-colors border border-blue-200"
+          >
+            <BookOpen size={18} />
+            Abrir Manual de Usuario
+          </Link>
+          <p className="text-xs text-slate-400 flex items-center justify-center gap-1.5 mt-1">
             <Shield size={14} />
             Conexión segura y encriptada
           </p>
-          <Link to="/developer-options" onClick={onClose} className="text-[10px] text-slate-300 hover:text-slate-500 transition-colors font-semibold uppercase tracking-widest">
-            Opciones de desarrollador
-          </Link>
         </div>
 
       </div>

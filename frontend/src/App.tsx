@@ -1,5 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import axios from 'axios';
+import { getOfflineRequests, removeOfflineRequest } from './utils/offlineQueue';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
@@ -13,15 +17,43 @@ import { InventoryPage } from './pages/InventoryPage';
 import { MaintenancePlansPage } from './pages/MaintenancePlansPage';
 import { PurchaseOrdersPage } from './pages/PurchaseOrdersPage';
 import { RCAPage } from './pages/RCAPage';
-import { DeveloperOptions } from './pages/DeveloperOptions';
 import { RequestPortal } from './pages/RequestPortal';
 import { SettingsPage } from './pages/SettingsPage';
+import { CalendarPage } from './pages/CalendarPage';
+import { UserManual } from './pages/UserManual';
 
 function App() {
+  useEffect(() => {
+    const handleOnline = async () => {
+      console.log('App is back online, syncing requests...');
+      const requests = await getOfflineRequests();
+      for (const req of requests) {
+        try {
+          // If the request was multipart/form-data (like FormData), we can't easily rebuild it from IDB 
+          // unless we serialized it correctly. For now, assuming simple JSON POST requests.
+          await axios({
+            url: req.url,
+            method: req.method,
+            headers: req.headers,
+            data: req.body,
+          });
+          await removeOfflineRequest(req.id);
+          console.log(`Synced offline request ${req.id}`);
+        } catch (error) {
+          console.error(`Failed to sync offline request ${req.id}`, error);
+        }
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, []);
+
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
+      <ThemeProvider>
+        <BrowserRouter>
+          <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/request" element={<RequestPortal />} />
           
@@ -31,6 +63,17 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Dashboard />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/calendar" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <CalendarPage />
                 </Layout>
               </ProtectedRoute>
             } 
@@ -134,6 +177,8 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          
+          <Route path="/manual" element={<UserManual />} />
 
           <Route 
             path="/settings" 
@@ -146,11 +191,10 @@ function App() {
             } 
           />
 
-          <Route path="/developer-options" element={<DeveloperOptions />} />
-          
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

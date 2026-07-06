@@ -333,7 +333,7 @@ export const Dashboard = () => {
       {/* Encabezado exclusivo para impresión */}
       <div className="hidden print:flex justify-between items-end border-b-2 border-slate-800 pb-4 mb-6">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Reporte de Órdenes de Trabajo</h1>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Reporte de Órdenes de Trabajo</h1>
           <p className="text-slate-500 mt-1">LPET CMMS - Listado y Resumen</p>
         </div>
         <div className="text-right">
@@ -344,8 +344,8 @@ export const Dashboard = () => {
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 print:hidden">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Órdenes de Trabajo</h1>
-          <p className="text-slate-500 mt-1">Gestiona y haz seguimiento del mantenimiento.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Órdenes de Trabajo</h1>
+          <p className="text-slate-500 mt-1">Gestiona y haz seguimiento dark:text-slate-300 del mantenimiento.</p>
         </div>
         
         <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -395,7 +395,7 @@ export const Dashboard = () => {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-4 items-center mb-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm print:hidden">
+      <div className="flex flex-wrap gap-4 items-center mb-4 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm print:hidden">
         <div className="flex items-center gap-2">
           <CalendarClock size={18} className="text-slate-500" />
           <span className="text-sm font-semibold text-slate-700">Filtro para resumen superior:</span>
@@ -497,7 +497,7 @@ export const Dashboard = () => {
 
         <div 
           onClick={() => handleStatusClick('EN_PROCESO')}
-          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'EN_PROCESO' ? 'ring-2 ring-blue-500 border-blue-500 shadow-md scale-[1.02]' : 'border-blue-100 shadow-sm shadow-blue-100/50 hover:shadow-md'}`}
+          className={`cursor-pointer transition-all bg-white dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'EN_PROCESO' ? 'ring-2 ring-blue-500 border-blue-500 shadow-md scale-[1.02]' : 'border-blue-100 shadow-sm shadow-blue-100/50 hover:shadow-md'}`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-blue-50 opacity-50 group-hover:scale-110 transition-transform">
              <Wrench className="w-14 h-14 sm:w-20 sm:h-20" />
@@ -517,7 +517,7 @@ export const Dashboard = () => {
 
         <div 
           onClick={() => handleStatusClick('EN_ESPERA')}
-          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'EN_ESPERA' ? 'ring-2 ring-purple-500 border-purple-500 shadow-md scale-[1.02]' : 'border-purple-100 shadow-sm shadow-purple-100/50 hover:shadow-md'}`}
+          className={`cursor-pointer transition-all bg-white dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'EN_ESPERA' ? 'ring-2 ring-purple-500 border-purple-500 shadow-md scale-[1.02]' : 'border-purple-100 shadow-sm shadow-purple-100/50 hover:shadow-md'}`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-purple-50 opacity-50 group-hover:scale-110 transition-transform">
              <AlertCircle className="w-14 h-14 sm:w-20 sm:h-20" />
@@ -537,7 +537,7 @@ export const Dashboard = () => {
 
         <div 
           onClick={() => handleStatusClick('FINALIZADO')}
-          className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'FINALIZADO' ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-md scale-[1.02]' : 'border-emerald-100 shadow-sm shadow-emerald-100/50 hover:shadow-md'}`}
+          className={`cursor-pointer transition-all bg-white dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'FINALIZADO' ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-md scale-[1.02]' : 'border-emerald-100 shadow-sm shadow-emerald-100/50 hover:shadow-md'}`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-emerald-50 opacity-50 group-hover:scale-110 transition-transform">
              <CheckCircle2 className="w-14 h-14 sm:w-20 sm:h-20" />
@@ -550,7 +550,7 @@ export const Dashboard = () => {
 
         <div 
           onClick={() => handleStatusClick('ANULADO')}
-          className={`cursor-pointer transition-all bg-slate-50 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'ANULADO' ? 'ring-2 ring-slate-400 border-slate-400 shadow-md scale-[1.02]' : 'border-slate-200 shadow-sm shadow-slate-200/50 hover:shadow-md hover:bg-slate-100'}`}
+          className={`cursor-pointer transition-all bg-slate-50 dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'ANULADO' ? 'ring-2 ring-slate-400 border-slate-400 shadow-md scale-[1.02]' : 'border-slate-200 shadow-sm shadow-slate-200/50 hover:shadow-md hover:bg-slate-100'}`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-slate-100 opacity-70 group-hover:scale-110 transition-transform">
              <XCircle className="w-14 h-14 sm:w-20 sm:h-20" />
@@ -564,7 +564,7 @@ export const Dashboard = () => {
         {hasPermission('VIEW_INVENTORY') && invSummary && (
           <div 
             onClick={() => navigate('/inventory?filter=low_stock')}
-            className={`cursor-pointer transition-all bg-white p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group border-rose-100 shadow-sm shadow-rose-100/50 hover:shadow-md col-span-2 md:col-span-1 print:hidden`}
+            className={`cursor-pointer transition-all bg-white dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group border-rose-100 dark:border-rose-900/50 shadow-sm shadow-rose-100/50 dark:shadow-rose-900/20 hover:shadow-md col-span-2 md:col-span-1 print:hidden`}
           >
             <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-rose-50 opacity-50 group-hover:scale-110 transition-transform">
                <AlertCircle className="w-14 h-14 sm:w-20 sm:h-20" />
@@ -584,7 +584,7 @@ export const Dashboard = () => {
       </div>
 
       {isLoading && workOrders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-slate-100 shadow-sm">
+        <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
           <RefreshCw size={32} className="animate-spin text-blue-800 mb-4" />
           <p className="text-slate-500 font-medium">Cargando órdenes de trabajo...</p>
         </div>

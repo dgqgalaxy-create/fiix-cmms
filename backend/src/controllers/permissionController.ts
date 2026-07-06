@@ -15,6 +15,7 @@ const defaultPermissions: Record<Role, any> = {
     MANAGE_INVENTORY: true,
     MANAGE_MAINTENANCE_PLANS: true,
     VIEW_ALL_WORK_ORDERS: true,
+    VIEW_CALENDAR: true,
     USE_QR_SCANNER: true,
   },
   GESTIONADOR: {
@@ -29,6 +30,7 @@ const defaultPermissions: Record<Role, any> = {
     MANAGE_INVENTORY: true,
     MANAGE_MAINTENANCE_PLANS: true,
     VIEW_ALL_WORK_ORDERS: true,
+    VIEW_CALENDAR: true,
     USE_QR_SCANNER: true,
   },
   TECNICO: {
@@ -43,6 +45,7 @@ const defaultPermissions: Record<Role, any> = {
     MANAGE_INVENTORY: false,
     MANAGE_MAINTENANCE_PLANS: false,
     VIEW_ALL_WORK_ORDERS: false,
+    VIEW_CALENDAR: false,
     USE_QR_SCANNER: true,
   },
 };

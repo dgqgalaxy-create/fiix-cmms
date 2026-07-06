@@ -162,7 +162,7 @@ export const createPublicWorkOrder = async (req: Request, res: Response): Promis
 
 export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { title, description, asset_id, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group } = req.body;
+    const { title, description, asset_id, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group, scheduled_date, due_date } = req.body;
     let { assigned_technicians_ids } = req.body;
     
     if (assigned_technicians_ids && !Array.isArray(assigned_technicians_ids)) {
@@ -193,6 +193,8 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
         requester_name,
         production_group,
         status: 'PENDIENTE',
+        scheduled_date: scheduled_date ? new Date(scheduled_date) : null,
+        due_date: due_date ? new Date(due_date) : null,
         request_image_url,
         created_by_id: req.user.userId,
         assigned_technicians: assigned_technicians_ids && assigned_technicians_ids.length > 0
@@ -215,7 +217,7 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
 export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { title, description, asset_id, status, hold_reason, resolution_notes, assigned_technicians_ids, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group, signature_clean_area, signature_delivery, used_items, failure_problem_id, failure_cause_id, failure_remedy_id } = req.body;
+    const { title, description, asset_id, status, hold_reason, resolution_notes, assigned_technicians_ids, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group, signature_clean_area, signature_delivery, used_items, failure_problem_id, failure_cause_id, failure_remedy_id, scheduled_date, due_date } = req.body;
     const userRole = req.user?.role;
     const userId = req.user?.userId;
 
@@ -269,6 +271,8 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
     if (failure_problem_id !== undefined) updateData.failure_problem_id = failure_problem_id;
     if (failure_cause_id !== undefined) updateData.failure_cause_id = failure_cause_id;
     if (failure_remedy_id !== undefined) updateData.failure_remedy_id = failure_remedy_id;
+    if (scheduled_date !== undefined) updateData.scheduled_date = scheduled_date ? new Date(scheduled_date) : null;
+    if (due_date !== undefined) updateData.due_date = due_date ? new Date(due_date) : null;
     
     // Auto-asignación: Si un técnico la cambia a EN_PROCESO, se auto-asigna si la lista estaba vacía
     if (userRole === 'TECNICO' && status === 'EN_PROCESO' && currentWorkOrder.status === 'PENDIENTE') {

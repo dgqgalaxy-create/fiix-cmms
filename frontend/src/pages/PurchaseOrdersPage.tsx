@@ -64,11 +64,11 @@ export const PurchaseOrdersPage = () => {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
         <div>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-2">
             <ShoppingCart className="text-indigo-600" size={28} />
             Órdenes de Compra
           </h1>
-          <p className="text-slate-500 mt-1">Gestiona los pedidos de refacciones a proveedores</p>
+          <p className="text-slate-500 mt-1">Gestiona los pedidos dark:text-slate-300 de refacciones a proveedores</p>
         </div>
         
         <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3">

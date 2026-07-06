@@ -64,7 +64,7 @@ export const ZonesPage = () => {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <MapPin className="text-emerald-600" />
             Gestión de Zonas
           </h1>

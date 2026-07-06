@@ -55,11 +55,11 @@ export const MaintenancePlansPage = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <CalendarClock className="text-blue-600" />
             Mantenimiento Preventivo
           </h1>
-          <p className="text-slate-500 text-sm mt-1">Configura rutinas automáticas para tus equipos.</p>
+          <p className="text-slate-500 text-sm mt-1">Configura rutinas automáticas dark:text-slate-300 para tus equipos.</p>
         </div>
         <button 
           onClick={handleCreate}

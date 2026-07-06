@@ -181,23 +181,15 @@ export const DeveloperOptions = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-12">
+    <div className="space-y-8 animate-in fade-in duration-500">
       <div className="max-w-4xl mx-auto space-y-8">
-        
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors font-semibold"
-        >
-          <ArrowLeft size={20} />
-          Volver a la Aplicación
-        </button>
 
         <div className="flex items-center gap-4 border-b border-slate-200 pb-6">
           <div className="w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center">
             <ShieldAlert size={24} />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-slate-800 tracking-tight">Opciones de Desarrollador</h1>
+            <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Opciones de Desarrollador</h1>
             <p className="text-slate-500">Gestión crítica del sistema y base de datos.</p>
           </div>
         </div>
@@ -209,12 +201,12 @@ export const DeveloperOptions = () => {
         )}
 
         {successMsg && (
-          <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl border border-emerald-100 flex items-center gap-3">
+          <div className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900 flex items-center gap-3">
             <CheckCircle2 size={20} /> {successMsg}
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           
           {/* Card: Exportar */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center text-center hover:shadow-md transition-shadow">
@@ -286,18 +278,58 @@ export const DeveloperOptions = () => {
           </div>
 
           {/* Card: Borrar */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-red-200 flex flex-col items-center text-center hover:shadow-md transition-shadow">
-            <div className="w-14 h-14 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-4">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-red-200 dark:border-red-900/50 flex flex-col items-center text-center hover:shadow-md transition-shadow">
+            <div className="w-14 h-14 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mb-4">
               <Trash2 size={28} />
             </div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Vaciar Base de Datos</h3>
-            <p className="text-slate-500 text-sm mb-6 flex-grow">Elimina todos los registros de la base de datos manteniendo las tablas vacías.</p>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Vaciar Base de Datos</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 flex-grow">Elimina todos los registros de la base de datos manteniendo las tablas vacías.</p>
             <button 
               onClick={() => setIsDeleteModalOpen(true)}
               disabled={isLoading}
               className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors"
             >
               Borrar Todo
+            </button>
+          </div>
+
+          {/* Card: Forzar Error Sincronización */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-amber-200 dark:border-amber-900/50 flex flex-col items-center text-center hover:shadow-md transition-shadow">
+            <div className="w-14 h-14 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mb-4">
+              <AlertTriangle size={28} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Forzar Error Sync</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 flex-grow">Simula una falla en la sincronización para probar PWA OfflineQueue.</p>
+            <button 
+              onClick={() => {
+                alert("Simulando error en red (deshabilitado en producción)");
+              }}
+              className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-lg transition-colors"
+            >
+              Simular Falla
+            </button>
+          </div>
+
+          {/* Card: Limpiar Cache PWA */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-md transition-shadow">
+            <div className="w-14 h-14 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full flex items-center justify-center mb-4">
+              <ShieldAlert size={28} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Limpiar Caché PWA</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 flex-grow">Limpia Service Workers y almacenamiento local para reiniciar PWA.</p>
+            <button 
+              onClick={() => {
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.getRegistrations().then(registrations => {
+                    for (let reg of registrations) reg.unregister();
+                  });
+                }
+                localStorage.clear();
+                window.location.reload();
+              }}
+              className="w-full bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-bold py-2.5 rounded-lg transition-colors"
+            >
+              Limpiar y Recargar
             </button>
           </div>
 
