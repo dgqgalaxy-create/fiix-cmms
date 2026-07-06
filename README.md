@@ -1,4 +1,5 @@
 # FIIX CMMS 🛠️
+*(Última actualización: 06 de Julio de 2026)*
 
 Sistema de Gestión de Mantenimiento Computarizado (CMMS) construido con el stack PERN y Prisma ORM.
 
