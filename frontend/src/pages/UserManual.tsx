@@ -9,6 +9,8 @@ const SECTIONS = [
   { id: 'assets', title: 'Activos', icon: <Wrench size={18} /> },
   { id: 'roles', title: 'Roles y Permisos', icon: <Shield size={18} /> },
   { id: 'users', title: 'Gestión de Personal', icon: <Users size={18} /> },
+  { id: 'checklists', title: 'Checklist Diario', icon: <BookOpen size={18} /> },
+  { id: 'roster', title: 'Horarios y Turnos', icon: <BookOpen size={18} /> },
 ];
 
 export const UserManual = () => {
@@ -170,8 +172,35 @@ export const UserManual = () => {
               </div>
             )}
 
+            {activeSection === 'checklists' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">Checklist Diario</h2>
+                <p>El Checklist Diario te permite llevar un registro estructurado del estado de la maquinaria y las líneas de producción cada día.</p>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Límite Diario</h3>
+                <p>Para evitar duplicidad y mantener un registro consolidado, <strong>el sistema solo permite crear un checklist por día</strong>. Si ya existe uno, el botón de "Crear" se ocultará y en su lugar verás la opción de "Ver Checklist de Hoy".</p>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Evaluaciones y Observaciones</h3>
+                <p>Puedes calificar cada sistema (Mecánico, Eléctrico, etc.) como OK, NOK (No OK) o N/A (No Aplica), y añadir comentarios si detectas alguna anomalía.</p>
+              </div>
+            )}
+
+            {activeSection === 'roster' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">Horarios y Turnos (Roster)</h2>
+                <p>El calendario de horarios es la herramienta principal para asignar patrones de turnos (como 4x4) y gestionar excepciones del personal.</p>
+                
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Gestión de Excepciones</h3>
+                <p>Puedes registrar Vacaciones, Faltas, Tiempo Extra o Tiempo por Tiempo (TxT) de forma muy sencilla: <strong>arrastra la etiqueta</strong> desde la lista lateral directamente hacia el día correspondiente en el calendario.</p>
+
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Días Festivos de México</h3>
+                <p>El calendario resalta de forma automática los días de asueto oficiales (Ej. 16 de Septiembre, 25 de Diciembre). Al dar clic en el día, verás un anuncio indicando la festividad.</p>
+
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Impresión en PDF</h3>
+                <p>Utiliza el botón <strong>Imprimir / PDF</strong> para generar un reporte limpio del mes. El sistema ocultará los menús y la barra lateral para que el calendario ocupe toda la página de forma horizontal.</p>
+              </div>
+            )}
+
             {/* Default fallback for other sections (if any in the future) */}
-            {activeSection !== 'intro' && activeSection !== 'dashboard' && activeSection !== 'roles' && activeSection !== 'users' && activeSection !== 'inventory' && activeSection !== 'assets' && (
+            {activeSection !== 'intro' && activeSection !== 'dashboard' && activeSection !== 'roles' && activeSection !== 'users' && activeSection !== 'inventory' && activeSection !== 'assets' && activeSection !== 'checklists' && activeSection !== 'roster' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col items-center justify-center text-center py-20">
                 <Wrench size={48} className="text-slate-300 dark:text-slate-600 mb-4" />
                 <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">Sección en Construcción</h2>

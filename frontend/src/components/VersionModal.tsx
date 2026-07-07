@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.7.2";
+export const APP_VERSION = "1.7.3";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -22,16 +22,17 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Zonas y Permisos",
     "Directorio y Solicitantes",
     "KPIs y Metas",
+    "Checklist Diario",
+    "Calendario de Horarios y Turnos (Roster)",
     "Opciones de Desarrollador"
   ];
   const changelog = [
-    "Sincronización de Contexto de Proyecto e indexación de archivos fuente.",
-    "Optimización de código base (eliminación de Dead Code).",
-    "Remoción de logs de depuración (Mejora de seguridad y rendimiento).",
-    "Correcciones visuales en subtítulos filtrados (CSS residual).",
-    "Filtros avanzados y ocultamiento de inactivos en Directorio.",
-    "Autoguardado en tiempo real para Configuración de Permisos.",
-    "Actualización silenciosa de OTs vía WebSockets."
+    "Nuevo módulo de Checklist Diario (límite de 1 por día).",
+    "Nuevo módulo de Horarios (Roster) para asignar turnos y excepciones por Drag & Drop.",
+    "Integración de Días Festivos Globales (México).",
+    "Soporte de Impresión (PDF) optimizado para el calendario de horarios.",
+    "Supresión de permisos VIEW_* para hacer los módulos públicos por defecto.",
+    "Sincronización de Contexto de Proyecto e indexación de archivos fuente."
   ];
 
   return (
