@@ -795,14 +795,16 @@ export const InventoryPage = () => {
                   <span className="whitespace-nowrap">Stock Crítico</span>
                 </button>
 
-                <button
-                  onClick={handleGeneratePurchaseList}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition-colors shadow-sm"
-                  title="Generar Lista de Compras"
-                >
-                  <ShoppingCart size={18} className="text-slate-500" />
-                  <span className="hidden md:inline whitespace-nowrap">Generar Pedido</span>
-                </button>
+                {hasPermission('MANAGE_PURCHASES') && (
+                  <button
+                    onClick={handleGeneratePurchaseList}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition-colors shadow-sm"
+                    title="Generar Lista de Compras"
+                  >
+                    <ShoppingCart size={18} className="text-slate-500" />
+                    <span className="hidden md:inline whitespace-nowrap">Generar Pedido</span>
+                  </button>
+                )}
               </div>
             </div>
           )}

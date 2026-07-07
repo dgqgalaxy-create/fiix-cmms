@@ -1,4 +1,5 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect } from 'react';
+import type { FormEvent } from 'react';
 import axios from 'axios';
 import { Wifi, WifiOff, CheckCircle2 } from 'lucide-react';
 import CreatableSelect from 'react-select/creatable';

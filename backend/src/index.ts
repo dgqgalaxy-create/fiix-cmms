@@ -34,9 +34,11 @@ import purchaseOrderRoutes from './routes/purchaseOrderRoutes';
 import rcaRoutes from './routes/rcaRoutes';
 import devRoutes from './routes/devRoutes';
 import publicRoutes from './routes/publicRoutes';
+import checklistRoutes from './routes/checklistRoutes';
 import settingsRoutes from './routes/settingsRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import requesterRoutes from './routes/requesterRoutes';
+import rosterRoutes from './routes/rosterRoutes';
 import { initCronJobs } from './utils/cronJobs';
 
 app.get('/api/health', (req: Request, res: Response) => {
@@ -49,17 +51,19 @@ app.use('/api/assets', assetRoutes);
 app.use('/api/work-orders', workOrderRoutes);
 app.use('/api/kpis', kpiRoutes);
 app.use('/api/permissions', permissionRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/zones', zoneRoutes);
+app.use('/api/public', publicRoutes);
+app.use('/api/checklists', checklistRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
 app.use('/api/rca', rcaRoutes);
 app.use('/api/dev', devRoutes);
-app.use('/api/public', publicRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/zones', zoneRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/requesters', requesterRoutes);
+app.use('/api/roster', rosterRoutes);
 
 // Initialize Cron Jobs
 initCronJobs();

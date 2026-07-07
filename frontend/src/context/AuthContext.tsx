@@ -1,4 +1,5 @@
-import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { getMyPermissions } from '../api/permissions';
 

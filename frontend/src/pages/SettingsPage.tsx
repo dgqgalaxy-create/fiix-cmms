@@ -3,8 +3,12 @@ import { useTheme } from '../context/ThemeContext';
 import { Settings, Bell, Palette, Code, CheckCircle2, AlertTriangle, Monitor, Sun, Moon, Shield } from 'lucide-react';
 import { PermissionsPage } from './PermissionsPage';
 import { DeveloperOptions } from './DeveloperOptions';
+import { ChecklistCatalogue } from '../components/ChecklistCatalogue';
+import { ListChecks } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export const SettingsPage = () => {
+  const { hasPermission } = useAuth();
   const [settings, setSettings] = useState({
     telegram_enabled: false,
     email_enabled: false,
@@ -121,7 +125,21 @@ export const SettingsPage = () => {
               <Code size={18} />
               Opciones de Desarrollador
             </button>
-            <button
+            {hasPermission('MANAGE_CHECKLIST_CATALOG') && (
+              <button
+                onClick={() => setActiveTab('checklist_catalogue')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
+                  activeTab === 'checklist_catalogue'
+                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                <ListChecks size={18} />
+                Catálogo Checklist
+              </button>
+            )}
+            {hasPermission('MANAGE_PERMISSIONS') && (
+              <button
               onClick={() => setActiveTab('permissions')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
                 activeTab === 'permissions'
@@ -132,6 +150,7 @@ export const SettingsPage = () => {
               <Shield size={18} />
               Roles y Permisos
             </button>
+            )}
           </div>
         </div>
 
@@ -245,6 +264,12 @@ export const SettingsPage = () => {
               <div className="p-0">
                 <PermissionsPage />
               </div>
+            </div>
+          )}
+
+          {activeTab === 'checklist_catalogue' && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <ChecklistCatalogue />
             </div>
           )}
         </div>

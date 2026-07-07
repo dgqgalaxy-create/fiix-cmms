@@ -3,7 +3,14 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 07 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.7.2 (Lanzamiento: 07 de Julio de 2026)
+## 🚀 Versión Actual: v1.7.3 (Lanzamiento: 07 de Julio de 2026)
+
+### Novedades en v1.7.3 (Checklists y Horarios)
+- **Checklist Diario:** Módulo para registro de estado de máquinas, protegido a solo un checklist por día.
+- **Módulo de Horarios (Roster):** Calendario de personal con patrones de turnos y excepciones por drag & drop.
+- **Impresión Especializada:** Reglas CSS avanzadas para exportar el calendario de horarios a PDF ocultando barras y botones.
+- **Días Festivos:** Integración y sombreado automático de los días festivos en México en el calendario.
+- **Permisos Simplificados:** Supresión de permisos de sólo lectura para hacer los tableros de KPIs y Horarios públicos a toda la empresa, protegiendo únicamente las mutaciones.
 
 ### Novedades en v1.7.2 (Documentación)
 - **Actualización de Contexto Global:** Se renovó el documento de arquitectura para reflejar todos los módulos terminados y la convención de separación entre `data` y `docs`.
@@ -47,6 +54,6 @@ Este documento contiene la lista de módulos y características pendientes de de
 - [x] **Soporte PWA (Offline):** Que la app funcione sin conexión a internet y sincronice datos en segundo plano.
 - [x] **Gestión con Códigos QR:** Escaneo físico en máquinas para abrir historiales y escaneo en estantes para el control rápido de refacciones.
 - [x] **Árbol de Fallas (RCA):** Clasificación obligatoria de Problema -> Causa -> Remedio para generar análisis Pareto de fallas comunes.
-- [x] **Calendario de Carga de Trabajo (Gantt):** Vista interactiva para los supervisores para balancear la carga semanal de los técnicos.
+- [x] **Calendario de Carga de Trabajo / Turnos (Roster):** Vista interactiva para gestionar y asignar turnos, días festivos y faltas del personal (Completado en v1.7.3).
 - [ ] **Portal de Contratistas:** Acceso limitado para proveedores externos donde puedan reportar sus trabajos sin ver datos sensibles.
 - [ ] **Multiplanta / Multisítio:** Segregación de información para empresas con múltiples fábricas con un dashboard corporativo global.

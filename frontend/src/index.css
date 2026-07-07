@@ -37,6 +37,28 @@ body {
     print-color-adjust: exact;
     background-color: white;
   }
+  .rbc-btn-group {
+    display: none !important;
+  }
+  .rbc-toolbar {
+    margin-bottom: 20px;
+  }
+  .rbc-toolbar-label {
+    font-size: 24px !important;
+    font-weight: bold;
+  }
+  
+  /* Make events smaller to fit up to 8 per day on paper */
+  .rbc-event {
+    padding: 0px 2px !important;
+    font-size: 9px !important;
+    min-height: 14px !important;
+    line-height: 14px !important;
+    margin-bottom: 1px !important;
+  }
+  .rbc-month-row {
+    min-height: 110px !important;
+  }
 }
 
 /* Calendar Today Highlight */

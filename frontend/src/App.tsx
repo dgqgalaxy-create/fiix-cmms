@@ -21,6 +21,9 @@ import { RequestPortal } from './pages/RequestPortal';
 import { SettingsPage } from './pages/SettingsPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { UserManual } from './pages/UserManual';
+import DailyChecklistsPage from './pages/DailyChecklistsPage';
+import ChecklistFormPage from './pages/ChecklistFormPage';
+import { RosterPage } from './pages/RosterPage';
 
 function App() {
   useEffect(() => {
@@ -74,6 +77,17 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <CalendarPage />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/roster" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RosterPage />
                 </Layout>
               </ProtectedRoute>
             } 
@@ -140,6 +154,28 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <KPIPage />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/checklists" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <DailyChecklistsPage />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/checklists/:id" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ChecklistFormPage />
                 </Layout>
               </ProtectedRoute>
             } 

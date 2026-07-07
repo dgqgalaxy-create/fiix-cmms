@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar } from 'lucide-react';
+import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { VersionModal, APP_VERSION } from './VersionModal';
 import { OnlineUsersBadge } from './common/OnlineUsersBadge';
@@ -14,15 +14,18 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     { name: 'Órdenes de Trabajo', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
     { name: 'Activos', path: '/assets', icon: <Database size={20} /> },
     { name: 'Inventario', path: '/inventory', icon: <Package size={20} /> },
-    { name: 'Compras', path: '/purchase-orders', icon: <ShoppingCart size={20} /> },
+    { name: 'Checklist Diario', path: '/checklists', icon: <ClipboardCheck size={20} /> },
+    { name: 'Horarios', path: '/roster', icon: <Clock size={20} /> },
+    { name: 'Calendario', path: '/calendar', icon: <Calendar size={20} /> },
+    { name: 'KPIs y Metas', path: '/kpis', icon: <Activity size={20} /> },
   ];
+
+  if (hasPermission('MANAGE_PURCHASES')) {
+    navItems.push({ name: 'Compras', path: '/purchase-orders', icon: <ShoppingCart size={20} /> });
+  }
 
   if (hasPermission('MANAGE_MAINTENANCE_PLANS')) {
     navItems.push({ name: 'Planes Preventivos', path: '/maintenance-plans', icon: <CalendarClock size={20} /> });
-  }
-
-  if (hasPermission('VIEW_CALENDAR')) {
-    navItems.push({ name: 'Calendario', path: '/calendar', icon: <Calendar size={20} /> });
   }
 
   if (hasPermission('MANAGE_ZONES')) {
@@ -33,10 +36,6 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   if (hasPermission('MANAGE_USERS')) {
     navItems.push({ name: 'Personal', path: '/users', icon: <Users size={20} /> });
-  }
-
-  if (hasPermission('VIEW_KPIS') || hasPermission('MANAGE_KPIS')) {
-    navItems.push({ name: 'KPIs y Metas', path: '/kpis', icon: <Activity size={20} /> });
   }
 
   if (user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR') {
