@@ -1,18 +1,33 @@
 import { useState, useEffect } from 'react';
-import { Plus, RefreshCw, Users } from 'lucide-react';
+import { Plus, RefreshCw, Users, Search, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getUsers, createUser, updateUser, deleteUser } from '../api/users';
 import type { User } from '../api/users';
+import { getRequesters, deleteRequester } from '../api/requesters';
+import type { Requester } from '../api/requesters';
 import { UsersTable } from '../components/UsersTable';
 import { UserModal } from '../components/UserModal';
+import { RequestersTable } from '../components/RequestersTable';
+import { RequesterModal } from '../components/RequesterModal';
 
 export const UsersPage = () => {
   const { user: currentUser, hasPermission } = useAuth();
+  
+  const [activeTab, setActiveTab] = useState<'users' | 'requesters'>('users');
+  
   const [users, setUsers] = useState<User[]>([]);
+  const [requesters, setRequesters] = useState<Requester[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showInactive, setShowInactive] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Modals state
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  
+  const [isRequesterModalOpen, setIsRequesterModalOpen] = useState(false);
+  const [selectedRequester, setSelectedRequester] = useState<Requester | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -26,9 +41,27 @@ export const UsersPage = () => {
     }
   };
 
+  const fetchRequesters = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getRequesters();
+      setRequesters(data);
+    } catch (error) {
+      console.error('Error fetching requesters', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (activeTab === 'users') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchUsers();
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchRequesters();
+    }
+  }, [activeTab]);
 
   const handleCreate = async (data: any) => {
     await createUser(data);
@@ -46,10 +79,34 @@ export const UsersPage = () => {
     await fetchUsers();
   };
 
-  const handleOpenCreate = () => {
-    setSelectedUser(null);
-    setIsModalOpen(true);
+  const handleDeleteRequester = async (id: string) => {
+    await deleteRequester(id);
+    await fetchRequesters();
   };
+
+  const handleOpenCreateUser = () => {
+    setSelectedUser(null);
+    setIsUserModalOpen(true);
+  };
+
+  const handleOpenCreateRequester = () => {
+    setSelectedRequester(null);
+    setIsRequesterModalOpen(true);
+  };
+
+  let filteredUsers = [...users];
+  
+  if (!showInactive) {
+    filteredUsers = filteredUsers.filter(u => u.is_active);
+  }
+
+  if (searchTerm.trim() !== '') {
+    const term = searchTerm.toLowerCase();
+    filteredUsers = filteredUsers.filter(u => u.name.toLowerCase().includes(term));
+  }
+
+  const roleValue = { 'ADMINISTRADOR': 3, 'GESTIONADOR': 2, 'TECNICO': 1 };
+  filteredUsers.sort((a, b) => (roleValue[b.role as keyof typeof roleValue] || 0) - (roleValue[a.role as keyof typeof roleValue] || 0));
 
   return (
     <>
@@ -59,12 +116,12 @@ export const UsersPage = () => {
             <Users size={32} className="text-blue-800" />
             Directorio de Personal
           </h1>
-          <p className="text-slate-500 mt-1">Gestiona técnicos dark:text-slate-300, gestionadores y administradores del sistema.</p>
+          <p className="text-slate-500 dark:text-slate-300 mt-1">Gestiona técnicos, gestionadores y administradores del sistema.</p>
         </div>
         
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <button 
-            onClick={fetchUsers}
+            onClick={activeTab === 'users' ? fetchUsers : fetchRequesters}
             className="p-2.5 text-slate-500 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors shadow-sm"
             title="Actualizar"
           >
@@ -73,37 +130,97 @@ export const UsersPage = () => {
           
           {hasPermission('MANAGE_USERS') && (
             <button 
-              onClick={handleOpenCreate}
+              onClick={activeTab === 'users' ? handleOpenCreateUser : handleOpenCreateRequester}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow-sm shadow-emerald-700/20 transition-colors"
             >
               <Plus size={18} />
-              Nuevo Usuario
+              {activeTab === 'users' ? 'Nuevo Usuario' : 'Nuevo Solicitante'}
             </button>
           )}
         </div>
       </div>
 
-      {isLoading && users.length === 0 ? (
+      <div className="flex border-b border-slate-200 mb-6">
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`px-6 py-3 font-medium text-sm transition-colors relative ${activeTab === 'users' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          Personal Interno
+          {activeTab === 'users' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />}
+        </button>
+        <button
+          onClick={() => setActiveTab('requesters')}
+          className={`px-6 py-3 font-medium text-sm transition-colors relative ${activeTab === 'requesters' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          Catálogo de Solicitantes
+          {activeTab === 'requesters' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />}
+        </button>
+      </div>
+
+      {isLoading && ((activeTab === 'users' && users.length === 0) || (activeTab === 'requesters' && requesters.length === 0)) ? (
         <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-slate-100 shadow-sm">
           <RefreshCw size={32} className="animate-spin text-blue-800 mb-4" />
-          <p className="text-slate-500 font-medium">Cargando personal...</p>
+          <p className="text-slate-500 font-medium">Cargando...</p>
         </div>
+      ) : activeTab === 'users' ? (
+        <>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+            <div className="relative w-full sm:w-72">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Buscar por nombre..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 w-full bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all"
+              />
+            </div>
+            <button
+              onClick={() => setShowInactive(!showInactive)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors border shadow-sm ${
+                showInactive 
+                  ? 'bg-slate-800 text-white border-slate-700 hover:bg-slate-700' 
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {showInactive ? <EyeOff size={16} /> : <Eye size={16} />}
+              {showInactive ? 'Ocultar Inactivos' : 'Ver Inactivos'}
+            </button>
+          </div>
+          <UsersTable 
+            users={filteredUsers} 
+            onRowClick={hasPermission('MANAGE_USERS') ? (u) => {
+              setSelectedUser(u);
+              setIsUserModalOpen(true);
+            } : undefined}
+          />
+        </>
       ) : (
-        <UsersTable 
-          users={users} 
-          onRowClick={hasPermission('MANAGE_USERS') ? (u) => {
-            setSelectedUser(u);
-            setIsModalOpen(true);
-          } : undefined}
+        <RequestersTable 
+          requesters={requesters}
+          onEdit={hasPermission('MANAGE_USERS') ? (r) => {
+            setSelectedRequester(r);
+            setIsRequesterModalOpen(true);
+          } : () => {}}
+          onDelete={hasPermission('MANAGE_USERS') ? handleDeleteRequester : () => {}}
         />
       )}
 
       <UserModal 
         user={selectedUser}
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+        isOpen={isUserModalOpen} 
+        onClose={() => setIsUserModalOpen(false)} 
         onSubmit={selectedUser ? handleUpdate : handleCreate}
         onDelete={handleDelete}
+      />
+
+      <RequesterModal
+        isOpen={isRequesterModalOpen}
+        onClose={() => setIsRequesterModalOpen(false)}
+        requester={selectedRequester}
+        onSuccess={fetchRequesters}
       />
     </>
   );

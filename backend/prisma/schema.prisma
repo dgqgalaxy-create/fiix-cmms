@@ -85,6 +85,15 @@ model User {
   notifications   AppNotification[]
 }
 
+model Requester {
+  id          String      @id @default(uuid()) @db.Uuid
+  name        String      @unique
+  email       String?
+  department  String?
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+}
+
 model Zone {
   id          String      @id @default(uuid()) @db.Uuid
   name        String      @unique

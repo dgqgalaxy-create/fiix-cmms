@@ -59,7 +59,7 @@ export const MaintenancePlansPage = () => {
             <CalendarClock className="text-blue-600" />
             Mantenimiento Preventivo
           </h1>
-          <p className="text-slate-500 text-sm mt-1">Configura rutinas automáticas dark:text-slate-300 para tus equipos.</p>
+          <p className="text-slate-500 dark:text-slate-300 text-sm mt-1">Configura rutinas automáticas para tus equipos.</p>
         </div>
         <button 
           onClick={handleCreate}

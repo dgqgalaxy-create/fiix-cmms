@@ -46,6 +46,7 @@ export const Dashboard = () => {
   
   const [summaryStartDate, setSummaryStartDate] = useState<string>('');
   const [summaryEndDate, setSummaryEndDate] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'NEWEST' | 'OLDEST' | 'PRIORITY'>('NEWEST');
 
   const totalRecibidas = Object.entries(summary || {}).reduce((acc, [key, val]) => {
     if (key !== 'ANULADO') return acc + (val || 0);
@@ -176,7 +177,6 @@ export const Dashboard = () => {
     fetchWorkOrders();
 
     const handleRefresh = () => {
-      console.log('[Socket.io] Actualización en tiempo real recibida para órdenes de trabajo');
       fetchWorkOrders(true);
     };
 
@@ -296,6 +296,16 @@ export const Dashboard = () => {
       });
     }
 
+    // Ordenamiento explícito
+    if (sortOrder === 'NEWEST') {
+      list.sort((a, b) => (b.folio || 0) - (a.folio || 0));
+    } else if (sortOrder === 'OLDEST') {
+      list.sort((a, b) => (a.folio || 0) - (b.folio || 0));
+    } else if (sortOrder === 'PRIORITY') {
+      const pMap: Record<string, number> = { URGENTE: 3, NORMAL: 2, BAJO: 1 };
+      list.sort((a, b) => (pMap[b.priority] || 0) - (pMap[a.priority] || 0));
+    }
+
     return list;
   };
 
@@ -345,7 +355,7 @@ export const Dashboard = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 print:hidden">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Órdenes de Trabajo</h1>
-          <p className="text-slate-500 mt-1">Gestiona y haz seguimiento dark:text-slate-300 del mantenimiento.</p>
+          <p className="text-slate-500 dark:text-slate-300 mt-1">Gestiona y haz seguimiento del mantenimiento.</p>
         </div>
         
         <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -680,6 +690,16 @@ export const Dashboard = () => {
               {uniqueAssets.map(asset => (
                 <option key={asset} value={asset}>{asset}</option>
               ))}
+            </select>
+
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as any)}
+              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
+            >
+              <option value="NEWEST">Más recientes primero</option>
+              <option value="OLDEST">Más antiguos primero</option>
+              <option value="PRIORITY">Por prioridad (Urgentes)</option>
             </select>
 
             {(dateFilter !== 'ALL' || priorityFilter !== 'ALL' || assetFilter !== 'ALL' || searchTerm !== '' || statusFilter !== null) && (

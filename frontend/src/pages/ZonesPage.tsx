@@ -5,16 +5,12 @@ import { useAuth } from '../context/AuthContext';
 import { Plus, Trash2, MapPin, Loader2 } from 'lucide-react';
 
 export const ZonesPage = () => {
-  const { user, hasPermission } = useAuth();
+  const { hasPermission } = useAuth();
   const [zones, setZones] = useState<Zone[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [newZoneName, setNewZoneName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    fetchZones();
-  }, []);
 
   const fetchZones = async () => {
     try {
@@ -28,6 +24,10 @@ export const ZonesPage = () => {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchZones();
+  }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

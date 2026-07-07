@@ -25,7 +25,7 @@ import { UserManual } from './pages/UserManual';
 function App() {
   useEffect(() => {
     const handleOnline = async () => {
-      console.log('App is back online, syncing requests...');
+      // App is back online, syncing requests...
       const requests = await getOfflineRequests();
       for (const req of requests) {
         try {
@@ -38,7 +38,7 @@ function App() {
             data: req.body,
           });
           await removeOfflineRequest(req.id);
-          console.log(`Synced offline request ${req.id}`);
+          // Synced offline request
         } catch (error) {
           console.error(`Failed to sync offline request ${req.id}`, error);
         }

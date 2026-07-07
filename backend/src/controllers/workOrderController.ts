@@ -127,6 +127,14 @@ export const createPublicWorkOrder = async (req: Request, res: Response): Promis
       return;
     }
 
+    if (requester_name) {
+      const nameTrimmed = requester_name.trim();
+      const existingReq = await prisma.requester.findUnique({ where: { name: nameTrimmed } });
+      if (!existingReq) {
+        await prisma.requester.create({ data: { name: nameTrimmed } });
+      }
+    }
+
     const newWorkOrder = await prisma.workOrder.create({
       data: {
         title,
@@ -149,6 +157,7 @@ export const createPublicWorkOrder = async (req: Request, res: Response): Promis
 
     const io = getIO();
     io.emit('new_work_order', newWorkOrder);
+    io.emit('refresh_work_orders');
     
     // Disparar notificaciones
     await triggerNewWorkOrderNotification(newWorkOrder);
@@ -179,6 +188,14 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
     
     if (files && files['request_image']) {
       request_image_url = `/uploads/${files['request_image'][0].filename}`;
+    }
+
+    if (requester_name) {
+      const nameTrimmed = requester_name.trim();
+      const existingReq = await prisma.requester.findUnique({ where: { name: nameTrimmed } });
+      if (!existingReq) {
+        await prisma.requester.create({ data: { name: nameTrimmed } });
+      }
     }
 
     const newWorkOrder = await prisma.workOrder.create({

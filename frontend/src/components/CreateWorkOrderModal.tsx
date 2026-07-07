@@ -6,7 +6,9 @@ import { getZones } from '../api/zones';
 import type { Zone } from '../api/zones';
 import { getUsers } from '../api/users';
 import type { User } from '../api/users';
-import { getUniqueRequesters } from '../api/workOrders';
+import { getRequesters } from '../api/requesters';
+import type { Requester } from '../api/requesters';
+import { RequesterModal } from './RequesterModal';
 
 interface Props {
   isOpen: boolean;
@@ -30,7 +32,8 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
-  const [requesters, setRequesters] = useState<string[]>([]);
+  const [requesters, setRequesters] = useState<Requester[]>([]);
+  const [isAddRequesterOpen, setIsAddRequesterOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -50,7 +53,7 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
         getAssets(),
         getUsers('TECNICO'),
         getZones(),
-        getUniqueRequesters()
+        getRequesters()
       ]);
       setAssets(assetsData);
       setTechnicians(techsData);
@@ -262,22 +265,27 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del Solicitante</label>
-                <input
-                  type="text"
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-sm font-medium text-slate-700">Nombre del Solicitante</label>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddRequesterOpen(true)}
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                  >
+                    + Nuevo
+                  </button>
+                </div>
+                <select
                   required
-                  list="users-list"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all"
-                  placeholder="Ej: Juan Pérez"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
                   value={requesterName}
                   onChange={(e) => setRequesterName(e.target.value)}
-                  autoComplete="off"
-                />
-                <datalist id="users-list">
-                  {requesters.map((reqName) => (
-                    <option key={reqName} value={reqName} />
+                >
+                  <option value="" disabled>Selecciona un solicitante</option>
+                  {requesters.map((req) => (
+                    <option key={req.id} value={req.name}>{req.name}</option>
                   ))}
-                </datalist>
+                </select>
               </div>
 
               <div>
@@ -400,6 +408,17 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
           </button>
         </div>
       </div>
+
+      <RequesterModal 
+        isOpen={isAddRequesterOpen}
+        onClose={() => setIsAddRequesterOpen(false)}
+        onSuccess={async (name) => {
+          // Recargar la lista y seleccionarlo automáticamente
+          const data = await getRequesters();
+          setRequesters(data);
+          setRequesterName(name);
+        }}
+      />
     </div>
   );
 };

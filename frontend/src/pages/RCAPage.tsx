@@ -159,7 +159,7 @@ export const RCAPage = () => {
             <GitBranch className="text-blue-600" />
             Árbol de Fallas (RCA)
           </h1>
-          <p className="text-slate-500 mt-1">Configura las categorías dark:text-slate-300 para el Análisis de Causa Raíz.</p>
+          <p className="text-slate-500 dark:text-slate-300 mt-1">Configura las categorías para el Análisis de Causa Raíz.</p>
         </div>
       </div>
 

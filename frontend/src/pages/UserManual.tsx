@@ -93,12 +93,85 @@ export const UserManual = () => {
                   <span className="px-3 py-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded-full text-sm font-medium">EN ESPERA</span>
                   <span className="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full text-sm font-medium">FINALIZADO</span>
                 </div>
-                <p className="mt-3">El estado "EN ESPERA" se usa comúnmente cuando faltan refacciones o se requiere un paro de máquina.</p>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-8 mb-3">3. Filtros y Organización (Novedad v1.7.0)</h3>
+                <p>Las órdenes se recargan automáticamente y en tiempo real si son creadas desde el portal público. Además, puedes utilizar los filtros superiores para ordenarlas:</p>
+                <ul className="list-disc pl-5 space-y-2 mt-3">
+                  <li><strong>Más recientes primero:</strong> Muestra los folios más nuevos en la parte superior.</li>
+                  <li><strong>Más antiguos primero:</strong> Prioriza los folios más rezagados o viejos.</li>
+                  <li><strong>Por Prioridad:</strong> Coloca hasta arriba las órdenes marcadas como urgentes.</li>
+                </ul>
               </div>
             )}
 
-            {/* Default fallback for other sections */}
-            {activeSection !== 'intro' && activeSection !== 'dashboard' && (
+            {activeSection === 'roles' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">Roles y Permisos</h2>
+                <p>Esta sección permite a los Administradores controlar exactamente qué puede y no puede hacer cada nivel de usuario en el CMMS.</p>
+                
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-8 mb-3">Autoguardado en Tiempo Real (Novedad v1.7.0)</h3>
+                <p>Ya no es necesario buscar un botón de "Guardar". Simplemente enciende o apaga el interruptor del permiso que desees cambiar.</p>
+                <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 p-4 rounded-xl mt-4">
+                  <p className="text-emerald-800 dark:text-emerald-300">
+                    Al encender o apagar un permiso, aparecerá un pequeño círculo de carga junto al nombre del Rol. Esto indica que tu configuración ha sido guardada permanentemente en el servidor.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {activeSection === 'users' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">Gestión de Personal</h2>
+                <p>El directorio se divide en dos grandes áreas para evitar mezclar al personal interno con quienes únicamente hacen reportes.</p>
+
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Personal Interno vs Catálogo de Solicitantes</h3>
+                <ul className="list-disc pl-5 space-y-2 mt-3">
+                  <li><strong>Personal Interno:</strong> Técnicos, gestionadores y administradores con usuario y contraseña para operar el sistema.</li>
+                  <li><strong>Catálogo de Solicitantes:</strong> Personal general que solo levanta reportes mediante el portal público y de los que solo llevamos un registro de contacto.</li>
+                </ul>
+
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-8 mb-3">Búsqueda y Filtros</h3>
+                <p>Utiliza la barra de búsqueda superior para encontrar técnicos por su nombre. La tabla ordena a los usuarios por jerarquía automáticamente (Administradores hasta arriba).</p>
+
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-8 mb-3">Dar de Baja vs Eliminar</h3>
+                <p><strong>Por integridad de datos</strong>, no puedes eliminar a un usuario que ya ha trabajado en órdenes o movido inventario. En su lugar, debes Editarlo y desmarcar la casilla de "Usuario Activo" para darle de baja. Podrás seguir viendo su historial presionando el botón "Ver Inactivos".</p>
+              </div>
+            )}
+
+            {activeSection === 'inventory' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">Inventario y Compras</h2>
+                <p>Mantén un control estricto de las refacciones, herramientas y consumibles de la planta.</p>
+
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Catálogo de Refacciones</h3>
+                <p>Aquí puedes dar de alta cada pieza, especificando su número de parte, ubicación en almacén (ej. Estante A3), marca y cantidad disponible. El sistema te alertará visualmente cuando el stock baje de su nivel mínimo para que prevengas desabastos.</p>
+
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-8 mb-3">Movimientos de Inventario</h3>
+                <p>Cada vez que un técnico consume una pieza para una orden de trabajo, el stock se descuenta automáticamente y queda un registro histórico exacto de quién, cuándo y en qué orden de trabajo se utilizó la refacción.</p>
+
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-8 mb-3">Órdenes de Compra (Próximamente)</h3>
+                <p className="text-slate-500 italic">El módulo integral de compras digitales (POs) se encuentra en fase de desarrollo según el Roadmap oficial del proyecto.</p>
+              </div>
+            )}
+
+            {activeSection === 'assets' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">Gestión de Activos</h2>
+                <p>El catálogo de activos representa toda la maquinaria, vehículos y equipos que reciben mantenimiento en tu empresa.</p>
+
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Estructura del Activo</h3>
+                <p>Al crear un activo, asegúrate de proporcionar su código o identificador interno único, nombre claro y a qué zona pertenece. Esto es vital para que las métricas de Costos y Tiempo Medio de Reparación (MTTR) se calculen con exactitud.</p>
+
+                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 p-4 rounded-xl mt-4">
+                  <h3 className="font-bold text-blue-800 dark:text-blue-300 mb-2">📸 Códigos QR y Trazabilidad</h3>
+                  <p className="text-blue-700 dark:text-blue-400/80">
+                    Al visualizar los detalles de un activo, el sistema genera automáticamente un Código QR. Puedes imprimir este código y pegarlo físicamente en la máquina. Posteriormente, los técnicos pueden usar la cámara de su dispositivo móvil para escanear el QR y abrir al instante el historial de fallas y detalles de esa máquina.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Default fallback for other sections (if any in the future) */}
+            {activeSection !== 'intro' && activeSection !== 'dashboard' && activeSection !== 'roles' && activeSection !== 'users' && activeSection !== 'inventory' && activeSection !== 'assets' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col items-center justify-center text-center py-20">
                 <Wrench size={48} className="text-slate-300 dark:text-slate-600 mb-4" />
                 <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">Sección en Construcción</h2>

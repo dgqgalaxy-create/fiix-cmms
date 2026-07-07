@@ -11,9 +11,9 @@ export const socket: Socket = io(BACKEND_URL, {
 });
 
 socket.on('connect', () => {
-  console.log('[Socket.io] Conectado al servidor en tiempo real');
+  // Conectado al servidor en tiempo real
 });
 
 socket.on('disconnect', () => {
-  console.log('[Socket.io] Desconectado del servidor');
+  // Desconectado del servidor
 });

@@ -48,12 +48,11 @@ router.get('/assets', async (req, res) => {
 
 router.get('/requesters', async (req, res) => {
   try {
-    const requesters = await prisma.workOrder.findMany({
-      where: { requester_name: { not: null } },
-      select: { requester_name: true },
-      distinct: ['requester_name']
+    const requesters = await prisma.requester.findMany({
+      orderBy: { name: 'asc' },
+      select: { name: true }
     });
-    const names = requesters.map(r => r.requester_name).filter(Boolean);
+    const names = requesters.map(r => r.name);
     res.json(names);
   } catch (error) {
     res.status(500).json({ error: 'Error fetching requesters' });

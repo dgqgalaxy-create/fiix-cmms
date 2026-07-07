@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.6.0";
+export const APP_VERSION = "1.7.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "06 de Julio, 2026";
+  const updateDate = "07 de Julio, 2026";
   const modules = [
     "Panel Principal (Dashboard)",
     "Gestión de Activos (Equipos)",
@@ -20,15 +20,17 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Planes Preventivos",
     "Módulo de Compras",
     "Zonas y Permisos",
+    "Directorio y Solicitantes",
     "KPIs y Metas",
     "Opciones de Desarrollador"
   ];
   const changelog = [
-    "Soporte Offline Completo (PWA) con cola de sincronización IndexedDB.",
-    "Restauración y mejora del módulo Opciones de Desarrollador protegidas por contraseña.",
-    "Ajuste visual del Calendario (altura completa adaptable al monitor).",
-    "Correcciones globales al Modo Oscuro (legibilidad de textos grises).",
-    "Navegación del Manual de Usuario mejorada con retroceso en historial."
+    "Optimización de código base (eliminación de Dead Code).",
+    "Remoción de logs de depuración (Mejora de seguridad y rendimiento).",
+    "Correcciones visuales en subtítulos filtrados (CSS residual).",
+    "Filtros avanzados y ocultamiento de inactivos en Directorio.",
+    "Autoguardado en tiempo real para Configuración de Permisos.",
+    "Actualización silenciosa de OTs vía WebSockets."
   ];
 
   return (

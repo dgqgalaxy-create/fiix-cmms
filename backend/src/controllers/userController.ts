@@ -95,7 +95,7 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
   } catch(error: any) {
     console.error('Error deleting user:', error);
     if (error.code === 'P2003') {
-       res.status(400).json({ error: 'No se puede eliminar el usuario porque tiene órdenes de trabajo asociadas. Mantén su cuenta activa o cambia su rol.' });
+       res.status(400).json({ error: 'No es posible eliminar el usuario debido a que tiene registros ligados (órdenes de trabajo o movimientos de inventario). Por favor, dalo de baja marcándolo como Inactivo.' });
        return;
     }
     res.status(500).json({ error: 'Error al eliminar usuario' });

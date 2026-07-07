@@ -49,7 +49,8 @@ export const PermissionsPage = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const handleToggle = (role: string, permKey: string, currentValue: boolean) => {
+  const handleToggle = async (role: string, permKey: string, currentValue: boolean) => {
+    // 1. Actualización optimista de UI
     setRolePermissions(prev => 
       prev.map(rp => {
         if (rp.role === role) {
@@ -64,21 +65,23 @@ export const PermissionsPage = () => {
         return rp;
       })
     );
-  };
 
-  const handleSave = async (role: string) => {
+    // 2. Guardar en backend
+    const rp = rolePermissions.find(r => r.role === role);
+    if (!rp) return;
+
+    const newPermissions = {
+      ...rp.permissions,
+      [permKey]: !currentValue
+    };
+
     try {
       setSavingRole(role);
       setError('');
-      setSuccessMsg('');
-      const rp = rolePermissions.find(r => r.role === role);
-      if (!rp) return;
-
-      await updateRolePermissions(role, rp.permissions);
-      setSuccessMsg(`Permisos actualizados para el rol: ${role}`);
-      setTimeout(() => setSuccessMsg(''), 3000);
+      await updateRolePermissions(role, newPermissions);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al guardar los permisos.');
+      setError(err.response?.data?.error || 'Error al guardar los permisos. Recargando...');
+      fetchPermissions(); // Revertir en caso de error
     } finally {
       setSavingRole(null);
     }
@@ -120,18 +123,10 @@ export const PermissionsPage = () => {
         {rolePermissions.map((rp) => (
           <div key={rp.role} className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
             <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 flex justify-between items-center gap-3">
-              <div className="min-w-0">
+              <div className="min-w-0 flex items-center gap-3">
                 <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 truncate" title={rp.role}>{rp.role}</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Configuración de acceso</p>
+                {savingRole === rp.role && <Loader2 size={16} className="animate-spin text-indigo-600" />}
               </div>
-              <button
-                onClick={() => handleSave(rp.role)}
-                disabled={savingRole === rp.role}
-                className="px-3 sm:px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl flex items-center gap-2 transition-colors disabled:opacity-70 flex-shrink-0"
-              >
-                {savingRole === rp.role ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                Guardar
-              </button>
             </div>
             <div className="p-2 flex-1">
               {AVAILABLE_PERMISSIONS.map((perm) => {

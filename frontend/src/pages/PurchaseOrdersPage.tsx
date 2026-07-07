@@ -68,7 +68,7 @@ export const PurchaseOrdersPage = () => {
             <ShoppingCart className="text-indigo-600" size={28} />
             Órdenes de Compra
           </h1>
-          <p className="text-slate-500 mt-1">Gestiona los pedidos dark:text-slate-300 de refacciones a proveedores</p>
+          <p className="text-slate-500 dark:text-slate-300 mt-1">Gestiona los pedidos de refacciones a proveedores</p>
         </div>
         
         <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3">

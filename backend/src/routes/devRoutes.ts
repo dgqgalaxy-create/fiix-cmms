@@ -35,7 +35,7 @@ const verifyDevPassword = async (req: Request, res: Response, next: express.Next
     for (const admin of admins) {
       if (!admin.password_hash) continue;
       const match = await bcrypt.compare(password, admin.password_hash);
-      console.log(`[DEV VERIFY] Comparing with admin ${admin.email}, match: ${match}`);
+      // DEV VERIFY
       if (match) {
         isValid = true;
         break;
@@ -43,7 +43,7 @@ const verifyDevPassword = async (req: Request, res: Response, next: express.Next
     }
 
     if (!isValid) {
-      console.log(`[DEV VERIFY] Invalid password`);
+      // DEV VERIFY Invalid
       res.status(401).json({ message: 'Contraseña de administrador incorrecta.' });
       return;
     }

@@ -80,16 +80,17 @@ export const InventoryPage = () => {
     fetchData();
 
     const handleRefresh = () => {
-      console.log('[Socket.io] Actualización en tiempo real recibida para inventario');
       fetchData(true);
     };
 
+    socket.on('inventory_updated', handleRefresh);
     socket.on('refresh_inventory', handleRefresh);
 
     return () => {
+      socket.off('inventory_updated', handleRefresh);
       socket.off('refresh_inventory', handleRefresh);
     };
-  }, []);
+  }, [hasPermission]);
 
   // Handle URL parameters (filters)
   useEffect(() => {
@@ -687,7 +688,7 @@ export const InventoryPage = () => {
               </div>
             )}
           </div>
-          <p className="text-slate-500 mt-2">Gestiona repuestos dark:text-slate-300, movimientos y catálogos.</p>
+          <p className="text-slate-500 dark:text-slate-300 mt-2">Gestiona repuestos, movimientos y catálogos.</p>
         </div>
 
         <div className="flex items-center gap-3 w-full md:w-auto">
