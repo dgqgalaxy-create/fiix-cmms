@@ -39,10 +39,10 @@ export const UserManual = () => {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col md:flex-row h-[calc(100vh-180px)]">
+      <div className="flex flex-col md:flex-row gap-6 mt-4">
         
         {/* Sidebar de navegación */}
-        <div className="w-full md:w-72 bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0">
+        <div className="w-full md:w-72 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col shrink-0 h-fit sticky top-24">
           <div className="p-5 border-b border-slate-200 dark:border-slate-800">
             <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Temario de Ayuda</h3>
           </div>
@@ -65,7 +65,7 @@ export const UserManual = () => {
         </div>
 
         {/* Contenido Principal */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-12 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900">
+        <div className="flex-1 text-slate-700 dark:text-slate-300">
           <div className="max-w-4xl mx-auto space-y-10 pb-12">
             
             {activeSection === 'intro' && (
