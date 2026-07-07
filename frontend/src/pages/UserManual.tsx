@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Search, Menu, Wrench, Users, Shield, Package, LayoutDashboard, ArrowLeft } from 'lucide-react';
+import { BookOpen, Search, Menu, Wrench, Users, Shield, Package, LayoutDashboard, ArrowLeft, Terminal } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const SECTIONS = [
   { id: 'intro', title: 'Introducción', icon: <BookOpen size={18} /> },
@@ -16,6 +17,12 @@ const SECTIONS = [
 export const UserManual = () => {
   const [activeSection, setActiveSection] = useState('intro');
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const sections = [...SECTIONS];
+  if (user?.role === 'ADMINISTRADOR') {
+    sections.push({ id: 'dev', title: 'Opciones de Desarrollador', icon: <Terminal size={18} /> });
+  }
 
   return (
     <div className="h-full flex flex-col space-y-4">
@@ -37,7 +44,7 @@ export const UserManual = () => {
         {/* Sidebar de navegación */}
         <div className="w-full md:w-64 bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0">
           <div className="flex-1 overflow-y-auto p-4 space-y-1">
-            {SECTIONS.map((sec) => (
+            {sections.map((sec) => (
               <button
                 key={sec.id}
                 onClick={() => setActiveSection(sec.id)}
@@ -199,8 +206,33 @@ export const UserManual = () => {
               </div>
             )}
 
+            {activeSection === 'dev' && user?.role === 'ADMINISTRADOR' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <Terminal className="text-red-600 dark:text-red-400" size={32} />
+                  <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Opciones de Desarrollador</h2>
+                </div>
+                
+                <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 p-4 rounded-xl">
+                  <h3 className="font-bold text-red-800 dark:text-red-300 mb-2">⚠️ Área Crítica</h3>
+                  <p className="text-red-700 dark:text-red-400/90 text-sm">Esta sección es exclusiva para el personal técnico administrador del sistema. Las acciones aquí son destructivas.</p>
+                </div>
+
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Vaciar Base de Datos</h3>
+                <p>El botón de "Vaciar Base de Datos" es un <strong>Borrado Absoluto e Irreversible</strong>. Al ejecutarlo (escribiendo la palabra ELIMINAR), el sistema realizará un TRUNCATE en cascada en el servidor.</p>
+                
+                <ul className="list-disc pl-5 space-y-2 mt-3 text-slate-600 dark:text-slate-400">
+                  <li>Se borrarán inventarios, histórico de órdenes, usuarios, roles personalizados, festivos, checklists, zonas y métricas. Todo.</li>
+                  <li>Inmediatamente perderás tu sesión y serás expulsado al Login.</li>
+                  <li>Para evitar que el sistema quede inoperable, se auto-generará un usuario de emergencia (`admin` / `password123`).</li>
+                </ul>
+
+                <p className="mt-4"><strong>¿Cuándo usarlo?</strong> Únicamente si acabas de descargar un respaldo JSON (Exportar) y deseas limpiar para volver a importarlo, o si vas a hacer el arranque oficial de la planta y necesitas borrar toda la basura de las pruebas (teniendo en cuenta que deberás repoblar el catálogo de refacciones por consola).</p>
+              </div>
+            )}
+
             {/* Default fallback for other sections (if any in the future) */}
-            {activeSection !== 'intro' && activeSection !== 'dashboard' && activeSection !== 'roles' && activeSection !== 'users' && activeSection !== 'inventory' && activeSection !== 'assets' && activeSection !== 'checklists' && activeSection !== 'roster' && (
+            {activeSection !== 'intro' && activeSection !== 'dashboard' && activeSection !== 'roles' && activeSection !== 'users' && activeSection !== 'inventory' && activeSection !== 'assets' && activeSection !== 'checklists' && activeSection !== 'roster' && activeSection !== 'dev' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col items-center justify-center text-center py-20">
                 <Wrench size={48} className="text-slate-300 dark:text-slate-600 mb-4" />
                 <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">Sección en Construcción</h2>
