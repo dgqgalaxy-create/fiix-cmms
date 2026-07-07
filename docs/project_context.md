@@ -9,18 +9,27 @@ Un Sistema Computarizado de Gestión de Mantenimiento (CMMS / GMAO) de clase mun
 - **Automatización:** Minimizar clics (autocompletado de imágenes web, alertas de stock crítico automáticas).
 
 ## Módulos Desarrollados (Completados)
-1. **Autenticación y Usuarios:** Roles (Admin, Gestionador, Técnico).
-2. **Dashboard de Inicio:** KPIs en tiempo real (Órdenes abiertas, stock crítico, activos inactivos).
-3. **Gestión de Activos:** Catálogo de máquinas y ubicaciones jerárquicas.
-4. **Órdenes de Trabajo (WO):** Creación de reportes, firma digital, toma de fotografías, estado de "En Progreso" y asignación de técnicos.
-5. **Inventario de Repuestos:** Control de refacciones (Categorías, Ubicaciones, Proveedores).
-6. **Módulo de Reabastecimiento:** Alertas de stock crítico, paginación masiva, y generador automatizado de Órdenes de Compra en formato texto. Búsqueda inteligente de imágenes de refacciones en internet.
+1. **Autenticación y Usuarios:** Roles (Admin, Gestionador, Técnico) con matriz dinámica de permisos y autoguardado.
+2. **Dashboard de Inicio:** KPIs en tiempo real, calendario interactivo, tiempo promedio para reparar (MTTR).
+3. **Gestión de Activos:** Catálogo de máquinas, jerarquías y Zonas.
+4. **Órdenes de Trabajo (WO):**
+   - Core (creación, firma, evidencia fotográfica).
+   - *WebSockets:* Notificaciones y actualizaciones silenciosas en tiempo real del portal al técnico.
+5. **Directorio y Solicitantes:** Separación lógica entre personal interno y personal externo (solicitantes) para evitar mezclar registros.
+6. **Mantenimientos Preventivos:** Programación por calendario con CronJobs que disparan OTs automáticamente en base a fechas o frecuencias (Días, Semanas, Meses, Años).
+7. **Análisis de Causa Raíz (RCA):** Sistema de 5 Porqués para investigaciones de fallas recurrentes.
+8. **Inventario y Compras:**
+   - Control de refacciones (Categorías, Ubicaciones, Proveedores).
+   - Módulo de Reabastecimiento con alertas de stock crítico.
+   - Búsqueda inteligente de imágenes web (Puppeteer).
+9. **Portal de Reportes Públicos:** Formulario accesible sin contraseña donde los usuarios de la planta pueden escanear un código y levantar un reporte (ticket).
 
-## Estrategia de Migración de Datos (Día Cero)
-Existe una carpeta `data/` que almacena los archivos `.csv` exportados del sistema anterior (Fiix). Estos archivos alimentan al script migrador (`backend/src/seed_csv.ts`).
-**AVISO CRÍTICO PARA FUTURAS MIGRACIONES:**
-Faltan integrar los archivos base para migrar el **historial de Órdenes de Mantenimiento (Work Orders)**. Cuando el usuario provea estos archivos, se deberá alinear exhaustivamente el formato y las cabeceras del `.csv` para que sean 100% compatibles con el esquema de la base de datos actual antes de importarlos.
+## Estrategia de Migración de Datos (Completada / En Progreso)
+Los datos base de refacciones, inventario e históricos han sido integrados con éxito:
+- `seed_inventory.ts` importó las refacciones.
+- `seed_orders.ts` importó y unificó exitosamente todo el historial de Órdenes de Mantenimiento de años anteriores.
+- **Pendiente / Actual:** La carpeta `docs/` se utilizará exclusivamente para albergar documentos de referencia (PDFs, manuales, requerimientos como formatos físicos) que dictarán las reglas de negocio, como el "Check list diario.pdf".
 
 ## Tecnologías
-- **Frontend:** React, TypeScript, TailwindCSS, Vite, Lucide React (Íconos).
-- **Backend:** Node.js, Express, TypeScript, Prisma ORM, PostgreSQL.
+- **Frontend:** React, TypeScript, TailwindCSS, Vite, Lucide React, Socket.io-client.
+- **Backend:** Node.js, Express, TypeScript, Prisma ORM, PostgreSQL, WebSockets, Node-cron, Puppeteer.

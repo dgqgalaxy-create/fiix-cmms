@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.7.1";
+export const APP_VERSION = "1.7.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -25,6 +25,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Sincronización de Contexto de Proyecto e indexación de archivos fuente.",
     "Optimización de código base (eliminación de Dead Code).",
     "Remoción de logs de depuración (Mejora de seguridad y rendimiento).",
     "Correcciones visuales en subtítulos filtrados (CSS residual).",

@@ -3,7 +3,10 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 07 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.7.1 (Lanzamiento: 07 de Julio de 2026)
+## 🚀 Versión Actual: v1.7.2 (Lanzamiento: 07 de Julio de 2026)
+
+### Novedades en v1.7.2 (Documentación)
+- **Actualización de Contexto Global:** Se renovó el documento de arquitectura para reflejar todos los módulos terminados y la convención de separación entre `data` y `docs`.
 
 ### Novedades en v1.7.1 (Mantenimiento y Optimización)
 - **Limpieza de Código (Dead Code):** Eliminación de variables no utilizadas e importaciones fantasma para optimizar memoria.
