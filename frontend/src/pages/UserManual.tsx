@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Search, Menu, Wrench, Users, Shield, Package, LayoutDashboard, ArrowLeft, Terminal } from 'lucide-react';
+import { BookOpen, Search, Menu, Wrench, Users, Shield, Package, LayoutDashboard, ArrowLeft, Terminal, AlertTriangle, CheckCircle2, Info, FileText, QrCode, Clock, Filter, Printer } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const SECTIONS = [
   { id: 'intro', title: 'Introducción', icon: <BookOpen size={18} /> },
   { id: 'dashboard', title: 'Dashboard y Órdenes', icon: <LayoutDashboard size={18} /> },
   { id: 'inventory', title: 'Inventario y Compras', icon: <Package size={18} /> },
-  { id: 'assets', title: 'Activos', icon: <Wrench size={18} /> },
+  { id: 'assets', title: 'Activos (Maquinaria)', icon: <Wrench size={18} /> },
   { id: 'roles', title: 'Roles y Permisos', icon: <Shield size={18} /> },
   { id: 'users', title: 'Gestión de Personal', icon: <Users size={18} /> },
-  { id: 'checklists', title: 'Checklist Diario', icon: <BookOpen size={18} /> },
-  { id: 'roster', title: 'Horarios y Turnos', icon: <BookOpen size={18} /> },
+  { id: 'checklists', title: 'Checklist Diario', icon: <FileText size={18} /> },
+  { id: 'roster', title: 'Horarios y Turnos', icon: <Clock size={18} /> },
 ];
 
 export const UserManual = () => {
@@ -27,31 +27,34 @@ export const UserManual = () => {
   return (
     <div className="h-full flex flex-col space-y-4">
       <div className="flex items-center gap-4">
-        <button onClick={() => navigate(-1)} className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-lg">
+        <button onClick={() => navigate(-1)} className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-lg transition-colors">
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-            <BookOpen className="text-blue-600 dark:text-blue-400" size={28} />
-            Manual de Usuario
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+            <BookOpen className="text-blue-600 dark:text-blue-400" size={32} />
+            Manual de Usuario Interactivo
           </h1>
-          <p className="text-slate-500 dark:text-slate-300 mt-1">Guía completa de uso de LPET CMMS.</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Guía completa, detallada y paso a paso para dominar LPET CMMS.</p>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col md:flex-row h-[calc(100vh-180px)]">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col md:flex-row h-[calc(100vh-180px)]">
         
         {/* Sidebar de navegación */}
-        <div className="w-full md:w-64 bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0">
+        <div className="w-full md:w-72 bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0">
+          <div className="p-5 border-b border-slate-200 dark:border-slate-800">
+            <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Temario de Ayuda</h3>
+          </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-1">
             {sections.map((sec) => (
               <button
                 key={sec.id}
                 onClick={() => setActiveSection(sec.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
+                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all text-left ${
                   activeSection === sec.id
-                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800/50'
+                    ? 'bg-blue-600 text-white shadow-md transform scale-[1.02]'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 hover:scale-[1.01]'
                 }`}
               >
                 {sec.icon}
@@ -62,181 +65,413 @@ export const UserManual = () => {
         </div>
 
         {/* Contenido Principal */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-10 text-slate-700 dark:text-slate-300">
-          <div className="max-w-3xl mx-auto space-y-8">
+        <div className="flex-1 overflow-y-auto p-6 md:p-12 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900">
+          <div className="max-w-4xl mx-auto space-y-10 pb-12">
             
             {activeSection === 'intro' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-6">
-                  <BookOpen size={32} />
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center mb-8 shadow-lg shadow-blue-500/30">
+                  <BookOpen size={40} />
                 </div>
-                <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">Bienvenido a LPET CMMS</h2>
-                <p className="text-lg leading-relaxed mb-4">
-                  El Sistema de Gestión de Mantenimiento Asistido por Computadora (CMMS) de LPET está diseñado para optimizar, organizar y dar seguimiento a todas las operaciones de mantenimiento dentro de tu planta.
-                </p>
-                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 p-4 rounded-xl mt-6">
-                  <h3 className="font-bold text-blue-800 dark:text-blue-300 mb-2">💡 Tip de Navegación</h3>
-                  <p className="text-blue-700 dark:text-blue-400/80">
-                    Utiliza la barra lateral izquierda para explorar los diferentes módulos del sistema. Si tienes el modo oscuro activado (en Configuración), la interfaz se adaptará automáticamente.
+                <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-6 tracking-tight">Bienvenido a LPET CMMS</h2>
+                
+                <div className="prose prose-slate dark:prose-invert max-w-none">
+                  <p className="text-lg leading-relaxed text-slate-600 dark:text-slate-400">
+                    El Sistema de Gestión de Mantenimiento Asistido por Computadora (CMMS) de LPET ha sido diseñado bajo tres pilares fundamentales: <strong>Rapidez, Trazabilidad y Seguridad</strong>.
+                  </p>
+                  <p className="text-lg leading-relaxed text-slate-600 dark:text-slate-400 mt-4">
+                    Nuestro objetivo es abandonar las hojas de cálculo y los formatos de papel para centralizar todas las operaciones de mantenimiento de tu planta en un entorno digital inteligente. Cada refacción, cada falla y cada técnico dejan una huella digital auditable en tiempo real.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center mb-4">
+                      <LayoutDashboard size={20} />
+                    </div>
+                    <h4 className="font-bold text-slate-900 dark:text-white mb-2">Diseño Intuitivo</h4>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Menos clics y navegación fluida. Todo está a uno o dos pasos de distancia.</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center mb-4">
+                      <Shield size={20} />
+                    </div>
+                    <h4 className="font-bold text-slate-900 dark:text-white mb-2">Datos Protegidos</h4>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Controles de permisos granulares para asegurar que cada usuario vea solo lo que le corresponde.</p>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 p-5 rounded-2xl mt-8">
+                  <h3 className="font-bold text-blue-900 dark:text-blue-300 mb-2 flex items-center gap-2">
+                    <Info size={18} /> ¿Cómo leer este manual?
+                  </h3>
+                  <p className="text-blue-800 dark:text-blue-400/90 text-sm">
+                    Utiliza la barra lateral para explorar en detalle cada rincón del sistema. Las funciones destructivas o críticas estarán marcadas en rojo para tu seguridad.
                   </p>
                 </div>
               </div>
             )}
 
             {activeSection === 'dashboard' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-                <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">Dashboard y Órdenes</h2>
-                
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-8 mb-3">1. Creación de Órdenes</h3>
-                <p>Las órdenes de trabajo son el corazón del sistema. Puedes crear órdenes Preventivas, Correctivas o Predictivas. Al crear una orden, asegúrate de:</p>
-                <ul className="list-disc pl-5 space-y-2 mt-3">
-                  <li>Asignar un nivel de prioridad real (Baja, Media, Alta, Urgente).</li>
-                  <li>Seleccionar a los técnicos correspondientes.</li>
-                  <li>Vincular el Activo correcto para mantener su historial.</li>
-                </ul>
-
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-8 mb-3">2. Cambios de Estado</h3>
-                <p>Una orden pasa por varios estados:</p>
-                <div className="flex flex-wrap gap-2 mt-3">
-                  <span className="px-3 py-1 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-full text-sm font-medium">EN PROCESO</span>
-                  <span className="px-3 py-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded-full text-sm font-medium">EN ESPERA</span>
-                  <span className="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full text-sm font-medium">FINALIZADO</span>
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+                <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
+                  <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                    <LayoutDashboard size={28} />
+                  </div>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white">Dashboard y Órdenes</h2>
                 </div>
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-8 mb-3">3. Filtros y Organización (Novedad v1.7.0)</h3>
-                <p>Las órdenes se recargan automáticamente y en tiempo real si son creadas desde el portal público. Además, puedes utilizar los filtros superiores para ordenarlas:</p>
-                <ul className="list-disc pl-5 space-y-2 mt-3">
-                  <li><strong>Más recientes primero:</strong> Muestra los folios más nuevos en la parte superior.</li>
-                  <li><strong>Más antiguos primero:</strong> Prioriza los folios más rezagados o viejos.</li>
-                  <li><strong>Por Prioridad:</strong> Coloca hasta arriba las órdenes marcadas como urgentes.</li>
-                </ul>
+
+                <div className="space-y-4">
+                  <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 w-8 h-8 rounded-full flex items-center justify-center text-sm">1</span>
+                    El Ciclo de Vida de una Orden
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-400">
+                    Las Órdenes de Trabajo (OT) son el núcleo de CMMS. Su ciclo de vida garantiza que una falla sea rastreada desde que se reporta hasta que se soluciona.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div className="border border-slate-200 dark:border-slate-700 p-4 rounded-2xl">
+                      <span className="px-3 py-1 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-full text-xs font-bold mb-3 inline-block">EN PROCESO</span>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">La orden ha sido creada y los técnicos están trabajando activamente en ella.</p>
+                    </div>
+                    <div className="border border-slate-200 dark:border-slate-700 p-4 rounded-2xl">
+                      <span className="px-3 py-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded-full text-xs font-bold mb-3 inline-block">EN ESPERA</span>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">El trabajo está pausado, usualmente esperando una refacción o autorización externa.</p>
+                    </div>
+                    <div className="border border-slate-200 dark:border-slate-700 p-4 rounded-2xl">
+                      <span className="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full text-xs font-bold mb-3 inline-block">FINALIZADO</span>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">El trabajo terminó y la máquina opera con normalidad. Requiere firma del técnico.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-4">
+                  <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
+                    Filtros y Búsquedas Avanzadas
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-400">
+                    No pierdas tiempo navegando entre páginas. El Dashboard cuenta con herramientas para encontrar exactamente la orden que necesitas.
+                  </p>
+                  <ul className="list-none space-y-3 mt-4">
+                    <li className="flex items-start gap-3">
+                      <Filter className="text-blue-500 shrink-0 mt-1" size={18} />
+                      <div>
+                        <strong className="text-slate-800 dark:text-slate-200 block">Ordenamiento Cronológico</strong>
+                        <span className="text-sm text-slate-500">Alterna entre "Más recientes primero" (para el día a día) o "Más antiguos primero" (para limpiar el rezago).</span>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Filter className="text-blue-500 shrink-0 mt-1" size={18} />
+                      <div>
+                        <strong className="text-slate-800 dark:text-slate-200 block">Filtro por Prioridad</strong>
+                        <span className="text-sm text-slate-500">Haz clic en el filtro para aislar únicamente las órdenes catalogadas como "Urgentes" o "Altas".</span>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/30 p-5 rounded-2xl mt-8 flex gap-4 items-start">
+                  <div className="p-2 bg-emerald-100 dark:bg-emerald-800 rounded-full shrink-0">
+                    <CheckCircle2 className="text-emerald-600 dark:text-emerald-300" size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-emerald-900 dark:text-emerald-300 mb-1">WebSockets: Magia en Tiempo Real</h3>
+                    <p className="text-emerald-800 dark:text-emerald-400/90 text-sm leading-relaxed">
+                      Si un operador escanea un código QR en la planta y levanta un reporte desde su celular, <strong>la orden aparecerá mágicamente en tu Dashboard sin que tengas que recargar la página</strong>. Esto es gracias a nuestra arquitectura de WebSockets bidireccionales.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeSection === 'inventory' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+                <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
+                  <div className="p-3 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl">
+                    <Package size={28} />
+                  </div>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white">Inventario y Compras</h2>
+                </div>
+
+                <p className="text-lg text-slate-600 dark:text-slate-400">
+                  Controlar el almacén de refacciones es vital para reducir los tiempos muertos (MTTR). Si la pieza no está, la máquina no produce.
+                </p>
+
+                <div className="space-y-6">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
+                      <Search className="text-amber-500" size={20} /> Catálogo Inteligente
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
+                      Cada refacción tiene un Número de Parte, Marca, Modelo y Ubicación Física (Ej. Estante A3, Nivel 2). Pero la característica estrella es su <strong>Integración Web</strong>: si dejas la imagen en blanco, nuestro motor (Puppeteer) buscará y descargará automáticamente la imagen de la refacción desde internet usando su número de parte.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
+                      <AlertTriangle className="text-rose-500" size={20} /> Alertas de Stock (Reorden)
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Al crear una refacción defines un "Stock Mínimo". Cuando los técnicos consumen piezas en sus órdenes de trabajo, el sistema resta ese inventario matemáticamente de forma automática. Si llega al mínimo, la pieza se marca en rojo intenso alertando al comprador que es momento de reabastecer.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeSection === 'assets' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+                <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
+                  <div className="p-3 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 rounded-xl">
+                    <Wrench size={28} />
+                  </div>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white">Gestión de Activos</h2>
+                </div>
+
+                <p className="text-lg text-slate-600 dark:text-slate-400">
+                  Los Activos representan las máquinas, edificios, vehículos o equipos que reciben mantenimiento. Sin un buen catálogo de activos, las métricas y los costos no tienen sentido.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200">Campos Obligatorios</h3>
+                    <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
+                      <li><strong>Código (Asset Tag):</strong> Un ID único irrepetible (Ej. M-01).</li>
+                      <li><strong>Nombre:</strong> Descripción clara de la máquina.</li>
+                      <li><strong>Zona:</strong> Área de la planta donde está ubicada (Ej. Producción Línea 1, Empaque).</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-slate-900 dark:bg-slate-950 p-6 rounded-3xl shadow-xl text-center flex flex-col items-center justify-center relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl"></div>
+                    <QrCode size={48} className="text-cyan-400 mb-4" />
+                    <h3 className="text-lg font-bold text-white mb-2">Escaneo Rápido (QR)</h3>
+                    <p className="text-sm text-slate-400">
+                      El CMMS genera un QR único para cada máquina. Imprímelo, pégalo en el chasis físico y permite que tus técnicos o solicitantes lo escaneen para abrir su expediente al instante sin teclear nada.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 
             {activeSection === 'roles' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-                <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">Roles y Permisos</h2>
-                <p>Esta sección permite a los Administradores controlar exactamente qué puede y no puede hacer cada nivel de usuario en el CMMS.</p>
-                
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-8 mb-3">Autoguardado en Tiempo Real (Novedad v1.7.0)</h3>
-                <p>Ya no es necesario buscar un botón de "Guardar". Simplemente enciende o apaga el interruptor del permiso que desees cambiar.</p>
-                <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 p-4 rounded-xl mt-4">
-                  <p className="text-emerald-800 dark:text-emerald-300">
-                    Al encender o apagar un permiso, aparecerá un pequeño círculo de carga junto al nombre del Rol. Esto indica que tu configuración ha sido guardada permanentemente en el servidor.
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+                <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
+                  <div className="p-3 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl">
+                    <Shield size={28} />
+                  </div>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white">Roles y Permisos</h2>
+                </div>
+
+                <p className="text-lg text-slate-600 dark:text-slate-400">
+                  La seguridad es primordial. El módulo de permisos te otorga control granular (casi quirúrgico) sobre lo que cada usuario puede hacer, leer, editar o eliminar.
+                </p>
+
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden mt-6">
+                  <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                    <h3 className="font-bold text-slate-800 dark:text-slate-200">Los 3 Roles Base</h3>
+                  </div>
+                  <div className="p-4 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <span className="px-3 py-1 bg-red-100 text-red-700 font-bold text-xs rounded-full min-w-[120px] text-center">ADMINISTRADOR</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Control absoluto y total del sistema.</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="px-3 py-1 bg-blue-100 text-blue-700 font-bold text-xs rounded-full min-w-[120px] text-center">GESTIONADOR</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Supervisores o Planeadores. Pueden asignar tareas y aprobar, pero no configurar el sistema.</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="px-3 py-1 bg-green-100 text-green-700 font-bold text-xs rounded-full min-w-[120px] text-center">TECNICO</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Personal de campo. Cierran órdenes, consumen inventario, pero no pueden borrar activos ni usuarios.</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 p-5 rounded-2xl mt-8">
+                  <h3 className="font-bold text-blue-900 dark:text-blue-300 mb-2 flex items-center gap-2">
+                    <CheckCircle2 size={18} /> Autoguardado Inteligente
+                  </h3>
+                  <p className="text-blue-800 dark:text-blue-400/90 text-sm">
+                    En la matriz de permisos no encontrarás un botón de "Guardar". Cada vez que enciendes (Toggle) o apagas un permiso para un rol específico, el sistema lo procesa, lo guarda en el servidor y muestra un pequeño indicador verde temporal. **Cero fricciones.**
                   </p>
                 </div>
               </div>
             )}
 
             {activeSection === 'users' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-                <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">Gestión de Personal</h2>
-                <p>El directorio se divide en dos grandes áreas para evitar mezclar al personal interno con quienes únicamente hacen reportes.</p>
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+                <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
+                  <div className="p-3 bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-600 dark:text-fuchsia-400 rounded-xl">
+                    <Users size={28} />
+                  </div>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white">Gestión de Personal</h2>
+                </div>
 
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Personal Interno vs Catálogo de Solicitantes</h3>
-                <ul className="list-disc pl-5 space-y-2 mt-3">
-                  <li><strong>Personal Interno:</strong> Técnicos, gestionadores y administradores con usuario y contraseña para operar el sistema.</li>
-                  <li><strong>Catálogo de Solicitantes:</strong> Personal general que solo levanta reportes mediante el portal público y de los que solo llevamos un registro de contacto.</li>
-                </ul>
+                <p className="text-lg text-slate-600 dark:text-slate-400">
+                  Para mantener el sistema ordenado, LPET CMMS hace una división estricta entre quienes trabajan **dentro** del sistema y quienes solo lo usan para **pedir ayuda**.
+                </p>
 
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-8 mb-3">Búsqueda y Filtros</h3>
-                <p>Utiliza la barra de búsqueda superior para encontrar técnicos por su nombre. La tabla ordena a los usuarios por jerarquía automáticamente (Administradores hasta arriba).</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  <div className="border border-slate-200 dark:border-slate-700 rounded-2xl p-6 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Personal Interno</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Tienen usuario, contraseña y un Rol (Admin, Técnico). Pueden entrar al sistema, firmar, y ejecutar comandos según su jerarquía.
+                    </p>
+                  </div>
+                  <div className="border border-slate-200 dark:border-slate-700 rounded-2xl p-6 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Solicitantes (Público)</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Operadores de máquinas o gerentes de producción que usan el portal público para levantar folios de falla. Solo guardamos su Nombre, Teléfono y Departamento.
+                    </p>
+                  </div>
+                </div>
 
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-8 mb-3">Dar de Baja vs Eliminar</h3>
-                <p><strong>Por integridad de datos</strong>, no puedes eliminar a un usuario que ya ha trabajado en órdenes o movido inventario. En su lugar, debes Editarlo y desmarcar la casilla de "Usuario Activo" para darle de baja. Podrás seguir viendo su historial presionando el botón "Ver Inactivos".</p>
-              </div>
-            )}
-
-            {activeSection === 'inventory' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-                <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">Inventario y Compras</h2>
-                <p>Mantén un control estricto de las refacciones, herramientas y consumibles de la planta.</p>
-
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Catálogo de Refacciones</h3>
-                <p>Aquí puedes dar de alta cada pieza, especificando su número de parte, ubicación en almacén (ej. Estante A3), marca y cantidad disponible. El sistema te alertará visualmente cuando el stock baje de su nivel mínimo para que prevengas desabastos.</p>
-
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-8 mb-3">Movimientos de Inventario</h3>
-                <p>Cada vez que un técnico consume una pieza para una orden de trabajo, el stock se descuenta automáticamente y queda un registro histórico exacto de quién, cuándo y en qué orden de trabajo se utilizó la refacción.</p>
-
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-8 mb-3">Órdenes de Compra (Próximamente)</h3>
-                <p className="text-slate-500 italic">El módulo integral de compras digitales (POs) se encuentra en fase de desarrollo según el Roadmap oficial del proyecto.</p>
-              </div>
-            )}
-
-            {activeSection === 'assets' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-                <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">Gestión de Activos</h2>
-                <p>El catálogo de activos representa toda la maquinaria, vehículos y equipos que reciben mantenimiento en tu empresa.</p>
-
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Estructura del Activo</h3>
-                <p>Al crear un activo, asegúrate de proporcionar su código o identificador interno único, nombre claro y a qué zona pertenece. Esto es vital para que las métricas de Costos y Tiempo Medio de Reparación (MTTR) se calculen con exactitud.</p>
-
-                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 p-4 rounded-xl mt-4">
-                  <h3 className="font-bold text-blue-800 dark:text-blue-300 mb-2">📸 Códigos QR y Trazabilidad</h3>
-                  <p className="text-blue-700 dark:text-blue-400/80">
-                    Al visualizar los detalles de un activo, el sistema genera automáticamente un Código QR. Puedes imprimir este código y pegarlo físicamente en la máquina. Posteriormente, los técnicos pueden usar la cámara de su dispositivo móvil para escanear el QR y abrir al instante el historial de fallas y detalles de esa máquina.
+                <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 p-5 rounded-2xl mt-8">
+                  <h3 className="font-bold text-amber-900 dark:text-amber-300 mb-2 flex items-center gap-2">
+                    <Shield size={18} /> Regla Anti-Borrado (Integridad Referencial)
+                  </h3>
+                  <p className="text-amber-800 dark:text-amber-400/90 text-sm">
+                    No puedes "eliminar" a un técnico si este ya firmó órdenes de trabajo o sacó refacciones en el pasado. Si lo borras, la historia quedaría sin responsable. Para solucionar esto, la mejor práctica es editar al usuario y **desmarcar la casilla de Activo**. Esto lo ocultará de las listas para asignar turnos, pero mantendrá su firma en la historia.
                   </p>
                 </div>
               </div>
             )}
 
             {activeSection === 'checklists' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-                <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">Checklist Diario</h2>
-                <p>El Checklist Diario te permite llevar un registro estructurado del estado de la maquinaria y las líneas de producción cada día.</p>
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Límite Diario</h3>
-                <p>Para evitar duplicidad y mantener un registro consolidado, <strong>el sistema solo permite crear un checklist por día</strong>. Si ya existe uno, el botón de "Crear" se ocultará y en su lugar verás la opción de "Ver Checklist de Hoy".</p>
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Evaluaciones y Observaciones</h3>
-                <p>Puedes calificar cada sistema (Mecánico, Eléctrico, etc.) como OK, NOK (No OK) o N/A (No Aplica), y añadir comentarios si detectas alguna anomalía.</p>
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+                <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
+                  <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                    <FileText size={28} />
+                  </div>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white">Checklist Diario</h2>
+                </div>
+
+                <p className="text-lg text-slate-600 dark:text-slate-400">
+                  Evaluar el estado general de las máquinas día a día previene fallas catastróficas. Este módulo digitaliza la clásica libreta de recorridos.
+                </p>
+
+                <div className="space-y-6 mt-6">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
+                      <Shield className="text-slate-500" size={20} /> Límite Estricto Diario
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                      El sistema cuenta con un seguro preventivo: <strong>solo permite un checklist general por día</strong> para toda la planta. Si el turno de la mañana ya lo hizo, el botón "Crear" se desactiva y cambia a "Ver Checklist de Hoy". Esto centraliza las observaciones y evita información duplicada.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
+                      <CheckCircle2 className="text-emerald-500" size={20} /> Evaluaciones Rápidas
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                      La interfaz es un formulario masivo donde puedes marcar rápidamente si sistemas como Lubricación, Neumática, y Eléctrica están <strong className="text-green-600">OK</strong>, <strong className="text-red-500">NOK (Falla)</strong> o N/A. Si marcas algo como NOK, tienes un campo de texto obligatorio para describir el problema detectado.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 
             {activeSection === 'roster' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-                <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">Horarios y Turnos (Roster)</h2>
-                <p>El calendario de horarios es la herramienta principal para asignar patrones de turnos (como 4x4) y gestionar excepciones del personal.</p>
-                
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Gestión de Excepciones</h3>
-                <p>Puedes registrar Vacaciones, Faltas, Tiempo Extra o Tiempo por Tiempo (TxT) de forma muy sencilla: <strong>arrastra la etiqueta</strong> desde la lista lateral directamente hacia el día correspondiente en el calendario.</p>
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+                <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
+                  <div className="p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl">
+                    <Clock size={28} />
+                  </div>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white">Horarios y Turnos (Roster)</h2>
+                </div>
 
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Días Festivos de México</h3>
-                <p>El calendario resalta de forma automática los días de asueto oficiales (Ej. 16 de Septiembre, 25 de Diciembre). Al dar clic en el día, verás un anuncio indicando la festividad.</p>
+                <p className="text-lg text-slate-600 dark:text-slate-400">
+                  Saber quién está en la planta hoy es esencial. Este módulo funciona como un calendario interactivo de la plantilla técnica.
+                </p>
 
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Impresión en PDF</h3>
-                <p>Utiliza el botón <strong>Imprimir / PDF</strong> para generar un reporte limpio del mes. El sistema ocultará los menús y la barra lateral para que el calendario ocupe toda la página de forma horizontal.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Asignación de Patrones</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      En lugar de asignar días uno por uno, puedes asignar un patrón de repetición (Ej. Turno 4x4) y el sistema generará los bloques automáticos hacia el futuro.
+                    </p>
+                  </div>
+                  
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Arrastrar y Soltar (Drag & Drop)</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      ¿Alguien faltó hoy o pidió vacaciones? Toma la etiqueta de incidencia de la barra lateral (Falta, Vacaciones, Tiempo Extra, TxT) y arrástrala sobre el día del calendario para registrarla.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-fuchsia-50 dark:bg-fuchsia-900/10 border border-fuchsia-200 dark:border-fuchsia-900/30 p-5 rounded-2xl mt-6">
+                  <h3 className="font-bold text-fuchsia-900 dark:text-fuchsia-300 mb-2 flex items-center gap-2">
+                    <BookOpen size={18} /> Días Festivos Autoprogramados
+                  </h3>
+                  <p className="text-fuchsia-800 dark:text-fuchsia-400/90 text-sm">
+                    El calendario sombrea en color morado claro e impone un borde llamativo automáticamente sobre los días festivos nacionales de México (Ej. Año Nuevo, Día del Trabajo, Grito de Dolores).
+                  </p>
+                </div>
+
+                <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-900/30 p-5 rounded-2xl mt-6">
+                  <h3 className="font-bold text-indigo-900 dark:text-indigo-300 mb-2 flex items-center gap-2">
+                    <Printer size={18} /> Impresión Inteligente PDF
+                  </h3>
+                  <p className="text-indigo-800 dark:text-indigo-400/90 text-sm mb-3">
+                    El botón "Imprimir / PDF" no solo activa la impresora de tu navegador, sino que ejecuta reglas de diseño ocultas (CSS Print Media) diseñadas para exportar:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1 text-sm text-indigo-800/80 dark:text-indigo-300/80">
+                    <li>Oculta el menú lateral, los botones y la botonera propia del calendario para no gastar tinta en "basura visual".</li>
+                    <li>Fija la altura a 650px exactos para que la vista del mes quepa perfectamente en una hoja A4 Horizontal sin salir partida a la mitad.</li>
+                    <li>Reduce inteligentemente las etiquetas (9px) para garantizar que si hay más de 8 personas en un día, quepan todos sin que se oculte ninguno tras un botón "+X más".</li>
+                  </ul>
+                </div>
               </div>
             )}
 
             {activeSection === 'dev' && user?.role === 'ADMINISTRADOR' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <Terminal className="text-red-600 dark:text-red-400" size={32} />
-                  <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Opciones de Desarrollador</h2>
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+                <div className="flex items-center gap-4 mb-6 border-b border-red-200 dark:border-red-900/50 pb-6">
+                  <div className="p-3 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl">
+                    <Terminal size={28} />
+                  </div>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white">Opciones de Desarrollador</h2>
                 </div>
                 
-                <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 p-4 rounded-xl">
-                  <h3 className="font-bold text-red-800 dark:text-red-300 mb-2">⚠️ Área Crítica</h3>
-                  <p className="text-red-700 dark:text-red-400/90 text-sm">Esta sección es exclusiva para el personal técnico administrador del sistema. Las acciones aquí son destructivas.</p>
+                <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 p-6 rounded-2xl shadow-sm">
+                  <h3 className="text-xl font-bold text-red-800 dark:text-red-300 mb-3 flex items-center gap-2">
+                    <AlertTriangle size={24} className="animate-pulse" /> El Botón Rojo Nuclear
+                  </h3>
+                  <p className="text-red-700 dark:text-red-400/90 text-sm leading-relaxed mb-4">
+                    Esta sección de sistema está encriptada detrás de una contraseña maestra por una razón. El botón <strong>"Vaciar Base de Datos"</strong> es un proceso de borrado absoluto y destructivo (TRUNCATE CASCADE).
+                  </p>
+                  
+                  <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-red-100 dark:border-red-900/20">
+                    <h4 className="font-bold text-red-900 dark:text-red-200 text-sm uppercase tracking-wider mb-3">¿Qué sucede al ejecutarlo?</h4>
+                    <ul className="space-y-3 text-sm text-red-800/80 dark:text-red-300/80">
+                      <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-red-400" size={16} /> Toda la historia (órdenes de años pasados), activos, inventario, catálogos, y configuraciones (roles, checklists, roster) se borra a nivel de disco de forma irreversible.</li>
+                      <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-red-400" size={16} /> Dado que tu usuario será eliminado, tu sesión actual se cortará abruptamente expulsándote a la pantalla de inicio de sesión.</li>
+                      <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-red-400" size={16} /> Para que el sistema no se quede bloqueado permanentemente (sin usuarios para entrar), el sistema inyecta un salvavidas final: creará un usuario administrador base (`admin` / `password123`).</li>
+                    </ul>
+                  </div>
+
+                  <div className="mt-6">
+                    <h4 className="font-bold text-red-900 dark:text-red-200 text-sm uppercase tracking-wider mb-2">Casos de Uso Aceptables</h4>
+                    <p className="text-sm text-red-800/80 dark:text-red-300/80">
+                      Utiliza este botón <strong>únicamente</strong> después de haber realizado una Exportación de Respaldo JSON si deseas limpiar la base de datos para reimportarla en limpio; o si se va a hacer el lanzamiento oficial de la aplicación y se requiere borrar toda la data de pruebas.
+                    </p>
+                  </div>
                 </div>
-
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mt-6 mb-3">Vaciar Base de Datos</h3>
-                <p>El botón de "Vaciar Base de Datos" es un <strong>Borrado Absoluto e Irreversible</strong>. Al ejecutarlo (escribiendo la palabra ELIMINAR), el sistema realizará un TRUNCATE en cascada en el servidor.</p>
-                
-                <ul className="list-disc pl-5 space-y-2 mt-3 text-slate-600 dark:text-slate-400">
-                  <li>Se borrarán inventarios, histórico de órdenes, usuarios, roles personalizados, festivos, checklists, zonas y métricas. Todo.</li>
-                  <li>Inmediatamente perderás tu sesión y serás expulsado al Login.</li>
-                  <li>Para evitar que el sistema quede inoperable, se auto-generará un usuario de emergencia (`admin` / `password123`).</li>
-                </ul>
-
-                <p className="mt-4"><strong>¿Cuándo usarlo?</strong> Únicamente si acabas de descargar un respaldo JSON (Exportar) y deseas limpiar para volver a importarlo, o si vas a hacer el arranque oficial de la planta y necesitas borrar toda la basura de las pruebas (teniendo en cuenta que deberás repoblar el catálogo de refacciones por consola).</p>
               </div>
             )}
 
-            {/* Default fallback for other sections (if any in the future) */}
+            {/* Default fallback for other sections */}
             {activeSection !== 'intro' && activeSection !== 'dashboard' && activeSection !== 'roles' && activeSection !== 'users' && activeSection !== 'inventory' && activeSection !== 'assets' && activeSection !== 'checklists' && activeSection !== 'roster' && activeSection !== 'dev' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col items-center justify-center text-center py-20">
-                <Wrench size={48} className="text-slate-300 dark:text-slate-600 mb-4" />
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col items-center justify-center text-center py-24 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+                <Wrench size={56} className="text-slate-300 dark:text-slate-600 mb-6" />
                 <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">Sección en Construcción</h2>
-                <p className="text-slate-500 dark:text-slate-400">Estamos documentando esta sección. Vuelve pronto para más detalles.</p>
+                <p className="text-slate-500 dark:text-slate-400 max-w-sm">Nuestros ingenieros de documentación están redactando esta sección. Vuelve pronto para explorar los detalles.</p>
               </div>
             )}
 
