@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import { Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
+import { APP_VERSION } from '../components/VersionModal';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
@@ -38,8 +39,8 @@ export const Login = () => {
             alt="LPET Logo" 
             className="mx-auto h-20 md:h-24 object-contain mb-4"
           />
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">
-            CMMS
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2">
+            CMMS <span className="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mt-1">v{APP_VERSION}</span>
           </h1>
           <p className="text-slate-500 mt-2">Inicia sesión para gestionar el mantenimiento</p>
         </div>
