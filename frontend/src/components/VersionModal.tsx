@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.7.3";
+export const APP_VERSION = "1.7.4";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -27,12 +27,12 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Reescritura interactiva del Manual de Usuario con UI Premium y navegación lateral.",
+    "Ocultamiento del efecto 'ventana flotante' para pantallas ultra-anchas en el manual.",
+    "Restricción de seguridad: Información de opciones destructivas (Dev) visible solo para Administradores.",
+    "Inyección dinámica de la versión de la aplicación en la pantalla de inicio de sesión.",
     "Nuevo módulo de Checklist Diario (límite de 1 por día).",
-    "Nuevo módulo de Horarios (Roster) para asignar turnos y excepciones por Drag & Drop.",
-    "Integración de Días Festivos Globales (México).",
-    "Soporte de Impresión (PDF) optimizado para el calendario de horarios.",
-    "Supresión de permisos VIEW_* para hacer los módulos públicos por defecto.",
-    "Sincronización de Contexto de Proyecto e indexación de archivos fuente."
+    "Nuevo módulo de Horarios (Roster) para asignar turnos y excepciones por Drag & Drop."
   ];
 
   return (

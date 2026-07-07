@@ -3,9 +3,15 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 07 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.7.3 (Lanzamiento: 07 de Julio de 2026)
+## 🚀 Versión Actual: v1.7.4 (Lanzamiento: 07 de Julio de 2026)
 
-### Novedades en v1.7.3 (Checklists y Horarios)
+### Novedades en v1.7.4 (Documentación y UI Premium)
+- **Manual de Usuario Interactivo:** Reescritura completa del manual con diseño de tarjetas, insignias, navegación lateral sticky, y descripciones a fondo de la lógica interna (WebSockets, alertas de reorden).
+- **Opciones de Desarrollador (Manual):** Documentación explícita sobre el "Botón Rojo" de borrado (TRUNCATE CASCADE) restringida dinámicamente a Administradores.
+- **Versión en Login:** Se inyectó dinámicamente la variable `APP_VERSION` en la pantalla de inicio de sesión.
+- **Ajustes Visuales:** Corrección del efecto "ventana flotante" en contenedores para mejor integración con el Layout principal.
+
+### Novedades Anteriores (v1.7.3 - Checklists y Horarios)
 - **Checklist Diario:** Módulo para registro de estado de máquinas, protegido a solo un checklist por día.
 - **Módulo de Horarios (Roster):** Calendario de personal con patrones de turnos y excepciones por drag & drop.
 - **Impresión Especializada:** Reglas CSS avanzadas para exportar el calendario de horarios a PDF ocultando barras y botones.
