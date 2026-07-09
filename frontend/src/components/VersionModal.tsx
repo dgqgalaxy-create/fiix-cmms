@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.7.4";
+export const APP_VERSION = "1.7.5";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "07 de Julio, 2026";
+  const updateDate = "09 de Julio, 2026";
   const modules = [
     "Panel Principal (Dashboard)",
     "Gestión de Activos (Equipos)",
@@ -27,12 +27,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Configuración dinámica de Telegram desde Opciones de Desarrollador.",
+    "Corrección en importación masiva: Auto-creación de Solicitantes al subir CSV de órdenes.",
     "Reescritura interactiva del Manual de Usuario con UI Premium y navegación lateral.",
-    "Ocultamiento del efecto 'ventana flotante' para pantallas ultra-anchas en el manual.",
-    "Restricción de seguridad: Información de opciones destructivas (Dev) visible solo para Administradores.",
-    "Inyección dinámica de la versión de la aplicación en la pantalla de inicio de sesión.",
-    "Nuevo módulo de Checklist Diario (límite de 1 por día).",
-    "Nuevo módulo de Horarios (Roster) para asignar turnos y excepciones por Drag & Drop."
+    "Restricción de seguridad: Opciones destructivas visibles solo para Administradores.",
+    "Inyección dinámica de la versión de la aplicación en la pantalla de inicio de sesión."
   ];
 
   return (
