@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import multer from 'multer';
 import { parse } from 'csv-parse/sync';
-import { UnitOfMeasure, Role, AssetStatus, WorkOrderStatus, Priority, MaintenanceType, ProductionGroup } from '@prisma/client';
+import { Role, AssetStatus, WorkOrderStatus, Priority, MaintenanceType, ProductionGroup } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const router = express.Router();
@@ -323,12 +323,28 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
       const venMap = Object.fromEntries(vendors.map(c => [c.internal_id, c.id]));
 
       const data = parse(itemFile.buffer.toString('utf8'), { columns: true, skip_empty_lines: true });
+
+      // Extraer y crear UOMs faltantes
+      const uomSet = new Set<string>();
+      for (const row of data as any[]) {
+        if (row['UOM']) {
+          uomSet.add(row['UOM'].toUpperCase());
+        }
+      }
+      
+      const existingUoms = await prisma.unitOfMeasure.findMany();
+      const existingUomNames = new Set(existingUoms.map(u => u.name));
+      const newUoms = Array.from(uomSet).filter(u => !existingUomNames.has(u));
+      
+      if (newUoms.length > 0) {
+        await prisma.unitOfMeasure.createMany({
+          data: newUoms.map(name => ({ name }))
+        });
+      }
+
       for (const row of data as any[]) {
         try {
-          let uom: any = UnitOfMeasure.PIEZAS;
-          if (Object.values(UnitOfMeasure).includes(row['UOM'] as any)) {
-            uom = row['UOM'] as any;
-          }
+          let uom = row['UOM'] ? row['UOM'].toUpperCase() : 'PIEZAS';
           
           let cost = row['Purchase Cost'] ? parseFloat(row['Purchase Cost'].replace(/[^0-9.-]+/g,"")) : 0;
           let stock = parseFloat(row['Stock']) || 0;

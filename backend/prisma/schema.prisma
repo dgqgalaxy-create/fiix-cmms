@@ -47,17 +47,10 @@ enum ProductionGroup {
   NA
 }
 
-enum UnitOfMeasure {
-  PIEZAS
-  LITROS
-  METROS
-  KILOGRAMOS
-  KITS
-  CAJAS
-  PAQUETES
-  GALONES
-  JUEGOS
-  OTROS
+model UnitOfMeasure {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  is_active Boolean  @default(true)
 }
 
 enum FrequencyType {
@@ -146,6 +139,10 @@ model Asset {
 
   zone_id         String?     @db.Uuid
   zone            Zone?       @relation(fields: [zone_id], references: [id])
+  
+  vendor_id       String?     @db.Uuid
+  vendor          Vendor?     @relation(fields: [vendor_id], references: [id])
+  price           Float?
 
   work_orders     WorkOrder[]
   maintenance_plans MaintenancePlan[]
@@ -255,6 +252,7 @@ model Vendor {
 
   items       Item[]
   purchase_orders PurchaseOrder[]
+  assets      Asset[]
 }
 
 model Item {
@@ -277,7 +275,7 @@ model Item {
   stock              Float           @default(0)
   minimum_inventory  Float           @default(0)
   is_active          Boolean         @default(true)
-  uom                UnitOfMeasure   @default(PIEZAS)
+  uom                String
 
   inventory_transactions InventoryTransaction[]
   maintenance_plans      PlanItem[]

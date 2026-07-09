@@ -6,6 +6,7 @@ export const getAssets = async (req: Request, res: Response): Promise<void> => {
     const assets = await prisma.asset.findMany({
       include: {
         zone: true,
+        vendor: true,
       },
       orderBy: { created_at: 'desc' },
     });
@@ -22,6 +23,7 @@ export const getAssetById = async (req: Request, res: Response): Promise<void> =
       where: { id },
       include: {
         zone: true,
+        vendor: true,
       },
     });
     if (!asset) {
@@ -36,7 +38,7 @@ export const getAssetById = async (req: Request, res: Response): Promise<void> =
 
 export const createAsset = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { zone_id, internal_code, name, brand, model, serial_number, description, status } = req.body;
+    const { zone_id, vendor_id, price, internal_code, name, brand, model, serial_number, description, status } = req.body;
     
     const assetData: any = {
       internal_code,
@@ -46,6 +48,8 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
       serial_number: serial_number || null,
       description: description || null,
       status,
+      vendor_id: vendor_id || null,
+      price: price ? parseFloat(price) : null,
     };
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };

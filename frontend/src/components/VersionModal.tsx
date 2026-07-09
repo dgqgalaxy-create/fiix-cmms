@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.7.5";
+export const APP_VERSION = "1.8.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -27,11 +27,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
-    "Configuración dinámica de Telegram desde Opciones de Desarrollador.",
-    "Corrección en importación masiva: Auto-creación de Solicitantes al subir CSV de órdenes.",
-    "Reescritura interactiva del Manual de Usuario con UI Premium y navegación lateral.",
-    "Restricción de seguridad: Opciones destructivas visibles solo para Administradores.",
-    "Inyección dinámica de la versión de la aplicación en la pantalla de inicio de sesión."
+    "Catálogo de Unidades de Medida (UOM) personalizables en Ajustes.",
+    "Botón para restaurar Checklist Fijo (28 puntos clave extraídos de PDF original).",
+    "Sincronización global real-time del botón de Telegram usando variables de red.",
+    "Auto-extracción de Unidades de Medida faltantes al importar CSV de Inventario.",
+    "Filtro de seguridad en Auth para evitar cierres forzosos tras reseteos de base de datos."
   ];
 
   return (

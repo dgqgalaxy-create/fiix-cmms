@@ -16,6 +16,12 @@ export interface Asset {
     id: string;
     name: string;
   };
+  vendor_id?: string;
+  price?: number;
+  vendor?: {
+    id: string;
+    name: string;
+  };
 }
 
 export const getAssets = async (): Promise<Asset[]> => {

@@ -96,3 +96,8 @@ export const reorderChecklistActivities = async (orderedIds: { id: string; order
   const response = await api.put('/checklists/activities/reorder', { orderedIds });
   return response.data;
 };
+
+export const restoreDefaultChecklistActivities = async () => {
+  const response = await api.post(`/checklists/activities/restore-defaults`);
+  return response.data;
+};

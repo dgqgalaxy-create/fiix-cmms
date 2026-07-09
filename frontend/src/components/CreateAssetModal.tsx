@@ -3,6 +3,8 @@ import { X, Loader2 } from 'lucide-react';
 import type { Asset } from '../api/assets';
 import { getZones } from '../api/zones';
 import type { Zone } from '../api/zones';
+import { getVendors } from '../api/inventory';
+import type { Vendor } from '../api/inventory';
 
 interface Props {
   isOpen: boolean;
@@ -20,9 +22,13 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'OPERATIVO' | 'EN_MANTENIMIENTO' | 'FUERA_DE_SERVICIO'>('OPERATIVO');
   const [zoneId, setZoneId] = useState('');
+  const [vendorId, setVendorId] = useState('');
+  const [price, setPrice] = useState('');
   
   const [zones, setZones] = useState<Zone[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isLoadingZones, setIsLoadingZones] = useState(false);
+  const [isLoadingVendors, setIsLoadingVendors] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   
@@ -40,6 +46,8 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
         setDescription(initialData.description || '');
         setStatus(initialData.status);
         setZoneId(initialData.zone_id || '');
+        setVendorId(initialData.vendor_id || '');
+        setPrice(initialData.price?.toString() || '');
       } else {
         setInternalCode('');
         setName('');
@@ -49,6 +57,8 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
         setDescription('');
         setStatus('OPERATIVO');
         setZoneId('');
+        setVendorId('');
+        setPrice('');
       }
       setImageFile(null);
       setDocumentFile(null);
@@ -61,6 +71,15 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
         setError('Error al cargar las zonas');
       }).finally(() => {
         setIsLoadingZones(false);
+      });
+
+      setIsLoadingVendors(true);
+      getVendors().then(data => {
+        setVendors(data);
+      }).catch(() => {
+        // Silencioso, puede no ser crítico
+      }).finally(() => {
+        setIsLoadingVendors(false);
       });
     }
   }, [isOpen, initialData]);
@@ -84,6 +103,8 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
       submitData.append('description', description);
       submitData.append('status', status);
       submitData.append('zone_id', zoneId);
+      if (vendorId) submitData.append('vendor_id', vendorId);
+      if (price) submitData.append('price', price);
       
       if (imageFile) submitData.append('image', imageFile);
       if (documentFile) submitData.append('document', documentFile);
@@ -163,6 +184,29 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Modelo *</label>
                 <input type="text" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="3196" value={model} onChange={(e) => setModel(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Proveedor (Opcional)</label>
+                {isLoadingVendors ? (
+                  <div className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-500">Cargando...</div>
+                ) : (
+                  <select className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" value={vendorId} onChange={(e) => setVendorId(e.target.value)}>
+                    <option value="">Sin proveedor registrado</option>
+                    {vendors.map(v => (
+                      <option key={v.id} value={v.id}>{v.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Precio de Compra (Opcional)</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-2.5 text-slate-500">$</span>
+                  <input type="number" step="0.01" min="0" className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="0.00" value={price} onChange={(e) => setPrice(e.target.value)} />
+                </div>
               </div>
             </div>
 

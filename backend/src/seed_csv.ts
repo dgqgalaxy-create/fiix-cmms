@@ -1,4 +1,4 @@
-import { UnitOfMeasure } from '@prisma/client';
+import { Role } from '@prisma/client';
 import fs from 'fs';
 import { parse } from 'csv-parse/sync';
 import path from 'path';
@@ -72,13 +72,29 @@ async function main() {
   // 5. Items (Repuestos)
   const itemRaw = fs.readFileSync(path.join(dataDir, 'Items - Items.csv'), 'utf8');
   const itemData = parse(itemRaw, { columns: true, skip_empty_lines: true });
+
+  // Extraer y crear UOMs faltantes
+  const uomSet = new Set<string>();
+  for (const row of itemData as any[]) {
+    if (row['UOM']) {
+      uomSet.add(row['UOM'].toUpperCase());
+    }
+  }
+  
+  const existingUoms = await prisma.unitOfMeasure.findMany();
+  const existingUomNames = new Set(existingUoms.map(u => u.name));
+  const newUoms = Array.from(uomSet).filter(u => !existingUomNames.has(u));
+  
+  if (newUoms.length > 0) {
+    await prisma.unitOfMeasure.createMany({
+      data: newUoms.map(name => ({ name }))
+    });
+  }
+
   let itemsImported = 0;
   for (const row of itemData as any[]) {
     try {
-      let uom: any = UnitOfMeasure.PIEZAS;
-      if (Object.values(UnitOfMeasure).includes(row['UOM'] as any)) {
-        uom = row['UOM'] as any;
-      }
+      let uom = row['UOM'] ? row['UOM'].toUpperCase() : 'PIEZAS';
       
       let cost = row['Purchase Cost'] ? parseFloat(row['Purchase Cost'].replace(/[^0-9.-]+/g,"")) : 0;
       let stock = parseFloat(row['Stock']) || 0;

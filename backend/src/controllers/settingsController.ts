@@ -46,3 +46,36 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
+export const getUoms = async (req: Request, res: Response) => {
+  try {
+    const uoms = await prisma.unitOfMeasure.findMany({
+      orderBy: { name: 'asc' }
+    });
+    res.json(uoms);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+export const createUom = async (req: Request, res: Response) => {
+  try {
+    const { name } = req.body;
+    const uom = await prisma.unitOfMeasure.create({
+      data: { name: name.toUpperCase() }
+    });
+    res.json(uom);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+export const deleteUom = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    await prisma.unitOfMeasure.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};

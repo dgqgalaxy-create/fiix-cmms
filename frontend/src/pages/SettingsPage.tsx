@@ -4,8 +4,10 @@ import { Settings, Bell, Palette, Code, CheckCircle2, AlertTriangle, Monitor, Su
 import { PermissionsPage } from './PermissionsPage';
 import { DeveloperOptions } from './DeveloperOptions';
 import { ChecklistCatalogue } from '../components/ChecklistCatalogue';
-import { ListChecks } from 'lucide-react';
+import { UomCatalogue } from '../components/UomCatalogue';
+import { ListChecks, Scale } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import api from '../api/axios';
 
 export const SettingsPage = () => {
   const { hasPermission } = useAuth();
@@ -24,17 +26,11 @@ export const SettingsPage = () => {
 
   const fetchSettings = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3000/api/settings', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const res = await api.get('/settings');
+      if (res.data) {
         setSettings({
-          telegram_enabled: data.telegram_enabled,
-          email_enabled: data.email_enabled
+          telegram_enabled: res.data.telegram_enabled,
+          email_enabled: res.data.email_enabled
         });
       }
     } catch (err) {
@@ -48,23 +44,15 @@ export const SettingsPage = () => {
     try {
       setIsSaving(true);
       const newValue = !settings[key];
-      const token = localStorage.getItem('token');
       
       const updatePayload = {
         ...settings,
         [key]: newValue
       };
 
-      const res = await fetch('http://localhost:3000/api/settings', {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updatePayload)
-      });
+      const res = await api.patch('/settings', updatePayload);
 
-      if (res.ok) {
+      if (res.data) {
         setSettings(updatePayload);
       }
     } catch (err) {
@@ -126,17 +114,30 @@ export const SettingsPage = () => {
               Opciones de Desarrollador
             </button>
             {hasPermission('MANAGE_CHECKLIST_CATALOG') && (
-              <button
-                onClick={() => setActiveTab('checklist_catalogue')}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
-                  activeTab === 'checklist_catalogue'
-                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <ListChecks size={18} />
-                Catálogo Checklist
-              </button>
+              <>
+                <button
+                  onClick={() => setActiveTab('checklist_catalogue')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+                    activeTab === 'checklist_catalogue'
+                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                  }`}
+                >
+                  <ListChecks size={20} />
+                  Catálogo de Checklist
+                </button>
+                <button
+                  onClick={() => setActiveTab('uom')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+                    activeTab === 'uom'
+                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                  }`}
+                >
+                  <Scale size={20} />
+                  Unidades de Medida
+                </button>
+              </>
             )}
             {hasPermission('MANAGE_PERMISSIONS') && (
               <button
@@ -270,6 +271,12 @@ export const SettingsPage = () => {
           {activeTab === 'checklist_catalogue' && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <ChecklistCatalogue />
+            </div>
+          )}
+
+          {activeTab === 'uom' && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <UomCatalogue />
             </div>
           )}
         </div>

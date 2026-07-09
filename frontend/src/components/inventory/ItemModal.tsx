@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Upload, Package, ArrowRightLeft } from 'lucide-react';
 import { createItem, updateItem } from '../../api/inventory';
+import { getUoms } from '../../api/settings';
+import type { UnitOfMeasure } from '../../api/settings';
 import { ImageSearchModal } from '../inventory/ImageSearchModal';
 import type { Item, ItemCategory, ItemLocation, Vendor, InventoryTransaction } from '../../api/inventory';
 import { BACKEND_URL } from '../../api/axios';
@@ -37,6 +39,11 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isImageSearchModalOpen, setIsImageSearchModalOpen] = useState(false);
+  const [uoms, setUoms] = useState<UnitOfMeasure[]>([]);
+
+  useEffect(() => {
+    getUoms().then(setUoms).catch(console.error);
+  }, []);
 
   const filteredTransactions = React.useMemo(() => {
     if (!item || !transactions) return [];
@@ -151,8 +158,6 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
       setIsSubmitting(false);
     }
   };
-
-  const uomOptions = ['PIEZAS', 'LITROS', 'METROS', 'KILOGRAMOS', 'KITS', 'CAJAS', 'PAQUETES', 'GALONES', 'JUEGOS', 'OTROS'];
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
@@ -370,7 +375,11 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
                     onChange={(e) => setFormData({ ...formData, uom: e.target.value })}
                     className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-slate-100"
                   >
-                    {uomOptions.map(u => <option key={u} value={u}>{u}</option>)}
+                    {uoms.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
+                    {/* Fallback si la uom actual no está en la lista pero existe en BD */}
+                    {formData.uom && !uoms.find(u => u.name === formData.uom) && (
+                      <option value={formData.uom}>{formData.uom}</option>
+                    )}
                   </select>
                 </div>
               </div>

@@ -5,7 +5,8 @@ import {
   createChecklistActivity, 
   updateChecklistActivity, 
   deleteChecklistActivity,
-  reorderChecklistActivities
+  reorderChecklistActivities,
+  restoreDefaultChecklistActivities
 } from '../api/checklists';
 import type { ChecklistActivity } from '../api/checklists';
 
@@ -99,6 +100,19 @@ export const ChecklistCatalogue = () => {
     }
   };
 
+  const handleRestoreDefaults = async () => {
+    if (!confirm('¿Estás seguro de restaurar el checklist por defecto? Se borrarán las preguntas actuales.')) return;
+    try {
+      setIsSaving(true);
+      const restored = await restoreDefaultChecklistActivities();
+      setActivities(restored);
+    } catch (error) {
+      console.error('Error restoring default activities:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-8 flex justify-center items-center h-40">
@@ -119,13 +133,23 @@ export const ChecklistCatalogue = () => {
             Gestiona las preguntas que aparecerán en los próximos checklists diarios.
           </p>
         </div>
-        <button
-          onClick={() => setIsCreating(true)}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2"
-        >
-          <Plus size={18} />
-          Añadir Pregunta
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleRestoreDefaults}
+            disabled={isSaving}
+            className="bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
+          >
+            Restaurar por Defecto
+          </button>
+          <button
+            onClick={() => setIsCreating(true)}
+            disabled={isSaving}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2"
+          >
+            <Plus size={18} />
+            Añadir Pregunta
+          </button>
+        </div>
       </div>
       
       <div className="p-6">

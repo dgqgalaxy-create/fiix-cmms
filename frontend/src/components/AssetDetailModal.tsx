@@ -1,4 +1,4 @@
-import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye } from 'lucide-react';
+import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck } from 'lucide-react';
 import type { Asset } from '../api/assets';
 import { BACKEND_URL } from '../api/axios';
 
@@ -121,6 +121,24 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                   <span className="text-xs font-bold uppercase tracking-wider">Número de Serie</span>
                 </div>
                 <div className="text-sm font-medium text-slate-800">{asset.serial_number || 'No especificado'}</div>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <div className="flex items-center gap-2 text-slate-500 mb-1">
+                  <Truck size={16} />
+                  <span className="text-xs font-bold uppercase tracking-wider">Proveedor</span>
+                </div>
+                <div className="text-sm font-medium text-slate-800">{asset.vendor?.name || 'No especificado'}</div>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <div className="flex items-center gap-2 text-slate-500 mb-1">
+                  <DollarSign size={16} />
+                  <span className="text-xs font-bold uppercase tracking-wider">Precio de Compra</span>
+                </div>
+                <div className="text-sm font-medium text-slate-800">
+                  {asset.price !== undefined && asset.price !== null ? `$${asset.price.toFixed(2)}` : 'No especificado'}
+                </div>
               </div>
             </div>
 

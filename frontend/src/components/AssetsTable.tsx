@@ -122,6 +122,7 @@ export const AssetsTable = ({ assets, onDelete, onEdit, onRowClick, onPrintQR, c
                 <th className="px-6 py-4 hidden sm:table-cell">Código</th>
                 <th className="px-6 py-4">Equipo</th>
                 <th className="px-6 py-4 hidden sm:table-cell">Zona</th>
+                <th className="px-6 py-4 hidden lg:table-cell">Proveedor</th>
                 <th className="px-6 py-4 hidden md:table-cell">Marca / Modelo</th>
                 <th className="px-6 py-4">Estado</th>
                 {canManage && <th className="px-6 py-4 text-right">Acciones</th>}
@@ -143,6 +144,9 @@ export const AssetsTable = ({ assets, onDelete, onEdit, onRowClick, onPrintQR, c
                   </td>
                   <td className="px-6 py-4 text-slate-700 hidden sm:table-cell">
                     {asset.zone?.name || <span className="text-slate-400 italic">Sin Zona</span>}
+                  </td>
+                  <td className="px-6 py-4 text-slate-700 hidden lg:table-cell">
+                    {asset.vendor?.name || <span className="text-slate-400 italic">-</span>}
                   </td>
                   <td className="px-6 py-4 text-slate-700 hidden md:table-cell">
                     {asset.brand} <span className="text-slate-400">/</span> {asset.model}
