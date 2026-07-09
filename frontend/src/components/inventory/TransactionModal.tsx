@@ -172,12 +172,12 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
                 <input
                   type="number"
                   required
-                  step="0.01"
-                  min="0.01"
+                  step="1"
+                  min="1"
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow font-mono text-lg"
-                  placeholder="0.00"
+                  placeholder="0"
                 />
               </div>
             </div>

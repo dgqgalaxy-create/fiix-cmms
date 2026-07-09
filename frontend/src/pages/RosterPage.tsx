@@ -505,7 +505,7 @@ export const RosterPage = () => {
                               if (e.target.value) {
                                 await addException({
                                   user_id: event.user_id,
-                                  type: e.target.value,
+                                  exception_type: e.target.value,
                                   date: format(selectedDay, 'yyyy-MM-dd')
                                 });
                                 fetchData();

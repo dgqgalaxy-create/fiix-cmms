@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.8.0";
+export const APP_VERSION = "1.9.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -27,11 +27,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
-    "Catálogo de Unidades de Medida (UOM) personalizables en Ajustes.",
-    "Botón para restaurar Checklist Fijo (28 puntos clave extraídos de PDF original).",
-    "Sincronización global real-time del botón de Telegram usando variables de red.",
-    "Auto-extracción de Unidades de Medida faltantes al importar CSV de Inventario.",
-    "Filtro de seguridad en Auth para evitar cierres forzosos tras reseteos de base de datos."
+    "Checklist con campos mixtos: ahora soporta texto y números para toma de lecturas.",
+    "Corrección en Roster: guardado correcto de incidencias y excepciones (Falta, TXT).",
+    "Auto-asignación de ubicación 'Sin Asignación' al crear repuestos o importar sin definir lugar.",
+    "Formularios de movimientos restringidos a cantidades enteras (no decimales).",
+    "Validación y bloqueo de movimientos negativos: impide sacar más inventario del existente."
   ];
 
   return (

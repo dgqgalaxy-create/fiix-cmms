@@ -216,7 +216,18 @@ export const createItem = async (req: Request, res: Response): Promise<void> => 
 
     if (category_id) itemData.category = { connect: { id: category_id } };
     if (vendor_id) itemData.vendor = { connect: { id: vendor_id } };
-    if (location_id) itemData.location = { connect: { id: location_id } };
+    
+    let finalLocationId = location_id;
+    if (!finalLocationId) {
+      let unassignedLoc = await prisma.itemLocation.findFirst({ where: { name: 'Sin Asignación' } });
+      if (!unassignedLoc) {
+        unassignedLoc = await prisma.itemLocation.create({
+          data: { name: 'Sin Asignación', internal_id: await generateInventoryCode('ItemLocation', 'LOC-', 3) }
+        });
+      }
+      finalLocationId = unassignedLoc.id;
+    }
+    itemData.location = { connect: { id: finalLocationId } };
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (files?.['image']) {
@@ -251,9 +262,22 @@ export const updateItem = async (req: Request, res: Response): Promise<void> => 
     if (is_active !== undefined) itemData.is_active = is_active === 'true' || is_active === true;
     if (uom) itemData.uom = uom;
 
-    if (category_id) itemData.category = { connect: { id: category_id } };
-    if (vendor_id) itemData.vendor = { connect: { id: vendor_id } };
-    if (location_id) itemData.location = { connect: { id: location_id } };
+    if (category_id !== undefined) itemData.category = category_id ? { connect: { id: category_id } } : { disconnect: true };
+    if (vendor_id !== undefined) itemData.vendor = vendor_id ? { connect: { id: vendor_id } } : { disconnect: true };
+    
+    if (location_id !== undefined) {
+      let finalLocationId = location_id;
+      if (!finalLocationId) {
+        let unassignedLoc = await prisma.itemLocation.findFirst({ where: { name: 'Sin Asignación' } });
+        if (!unassignedLoc) {
+          unassignedLoc = await prisma.itemLocation.create({
+            data: { name: 'Sin Asignación', internal_id: await generateInventoryCode('ItemLocation', 'LOC-', 3) }
+          });
+        }
+        finalLocationId = unassignedLoc.id;
+      }
+      itemData.location = { connect: { id: finalLocationId } };
+    }
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (files?.['image']) {
@@ -327,6 +351,14 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
 
     // Usamos una transacción de Prisma para asegurar que el stock se descuente o sume de manera segura
     const [transaction, item] = await prisma.$transaction(async (tx) => {
+      // Validar si es una salida que excede el stock
+      if (transactionAmount < 0) {
+        const currentItem = await tx.item.findUnique({ where: { id: item_id } });
+        if (!currentItem || currentItem.stock < Math.abs(transactionAmount)) {
+          throw new Error('INSUFFICIENT_STOCK');
+        }
+      }
+
       // 1. Crear el registro en el historial
       const newTx = await tx.inventoryTransaction.create({
         data: {
@@ -352,7 +384,11 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
 
     getIO().emit('refresh_inventory');
     res.status(201).json({ transaction, stock_actual: item.stock });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === 'INSUFFICIENT_STOCK') {
+      res.status(400).json({ error: 'Inventario insuficiente. No es posible retirar una cantidad mayor a las existencias actuales.' });
+      return;
+    }
     res.status(500).json({ error: 'Error al registrar transacción de inventario' });
   }
 };

@@ -109,8 +109,22 @@ export default function ChecklistFormPage() {
   };
 
   const renderStatusButton = (row: ChecklistRow, line: string) => {
-    const currentValue = (row as any)[line];
+    const currentValue = (row as any)[line] || '';
     const isEditable = checklist?.status === 'DRAFT';
+    const fieldType = (row as any).field_type || 'CHECKBOX';
+
+    if (fieldType === 'NUMBER' || fieldType === 'TEXT') {
+      return (
+        <input
+          type={fieldType === 'NUMBER' ? 'number' : 'text'}
+          disabled={!isEditable}
+          value={currentValue}
+          onChange={(e) => handleStatusChange(row.id, line, e.target.value)}
+          placeholder="-"
+          className="w-16 h-10 px-2 text-center rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white disabled:bg-slate-50 disabled:text-slate-500"
+        />
+      );
+    }
 
     const getColors = (val: string) => {
       if (val === 'OK') return 'bg-emerald-100 text-emerald-700 border-emerald-300';

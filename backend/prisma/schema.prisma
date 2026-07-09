@@ -435,6 +435,7 @@ model ChecklistActivity {
   id          String   @id @default(uuid()) @db.Uuid
   name        String
   order       Int      @default(0)
+  field_type  String   @default("CHECKBOX") // "CHECKBOX", "NUMBER", "TEXT"
   is_active   Boolean  @default(true)
   created_at  DateTime @default(now())
 }
@@ -459,6 +460,7 @@ model DailyChecklistRow {
   checklist       DailyChecklist @relation(fields: [checklist_id], references: [id], onDelete: Cascade)
   activity_name   String
   order           Int      @default(0)
+  field_type      String   @default("CHECKBOX")
   L1_status       String?
   L2_status       String?
   L3_status       String?

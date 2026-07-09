@@ -321,6 +321,17 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
       const catMap = Object.fromEntries(categories.map(c => [c.internal_id, c.id]));
       const locMap = Object.fromEntries(locations.map(c => [c.internal_id, c.id]));
       const venMap = Object.fromEntries(vendors.map(c => [c.internal_id, c.id]));
+      
+      let unassignedLoc = locations.find(l => l.name === 'Sin Asignación');
+      if (!unassignedLoc) {
+        // Generar un ID aleatorio usando el helper o manual
+        const count = await prisma.itemLocation.count();
+        const fallbackId = `LOC-${String(count + 1000).padStart(3, '0')}`;
+        unassignedLoc = await prisma.itemLocation.create({
+          data: { name: 'Sin Asignación', internal_id: fallbackId }
+        });
+      }
+      const unassignedLocId = unassignedLoc.id;
 
       const data = parse(itemFile.buffer.toString('utf8'), { columns: true, skip_empty_lines: true });
 
@@ -366,7 +377,7 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
               image_url: row['Image'],
               category_id: catMap[row['Category']] || null,
               vendor_id: venMap[row['Vendor']] || null,
-              location_id: locMap[row['Location']] || null,
+              location_id: locMap[row['Location']] || unassignedLocId,
               purchase_cost: cost,
               stock: stock,
               minimum_inventory: minStock,
@@ -380,7 +391,7 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
               image_url: row['Image'],
               category_id: catMap[row['Category']] || null,
               vendor_id: venMap[row['Vendor']] || null,
-              location_id: locMap[row['Location']] || null,
+              location_id: locMap[row['Location']] || unassignedLocId,
               purchase_cost: cost,
               stock: stock,
               minimum_inventory: minStock,

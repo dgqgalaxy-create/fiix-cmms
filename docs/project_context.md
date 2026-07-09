@@ -23,9 +23,9 @@ Un Sistema Computarizado de Gestión de Mantenimiento (CMMS / GMAO) de clase mun
    - Módulo de Reabastecimiento con alertas de stock crítico.
    - Búsqueda inteligente de imágenes web (Puppeteer).
 9. **Portal de Reportes Públicos:** Formulario accesible sin contraseña donde los usuarios de la planta pueden escanear un código y levantar un reporte (ticket).
-10. **Checklist Diario:** Módulo para la revisión estructurada (OK, NOK, NA, Observaciones) de las líneas de producción, con lógica estricta de un checklist por día.
+10. **Checklist Diario:** Módulo para la revisión estructurada de las líneas de producción, con lógica estricta de un checklist por día. Incluye actividades con campos mixtos (Check, Texto y Número).
 11. **Horarios y Turnos (Roster):** Calendario interactivo de arrastrar y soltar para asignar patrones de turnos (4x4) y excepciones (Vacaciones, Faltas, Tiempo Extra). Incluye integración de Días Festivos Globales (México) y soporte de impresión PDF.
-12. **Manual de Usuario (v1.7.4):** Manual interactivo integrado en el sistema con UI premium, filtrado dinámico (Opciones de Desarrollador ocultas para no-administradores) y explicación profunda de mecánicas internas.
+12. **Manual de Usuario (v1.9.0):** Manual interactivo integrado en el sistema con UI premium, filtrado dinámico (Opciones de Desarrollador ocultas para no-administradores) y explicación profunda de mecánicas internas.
 
 ## Estrategia de Migración de Datos (Completada / En Progreso)
 Los datos base de refacciones, inventario e históricos han sido integrados con éxito:

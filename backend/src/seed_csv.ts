@@ -69,6 +69,16 @@ async function main() {
   const locMap = Object.fromEntries(locations.map(c => [c.internal_id, c.id]));
   const venMap = Object.fromEntries(vendors.map(c => [c.internal_id, c.id]));
 
+  let unassignedLoc = locations.find(l => l.name === 'Sin Asignación');
+  if (!unassignedLoc) {
+    const count = await prisma.itemLocation.count();
+    const fallbackId = `LOC-${String(count + 1000).padStart(3, '0')}`;
+    unassignedLoc = await prisma.itemLocation.create({
+      data: { name: 'Sin Asignación', internal_id: fallbackId }
+    });
+  }
+  const unassignedLocId = unassignedLoc.id;
+
   // 5. Items (Repuestos)
   const itemRaw = fs.readFileSync(path.join(dataDir, 'Items - Items.csv'), 'utf8');
   const itemData = parse(itemRaw, { columns: true, skip_empty_lines: true });
@@ -108,7 +118,7 @@ async function main() {
           image_url: row['Image'],
           category_id: catMap[row['Category']] || null,
           vendor_id: venMap[row['Vendor']] || null,
-          location_id: locMap[row['Location']] || null,
+          location_id: locMap[row['Location']] || unassignedLocId,
           purchase_cost: cost,
           stock: stock,
           minimum_inventory: minStock,
@@ -122,7 +132,7 @@ async function main() {
           image_url: row['Image'],
           category_id: catMap[row['Category']] || null,
           vendor_id: venMap[row['Vendor']] || null,
-          location_id: locMap[row['Location']] || null,
+          location_id: locMap[row['Location']] || unassignedLocId,
           purchase_cost: cost,
           stock: stock,
           minimum_inventory: minStock,
