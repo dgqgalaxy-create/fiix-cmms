@@ -463,6 +463,24 @@ export const UserManual = () => {
                     </p>
                   </div>
                 </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 p-6 rounded-2xl shadow-sm">
+                  <h3 className="text-xl font-bold text-blue-800 dark:text-blue-300 mb-3 flex items-center gap-2">
+                    <Terminal size={24} /> Configuración Dinámica de Telegram
+                  </h3>
+                  <p className="text-blue-700 dark:text-blue-400/90 text-sm leading-relaxed mb-4">
+                    Esta opción permite conectar el sistema con un Bot de Telegram para recibir alertas en tiempo real sobre nuevas solicitudes de mantenimiento, sin requerir acceso al código fuente o al servidor (`.env`). Especialmente útil si se instala el sistema en diferentes plantas.
+                  </p>
+                  
+                  <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/20">
+                    <h4 className="font-bold text-blue-900 dark:text-blue-200 text-sm uppercase tracking-wider mb-3">¿Qué son estas credenciales?</h4>
+                    <ul className="space-y-3 text-sm text-blue-800/80 dark:text-blue-300/80">
+                      <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-blue-400" size={16} /> <strong>Bot Token:</strong> Es la llave maestra que te otorga <em>@BotFather</em> en Telegram para que el sistema asuma el control del bot.</li>
+                      <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-blue-400" size={16} /> <strong>Chat ID:</strong> Es el identificador numérico del grupo de chat al que deseas que lleguen las alertas (por ejemplo, el grupo de los técnicos).</li>
+                      <li className="flex gap-2 items-start"><Info className="shrink-0 mt-0.5 text-blue-400" size={16} /> <strong>Importante:</strong> Al guardar credenciales aquí, estas tendrán prioridad absoluta sobre el archivo `.env`. Si deseas regresar a la configuración por defecto del servidor, simplemente borra los campos y presiona Guardar.</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             )}
 
