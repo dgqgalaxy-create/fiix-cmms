@@ -409,8 +409,10 @@ model FailureRemedy {
 
 model SystemSettings {
   id               String   @id @default(uuid()) @db.Uuid
-  telegram_enabled Boolean  @default(true)
-  email_enabled    Boolean  @default(false)
+  telegram_enabled   Boolean  @default(true)
+  telegram_bot_token String?
+  telegram_chat_id   String?
+  email_enabled      Boolean  @default(false)
   updated_at       DateTime @updatedAt
 }
 

@@ -1,11 +1,15 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
-*(Última actualización: 07 de Julio de 2026)*
+*(Última actualización: 09 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.7.4 (Lanzamiento: 07 de Julio de 2026)
+## 🚀 Versión Actual: v1.7.5 (Lanzamiento: 09 de Julio de 2026)
 
-### Novedades en v1.7.4 (Documentación y UI Premium)
+### Novedades en v1.7.5 (Configuración Dinámica y Correcciones)
+- **Configuración de Telegram Dinámica:** Se movió la configuración del Bot de Telegram (Token y Chat ID) del archivo `.env` a la base de datos, con una nueva interfaz en "Opciones de Desarrollador" para facilitar la instalación "marca blanca" en nuevas fábricas.
+- **Importación CSV de Solicitantes:** Corrección en el módulo de importación masiva. Ahora, al subir el CSV de Órdenes de Trabajo, el sistema alimenta y crea automáticamente los registros faltantes en el Catálogo de Solicitantes.
+
+### Novedades Anteriores (v1.7.4 - Documentación y UI Premium)
 - **Manual de Usuario Interactivo:** Reescritura completa del manual con diseño de tarjetas, insignias, navegación lateral sticky, y descripciones a fondo de la lógica interna (WebSockets, alertas de reorden).
 - **Opciones de Desarrollador (Manual):** Documentación explícita sobre el "Botón Rojo" de borrado (TRUNCATE CASCADE) restringida dinámicamente a Administradores.
 - **Versión en Login:** Se inyectó dinámicamente la variable `APP_VERSION` en la pantalla de inicio de sesión.

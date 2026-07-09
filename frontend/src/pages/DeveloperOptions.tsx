@@ -12,6 +12,9 @@ export const DeveloperOptions = () => {
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [telegramToken, setTelegramToken] = useState('');
+  const [telegramChatId, setTelegramChatId] = useState('');
+  const [isSavingTelegram, setIsSavingTelegram] = useState(false);
   const navigate = useNavigate();
 
   const handleVerify = async (e: React.FormEvent) => {
@@ -22,11 +25,40 @@ export const DeveloperOptions = () => {
       await axios.post(`/dev/verify`, {}, {
         headers: { 'x-dev-password': password }
       });
+      try {
+        const setRes = await axios.get('/dev/settings', {
+          headers: { 'x-dev-password': password }
+        });
+        if (setRes.data) {
+          setTelegramToken(setRes.data.telegram_bot_token || '');
+          setTelegramChatId(setRes.data.telegram_chat_id || '');
+        }
+      } catch(e) {
+        console.error('Error fetching settings', e);
+      }
       setIsAuthenticated(true);
     } catch (err: any) {
       setError('Contraseña incorrecta o error de conexión.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSaveTelegram = async () => {
+    setIsSavingTelegram(true);
+    try {
+      await axios.post('/dev/settings', {
+        telegram_bot_token: telegramToken,
+        telegram_chat_id: telegramChatId
+      }, {
+        headers: { 'x-dev-password': password }
+      });
+      setSuccessMsg('Configuración de Telegram guardada con éxito.');
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err: any) {
+      setError('Error al guardar la configuración de Telegram.');
+    } finally {
+      setIsSavingTelegram(false);
     }
   };
 
@@ -331,6 +363,45 @@ export const DeveloperOptions = () => {
             >
               Limpiar y Recargar
             </button>
+          </div>
+
+          {/* Card: Configuración de Telegram */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-blue-200 dark:border-blue-900/50 flex flex-col items-center hover:shadow-md transition-shadow lg:col-span-3">
+            <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-4">
+              <KeyRound size={28} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Configuración Dinámica de Telegram</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 text-center">Permite cambiar el Token y Chat ID sin modificar el archivo .env.</p>
+            
+            <div className="w-full max-w-md space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Bot Token</label>
+                <input 
+                  type="text" 
+                  value={telegramToken}
+                  onChange={(e) => setTelegramToken(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 focus:border-blue-500 outline-none transition-all"
+                  placeholder="ej. 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Chat ID</label>
+                <input 
+                  type="text" 
+                  value={telegramChatId}
+                  onChange={(e) => setTelegramChatId(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 focus:border-blue-500 outline-none transition-all"
+                  placeholder="ej. -1001234567890"
+                />
+              </div>
+              <button 
+                onClick={handleSaveTelegram}
+                disabled={isSavingTelegram}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition-colors mt-2 disabled:opacity-50"
+              >
+                {isSavingTelegram ? 'Guardando...' : 'Guardar Telegram'}
+              </button>
+            </div>
           </div>
 
         </div>

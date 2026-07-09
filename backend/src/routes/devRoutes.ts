@@ -59,6 +59,56 @@ router.post('/verify', verifyDevPassword, (req: Request, res: Response) => {
   res.json({ success: true, message: 'Password is valid.' });
 });
 
+router.get('/settings', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
+  try {
+    let settings = await prisma.systemSettings.findFirst();
+    if (!settings) {
+      settings = await prisma.systemSettings.create({
+        data: {
+          telegram_enabled: true,
+          email_enabled: false,
+        },
+      });
+    }
+    res.json({
+      telegram_bot_token: settings.telegram_bot_token || '',
+      telegram_chat_id: settings.telegram_chat_id || ''
+    });
+  } catch (error) {
+    console.error('Error fetching dev settings:', error);
+    res.status(500).json({ message: 'Error fetching settings' });
+  }
+});
+
+router.post('/settings', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { telegram_bot_token, telegram_chat_id } = req.body;
+    let settings = await prisma.systemSettings.findFirst();
+    
+    if (!settings) {
+      await prisma.systemSettings.create({
+        data: {
+          telegram_enabled: true,
+          telegram_bot_token,
+          telegram_chat_id,
+        },
+      });
+    } else {
+      await prisma.systemSettings.update({
+        where: { id: settings.id },
+        data: {
+          telegram_bot_token,
+          telegram_chat_id,
+        },
+      });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating dev settings:', error);
+    res.status(500).json({ message: 'Error updating settings' });
+  }
+});
+
 router.post('/delete', verifyDevPassword, async (req: Request, res: Response) => {
   try {
     const tablenames = await prisma.$queryRaw<Array<{ tablename: string }>>`SELECT tablename FROM pg_tables WHERE schemaname='public'`;
@@ -91,6 +141,7 @@ router.get('/export', verifyDevPassword, async (req: Request, res: Response) => 
   try {
     const exportData = {
       User: await prisma.user.findMany(),
+      Requester: await prisma.requester.findMany(),
       Zone: await prisma.zone.findMany(),
       KPIGoal: await prisma.kPIGoal.findMany(),
       RolePermission: await prisma.rolePermission.findMany(),
@@ -139,6 +190,7 @@ router.post('/import', verifyDevPassword, upload.single('backupFile'), async (re
 
     // Insert data in order of dependencies
     if (data.User) await prisma.user.createMany({ data: data.User });
+    if (data.Requester) await prisma.requester.createMany({ data: data.Requester });
     if (data.Zone) await prisma.zone.createMany({ data: data.Zone });
     if (data.KPIGoal) await prisma.kPIGoal.createMany({ data: data.KPIGoal });
     if (data.RolePermission) await prisma.rolePermission.createMany({ data: data.RolePermission });
@@ -468,7 +520,20 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
                if (gStr.includes('D')) pGroup = ProductionGroup.D;
             }
 
-            const requester_name = row['Nombre del solicitante:'] || 'Desconocido';
+            const rawRequesterName = row['Nombre del solicitante:'];
+            const requester_name = rawRequesterName ? rawRequesterName.trim() : 'Desconocido';
+
+            if (requester_name !== 'Desconocido' && requester_name !== '') {
+               try {
+                 await prisma.requester.upsert({
+                   where: { name: requester_name },
+                   update: {},
+                   create: { name: requester_name }
+                 });
+               } catch(e) {
+                 // Ignorar si hay problemas de concurrencia o duplicados raros
+               }
+            }
 
             let existingWO = await prisma.workOrder.findFirst({ where: { folio: folioCsv } });
             

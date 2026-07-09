@@ -1,16 +1,6 @@
 import TelegramBot from 'node-telegram-bot-api';
 import prisma from '../config/prisma';
 
-// Replace with your bot token and chat ID in .env
-const token = process.env.TELEGRAM_BOT_TOKEN || '';
-const chatId = process.env.TELEGRAM_CHAT_ID || '';
-
-let bot: TelegramBot | null = null;
-
-if (token) {
-  bot = new TelegramBot(token, { polling: false });
-}
-
 export const sendTelegramAlert = async (message: string) => {
   try {
     const settings = await prisma.systemSettings.findFirst();
@@ -18,12 +8,16 @@ export const sendTelegramAlert = async (message: string) => {
       return; // Telegram is disabled
     }
 
-    if (!bot || !chatId) {
-      console.warn('Telegram bot token or chat ID is missing in .env');
+    const activeToken = settings.telegram_bot_token || process.env.TELEGRAM_BOT_TOKEN;
+    const activeChatId = settings.telegram_chat_id || process.env.TELEGRAM_CHAT_ID;
+
+    if (!activeToken || !activeChatId) {
+      console.warn('Telegram bot token or chat ID is missing in settings and .env');
       return;
     }
 
-    await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
+    const dynamicBot = new TelegramBot(activeToken, { polling: false });
+    await dynamicBot.sendMessage(activeChatId, message, { parse_mode: 'HTML' });
   } catch (error) {
     console.error('Error sending Telegram alert:', error);
   }
