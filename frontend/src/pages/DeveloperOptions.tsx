@@ -141,7 +141,7 @@ export const DeveloperOptions = () => {
       setSuccessMsg(`Archivos CSV procesados: ${results.categories} Categorías, ${results.locations} Ubicaciones, ${results.vendors} Proveedores, ${results.items} Repuestos, ${results.users} Usuarios, ${results.inventory} Movimientos, ${results.orders} Órdenes.`);
       setTimeout(() => setSuccessMsg(null), 8000);
     } catch (err: any) {
-      setError('Fallo al importar archivos CSV.');
+      setError(`Fallo al importar archivos CSV: ${err.response?.data?.message || err.message}`);
     } finally {
       setIsLoading(false);
       setLoadingMessage(null);

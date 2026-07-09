@@ -325,21 +325,26 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
       const data = parse(itemFile.buffer.toString('utf8'), { columns: true, skip_empty_lines: true });
 
       // Extraer y crear UOMs faltantes
-      const uomSet = new Set<string>();
-      for (const row of data as any[]) {
-        if (row['UOM']) {
-          uomSet.add(row['UOM'].toUpperCase());
+      try {
+        const uomSet = new Set<string>();
+        for (const row of data as any[]) {
+          if (row['UOM']) {
+            uomSet.add(row['UOM'].toUpperCase());
+          }
         }
-      }
-      
-      const existingUoms = await prisma.unitOfMeasure.findMany();
-      const existingUomNames = new Set(existingUoms.map(u => u.name));
-      const newUoms = Array.from(uomSet).filter(u => !existingUomNames.has(u));
-      
-      if (newUoms.length > 0) {
-        await prisma.unitOfMeasure.createMany({
-          data: newUoms.map(name => ({ name }))
-        });
+        
+        const existingUoms = await prisma.unitOfMeasure.findMany();
+        const existingUomNames = new Set(existingUoms.map(u => u.name));
+        const newUoms = Array.from(uomSet).filter(u => !existingUomNames.has(u));
+        
+        if (newUoms.length > 0) {
+          await prisma.unitOfMeasure.createMany({
+            data: newUoms.map(name => ({ name })),
+            skipDuplicates: true
+          });
+        }
+      } catch (uomError) {
+        console.error('Error auto-creando UOMs:', uomError);
       }
 
       for (const row of data as any[]) {
