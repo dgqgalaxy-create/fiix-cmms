@@ -161,7 +161,7 @@ export const Dashboard = () => {
       const [data, summaryData, invSumData] = await Promise.all([
         getWorkOrders(),
         getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined),
-        hasPermission('VIEW_INVENTORY') ? getInventorySummary() : Promise.resolve(null)
+        getInventorySummary().catch(() => null)
       ]);
       setWorkOrders(data);
       setSummary(summaryData);
@@ -443,7 +443,7 @@ export const Dashboard = () => {
         )}
       </div>
 
-      <div className={`grid grid-cols-2 lg:grid-cols-${hasPermission('VIEW_INVENTORY') ? '7' : '6'} md:grid-cols-4 print:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8`}>
+      <div className={`grid grid-cols-2 lg:grid-cols-${hasPermission('MANAGE_INVENTORY') ? '7' : '6'} md:grid-cols-4 print:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8`}>
         <div 
           onClick={() => { 
             setActiveTab('ACTIVAS'); 
@@ -458,6 +458,9 @@ export const Dashboard = () => {
           <div className="relative z-10">
             <span className="text-slate-300 text-xs sm:text-sm font-bold uppercase tracking-wider">Totales Recibidas</span>
             <div className="text-2xl sm:text-4xl font-black text-white mt-1.5 sm:mt-2">{totalRecibidas}</div>
+            <div className="text-[10px] sm:text-xs text-slate-400 font-medium mt-1 leading-tight">
+              Periodo: {(summaryStartDate && summaryEndDate) ? `Del ${summaryStartDate} al ${summaryEndDate}` : (summaryStartDate ? `Desde el ${summaryStartDate}` : (summaryEndDate ? `Hasta el ${summaryEndDate}` : 'Histórico completo (Todo)'))}
+            </div>
           </div>
         </div>
         <div 
@@ -571,7 +574,7 @@ export const Dashboard = () => {
           </div>
         </div>
 
-        {hasPermission('VIEW_INVENTORY') && invSummary && (
+        {hasPermission('MANAGE_INVENTORY') && invSummary && invSummary.low_stock_count > 0 && (
           <div 
             onClick={() => navigate('/inventory?filter=low_stock')}
             className={`cursor-pointer transition-all bg-white dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group border-rose-100 dark:border-rose-900/50 shadow-sm shadow-rose-100/50 dark:shadow-rose-900/20 hover:shadow-md col-span-2 md:col-span-1 print:hidden`}
@@ -588,6 +591,9 @@ export const Dashboard = () => {
                 </span>
               </span>
               <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{invSummary.low_stock_count || 0}</div>
+              <div className="text-[10px] sm:text-xs text-rose-600/70 font-medium mt-1 leading-tight">
+                Artículos con existencias al nivel mínimo o inferior
+              </div>
             </div>
           </div>
         )}

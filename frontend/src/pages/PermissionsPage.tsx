@@ -20,6 +20,8 @@ const AVAILABLE_PERMISSIONS = [
   { key: 'APPROVE_CHECKLIST', label: 'Aprobar Checklists Diarios', description: 'Permite revisar y aprobar los Checklists Diarios completados.' },
   { key: 'MANAGE_CHECKLIST_CATALOG', label: 'Administrar Catálogo de Checklists', description: 'Permite editar, agregar y eliminar las actividades del Checklist Diario.' },
   { key: 'MANAGE_PURCHASES', label: 'Administrar Compras', description: 'Permite acceder al módulo de compras y generar pedidos desde el inventario.' },
+  { key: 'MANAGE_INVENTORY', label: 'Administrar Inventario', description: 'Crear, editar y eliminar repuestos, categorías y ubicaciones.' },
+  { key: 'REGISTER_INVENTORY_ENTRIES', label: 'Registrar Entradas de Inventario', description: 'Permite registrar entradas de stock. Sin este permiso, solo se pueden registrar salidas.' },
   { key: 'MANAGE_SHIFTS', label: 'Administrar Horarios', description: 'Permite asignar patrones de turno e incidencias a los técnicos.' },
   { key: 'MANAGE_PERMISSIONS', label: 'Administrar Permisos', description: 'Acceso a esta pantalla de configuración.' },
 ];

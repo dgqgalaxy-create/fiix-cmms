@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, ArrowRightLeft } from 'lucide-react';
 import { createTransaction } from '../../api/inventory';
 import type { Item } from '../../api/inventory';
+import { useAuth } from '../../context/AuthContext';
 
 interface Props {
   isOpen: boolean;
@@ -12,11 +13,13 @@ interface Props {
 }
 
 export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemId }: Props) => {
+  const { hasPermission } = useAuth();
+  
   const [formData, setFormData] = useState({
     item_id: '',
     amount: '',
     reason: '',
-    type: 'IN' // IN = Entrada, OUT = Salida
+    type: hasPermission('REGISTER_INVENTORY_ENTRIES') ? 'IN' : 'OUT' // IN = Entrada, OUT = Salida
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,10 +31,10 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
     if (isOpen) {
       if (defaultItemId) {
         const item = items.find(i => i.id === defaultItemId);
-        setFormData({ item_id: defaultItemId, amount: '', reason: '', type: 'IN' });
+        setFormData({ item_id: defaultItemId, amount: '', reason: '', type: hasPermission('REGISTER_INVENTORY_ENTRIES') ? 'IN' : 'OUT' });
         setSearchQuery(item ? `${item.internal_code} - ${item.name}` : '');
       } else {
-        setFormData({ item_id: '', amount: '', reason: '', type: 'IN' });
+        setFormData({ item_id: '', amount: '', reason: '', type: hasPermission('REGISTER_INVENTORY_ENTRIES') ? 'IN' : 'OUT' });
         setSearchQuery('');
       }
       setIsSubmitting(false);
@@ -49,6 +52,12 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
     try {
       const amountValue = formData.type === 'IN' ? Math.abs(Number(formData.amount)) : -Math.abs(Number(formData.amount));
       
+      if (amountValue === 0) {
+        setError('La cantidad debe ser mayor a 0');
+        setIsSubmitting(false);
+        return;
+      }
+      
       await createTransaction({
         item_id: formData.item_id,
         amount: amountValue,
@@ -58,7 +67,7 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
       onSaved();
       onClose();
       // reset
-      setFormData({ item_id: '', amount: '', reason: '', type: 'IN' });
+      setFormData({ item_id: '', amount: '', reason: '', type: hasPermission('REGISTER_INVENTORY_ENTRIES') ? 'IN' : 'OUT' });
       setSearchQuery('');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al registrar el movimiento');
@@ -97,13 +106,15 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
 
           <div className="space-y-5">
             <div className="flex bg-slate-100 p-1 rounded-xl">
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, type: 'IN' })}
-                className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${formData.type === 'IN' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                Entrada (+ Stock)
-              </button>
+              {hasPermission('REGISTER_INVENTORY_ENTRIES') && (
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, type: 'IN' })}
+                  className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${formData.type === 'IN' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Entrada (+ Stock)
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, type: 'OUT' })}
@@ -169,12 +180,12 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
                     {formData.type === 'IN' ? '+' : '-'}
                   </span>
                 </div>
-                <input
-                  type="number"
-                  required
-                  step="1"
-                  min="1"
-                  value={formData.amount}
+                  <input
+                    type="number"
+                    required
+                    step="any"
+                    min="0"
+                    value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow font-mono text-lg"
                   placeholder="0"

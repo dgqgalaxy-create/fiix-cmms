@@ -14,6 +14,9 @@ async function main() {
   const catRaw = fs.readFileSync(path.join(dataDir, 'Items - Categories.csv'), 'utf8');
   const catData = parse(catRaw, { columns: true, skip_empty_lines: true });
   for (const row of catData as any[]) {
+    if (!row['ID'] || !row['Category'] || String(row['ID']).trim() === '' || String(row['Category']).trim() === '') {
+      continue;
+    }
     try {
       await prisma.itemCategory.upsert({
         where: { internal_id: row['ID'] },
@@ -30,6 +33,9 @@ async function main() {
   const locRaw = fs.readFileSync(path.join(dataDir, 'Items - Location.csv'), 'utf8');
   const locData = parse(locRaw, { columns: true, skip_empty_lines: true });
   for (const row of locData as any[]) {
+    if (!row['ID'] || !row['Location'] || String(row['ID']).trim() === '' || String(row['Location']).trim() === '') {
+      continue;
+    }
     try {
       await prisma.itemLocation.upsert({
         where: { internal_id: row['ID'] },

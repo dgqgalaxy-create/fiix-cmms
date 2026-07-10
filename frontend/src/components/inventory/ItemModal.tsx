@@ -31,7 +31,7 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
     location_id: '',
     purchase_cost: '',
     stock: '0',
-    minimum_inventory: '0',
+    minimum_inventory: '',
     is_active: true,
     uom: 'PIEZAS'
   });
@@ -109,7 +109,7 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
         location_id: '',
         purchase_cost: '',
         stock: '0',
-        minimum_inventory: '0',
+        minimum_inventory: '',
         is_active: true,
         uom: 'PIEZAS'
       });
@@ -135,6 +135,12 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
     setError(null);
 
     try {
+      if (Number(formData.minimum_inventory) <= 0) {
+        setError('El stock mínimo debe ser mayor a 0');
+        setIsSubmitting(false);
+        return;
+      }
+
       const data = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
         data.append(key, value.toString());
@@ -358,7 +364,8 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
                   <label className="block text-xs font-semibold text-slate-500 mb-1">Stock Mínimo</label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="any"
+                    min="0"
                     required
                     disabled={readOnly}
                     value={formData.minimum_inventory}

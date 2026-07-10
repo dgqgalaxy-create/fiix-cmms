@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.9.0";
+export const APP_VERSION = "1.9.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "09 de Julio, 2026";
+  const updateDate = "10 de Julio, 2026";
   const modules = [
     "Panel Principal (Dashboard)",
     "Gestión de Activos (Equipos)",
@@ -27,11 +27,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
-    "Checklist con campos mixtos: ahora soporta texto y números para toma de lecturas.",
-    "Corrección en Roster: guardado correcto de incidencias y excepciones (Falta, TXT).",
-    "Auto-asignación de ubicación 'Sin Asignación' al crear repuestos o importar sin definir lugar.",
-    "Formularios de movimientos restringidos a cantidades enteras (no decimales).",
-    "Validación y bloqueo de movimientos negativos: impide sacar más inventario del existente."
+    "Habilitado el registro de movimientos para técnicos directamente desde la vista de Repuestos.",
+    "Actualizaciones silenciosas: el guardado en Inventario ya no interrumpe tu pantalla con una carga.",
+    "Stock y movimientos más flexibles: permite registrar fracciones o decimales (ej. litros, metros) al escribir, y subir/bajar enteros con la perilla.",
+    "Mejora en Dashboard: Se añadió la indicación dinámica del periodo en la tarjeta de Totales Recibidas.",
+    "Validación de inventario: El stock mínimo ahora debe ser estrictamente mayor a 0."
   ];
 
   return (

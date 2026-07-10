@@ -128,7 +128,10 @@ export const RosterPage = () => {
       const currStr = format(curr, 'yyyy-MM-dd');
       
       data.patterns.forEach(pattern => {
-        const userExceptions = data.exceptions.filter(e => e.user_id === pattern.user_id && format(new Date(e.date), 'yyyy-MM-dd') === currStr);
+        const userExceptions = data.exceptions.filter(e => {
+          const exceptionDateStr = e.date.split('T')[0];
+          return e.user_id === pattern.user_id && exceptionDateStr === currStr;
+        });
         
         let hasOverride = false;
         
@@ -148,13 +151,13 @@ export const RosterPage = () => {
               allDay: true,
               dateStr: currStr,
             });
-            if (['FALTA', 'VACACIONES', 'PERMISO_SG', 'PERMISO_CG', 'FESTIVO'].includes(exc.exception_type)) {
-              hasOverride = true;
-            }
+            hasOverride = true;
           });
         }
 
-        const daysDiff = differenceInDays(curr, new Date(pattern.start_date));
+        const [yyyy, mm, dd] = pattern.start_date.split('T')[0].split('-');
+        const patternStart = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+        const daysDiff = differenceInDays(curr, patternStart);
         if (daysDiff >= 0 && !hasOverride) {
           let shiftTitle = '';
           
@@ -203,7 +206,7 @@ export const RosterPage = () => {
     }
 
     if (data?.holidays) {
-      const isHoliday = data.holidays.some(h => format(new Date(h.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
+      const isHoliday = data.holidays.some(h => h.date.split('T')[0] === format(date, 'yyyy-MM-dd'));
       if (isHoliday) {
         className += ' bg-rose-100 dark:bg-rose-900/40 ring-2 ring-inset ring-rose-400 dark:ring-rose-500';
       }
@@ -449,7 +452,7 @@ export const RosterPage = () => {
       
       {/* Modal Detalles del Día */}
       {selectedDay && (() => {
-        const holiday = data?.holidays?.find(h => format(new Date(h.date), 'yyyy-MM-dd') === format(selectedDay, 'yyyy-MM-dd'));
+        const holiday = data?.holidays?.find(h => h.date.split('T')[0] === format(selectedDay, 'yyyy-MM-dd'));
         
         return (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -508,6 +511,7 @@ export const RosterPage = () => {
                                   exception_type: e.target.value,
                                   date: format(selectedDay, 'yyyy-MM-dd')
                                 });
+                                window.alert('Incidencia añadida correctamente');
                                 fetchData();
                               }
                             }}

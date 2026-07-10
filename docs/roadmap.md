@@ -1,11 +1,24 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
-*(Última actualización: 09 de Julio de 2026)*
+*(Última actualización: 10 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.7.5 (Lanzamiento: 09 de Julio de 2026)
+## 🚀 Versión Actual: v1.9.1 (Lanzamiento: 10 de Julio de 2026)
 
-### Novedades en v1.7.5 (Configuración Dinámica y Correcciones)
+### Novedades en v1.9.1 (Mejoras en Inventario y UX)
+- **Acceso Ágil para Técnicos:** Habilitado el registro de movimientos para técnicos directamente desde la vista de Repuestos.
+- **Actualizaciones Silenciosas:** El guardado y registro de inventario ya no interrumpe la interfaz con pantallas de carga, trabajando en segundo plano.
+- **Stock y Movimientos Flexibles:** Ahora es posible registrar fracciones o decimales (ej. litros, metros) al escribir en el campo de cantidad. El control de botones (+ y -) sigue operando en números enteros.
+- **Etiqueta Dinámica en Dashboard:** La tarjeta de "Totales Recibidas" en Dashboard ahora especifica dinámicamente el periodo mostrado (Mes Actual, Semana Actual, etc).
+- **Validación Robusta:** El stock mínimo permitido es ahora mayor a 0, evitando configuraciones erróneas.
+
+### Novedades Anteriores (v1.9.0)
+- Checklists dinámicos con soporte para campos mixtos (texto y número).
+- Corrección del guardado de incidencias en el calendario (Roster).
+- Habilitada la validación para impedir la salida de inventario por cantidades mayores al stock existente.
+- Asignación predeterminada a "Sin Asignación" en inventario.
+
+### Novedades Anteriores (v1.7.5 - Configuración Dinámica y Correcciones)
 - **Configuración de Telegram Dinámica:** Se movió la configuración del Bot de Telegram (Token y Chat ID) del archivo `.env` a la base de datos, con una nueva interfaz en "Opciones de Desarrollador" para facilitar la instalación "marca blanca" en nuevas fábricas.
 - **Importación CSV de Solicitantes:** Corrección en el módulo de importación masiva. Ahora, al subir el CSV de Órdenes de Trabajo, el sistema alimenta y crea automáticamente los registros faltantes en el Catálogo de Solicitantes.
 

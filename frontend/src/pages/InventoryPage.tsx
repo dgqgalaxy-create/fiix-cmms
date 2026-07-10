@@ -298,28 +298,30 @@ export const InventoryPage = () => {
                     </div>
                   </div>
 
-                  {canManage && (
-                    <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-slate-100" onClick={(e) => e.stopPropagation()}>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleOpenTransactionModal(item.id); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
-                      >
-                        <ArrowRightLeft size={14} /> Movimiento
-                      </button>
-                      <button 
-                        onClick={() => setQrItem(item)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
-                      >
-                        <QrCode size={14} /> Imprimir QR
-                      </button>
-                      <button 
-                        onClick={() => handleOpenItemModal(item)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                      >
-                        <Edit2 size={14} /> Editar
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-slate-100" onClick={(e) => e.stopPropagation()}>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleOpenTransactionModal(item.id); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+                    >
+                      <ArrowRightLeft size={14} /> Movimiento
+                    </button>
+                    {canManage && (
+                      <>
+                        <button 
+                          onClick={() => setQrItem(item)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                        >
+                          <QrCode size={14} /> Imprimir QR
+                        </button>
+                        <button 
+                          onClick={() => handleOpenItemModal(item)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                        >
+                          <Edit2 size={14} /> Editar
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               ))}
               {filteredItems.length === 0 && (
@@ -339,7 +341,7 @@ export const InventoryPage = () => {
                       <th className="px-6 py-4">Repuesto</th>
                       <th className="px-6 py-4 text-center">Stock Actual</th>
                       <th className="px-6 py-4 hidden md:table-cell">Categoría / Ubic.</th>
-                      {canManage && <th className="px-6 py-4 text-right whitespace-nowrap">Acciones</th>}
+                      <th className="px-6 py-4 text-right whitespace-nowrap">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -390,33 +392,35 @@ export const InventoryPage = () => {
                             </span>
                           </div>
                         </td>
-                        {canManage && (
-                          <td className="px-6 py-4 text-right whitespace-nowrap">
-                            <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); handleOpenTransactionModal(item.id); }}
-                                className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-100"
-                                title="Realizar Movimiento"
-                              >
-                                <ArrowRightLeft size={18} />
-                              </button>
-                              <button 
-                                onClick={() => setQrItem(item)}
-                                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-100"
-                                title="Imprimir QR"
-                              >
-                                <QrCode size={18} />
-                              </button>
-                              <button 
-                                onClick={() => handleOpenItemModal(item)}
-                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
-                                title="Editar"
-                              >
-                                <Edit2 size={18} />
-                              </button>
-                            </div>
-                          </td>
-                        )}
+                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleOpenTransactionModal(item.id); }}
+                              className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-100"
+                              title="Realizar Movimiento"
+                            >
+                              <ArrowRightLeft size={18} />
+                            </button>
+                            {canManage && (
+                              <>
+                                <button 
+                                  onClick={() => setQrItem(item)}
+                                  className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-100"
+                                  title="Imprimir QR"
+                                >
+                                  <QrCode size={18} />
+                                </button>
+                                <button 
+                                  onClick={() => handleOpenItemModal(item)}
+                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                                  title="Editar"
+                                >
+                                  <Edit2 size={18} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     ))}
                     {filteredItems.length === 0 && (
@@ -700,12 +704,12 @@ export const InventoryPage = () => {
               <Plus size={18} /> Nuevo Repuesto
             </button>
           )}
-          {activeTab === 'transactions' && (
+          {activeTab === 'items' && (
             <button 
               onClick={() => handleOpenTransactionModal()}
               className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors w-full md:w-auto shadow-sm shadow-blue-600/20"
             >
-              <Plus size={18} /> Registrar Movimiento
+              <ArrowRightLeft size={18} /> Registrar Movimiento
             </button>
           )}
           {(activeTab === 'categories' || activeTab === 'locations' || activeTab === 'vendors') && canManage && (
@@ -831,7 +835,7 @@ export const InventoryPage = () => {
       <ItemModal 
         isOpen={isItemModalOpen} 
         onClose={() => setIsItemModalOpen(false)} 
-        onSaved={fetchData}
+        onSaved={() => fetchData(true)}
         item={selectedItem}
         categories={categories}
         locations={locations}
@@ -844,7 +848,7 @@ export const InventoryPage = () => {
       <TransactionModal
         isOpen={isTransactionModalOpen}
         onClose={() => setIsTransactionModalOpen(false)}
-        onSaved={fetchData}
+        onSaved={() => fetchData(true)}
         items={items}
         defaultItemId={preselectedTransactionItemId}
       />
@@ -860,7 +864,7 @@ export const InventoryPage = () => {
         onClose={() => setIsCatalogModalOpen(false)}
         type={catalogType}
         item={selectedCatalogItem}
-        onSaved={fetchData}
+        onSaved={() => fetchData(true)}
         readOnly={isCatalogReadOnly}
         allItems={items}
       />

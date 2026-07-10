@@ -113,8 +113,12 @@ router.post('/delete', verifyDevPassword, async (req: Request, res: Response) =>
   try {
     const tablenames = await prisma.$queryRaw<Array<{ tablename: string }>>`SELECT tablename FROM pg_tables WHERE schemaname='public'`;
     
+    // Explicitly delete checklist records just in case
+    await prisma.$executeRawUnsafe(`TRUNCATE TABLE "DailyChecklist" CASCADE;`);
+    await prisma.$executeRawUnsafe(`TRUNCATE TABLE "DailyChecklistRow" CASCADE;`);
+
     for (const { tablename } of tablenames) {
-      if (tablename !== '_prisma_migrations') {
+      if (tablename !== '_prisma_migrations' && tablename !== 'ChecklistActivity') {
         await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${tablename}" CASCADE;`);
       }
     }
@@ -158,6 +162,9 @@ router.get('/export', verifyDevPassword, async (req: Request, res: Response) => 
       InventoryTransaction: await prisma.inventoryTransaction.findMany(),
       PurchaseOrder: await prisma.purchaseOrder.findMany(),
       PurchaseOrderItem: await prisma.purchaseOrderItem.findMany(),
+      ChecklistActivity: await prisma.checklistActivity.findMany(),
+      DailyChecklist: await prisma.dailyChecklist.findMany(),
+      DailyChecklistRow: await prisma.dailyChecklistRow.findMany(),
       WorkOrder: await prisma.workOrder.findMany({
         include: { assigned_technicians: { select: { id: true } } }
       })
@@ -180,10 +187,14 @@ router.post('/import', verifyDevPassword, upload.single('backupFile'), async (re
 
     const data = JSON.parse(req.file.buffer.toString('utf-8'));
 
-    // Truncate all tables first
+    // Truncate all tables first, EXCEPT ChecklistActivity to preserve the seed/base configuration.
     const tablenames = await prisma.$queryRaw<Array<{ tablename: string }>>`SELECT tablename FROM pg_tables WHERE schemaname='public'`;
+    
+    await prisma.$executeRawUnsafe(`TRUNCATE TABLE "DailyChecklist" CASCADE;`);
+    await prisma.$executeRawUnsafe(`TRUNCATE TABLE "DailyChecklistRow" CASCADE;`);
+
     for (const { tablename } of tablenames) {
-      if (tablename !== '_prisma_migrations') {
+      if (tablename !== '_prisma_migrations' && tablename !== 'ChecklistActivity') {
         await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${tablename}" CASCADE;`);
       }
     }
@@ -207,6 +218,14 @@ router.post('/import', verifyDevPassword, upload.single('backupFile'), async (re
     if (data.InventoryTransaction) await prisma.inventoryTransaction.createMany({ data: data.InventoryTransaction });
     if (data.PurchaseOrder) await prisma.purchaseOrder.createMany({ data: data.PurchaseOrder });
     if (data.PurchaseOrderItem) await prisma.purchaseOrderItem.createMany({ data: data.PurchaseOrderItem });
+
+    // Restore Checklist data if available
+    if (data.ChecklistActivity) {
+      await prisma.$executeRawUnsafe(`TRUNCATE TABLE "ChecklistActivity" CASCADE;`);
+      await prisma.checklistActivity.createMany({ data: data.ChecklistActivity });
+    }
+    if (data.DailyChecklist) await prisma.dailyChecklist.createMany({ data: data.DailyChecklist });
+    if (data.DailyChecklistRow) await prisma.dailyChecklistRow.createMany({ data: data.DailyChecklistRow });
 
     // For WorkOrder, we handle the many-to-many relationship
     if (data.WorkOrder) {
@@ -269,10 +288,13 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
       const data = parse(catFile.buffer.toString('utf8'), { columns: true, skip_empty_lines: true });
       for (const row of data as any[]) {
         try {
+          const id = (row['ID'] || '').trim();
+          const name = (row['Category'] || '').trim();
+          if (!id || !name) continue;
           await prisma.itemCategory.upsert({
-            where: { internal_id: row['ID'] },
-            update: { name: row['Category'], icon_url: row['Icon'] },
-            create: { internal_id: row['ID'], name: row['Category'], icon_url: row['Icon'] }
+            where: { internal_id: id },
+            update: { name: name, icon_url: row['Icon'] },
+            create: { internal_id: id, name: name, icon_url: row['Icon'] }
           });
           results.categories++;
         } catch (e) {}
@@ -283,10 +305,13 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
       const data = parse(locFile.buffer.toString('utf8'), { columns: true, skip_empty_lines: true });
       for (const row of data as any[]) {
         try {
+          const id = (row['ID'] || '').trim();
+          const name = (row['Location'] || '').trim();
+          if (!id || !name) continue;
           await prisma.itemLocation.upsert({
-            where: { internal_id: row['ID'] },
-            update: { name: row['Location'], icon_url: row['Icon'] },
-            create: { internal_id: row['ID'], name: row['Location'], icon_url: row['Icon'] }
+            where: { internal_id: id },
+            update: { name: name, icon_url: row['Icon'] },
+            create: { internal_id: id, name: name, icon_url: row['Icon'] }
           });
           results.locations++;
         } catch (e) {}
@@ -297,14 +322,17 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
       const data = parse(venFile.buffer.toString('utf8'), { columns: true, skip_empty_lines: true });
       for (const row of data as any[]) {
         try {
+          const id = (row['ID'] || '').trim();
+          const name = (row['Name'] || '').trim();
+          if (!id || !name) continue;
           await prisma.vendor.upsert({
-            where: { internal_id: row['ID'] },
+            where: { internal_id: id },
             update: { 
-              name: row['Name'], logo_url: row['Logo'], website_url: row['URL'],
+              name: name, logo_url: row['Logo'], website_url: row['URL'],
               phone: row['Phone'], email: row['Email'], address: row['Address']
             },
             create: { 
-              internal_id: row['ID'], name: row['Name'], logo_url: row['Logo'], website_url: row['URL'],
+              internal_id: id, name: name, logo_url: row['Logo'], website_url: row['URL'],
               phone: row['Phone'], email: row['Email'], address: row['Address']
             }
           });
@@ -369,15 +397,19 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
           // Compatibilidad con archivos que tienen error de encoding en la pregunta inicial "¿Discontinued?"
           const isDiscontinued = row['¿Discontinued?'] === 'TRUE' || row['Discontinued?'] === 'TRUE';
           
+          const id = (row['Item ID'] || '').trim();
+          const name = (row['Name'] || '').trim();
+          if (!id) continue;
+          
           await prisma.item.upsert({
-            where: { internal_code: row['Item ID'] },
+            where: { internal_code: id },
             update: {
-              name: row['Name'] || 'Sin nombre',
+              name: name || 'Sin nombre',
               description: row['Description'],
               image_url: row['Image'],
-              category_id: catMap[row['Category']] || null,
-              vendor_id: venMap[row['Vendor']] || null,
-              location_id: locMap[row['Location']] || unassignedLocId,
+              category_id: catMap[(row['Category'] || '').trim()] || null,
+              vendor_id: venMap[(row['Vendor'] || '').trim()] || null,
+              location_id: locMap[(row['Location'] || '').trim()] || unassignedLocId,
               purchase_cost: cost,
               stock: stock,
               minimum_inventory: minStock,
@@ -385,13 +417,13 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
               uom: uom
             },
             create: {
-              internal_code: row['Item ID'],
-              name: row['Name'] || 'Sin nombre',
+              internal_code: id,
+              name: name || 'Sin nombre',
               description: row['Description'],
               image_url: row['Image'],
-              category_id: catMap[row['Category']] || null,
-              vendor_id: venMap[row['Vendor']] || null,
-              location_id: locMap[row['Location']] || unassignedLocId,
+              category_id: catMap[(row['Category'] || '').trim()] || null,
+              vendor_id: venMap[(row['Vendor'] || '').trim()] || null,
+              location_id: locMap[(row['Location'] || '').trim()] || unassignedLocId,
               purchase_cost: cost,
               stock: stock,
               minimum_inventory: minStock,

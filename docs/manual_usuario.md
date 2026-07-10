@@ -1,5 +1,5 @@
 # Manual de Usuario - LPET CMMS
-*(Versión 1.9.0)*
+*(Versión 1.9.1)*
 
 Bienvenido al manual de uso rápido del Sistema de Gestión de Mantenimiento Computarizado (CMMS). A continuación, te explicamos cómo utilizar las principales funciones agregadas recientemente.
 
@@ -9,11 +9,14 @@ Las actividades del Checklist ahora son más flexibles:
 - **Uso:** Simplemente haz clic en la línea correspondiente y teclea el valor numérico (ej. 45.5) o un texto corto. El sistema guardará la información tal como si fuese un check tradicional.
 - **Configuración:** Para que estos campos aparezcan, asegúrate de ir a las *Opciones de Desarrollador* en el menú y hacer clic en **"Restaurar Actividades por Defecto"**.
 
-## 2. Módulo Inventario: Restricciones y Autocorrecciones
-Se han mejorado las reglas del almacén para prevenir errores:
-- **Cantidades Enteras:** Al registrar entradas o salidas, el sistema te obligará a introducir números enteros (sin decimales).
-- **Bloqueo de Inventario Negativo:** Si intentas sacar más piezas de las que existen actualmente (ej. sacar 10 de un stock de 5), el sistema bloqueará la operación y mostrará un mensaje de alerta en rojo.
-- **Ubicación Automática:** Si creas un nuevo repuesto o importas un CSV y olvidas asignarle una ubicación, el sistema lo agrupará automáticamente bajo la ubicación "Sin Asignación".
+## 2. Módulo Inventario: Mejoras y Restricciones
+Se han mejorado las reglas del almacén para prevenir errores y mejorar la fluidez:
+- **Cantidades Flexibles (Decimales y Enteros):** Al registrar movimientos o editar stock, ahora puedes registrar cantidades decimales (ej. 0.5 litros o metros) tecleando el valor. Por otro lado, usar los botones (+/-) ajustará la cantidad de 1 en 1 (enteros).
+- **Acceso Ágil para Técnicos:** El botón "Registrar Movimiento" se encuentra disponible directamente en la vista principal de Repuestos, sin necesidad de cambiar a la pestaña de historial.
+- **Guardado Silencioso:** Los registros de movimientos, así como las creaciones de repuestos, ahora se sincronizan en segundo plano sin mostrar pantallas de carga molestas.
+- **Validación de Stock Mínimo:** El sistema ya no permite configurar un stock mínimo igual a 0.
+- **Bloqueo de Inventario Negativo:** Si intentas sacar más piezas de las que existen actualmente, el sistema bloqueará la operación con una alerta.
+- **Ubicación Automática:** Si creas un nuevo repuesto o importas un CSV sin definir lugar, el sistema lo agrupará bajo la ubicación "Sin Asignación".
 
 ## 3. Módulo Calendario (Roster)
 - **Corrección de Incidencias:** Se ha resuelto el problema que impedía guardar incidencias como (Falta, TXT, Vacaciones, etc.). Ahora basta con elegir la incidencia de la lista desplegable en el día del empleado y el sistema guardará la excepción inmediatamente.
