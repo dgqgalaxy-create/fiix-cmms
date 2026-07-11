@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, Search, Calendar, PackageOpen, ChevronRight, Filter, ExternalLink } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { ShoppingCart, Plus, Search, Calendar, PackageOpen, ChevronRight, Filter, ExternalLink, ChevronUp, ChevronDown } from 'lucide-react';
 import { getPurchaseOrders, type PurchaseOrder } from '../api/purchaseOrders';
 import { CreatePOModal } from '../components/CreatePOModal';
 import { PODetailModal } from '../components/PODetailModal';
@@ -14,6 +14,8 @@ export const PurchaseOrdersPage = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
+  const [sortField, setSortField] = useState<'folio' | 'vendor' | 'status' | 'total' | 'date'>('folio');
+  const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
 
   const { hasPermission } = useAuth();
 
@@ -45,6 +47,34 @@ export const PurchaseOrdersPage = () => {
     );
   }, [searchTerm, filterStatus, orders]);
 
+  const calculateTotal = (items: any[]) => {
+    return items.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
+  };
+
+  const sortedOrders = useMemo(() => {
+    return [...filteredOrders].sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'folio':
+          cmp = (a.folio || 0) - (b.folio || 0);
+          break;
+        case 'vendor':
+          cmp = (a.vendor?.name || '').localeCompare(b.vendor?.name || '');
+          break;
+        case 'status':
+          cmp = a.status.localeCompare(b.status);
+          break;
+        case 'total':
+          cmp = calculateTotal(a.items) - calculateTotal(b.items);
+          break;
+        case 'date':
+          cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+      }
+      return sortDirection === 'asc' ? cmp : -cmp;
+    });
+  }, [filteredOrders, sortField, sortDirection]);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'BORRADOR': return <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-bold border border-slate-200">BORRADOR</span>;
@@ -56,13 +86,9 @@ export const PurchaseOrdersPage = () => {
     }
   };
 
-  const calculateTotal = (items: any[]) => {
-    return items.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
-  };
-
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
         <div>
           <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-2">
             <ShoppingCart className="text-indigo-600" size={28} />
@@ -91,8 +117,8 @@ export const PurchaseOrdersPage = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row justify-between gap-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex flex-col md:flex-row justify-between gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
             <input 
@@ -100,26 +126,26 @@ export const PurchaseOrdersPage = () => {
               placeholder="Buscar por folio, proveedor o estado..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm"
+              className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm"
             />
           </div>
           <div className="relative">
             <button 
               onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium shadow-sm h-full"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium shadow-sm h-full"
             >
               <Filter size={18} />
               Filtros {filterStatus !== 'TODOS' && <span className="w-2 h-2 rounded-full bg-indigo-600"></span>}
             </button>
             {isFilterOpen && (
-              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200 z-50 overflow-hidden">
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
                 <div className="p-2">
                   <div className="text-xs font-bold text-slate-400 uppercase px-3 py-2">Estado de Orden</div>
                   {['TODOS', 'BORRADOR', 'APROBADA', 'ENVIADA', 'RECIBIDA', 'CANCELADA'].map(status => (
                     <button
                       key={status}
                       onClick={() => { setFilterStatus(status); setIsFilterOpen(false); }}
-                      className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${filterStatus === status ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+                      className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${filterStatus === status ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-bold' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                     >
                       {status}
                     </button>
@@ -137,19 +163,29 @@ export const PurchaseOrdersPage = () => {
             </div>
           ) : filteredOrders.length > 0 ? (
             <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-white border-b border-slate-200 text-sm text-slate-500 uppercase tracking-wider">
-                  <th className="px-6 py-4 font-semibold">Folio</th>
-                  <th className="px-6 py-4 font-semibold">Proveedor</th>
-                  <th className="px-6 py-4 font-semibold">Estado</th>
-                  <th className="px-6 py-4 font-semibold">Total</th>
-                  <th className="px-6 py-4 font-semibold">Fecha Creada</th>
-                  <th className="px-6 py-4 font-semibold text-right">Acciones</th>
+              <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold shadow-md shadow-[#739239]/40 dark:shadow-[#739239]/20 relative z-10">
+                <tr>
+                  <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" onClick={() => { setSortField('folio'); setSortDirection(sortField === 'folio' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                    <div className="flex items-center gap-1.5">Folio {sortField === 'folio' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                  </th>
+                  <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" onClick={() => { setSortField('vendor'); setSortDirection(sortField === 'vendor' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                    <div className="flex items-center gap-1.5">Proveedor {sortField === 'vendor' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                  </th>
+                  <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" onClick={() => { setSortField('status'); setSortDirection(sortField === 'status' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                    <div className="flex items-center gap-1.5">Estado {sortField === 'status' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                  </th>
+                  <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" onClick={() => { setSortField('total'); setSortDirection(sortField === 'total' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                    <div className="flex items-center gap-1.5">Total {sortField === 'total' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                  </th>
+                  <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" onClick={() => { setSortField('date'); setSortDirection(sortField === 'date' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                    <div className="flex items-center gap-1.5">Fecha Creada {sortField === 'date' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                  </th>
+                  <th className="px-6 py-4 text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredOrders.map(order => (
-                  <tr key={order.id} className="hover:bg-slate-50/80 transition-colors group">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                {sortedOrders.map((order) => (
+                  <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="font-bold text-slate-800">PO-{order.folio.toString().padStart(4, '0')}</div>
                     </td>

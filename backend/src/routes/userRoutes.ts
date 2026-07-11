@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getUsers, createUser, updateUser, deleteUser, heartbeat, getOnlineUsers } from '../controllers/userController';
+import { getUsers, createUser, updateUser, deleteUser, heartbeat, getOnlineUsers, updateMyPreferences, getMe } from '../controllers/userController';
 import { authenticate, requirePermission } from '../middlewares/authMiddleware';
 
 const router = Router();
@@ -7,6 +7,10 @@ const router = Router();
 // Heartbeat for online status
 router.post('/heartbeat', authenticate, heartbeat);
 router.get('/online', authenticate, getOnlineUsers);
+
+// Update my preferences
+router.get('/me', authenticate, getMe);
+router.put('/me/preferences', authenticate, updateMyPreferences);
 
 // Only authenticated users can fetch users.
 router.get('/', authenticate, getUsers);

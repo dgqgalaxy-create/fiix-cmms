@@ -1,6 +1,105 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 
+export const getAssetMetrics = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    
+    const asset = await prisma.asset.findUnique({ where: { id } });
+    if (!asset) {
+      res.status(404).json({ error: 'Activo no encontrado' });
+      return;
+    }
+
+    const workOrders = await prisma.workOrder.findMany({
+      where: { asset_id: id, status: 'FINALIZADO' },
+      orderBy: { created_at: 'asc' },
+      include: {
+        assigned_technicians: {
+          select: { name: true }
+        }
+      }
+    });
+
+    const correctiveOrders = workOrders.filter(wo => wo.maintenance_type === 'CORRECTIVO');
+    
+    let totalRepairTimeMs = 0;
+    let repairCount = 0;
+
+    correctiveOrders.forEach(wo => {
+      const end = wo.completed_at ? new Date(wo.completed_at).getTime() : 0;
+      const start = wo.started_at ? new Date(wo.started_at).getTime() : new Date(wo.created_at).getTime();
+      let repairTimeMs = wo.accumulated_time_ms;
+      if (!repairTimeMs || repairTimeMs <= 0) {
+        if (end && end > start) {
+          repairTimeMs = end - start;
+        } else {
+          repairTimeMs = 0;
+        }
+      }
+      
+      if (repairTimeMs > 0) {
+        totalRepairTimeMs += repairTimeMs;
+        repairCount++;
+      }
+    });
+
+    const mttr_hours = repairCount > 0 ? (totalRepairTimeMs / repairCount) / (1000 * 60 * 60) : 0;
+
+    let totalTimeBetweenFailuresMs = 0;
+    let failureCountForMtbf = 0;
+    
+    if (correctiveOrders.length >= 2) {
+       for (let i = 1; i < correctiveOrders.length; i++) {
+          const prev = correctiveOrders[i-1];
+          const curr = correctiveOrders[i];
+          const prevEnd = prev.completed_at ? new Date(prev.completed_at).getTime() : new Date(prev.created_at).getTime();
+          const currStart = new Date(curr.created_at).getTime();
+          if (currStart > prevEnd) {
+             totalTimeBetweenFailuresMs += (currStart - prevEnd);
+             failureCountForMtbf++;
+          }
+       }
+    }
+    const mtbf_hours = failureCountForMtbf > 0 ? (totalTimeBetweenFailuresMs / failureCountForMtbf) / (1000 * 60 * 60) : 0;
+
+    const monthly_stats: any[] = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+       monthly_stats.push({
+          month: d.getMonth(),
+          year: d.getFullYear(),
+          label: d.toLocaleString('es-ES', { month: 'short' }).toUpperCase(),
+          failures: 0,
+          downtime: 0
+       });
+    }
+
+    correctiveOrders.forEach(wo => {
+       const woDate = new Date(wo.created_at);
+       const stat = monthly_stats.find(m => m.month === woDate.getMonth() && m.year === woDate.getFullYear());
+       if (stat) {
+          stat.failures++;
+          const end = wo.completed_at ? new Date(wo.completed_at).getTime() : 0;
+          const start = wo.started_at ? new Date(wo.started_at).getTime() : woDate.getTime();
+          if (end > start) {
+              stat.downtime += (end - start) / (1000 * 60 * 60);
+          }
+       }
+    });
+
+    res.json({
+      mttr_hours: parseFloat(mttr_hours.toFixed(2)),
+      mtbf_hours: parseFloat(mtbf_hours.toFixed(2)),
+      monthly_stats,
+      history: workOrders.slice(-10).reverse() // Ultimas 10 ordenes finalizadas
+    });
+  } catch (error) {
+    console.error('Error fetching asset metrics', error);
+    res.status(500).json({ error: 'Error al obtener métricas del activo' });
+  }
+};
 export const getAssets = async (req: Request, res: Response): Promise<void> => {
   try {
     const assets = await prisma.asset.findMany({

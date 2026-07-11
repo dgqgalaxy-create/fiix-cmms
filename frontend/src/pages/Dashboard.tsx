@@ -512,13 +512,13 @@ export const Dashboard = () => {
           onClick={() => handleStatusClick('EN_PROCESO')}
           className={`cursor-pointer transition-all bg-white dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'EN_PROCESO' ? 'ring-2 ring-blue-500 border-blue-500 shadow-md scale-[1.02]' : 'border-blue-100 shadow-sm shadow-blue-100/50 hover:shadow-md'}`}
         >
-          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-blue-50 opacity-50 group-hover:scale-110 transition-transform">
+          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-blue-50 dark:text-blue-900/40 opacity-50 group-hover:scale-110 transition-transform">
              <Wrench className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
           <div className="relative z-10 h-full flex flex-col justify-between">
             <div>
               <span className="text-blue-600 text-xs sm:text-sm font-bold uppercase tracking-wider">En Proceso</span>
-              <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{summary.EN_PROCESO || 0}</div>
+              <div className="text-2xl sm:text-4xl font-black text-slate-800 dark:text-slate-100 mt-1.5 sm:mt-2">{summary.EN_PROCESO || 0}</div>
             </div>
             {activeTechsText && (
               <div className="mt-2 text-[10px] sm:text-xs text-blue-700/80 font-semibold leading-tight line-clamp-2" title={activeTechsText}>
@@ -532,13 +532,13 @@ export const Dashboard = () => {
           onClick={() => handleStatusClick('EN_ESPERA')}
           className={`cursor-pointer transition-all bg-white dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'EN_ESPERA' ? 'ring-2 ring-purple-500 border-purple-500 shadow-md scale-[1.02]' : 'border-purple-100 shadow-sm shadow-purple-100/50 hover:shadow-md'}`}
         >
-          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-purple-50 opacity-50 group-hover:scale-110 transition-transform">
+          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-purple-50 dark:text-purple-900/40 opacity-50 group-hover:scale-110 transition-transform">
              <AlertCircle className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
           <div className="relative z-10 h-full flex flex-col justify-between">
             <div>
               <span className="text-purple-600 text-xs sm:text-sm font-bold uppercase tracking-wider">Pausadas</span>
-              <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{summary.EN_ESPERA || 0}</div>
+              <div className="text-2xl sm:text-4xl font-black text-slate-800 dark:text-slate-100 mt-1.5 sm:mt-2">{summary.EN_ESPERA || 0}</div>
             </div>
             {pausedTechsText && (
               <div className="mt-2 text-[10px] sm:text-xs text-purple-700/80 font-semibold leading-tight line-clamp-2" title={pausedTechsText}>
@@ -552,12 +552,12 @@ export const Dashboard = () => {
           onClick={() => handleStatusClick('FINALIZADO')}
           className={`cursor-pointer transition-all bg-white dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'FINALIZADO' ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-md scale-[1.02]' : 'border-emerald-100 shadow-sm shadow-emerald-100/50 hover:shadow-md'}`}
         >
-          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-emerald-50 opacity-50 group-hover:scale-110 transition-transform">
+          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-emerald-50 dark:text-emerald-900/40 opacity-50 group-hover:scale-110 transition-transform">
              <CheckCircle2 className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
           <div className="relative z-10">
             <span className="text-emerald-600 text-xs sm:text-sm font-bold uppercase tracking-wider">Finalizadas</span>
-            <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{summary.FINALIZADO || 0}</div>
+            <div className="text-2xl sm:text-4xl font-black text-slate-800 dark:text-slate-100 mt-1.5 sm:mt-2">{summary.FINALIZADO || 0}</div>
           </div>
         </div>
 
@@ -565,12 +565,12 @@ export const Dashboard = () => {
           onClick={() => handleStatusClick('ANULADO')}
           className={`cursor-pointer transition-all bg-slate-50 dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'ANULADO' ? 'ring-2 ring-slate-400 border-slate-400 shadow-md scale-[1.02]' : 'border-slate-200 shadow-sm shadow-slate-200/50 hover:shadow-md hover:bg-slate-100'}`}
         >
-          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-slate-100 opacity-70 group-hover:scale-110 transition-transform">
+          <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-slate-100 dark:text-slate-700/50 opacity-70 group-hover:scale-110 transition-transform">
              <XCircle className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
           <div className="relative z-10">
             <span className="text-slate-500 text-xs sm:text-sm font-bold uppercase tracking-wider">Invalidadas</span>
-            <div className="text-2xl sm:text-4xl font-black text-slate-600 mt-1.5 sm:mt-2">{summary.ANULADO || 0}</div>
+            <div className="text-2xl sm:text-4xl font-black text-slate-600 dark:text-slate-300 mt-1.5 sm:mt-2">{summary.ANULADO || 0}</div>
           </div>
         </div>
 
@@ -579,7 +579,7 @@ export const Dashboard = () => {
             onClick={() => navigate('/inventory?filter=low_stock')}
             className={`cursor-pointer transition-all bg-white dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group border-rose-100 dark:border-rose-900/50 shadow-sm shadow-rose-100/50 dark:shadow-rose-900/20 hover:shadow-md col-span-2 md:col-span-1 print:hidden`}
           >
-            <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-rose-50 opacity-50 group-hover:scale-110 transition-transform">
+            <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-rose-50 dark:text-rose-900/40 opacity-50 group-hover:scale-110 transition-transform">
                <AlertCircle className="w-14 h-14 sm:w-20 sm:h-20" />
             </div>
             <div className="relative z-10">
@@ -590,7 +590,7 @@ export const Dashboard = () => {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
                 </span>
               </span>
-              <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1.5 sm:mt-2">{invSummary.low_stock_count || 0}</div>
+              <div className="text-2xl sm:text-4xl font-black text-slate-800 dark:text-slate-100 mt-1.5 sm:mt-2">{invSummary.low_stock_count || 0}</div>
               <div className="text-[10px] sm:text-xs text-rose-600/70 font-medium mt-1 leading-tight">
                 Artículos con existencias al nivel mínimo o inferior
               </div>

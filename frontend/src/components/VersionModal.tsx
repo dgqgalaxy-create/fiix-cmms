@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.9.1";
+export const APP_VERSION = "1.10.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "10 de Julio, 2026";
+  const updateDate = "11 de Julio, 2026";
   const modules = [
     "Panel Principal (Dashboard)",
     "Gestión de Activos (Equipos)",
@@ -27,11 +27,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
-    "Habilitado el registro de movimientos para técnicos directamente desde la vista de Repuestos.",
-    "Actualizaciones silenciosas: el guardado en Inventario ya no interrumpe tu pantalla con una carga.",
-    "Stock y movimientos más flexibles: permite registrar fracciones o decimales (ej. litros, metros) al escribir, y subir/bajar enteros con la perilla.",
-    "Mejora en Dashboard: Se añadió la indicación dinámica del periodo en la tarjeta de Totales Recibidas.",
-    "Validación de inventario: El stock mínimo ahora debe ser estrictamente mayor a 0."
+    "Nuevo: Menú lateral reorganizable con drag & drop y persistencia en la base de datos por usuario.",
+    "Mejora UI: Unificación del diseño de las tablas (glassmorphism y sombras) y alineación de encabezados.",
+    "Modo Oscuro: Contraste mejorado en tarjetas del Dashboard, tablas principales y órdenes de compra.",
+    "Stock y movimientos más flexibles: permite registrar fracciones o decimales al escribir.",
+    "Habilitado el registro de movimientos para técnicos desde la vista de Repuestos."
   ];
 
   return (

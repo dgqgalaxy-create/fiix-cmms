@@ -1,5 +1,6 @@
+import React, { useState, useMemo } from 'react';
 import type { WorkOrder } from '../api/workOrders';
-import { Clock, CheckCircle2, AlertCircle, Wrench, Calendar, MapPin, Tag, User } from 'lucide-react';
+import { Clock, CheckCircle2, AlertCircle, Wrench, Calendar, MapPin, Tag, User, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface Props {
   workOrders: WorkOrder[];
@@ -36,6 +37,32 @@ const formatFriendlyDate = (dateString: string) => {
 };
 
 export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
+  const [sortField, setSortField] = useState<'folio' | 'asset' | 'date' | 'status'>('folio');
+  const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
+
+  const sortedWorkOrders = useMemo(() => {
+    return [...workOrders].sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'folio':
+          cmp = (a.folio || 0) - (b.folio || 0);
+          break;
+        case 'asset':
+          cmp = a.asset.name.localeCompare(b.asset.name);
+          break;
+        case 'date':
+          const dateA = a.scheduled_date ? new Date(a.scheduled_date).getTime() : 0;
+          const dateB = b.scheduled_date ? new Date(b.scheduled_date).getTime() : 0;
+          cmp = dateA - dateB;
+          break;
+        case 'status':
+          cmp = a.status.localeCompare(b.status);
+          break;
+      }
+      return sortDirection === 'asc' ? cmp : -cmp;
+    });
+  }, [workOrders, sortField, sortDirection]);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'PENDIENTE':
@@ -86,9 +113,11 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {workOrders.map((wo) => (
-        <div 
+    <div>
+      {/* Vista de Tarjetas para Celulares */}
+      <div className="block xl:hidden flex flex-col gap-3">
+        {sortedWorkOrders.map((wo) => (
+          <div 
           key={wo.id} 
           onClick={() => onRowClick && onRowClick(wo)}
           className="group bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500 transition-all cursor-pointer overflow-hidden flex flex-col md:flex-row"
@@ -205,6 +234,105 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
           </div>
         </div>
       ))}
+      </div>
+
+      {/* Vista de Tabla para Escritorio */}
+      <div className="hidden xl:block bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold shadow-md shadow-[#739239]/40 dark:shadow-[#739239]/20 relative z-10">
+              <tr>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" onClick={() => { setSortField('folio'); setSortDirection(sortField === 'folio' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">Orden {sortField === 'folio' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" onClick={() => { setSortField('asset'); setSortDirection(sortField === 'asset' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">Equipo / Tarea {sortField === 'asset' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
+                <th className="px-6 py-4">Técnicos</th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" onClick={() => { setSortField('date'); setSortDirection(sortField === 'date' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">Programación {sortField === 'date' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" onClick={() => { setSortField('status'); setSortDirection(sortField === 'status' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">Estado {sortField === 'status' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+              {sortedWorkOrders.map((wo) => (
+                <tr 
+                  key={wo.id} 
+                  onClick={() => onRowClick && onRowClick(wo)}
+                  className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
+                >
+                  <td className="px-6 py-4 align-top">
+                    <div className="flex flex-col gap-1.5 items-start">
+                      <span className="bg-slate-800 dark:bg-slate-700 text-white px-2.5 py-1 rounded-md text-xs font-bold tracking-wide">
+                        WO-{(wo.folio || 0).toString().padStart(4, '0')}
+                      </span>
+                      {wo.priority === 'URGENTE' && (
+                        <span className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100 dark:border-red-800 uppercase tracking-widest flex items-center gap-1">
+                          <AlertCircle size={10} /> Urgente
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 align-top">
+                    <div className="flex flex-col gap-1 mb-2">
+                      <div className="font-bold text-slate-900 dark:text-slate-100 text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        {wo.title}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        <span className="font-semibold">{wo.asset.name}</span>
+                        {wo.zone?.name && (
+                          <>
+                            <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+                            <span className="flex items-center gap-1"><MapPin size={10}/> {wo.zone.name}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 align-top">
+                    {wo.assigned_technicians && wo.assigned_technicians.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {wo.assigned_technicians.map((t) => (
+                          <div key={t.id} className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-full" title={t.name}>
+                            <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 flex items-center justify-center text-[9px] font-bold shrink-0">
+                              {getInitials(t.name)}
+                            </div>
+                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t.name.split(' ')[0]}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-400 dark:text-slate-500 italic">Sin asignar</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 align-top">
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <Calendar size={12} className="text-slate-400" />
+                        <span className="text-slate-700 dark:text-slate-300">
+                          {wo.scheduled_date ? formatFriendlyDate(wo.scheduled_date) : '-'}
+                        </span>
+                      </div>
+                      {wo.due_date && (
+                        <div className={`flex items-center gap-1.5 text-xs ${new Date(wo.due_date) < new Date() && wo.status !== 'FINALIZADO' ? 'text-red-600 dark:text-red-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+                          <AlertCircle size={12} />
+                          <span>Límite: {formatFriendlyDate(wo.due_date)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 align-top text-right">
+                    {getStatusBadge(wo.status)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };

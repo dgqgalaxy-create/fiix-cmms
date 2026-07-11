@@ -8,6 +8,7 @@ export interface User {
   is_active: boolean;
   created_at: string;
   last_active?: string;
+  preferences?: any;
 }
 
 export const sendHeartbeat = async (): Promise<void> => {
@@ -37,5 +38,15 @@ export const updateUser = async (id: string, data: any): Promise<User> => {
 
 export const deleteUser = async (id: string): Promise<void> => {
   const response = await api.delete(`/users/${id}`);
+  return response.data;
+};
+
+export const getMe = async (): Promise<User> => {
+  const response = await api.get('/users/me');
+  return response.data;
+};
+
+export const updateMyPreferences = async (preferences: any): Promise<any> => {
+  const response = await api.put('/users/me/preferences', { preferences });
   return response.data;
 };

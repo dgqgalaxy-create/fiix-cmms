@@ -40,7 +40,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        preferences: user.preferences
       }
     });
   } catch (error) {

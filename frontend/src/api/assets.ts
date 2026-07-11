@@ -43,3 +43,8 @@ export const deleteAsset = async (id: string) => {
   const response = await api.delete(`/assets/${id}`);
   return response.data;
 };
+
+export const getAssetMetrics = async (id: string) => {
+  const response = await api.get(`/assets/${id}/metrics`);
+  return response.data;
+};

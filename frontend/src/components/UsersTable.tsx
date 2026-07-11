@@ -1,5 +1,6 @@
+import React, { useState, useMemo } from 'react';
 import type { User } from '../api/users';
-import { Pencil, Shield, Wrench, User as UserIcon } from 'lucide-react';
+import { Pencil, Shield, Wrench, User as UserIcon, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface Props {
   users: User[];
@@ -25,11 +26,35 @@ const getRoleColor = (role: string) => {
 };
 
 export const UsersTable = ({ users, onRowClick }: Props) => {
+  const [sortField, setSortField] = useState<'name' | 'email' | 'role' | 'date'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const sortedUsers = useMemo(() => {
+    return [...users].sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'name':
+          cmp = a.name.localeCompare(b.name);
+          break;
+        case 'email':
+          cmp = a.email.localeCompare(b.email);
+          break;
+        case 'role':
+          cmp = a.role.localeCompare(b.role);
+          break;
+        case 'date':
+          cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+      }
+      return sortDirection === 'asc' ? cmp : -cmp;
+    });
+  }, [users, sortField, sortDirection]);
+
   return (
     <div>
       {/* Vista de Tarjetas para Celulares */}
       <div className="block sm:hidden space-y-4">
-        {users.map((user) => (
+        {sortedUsers.map((user) => (
           <div 
             key={user.id} 
             onClick={() => onRowClick(user)}
@@ -61,17 +86,25 @@ export const UsersTable = ({ users, onRowClick }: Props) => {
       <div className="hidden sm:block bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Nombre</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden sm:table-cell">Correo</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Rol</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden md:table-cell">Registro</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Acción</th>
+            <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold shadow-md shadow-[#739239]/40 dark:shadow-[#739239]/20 relative z-10">
+              <tr>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortField('name'); setSortDirection(sortField === 'name' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">Nombre {sortField === 'name' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
+                <th className="px-6 py-4 hidden sm:table-cell cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortField('email'); setSortDirection(sortField === 'email' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">Correo {sortField === 'email' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortField('role'); setSortDirection(sortField === 'role' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">Rol {sortField === 'role' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
+                <th className="px-6 py-4 hidden md:table-cell cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortField('date'); setSortDirection(sortField === 'date' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">Registro {sortField === 'date' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
+                <th className="px-6 py-4 text-right">Acción</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {users.map((user) => (
+              {sortedUsers.map((user) => (
                 <tr 
                   key={user.id} 
                   onClick={() => onRowClick(user)}

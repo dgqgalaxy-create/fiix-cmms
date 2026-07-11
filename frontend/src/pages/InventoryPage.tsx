@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, ShoppingCart, ArrowUpDown } from 'lucide-react';
+import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, ShoppingCart, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { 
   getItems, getTransactions, getCategories, getLocations, getVendors
 } from '../api/inventory';
@@ -33,6 +33,10 @@ export const InventoryPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'code' | 'category' | 'stock'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const [txSortBy, setTxSortBy] = useState<'date' | 'item' | 'user' | 'amount' | 'reason'>('date');
+  const [txSortDirection, setTxSortDirection] = useState<'asc' | 'desc'>('desc');
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -157,27 +161,33 @@ export const InventoryPage = () => {
     }
     
     list.sort((a, b) => {
+      let cmp = 0;
       switch (sortBy) {
         case 'name':
-          return (a.name || '').localeCompare(b.name || '');
+          cmp = (a.name || '').localeCompare(b.name || '');
+          break;
         case 'code':
-          return (a.internal_code || '').localeCompare(b.internal_code || '');
+          cmp = (a.internal_code || '').localeCompare(b.internal_code || '');
+          break;
         case 'category':
-          return (a.category?.name || '').localeCompare(b.category?.name || '');
+          cmp = (a.category?.name || '').localeCompare(b.category?.name || '');
+          break;
         case 'stock':
-          return a.stock - b.stock;
+          cmp = a.stock - b.stock;
+          break;
         default:
-          return 0;
+          cmp = 0;
       }
+      return sortDirection === 'asc' ? cmp : -cmp;
     });
 
     return list;
-  }, [items, searchTerm, showLowStockOnly, sortBy]);
+  }, [items, searchTerm, showLowStockOnly, sortBy, sortDirection]);
 
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, showLowStockOnly, sortBy]);
+  }, [searchTerm, showLowStockOnly, sortBy, sortDirection]);
 
   const paginatedItems = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -335,13 +345,21 @@ export const InventoryPage = () => {
             <div className="hidden sm:block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm text-slate-600">
-                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 uppercase text-xs font-semibold">
+                  <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold shadow-md shadow-[#739239]/40 dark:shadow-[#739239]/20 relative z-10">
                     <tr>
-                      <th className="px-6 py-4">Código</th>
-                      <th className="px-6 py-4">Repuesto</th>
-                      <th className="px-6 py-4 text-center">Stock Actual</th>
-                      <th className="px-6 py-4 hidden md:table-cell">Categoría / Ubic.</th>
-                      <th className="px-6 py-4 text-right whitespace-nowrap">Acciones</th>
+                      <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortBy('code'); setSortDirection(sortBy === 'code' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                        <div className="flex items-center gap-1.5">Código {sortBy === 'code' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                      </th>
+                      <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortBy('name'); setSortDirection(sortBy === 'name' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                        <div className="flex items-center gap-1.5">Repuesto {sortBy === 'name' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                      </th>
+                      <th className="px-6 py-4 text-center cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortBy('stock'); setSortDirection(sortBy === 'stock' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                        <div className="flex items-center justify-center gap-1.5">Stock Actual {sortBy === 'stock' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                      </th>
+                      <th className="px-6 py-4 hidden md:table-cell cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortBy('category'); setSortDirection(sortBy === 'category' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                        <div className="flex items-center gap-1.5">Categoría / Ubic. {sortBy === 'category' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                      </th>
+                      <th className="px-6 py-4 text-right whitespace-nowrap uppercase tracking-wider text-[11px] font-bold">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -524,13 +542,23 @@ export const InventoryPage = () => {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm text-slate-600">
-                <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 uppercase text-xs font-semibold">
+                <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold shadow-md shadow-[#739239]/40 dark:shadow-[#739239]/20 relative z-10">
                   <tr>
-                    <th className="px-6 py-4">Fecha</th>
-                    <th className="px-6 py-4">Repuesto</th>
-                    <th className="px-6 py-4">Usuario</th>
-                    <th className="px-6 py-4 text-right">Cantidad</th>
-                    <th className="px-6 py-4">Motivo</th>
+                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setTxSortBy('date'); setTxSortDirection(txSortBy === 'date' && txSortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                      <div className="flex items-center gap-1.5">Fecha {txSortBy === 'date' ? (txSortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                    </th>
+                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setTxSortBy('item'); setTxSortDirection(txSortBy === 'item' && txSortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                      <div className="flex items-center gap-1.5">Repuesto {txSortBy === 'item' ? (txSortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                    </th>
+                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setTxSortBy('user'); setTxSortDirection(txSortBy === 'user' && txSortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                      <div className="flex items-center gap-1.5">Usuario {txSortBy === 'user' ? (txSortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                    </th>
+                    <th className="px-6 py-4 text-right cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setTxSortBy('amount'); setTxSortDirection(txSortBy === 'amount' && txSortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                      <div className="flex items-center justify-end gap-1.5">Cantidad {txSortBy === 'amount' ? (txSortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                    </th>
+                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setTxSortBy('reason'); setTxSortDirection(txSortBy === 'reason' && txSortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                      <div className="flex items-center gap-1.5">Motivo {txSortBy === 'reason' ? (txSortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -538,7 +566,27 @@ export const InventoryPage = () => {
                     (t.item?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
                     (t.user?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
                     (t.reason || '').toLowerCase().includes(searchTerm.toLowerCase())
-                  ).map((tx) => (
+                  ).sort((a, b) => {
+                    let cmp = 0;
+                    switch (txSortBy) {
+                      case 'date':
+                        cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                        break;
+                      case 'item':
+                        cmp = (a.item?.name || '').localeCompare(b.item?.name || '');
+                        break;
+                      case 'user':
+                        cmp = (a.user?.name || '').localeCompare(b.user?.name || '');
+                        break;
+                      case 'amount':
+                        cmp = a.amount - b.amount;
+                        break;
+                      case 'reason':
+                        cmp = (a.reason || '').localeCompare(b.reason || '');
+                        break;
+                    }
+                    return txSortDirection === 'asc' ? cmp : -cmp;
+                  }).map((tx) => (
                     <tr 
                       key={tx.id} 
                       className="hover:bg-slate-50/50 transition-colors cursor-pointer"
@@ -771,21 +819,7 @@ export const InventoryPage = () => {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400">
-                    <ArrowUpDown size={16} />
-                  </div>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
-                    className="pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none shadow-sm cursor-pointer"
-                  >
-                    <option value="name">Ordenar por Nombre</option>
-                    <option value="code">Ordenar por Código</option>
-                    <option value="category">Ordenar por Categoría</option>
-                    <option value="stock">Ordenar por Stock (Menor)</option>
-                  </select>
-                </div>
+
 
                 <button
                   onClick={() => setShowLowStockOnly(!showLowStockOnly)}

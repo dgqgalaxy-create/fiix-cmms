@@ -1,5 +1,10 @@
+import { useState } from 'react';
 import type { Asset } from '../api/assets';
-import { Activity, Ban, Settings, Trash2, Edit, Database, QrCode } from 'lucide-react';
+import { Activity, Ban, Settings, Trash2, Edit, Database, QrCode, Image as ImageIcon, ChevronUp, ChevronDown } from 'lucide-react';
+import { BACKEND_URL } from '../api/axios';
+
+type SortField = 'zone' | 'vendor' | 'status' | 'name' | 'internal_code' | 'brand_model' | null;
+type SortDirection = 'asc' | 'desc';
 
 interface Props {
   assets: Asset[];
@@ -11,6 +16,18 @@ interface Props {
 }
 
 export const AssetsTable = ({ assets, onDelete, onEdit, onRowClick, onPrintQR, canManage }: Props) => {
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'OPERATIVO':
@@ -48,11 +65,45 @@ export const AssetsTable = ({ assets, onDelete, onEdit, onRowClick, onPrintQR, c
     );
   }
 
+  const sortedAssets = [...assets].sort((a, b) => {
+    if (!sortField) return 0;
+    let valA = '';
+    let valB = '';
+    switch (sortField) {
+      case 'zone':
+        valA = a.zone?.name || '';
+        valB = b.zone?.name || '';
+        break;
+      case 'vendor':
+        valA = a.vendor?.name || '';
+        valB = b.vendor?.name || '';
+        break;
+      case 'status':
+        valA = a.status || '';
+        valB = b.status || '';
+        break;
+      case 'name':
+        valA = a.name || '';
+        valB = b.name || '';
+        break;
+      case 'internal_code':
+        valA = a.internal_code || '';
+        valB = b.internal_code || '';
+        break;
+      case 'brand_model':
+        valA = `${a.brand || ''} ${a.model || ''}`;
+        valB = `${b.brand || ''} ${b.model || ''}`;
+        break;
+    }
+    const cmp = valA.localeCompare(valB);
+    return sortDirection === 'asc' ? cmp : -cmp;
+  });
+
   return (
     <div>
       {/* Vista de Tarjetas para Celulares */}
       <div className="block sm:hidden space-y-4">
-        {assets.map((asset) => (
+        {sortedAssets.map((asset) => (
           <div 
             key={asset.id} 
             onClick={() => onRowClick?.(asset)}
@@ -67,12 +118,27 @@ export const AssetsTable = ({ assets, onDelete, onEdit, onRowClick, onPrintQR, c
               </div>
             </div>
             
-            <h3 className="font-bold text-slate-900 text-sm mb-1 leading-snug">{asset.name}</h3>
-            {asset.description && (
-              <p className="text-slate-500 text-xs line-clamp-2 mb-3 leading-relaxed">
-                {asset.description}
-              </p>
-            )}
+            <div className="flex gap-3 mb-2">
+              {asset.image_url ? (
+                <img 
+                  src={`${BACKEND_URL}${asset.image_url}`} 
+                  alt={asset.name} 
+                  className="w-12 h-12 rounded-xl object-cover bg-slate-100 shadow-sm flex-shrink-0 border border-slate-200/60" 
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 flex-shrink-0 border border-slate-200/60 shadow-sm">
+                  <ImageIcon size={20} />
+                </div>
+              )}
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm mb-1 leading-snug">{asset.name}</h3>
+                {asset.description && (
+                  <p className="text-slate-500 text-xs line-clamp-2 mb-1 leading-relaxed">
+                    {asset.description}
+                  </p>
+                )}
+              </div>
+            </div>
             
             <div className="flex justify-between items-center text-[11px] border-t border-slate-100 pt-2.5 mt-2">
               <div className="text-slate-500">
@@ -117,19 +183,31 @@ export const AssetsTable = ({ assets, onDelete, onEdit, onRowClick, onPrintQR, c
       <div className="hidden sm:block bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-600">
-            <thead className="bg-slate-50/50 border-b border-slate-100 text-slate-500 font-medium">
+            <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold shadow-md shadow-[#739239]/40 dark:shadow-[#739239]/20 relative z-10">
               <tr>
-                <th className="px-6 py-4 hidden sm:table-cell">Código</th>
-                <th className="px-6 py-4">Equipo</th>
-                <th className="px-6 py-4 hidden sm:table-cell">Zona</th>
-                <th className="px-6 py-4 hidden lg:table-cell">Proveedor</th>
-                <th className="px-6 py-4 hidden md:table-cell">Marca / Modelo</th>
-                <th className="px-6 py-4">Estado</th>
-                {canManage && <th className="px-6 py-4 text-right">Acciones</th>}
+                <th className="px-6 py-4 hidden sm:table-cell cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => handleSort('internal_code')}>
+                  <div className="flex items-center gap-1.5">Código {sortField === 'internal_code' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => handleSort('name')}>
+                  <div className="flex items-center gap-1.5">Equipo {sortField === 'name' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
+                <th className="px-6 py-4 hidden sm:table-cell cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => handleSort('zone')}>
+                  <div className="flex items-center gap-1.5">Zona {sortField === 'zone' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
+                <th className="px-6 py-4 hidden lg:table-cell cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => handleSort('vendor')}>
+                  <div className="flex items-center gap-1.5">Proveedor {sortField === 'vendor' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
+                <th className="px-6 py-4 hidden md:table-cell cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => handleSort('brand_model')}>
+                  <div className="flex items-center gap-1.5">Marca / Modelo {sortField === 'brand_model' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => handleSort('status')}>
+                  <div className="flex items-center gap-1.5">Estado {sortField === 'status' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
+                {canManage && <th className="px-6 py-4 text-right uppercase tracking-wider text-[11px] font-bold">Acciones</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {assets.map((asset) => (
+              {sortedAssets.map((asset) => (
                 <tr 
                   key={asset.id} 
                   onClick={() => onRowClick?.(asset)}
@@ -139,8 +217,23 @@ export const AssetsTable = ({ assets, onDelete, onEdit, onRowClick, onPrintQR, c
                     {asset.internal_code}
                   </td>
                   <td className="px-6 py-4">
-                    <div className="font-medium text-slate-900">{asset.name}</div>
-                    {asset.description && <div className="text-slate-500 text-xs mt-1 line-clamp-1">{asset.description}</div>}
+                    <div className="flex items-center gap-3">
+                      {asset.image_url ? (
+                        <img 
+                          src={`${BACKEND_URL}${asset.image_url}`} 
+                          alt={asset.name} 
+                          className="w-10 h-10 rounded-lg object-cover bg-slate-100 shadow-sm border border-slate-200/60" 
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 shadow-sm border border-slate-200/60 font-semibold text-xs">
+                          {asset.name?.substring(0, 2).toUpperCase() || 'NA'}
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-medium text-slate-900">{asset.name}</div>
+                        {asset.description && <div className="text-slate-500 text-xs mt-0.5 line-clamp-1">{asset.description}</div>}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-slate-700 hidden sm:table-cell">
                     {asset.zone?.name || <span className="text-slate-400 italic">Sin Zona</span>}

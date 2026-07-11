@@ -81,6 +81,7 @@ model User {
 
   pattern              TechnicianPattern?
   exceptions           TechnicianException[]
+  preferences          Json?       @default("{}")
 }
 
 model TechnicianPattern {

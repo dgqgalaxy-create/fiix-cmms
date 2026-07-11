@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ClipboardCheck, Plus, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { ClipboardCheck, Plus, CheckCircle, Clock, AlertCircle, ChevronUp, ChevronDown } from 'lucide-react';
 import { getChecklistHistory, getTodayChecklist, createTodayChecklist } from '../api/checklists';
 import type { DailyChecklist } from '../api/checklists';
 import { useAuth } from '../context/AuthContext';
@@ -11,6 +11,8 @@ export default function DailyChecklistsPage() {
   const [history, setHistory] = useState<DailyChecklist[]>([]);
   const [todayChecklist, setTodayChecklist] = useState<DailyChecklist | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sortField, setSortField] = useState<'date' | 'technician' | 'leader' | 'status'>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -56,6 +58,27 @@ export default function DailyChecklistsPage() {
     }
   };
 
+  const sortedHistory = useMemo(() => {
+    return [...history].sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'date':
+          cmp = new Date(a.date).getTime() - new Date(b.date).getTime();
+          break;
+        case 'technician':
+          cmp = (a.technician?.name || '').localeCompare(b.technician?.name || '');
+          break;
+        case 'leader':
+          cmp = (a.leader?.name || '').localeCompare(b.leader?.name || '');
+          break;
+        case 'status':
+          cmp = a.status.localeCompare(b.status);
+          break;
+      }
+      return sortDirection === 'asc' ? cmp : -cmp;
+    });
+  }, [history, sortField, sortDirection]);
+
   if (isLoading) {
     return <div className="p-8 text-center text-slate-500">Cargando...</div>;
   }
@@ -64,11 +87,11 @@ export default function DailyChecklistsPage() {
     <div className="p-6 md:p-8 max-w-7xl mx-auto animate-in fade-in zoom-in-95 duration-300">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
             <ClipboardCheck className="text-indigo-600" size={32} />
             Checklists Diarios
           </h1>
-          <p className="text-slate-500 mt-2">
+          <p className="text-slate-500 dark:text-slate-400 mt-2">
             Registro y seguimiento del estado diario de las líneas de producción.
           </p>
         </div>
@@ -92,19 +115,27 @@ export default function DailyChecklistsPage() {
         )}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-sm font-semibold text-slate-600">
-                <th className="px-6 py-4">Fecha</th>
-                <th className="px-6 py-4">Técnico</th>
-                <th className="px-6 py-4">Líder Mantenimiento</th>
-                <th className="px-6 py-4">Estado</th>
+            <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold shadow-md shadow-[#739239]/40 dark:shadow-[#739239]/20 relative z-10">
+              <tr>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" onClick={() => { setSortField('date'); setSortDirection(sortField === 'date' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">Fecha {sortField === 'date' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" onClick={() => { setSortField('technician'); setSortDirection(sortField === 'technician' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">Técnico {sortField === 'technician' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" onClick={() => { setSortField('leader'); setSortDirection(sortField === 'leader' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">Líder Mantenimiento {sortField === 'leader' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" onClick={() => { setSortField('status'); setSortDirection(sortField === 'status' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">Estado {sortField === 'status' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
                 <th className="px-6 py-4 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
               {history.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
@@ -112,16 +143,16 @@ export default function DailyChecklistsPage() {
                   </td>
                 </tr>
               ) : (
-                history.map((checklist) => (
-                  <tr key={checklist.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-slate-900 font-medium">
+                sortedHistory.map((checklist) => (
+                  <tr key={checklist.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                    <td className="px-6 py-4 text-slate-900 dark:text-slate-100 font-medium">
                       {format(new Date(checklist.date), "EEEE, d 'de' MMMM", { locale: es })}
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
                       {checklist.technician?.name || '-'}
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
-                      {checklist.leader?.name || <span className="text-slate-400 italic">Pendiente</span>}
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
+                      {checklist.leader?.name || <span className="text-slate-400 dark:text-slate-500 italic">Pendiente</span>}
                     </td>
                     <td className="px-6 py-4">
                       {getStatusBadge(checklist.status)}

@@ -150,3 +150,56 @@ export const getOnlineUsers = async (req: Request, res: Response): Promise<void>
     res.status(500).json({ error: 'Error al obtener usuarios en línea' });
   }
 };
+
+export const updateMyPreferences = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user?.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'No autenticado' });
+      return;
+    }
+
+    const { preferences } = req.body;
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { preferences }
+    });
+
+    res.json({ id: user.id, preferences: user.preferences });
+  } catch (error) {
+    console.error('Error updating preferences:', error);
+    res.status(500).json({ error: 'Error al actualizar preferencias' });
+  }
+};
+
+export const getMe = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user?.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'No autenticado' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        preferences: true
+      }
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'Usuario no encontrado' });
+      return;
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error('Error fetching me:', error);
+    res.status(500).json({ error: 'Error al obtener datos del usuario' });
+  }
+};
