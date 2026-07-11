@@ -21,7 +21,23 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const [token, setToken] = useState<string | null>(() => {
+    const storedToken = localStorage.getItem('token');
+    const lastActivity = localStorage.getItem('lastActivity');
+    
+    if (storedToken && lastActivity) {
+      const now = Date.now();
+      const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+      
+      if (now - parseInt(lastActivity, 10) > ONE_WEEK_MS) {
+        // Expired due to inactivity
+        localStorage.removeItem('token');
+        localStorage.removeItem('lastActivity');
+        return null;
+      }
+    }
+    return storedToken;
+  });
   const [user, setUser] = useState<User | null>(null);
   const [permissions, setPermissions] = useState<Record<string, boolean>>({});
 
@@ -52,6 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = (newToken: string, userData?: any) => {
     localStorage.setItem('token', newToken);
+    localStorage.setItem('lastActivity', Date.now().toString());
     setToken(newToken);
     if (userData) {
       setUser(userData);
@@ -60,6 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('lastActivity');
     setToken(null);
     setUser(null);
     setPermissions({});

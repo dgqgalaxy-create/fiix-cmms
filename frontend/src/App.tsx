@@ -27,6 +27,17 @@ import { RosterPage } from './pages/RosterPage';
 
 function App() {
   useEffect(() => {
+    // Verificamos si es una nueva sesión del navegador
+    const isNewSession = !sessionStorage.getItem('session_initialized');
+    if (isNewSession) {
+      sessionStorage.setItem('session_initialized', 'true');
+      const token = localStorage.getItem('token');
+      // Si el usuario está autenticado, lo redirigimos al dashboard
+      if (token && window.location.pathname !== '/dashboard') {
+        window.location.href = '/dashboard';
+      }
+    }
+
     const handleOnline = async () => {
       // App is back online, syncing requests...
       const requests = await getOfflineRequests();

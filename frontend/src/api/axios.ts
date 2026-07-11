@@ -11,6 +11,7 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    localStorage.setItem('lastActivity', Date.now().toString());
   }
   return config;
 });
@@ -21,6 +22,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
+      localStorage.removeItem('lastActivity');
       window.location.href = '/login';
     }
     return Promise.reject(error);
