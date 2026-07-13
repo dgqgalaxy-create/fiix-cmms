@@ -279,7 +279,7 @@ export const KPIPage = () => {
         {renderCard("Tiempo Respuesta", <Clock size={24} />, m.RESPONSE_TIME, false, (v) => (v / 3600000).toFixed(1), "horas", "Tiempo promedio que transcurre desde que se crea una solicitud hasta que un técnico comienza a trabajar en ella.")}
         {renderCard("Cumplimiento SLA", <Target size={24} />, m.SLA, true, (v) => v.toFixed(1), "%", "Porcentaje de reparaciones que se terminaron a tiempo de acuerdo con la meta establecida para el MTTR.")}
         {renderCard("Backlog", <AlertTriangle size={24} />, m.BACKLOG, false, (v) => v.toString(), "órdenes", "Cantidad de órdenes de trabajo que aún no se han finalizado (Pendientes o En Espera).")}
-        {renderCard("Disponibilidad Activos", <Database size={24} />, m.ASSET_AVAILABILITY, true, (v) => v.toFixed(1), "%", "Porcentaje actual de equipos operativos sin fallas críticas vs. el total de equipos registrados en el inventario.")}
+        {renderCard("Disponibilidad Activos", <Database size={24} />, m.ASSET_AVAILABILITY, true, (v) => v.toFixed(1), "%", "Porcentaje de tiempo operativo basado en 8467.27 horas anuales (descontando mantenimientos programados) para las líneas L1-L5, menos el tiempo de paros reales por fallas en el periodo seleccionado.")}
         {m.REINCIDENCIA && renderCard("Reincidencia (Fallas Repetidas)", <RefreshCw size={24} />, m.REINCIDENCIA, false, (v) => v.toFixed(1), "%", "Porcentaje de órdenes correctivas creadas para equipos que ya habían sido reparados en los últimos 2 días. Mide la calidad del retrabajo.")}
       </div>
 

@@ -173,11 +173,46 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
     // KPI 5: Backlog
     const backlog = allWorkOrders.filter(wo => wo.status === 'PENDIENTE' || wo.status === 'EN_ESPERA').length;
 
-    // KPI 6: Disponibilidad de Activos (Global, not strictly date dependent)
-    const operationalAssets = allAssets.filter(a => a.status === 'OPERATIVO');
-    const assetAvailability = allAssets.length > 0 
-      ? (operationalAssets.length / allAssets.length) * 100 
-      : 100;
+    // KPI 6: Disponibilidad de Activos (Time-based, Zonas L1-L5)
+    const targetZones = await prisma.zone.findMany({
+      where: { name: { in: ['L1', 'L2', 'L3', 'L4', 'L5'] } }
+    });
+    const targetZoneIds = targetZones.map(z => z.id);
+
+    const periodMs = end.getTime() - start.getTime();
+    const yearlyTotalMs = 365 * 24 * 60 * 60 * 1000;
+    const productiveMsPerYearPerLine = 8467.27 * 60 * 60 * 1000;
+    const totalTheoreticalMs = 5 * periodMs * (productiveMsPerYearPerLine / yearlyTotalMs);
+
+    let totalDowntimeMs = 0;
+    const availabilityOrders = allWorkOrders.filter(wo => 
+      wo.zone_id && 
+      targetZoneIds.includes(wo.zone_id) && 
+      wo.maintenance_type === 'CORRECTIVO' && 
+      wo.status === 'FINALIZADO'
+    );
+
+    availabilityOrders.forEach(wo => {
+      const completedAtTime = wo.completed_at ? new Date(wo.completed_at).getTime() : 0;
+      const createdAtTime = new Date(wo.created_at).getTime();
+      const startedAtTime = wo.started_at ? new Date(wo.started_at).getTime() : 0;
+
+      if (wo.machine_stopped && completedAtTime > createdAtTime) {
+        totalDowntimeMs += (completedAtTime - createdAtTime);
+      } else if (!wo.machine_stopped) {
+        if (startedAtTime > 0 && completedAtTime > startedAtTime) {
+          totalDowntimeMs += (completedAtTime - startedAtTime);
+        } else {
+          totalDowntimeMs += wo.accumulated_time_ms;
+        }
+      }
+    });
+
+    let assetAvailability = 100;
+    if (totalTheoreticalMs > 0) {
+      assetAvailability = ((totalTheoreticalMs - totalDowntimeMs) / totalTheoreticalMs) * 100;
+      if (assetAvailability < 0) assetAvailability = 0;
+    }
 
     // KPI 7: Reincidencia (Tasa de Retrabajo en 2 días)
     const correctiveOrders = allWorkOrders.filter(wo => wo.maintenance_type === 'CORRECTIVO' && wo.asset_id);
