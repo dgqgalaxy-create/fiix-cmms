@@ -743,6 +743,29 @@ export const InventoryPage = () => {
           <p className="text-slate-500 dark:text-slate-300 mt-2">Gestiona repuestos, movimientos y catálogos.</p>
         </div>
 
+        {/* Stock Crítico Alert */}
+        {!isLoading && items.filter(i => i.is_active && i.stock <= i.minimum_inventory).length > 0 && (
+          <div 
+            onClick={() => { setShowLowStockOnly(true); setActiveTab('items'); }}
+            className="cursor-pointer transition-all bg-white dark:bg-slate-800 px-5 py-3 rounded-2xl border border-rose-200 dark:border-rose-900/50 shadow-sm hover:shadow-md flex items-center gap-4 group"
+          >
+            <div className="p-2.5 bg-rose-50 dark:bg-rose-900/30 rounded-xl">
+              <AlertCircle className="w-6 h-6 text-rose-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-rose-600 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                Stock Crítico
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                </span>
+              </span>
+              <span className="text-[11px] text-rose-500/70 font-medium">Artículos al mínimo o inferior</span>
+            </div>
+            <div className="text-3xl font-black text-rose-600">{items.filter(i => i.is_active && i.stock <= i.minimum_inventory).length}</div>
+          </div>
+        )}
+
         <div className="flex items-center gap-3 w-full md:w-auto">
           {activeTab === 'items' && canManage && (
             <button 

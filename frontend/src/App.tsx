@@ -32,8 +32,9 @@ function App() {
     if (isNewSession) {
       sessionStorage.setItem('session_initialized', 'true');
       const token = localStorage.getItem('token');
-      // Si el usuario está autenticado, lo redirigimos al dashboard
-      if (token && window.location.pathname !== '/dashboard') {
+      // Si el usuario está autenticado, lo redirigimos al dashboard (excepto si va al portal público)
+      const excludeRedirect = ['/dashboard', '/request'];
+      if (token && !excludeRedirect.includes(window.location.pathname)) {
         window.location.href = '/dashboard';
       }
     }

@@ -17,6 +17,11 @@ const defaultPermissions: Record<Role, any> = {
     VIEW_ALL_WORK_ORDERS: true,
     MANAGE_CALENDAR: true,
     USE_QR_SCANNER: true,
+    APPROVE_CHECKLIST: true,
+    MANAGE_CHECKLIST_CATALOG: true,
+    MANAGE_PURCHASES: true,
+    REGISTER_INVENTORY_ENTRIES: true,
+    MANAGE_SHIFTS: true,
   },
   GESTIONADOR: {
     MANAGE_USERS: false,
@@ -32,6 +37,11 @@ const defaultPermissions: Record<Role, any> = {
     VIEW_ALL_WORK_ORDERS: true,
     MANAGE_CALENDAR: true,
     USE_QR_SCANNER: true,
+    APPROVE_CHECKLIST: true,
+    MANAGE_CHECKLIST_CATALOG: false,
+    MANAGE_PURCHASES: true,
+    REGISTER_INVENTORY_ENTRIES: true,
+    MANAGE_SHIFTS: false,
   },
   TECNICO: {
     MANAGE_USERS: false,
@@ -47,6 +57,11 @@ const defaultPermissions: Record<Role, any> = {
     VIEW_ALL_WORK_ORDERS: false,
     MANAGE_CALENDAR: false,
     USE_QR_SCANNER: true,
+    APPROVE_CHECKLIST: false,
+    MANAGE_CHECKLIST_CATALOG: false,
+    MANAGE_PURCHASES: false,
+    REGISTER_INVENTORY_ENTRIES: false,
+    MANAGE_SHIFTS: false,
   },
 };
 

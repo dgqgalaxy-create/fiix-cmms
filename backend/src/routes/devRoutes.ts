@@ -558,7 +558,7 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
                const st = row['ESTADO'].toUpperCase();
                if (st.includes('FINALIZADO')) status = WorkOrderStatus.FINALIZADO;
                else if (st.includes('PROCESO')) status = WorkOrderStatus.EN_PROCESO;
-               else if (st.includes('ESPERA')) status = WorkOrderStatus.EN_ESPERA;
+               else if (st.includes('ESPERA') || st.includes('PAUSAD')) status = WorkOrderStatus.EN_ESPERA;
                else if (st.includes('ANULADO')) status = WorkOrderStatus.ANULADO;
             }
 
@@ -617,10 +617,12 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
                requester_name,
                production_group: pGroup,
                status,
+               hold_reason: row['RAZON PAUSA'] || null,
                resolution_notes: resolutionNotes,
                created_by_id: adminUser.id,
                created_at,
                started_at,
+               paused_at: parseSafeDate(row['HORA PAUSA']) || null,
                completed_at: status === WorkOrderStatus.ANULADO && !completed_at ? new Date() : completed_at,
                accumulated_time_ms: row['TIEMPO REPARACIÓN'] ? Math.floor(parseFloat(row['TIEMPO REPARACIÓN']) * 60000) : 0,
                assigned_technicians: { connect: assignedUserIds }

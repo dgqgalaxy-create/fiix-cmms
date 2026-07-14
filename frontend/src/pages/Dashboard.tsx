@@ -1,14 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Plus, RefreshCw, Clock, Wrench, AlertCircle, CheckCircle2, Search, Download, Activity, XCircle, CalendarClock, LayoutDashboard } from 'lucide-react';
-import { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts';
 import { WorkOrdersTable } from '../components/WorkOrdersTable';
 import { CreateWorkOrderModal } from '../components/CreateWorkOrderModal';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { getWorkOrders, getWorkOrdersSummary, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder } from '../api/workOrders';
-import { getInventorySummary } from '../api/inventory';
-import type { InventorySummary } from '../api/inventory';
 import type { WorkOrder } from '../api/workOrders';
 import { socket } from '../api/socket';
 import { useNavigate } from 'react-router-dom';
@@ -18,7 +16,6 @@ export const Dashboard = () => {
   const { user, hasPermission } = useAuth();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [summary, setSummary] = useState<Record<string, number>>({});
-  const [invSummary, setInvSummary] = useState<InventorySummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -158,14 +155,12 @@ export const Dashboard = () => {
   const fetchWorkOrders = async (backgroundFetch: boolean = false) => {
     try {
       if (!backgroundFetch) setIsLoading(true);
-      const [data, summaryData, invSumData] = await Promise.all([
+      const [data, summaryData] = await Promise.all([
         getWorkOrders(),
         getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined),
-        getInventorySummary().catch(() => null)
       ]);
       setWorkOrders(data);
       setSummary(summaryData);
-      setInvSummary(invSumData);
     } catch (error) {
       console.error('Error fetching work orders', error);
     } finally {
@@ -338,6 +333,34 @@ export const Dashboard = () => {
   const paretoData = getParetoData();
   const filteredList = getFilteredWorkOrders();
 
+  const getMaintenanceTypeData = () => {
+    let preventivo = 0;
+    let correctivo = 0;
+    let servicio = 0;
+
+    const list = summaryStartDate || summaryEndDate ? workOrders.filter(wo => {
+      if (wo.status === 'ANULADO') return false;
+      const created = new Date(wo.created_at);
+      const start = summaryStartDate ? new Date(summaryStartDate + 'T00:00:00') : new Date(0);
+      const end = summaryEndDate ? new Date(summaryEndDate + 'T23:59:59') : new Date(8640000000000000);
+      return created >= start && created <= end;
+    }) : workOrders.filter(wo => wo.status !== 'ANULADO');
+
+    list.forEach(wo => {
+      if (wo.maintenance_type === 'PREVENTIVO') preventivo++;
+      else if (wo.maintenance_type === 'CORRECTIVO') correctivo++;
+      else if (wo.maintenance_type === 'SERVICIO') servicio++;
+    });
+
+    return [
+      { name: 'Preventivo', value: preventivo, color: '#10b981' },
+      { name: 'Correctivo', value: correctivo, color: '#f59e0b' },
+      { name: 'Servicio', value: servicio, color: '#3b82f6' },
+    ].filter(item => item.value > 0);
+  };
+
+  const pieData = getMaintenanceTypeData();
+
   return (
     <>
       {/* Encabezado exclusivo para impresión */}
@@ -443,29 +466,35 @@ export const Dashboard = () => {
         )}
       </div>
 
-      <div className={`grid grid-cols-2 lg:grid-cols-${hasPermission('MANAGE_INVENTORY') ? '7' : '6'} md:grid-cols-4 print:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8`}>
+      <div className="flex flex-col xl:flex-row gap-4 mb-6 sm:mb-8">
+        <div className={`flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-6 print:grid-cols-6 gap-3 sm:gap-4`}>
+        {/* --- Card: Totales Recibidas --- */}
         <div 
           onClick={() => { 
             setActiveTab('ACTIVAS'); 
             setStatusFilter(null); 
             setTimeout(() => tableContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
           }}
-          className={`cursor-pointer transition-all bg-slate-900 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid shadow-lg col-span-2 md:col-span-1`}
+          className={`cursor-pointer transition-all bg-slate-900 p-3.5 sm:p-4 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid shadow-lg col-span-2 md:col-span-1 min-h-[130px]`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-slate-700 opacity-50 group-hover:scale-110 transition-transform">
              <LayoutDashboard className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
-          <div className="relative z-10">
-            <span className="text-slate-300 text-xs sm:text-sm font-bold uppercase tracking-wider">Totales Recibidas</span>
-            <div className="text-2xl sm:text-4xl font-black text-white mt-1.5 sm:mt-2">{totalRecibidas}</div>
-            <div className="text-[10px] sm:text-xs text-slate-400 font-medium mt-1 leading-tight">
-              Periodo: {(summaryStartDate && summaryEndDate) ? `Del ${summaryStartDate} al ${summaryEndDate}` : (summaryStartDate ? `Desde el ${summaryStartDate}` : (summaryEndDate ? `Hasta el ${summaryEndDate}` : 'Histórico completo (Todo)'))}
+          <div className="relative z-10 h-full flex flex-col">
+            <div className="h-8 flex items-start">
+              <span className="text-slate-300 text-[11px] sm:text-xs font-bold uppercase tracking-wider leading-tight">Totales Recibidas</span>
+            </div>
+            <div className="text-2xl sm:text-4xl font-black text-white">{totalRecibidas}</div>
+            <div className="mt-auto pt-2 text-[10px] text-slate-400 font-medium leading-tight">
+              {(summaryStartDate && summaryEndDate) ? `${summaryStartDate} — ${summaryEndDate}` : (summaryStartDate ? `Desde ${summaryStartDate}` : (summaryEndDate ? `Hasta ${summaryEndDate}` : 'Histórico completo'))}
             </div>
           </div>
         </div>
+
+        {/* --- Card: Pendientes --- */}
         <div 
           onClick={() => handleStatusClick('PENDIENTE')}
-          className={`cursor-pointer transition-all duration-300 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative group print:shadow-none print:break-inside-avoid ${statusFilter === 'PENDIENTE' ? 'bg-amber-600 text-white shadow-lg ring-4 ring-amber-400 ring-offset-2 scale-[1.02] border-transparent' : 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.5)] hover:shadow-[0_0_25px_rgba(245,158,11,0.8)] hover:scale-[1.03] hover:-translate-y-1 border-transparent'}`}
+          className={`cursor-pointer transition-all duration-300 p-3.5 sm:p-4 rounded-2xl border flex flex-col relative group print:shadow-none print:break-inside-avoid min-h-[130px] ${statusFilter === 'PENDIENTE' ? 'bg-amber-600 text-white shadow-lg ring-4 ring-amber-400 ring-offset-2 scale-[1.02] border-transparent' : 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.5)] hover:shadow-[0_0_25px_rgba(245,158,11,0.8)] hover:scale-[1.03] hover:-translate-y-1 border-transparent'}`}
         >
           {statusFilter !== 'PENDIENTE' && (
             <div className="absolute -inset-0.5 rounded-2xl ring-2 ring-amber-300 opacity-50 animate-pulse pointer-events-none"></div>
@@ -473,130 +502,147 @@ export const Dashboard = () => {
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-white opacity-20 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500 overflow-hidden rounded-2xl">
              <Clock className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
-          <div className="relative z-10 h-full flex flex-col justify-between">
-            <div>
-              <span className="text-amber-50 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-1.5">
+          <div className="relative z-10 h-full flex flex-col">
+            <div className="h-8 flex items-start">
+              <span className="text-amber-50 text-[11px] sm:text-xs font-bold uppercase tracking-wider leading-tight flex items-center gap-1.5">
                 Pendientes
-                <span className="relative flex h-2.5 w-2.5">
+                <span className="relative flex h-2 w-2 shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
                 </span>
               </span>
-              <div className="text-2xl sm:text-4xl font-black text-white mt-1.5 sm:mt-2 drop-shadow-md">
-                {summary.PENDIENTE || 0}
-              </div>
-              
-              <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                {urgentesCount > 0 && (
-                  <div className="bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-sm shadow-lg animate-pulse flex items-center gap-1">
-                    <AlertCircle size={10} />
-                    {urgentesCount} URGENTE{urgentesCount > 1 ? 'S' : ''}
-                  </div>
-                )}
-                {normalesCount > 0 && (
-                  <div className="bg-amber-700/80 text-amber-50 text-[10px] font-bold px-2 py-0.5 rounded-sm shadow-sm border border-amber-400/30">
-                    {normalesCount} NORMALES
-                  </div>
-                )}
-                {bajasCount > 0 && (
-                  <div className="bg-emerald-700/80 text-emerald-50 text-[10px] font-bold px-2 py-0.5 rounded-sm shadow-sm border border-emerald-400/30">
-                    {bajasCount} BAJAS
-                  </div>
-                )}
-              </div>
+            </div>
+            <div className="text-2xl sm:text-4xl font-black text-white drop-shadow-md">
+              {summary.PENDIENTE || 0}
+            </div>
+            <div className="mt-auto pt-2 flex flex-wrap items-center gap-1">
+              {urgentesCount > 0 && (
+                <div className="bg-rose-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-sm shadow-lg animate-pulse flex items-center gap-0.5">
+                  <AlertCircle size={9} />
+                  {urgentesCount} URG
+                </div>
+              )}
+              {normalesCount > 0 && (
+                <div className="bg-amber-700/80 text-amber-50 text-[9px] font-bold px-1.5 py-0.5 rounded-sm shadow-sm border border-amber-400/30">
+                  {normalesCount} NOR
+                </div>
+              )}
+              {bajasCount > 0 && (
+                <div className="bg-emerald-700/80 text-emerald-50 text-[9px] font-bold px-1.5 py-0.5 rounded-sm shadow-sm border border-emerald-400/30">
+                  {bajasCount} BAJ
+                </div>
+              )}
             </div>
           </div>
         </div>
 
+        {/* --- Card: En Proceso --- */}
         <div 
           onClick={() => handleStatusClick('EN_PROCESO')}
-          className={`cursor-pointer transition-all bg-white dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'EN_PROCESO' ? 'ring-2 ring-blue-500 border-blue-500 shadow-md scale-[1.02]' : 'border-blue-100 shadow-sm shadow-blue-100/50 hover:shadow-md'}`}
+          className={`cursor-pointer transition-all bg-white dark:bg-slate-800 p-3.5 sm:p-4 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid min-h-[130px] ${statusFilter === 'EN_PROCESO' ? 'ring-2 ring-blue-500 border-blue-500 shadow-md scale-[1.02]' : 'border-blue-100 shadow-sm shadow-blue-100/50 hover:shadow-md'}`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-blue-50 dark:text-blue-900/40 opacity-50 group-hover:scale-110 transition-transform">
              <Wrench className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
-          <div className="relative z-10 h-full flex flex-col justify-between">
-            <div>
-              <span className="text-blue-600 text-xs sm:text-sm font-bold uppercase tracking-wider">En Proceso</span>
-              <div className="text-2xl sm:text-4xl font-black text-slate-800 dark:text-slate-100 mt-1.5 sm:mt-2">{summary.EN_PROCESO || 0}</div>
+          <div className="relative z-10 h-full flex flex-col">
+            <div className="h-8 flex items-start">
+              <span className="text-blue-600 text-[11px] sm:text-xs font-bold uppercase tracking-wider leading-tight">En Proceso</span>
             </div>
+            <div className="text-2xl sm:text-4xl font-black text-slate-800 dark:text-slate-100">{summary.EN_PROCESO || 0}</div>
             {activeTechsText && (
-              <div className="mt-2 text-[10px] sm:text-xs text-blue-700/80 font-semibold leading-tight line-clamp-2" title={activeTechsText}>
+              <div className="mt-auto pt-2 text-[10px] text-blue-700/80 dark:text-blue-400 font-semibold leading-tight line-clamp-2" title={activeTechsText}>
                 👤 {activeTechsText}
               </div>
             )}
           </div>
         </div>
 
+        {/* --- Card: Pausadas --- */}
         <div 
           onClick={() => handleStatusClick('EN_ESPERA')}
-          className={`cursor-pointer transition-all bg-white dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'EN_ESPERA' ? 'ring-2 ring-purple-500 border-purple-500 shadow-md scale-[1.02]' : 'border-purple-100 shadow-sm shadow-purple-100/50 hover:shadow-md'}`}
+          className={`cursor-pointer transition-all bg-white dark:bg-slate-800 p-3.5 sm:p-4 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid min-h-[130px] ${statusFilter === 'EN_ESPERA' ? 'ring-2 ring-purple-500 border-purple-500 shadow-md scale-[1.02]' : 'border-purple-100 shadow-sm shadow-purple-100/50 hover:shadow-md'}`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-purple-50 dark:text-purple-900/40 opacity-50 group-hover:scale-110 transition-transform">
              <AlertCircle className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
-          <div className="relative z-10 h-full flex flex-col justify-between">
-            <div>
-              <span className="text-purple-600 text-xs sm:text-sm font-bold uppercase tracking-wider">Pausadas</span>
-              <div className="text-2xl sm:text-4xl font-black text-slate-800 dark:text-slate-100 mt-1.5 sm:mt-2">{summary.EN_ESPERA || 0}</div>
+          <div className="relative z-10 h-full flex flex-col">
+            <div className="h-8 flex items-start">
+              <span className="text-purple-600 text-[11px] sm:text-xs font-bold uppercase tracking-wider leading-tight">Pausadas</span>
             </div>
+            <div className="text-2xl sm:text-4xl font-black text-slate-800 dark:text-slate-100">{summary.EN_ESPERA || 0}</div>
             {pausedTechsText && (
-              <div className="mt-2 text-[10px] sm:text-xs text-purple-700/80 font-semibold leading-tight line-clamp-2" title={pausedTechsText}>
+              <div className="mt-auto pt-2 text-[10px] text-purple-700/80 dark:text-purple-400 font-semibold leading-tight line-clamp-2" title={pausedTechsText}>
                 👤 {pausedTechsText}
               </div>
             )}
           </div>
         </div>
 
+        {/* --- Card: Finalizadas --- */}
         <div 
           onClick={() => handleStatusClick('FINALIZADO')}
-          className={`cursor-pointer transition-all bg-white dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'FINALIZADO' ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-md scale-[1.02]' : 'border-emerald-100 shadow-sm shadow-emerald-100/50 hover:shadow-md'}`}
+          className={`cursor-pointer transition-all bg-white dark:bg-slate-800 p-3.5 sm:p-4 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid min-h-[130px] ${statusFilter === 'FINALIZADO' ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-md scale-[1.02]' : 'border-emerald-100 shadow-sm shadow-emerald-100/50 hover:shadow-md'}`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-emerald-50 dark:text-emerald-900/40 opacity-50 group-hover:scale-110 transition-transform">
              <CheckCircle2 className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
-          <div className="relative z-10">
-            <span className="text-emerald-600 text-xs sm:text-sm font-bold uppercase tracking-wider">Finalizadas</span>
-            <div className="text-2xl sm:text-4xl font-black text-slate-800 dark:text-slate-100 mt-1.5 sm:mt-2">{summary.FINALIZADO || 0}</div>
+          <div className="relative z-10 h-full flex flex-col">
+            <div className="h-8 flex items-start">
+              <span className="text-emerald-600 text-[11px] sm:text-xs font-bold uppercase tracking-wider leading-tight">Finalizadas</span>
+            </div>
+            <div className="text-2xl sm:text-4xl font-black text-slate-800 dark:text-slate-100">{summary.FINALIZADO || 0}</div>
           </div>
         </div>
 
+        {/* --- Card: Invalidadas --- */}
         <div 
           onClick={() => handleStatusClick('ANULADO')}
-          className={`cursor-pointer transition-all bg-slate-50 dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid ${statusFilter === 'ANULADO' ? 'ring-2 ring-slate-400 border-slate-400 shadow-md scale-[1.02]' : 'border-slate-200 shadow-sm shadow-slate-200/50 hover:shadow-md hover:bg-slate-100'}`}
+          className={`cursor-pointer transition-all bg-slate-50 dark:bg-slate-800 p-3.5 sm:p-4 rounded-2xl border flex flex-col relative overflow-hidden group print:shadow-none print:break-inside-avoid min-h-[130px] ${statusFilter === 'ANULADO' ? 'ring-2 ring-slate-400 border-slate-400 shadow-md scale-[1.02]' : 'border-slate-200 shadow-sm shadow-slate-200/50 hover:shadow-md hover:bg-slate-100'}`}
         >
           <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-slate-100 dark:text-slate-700/50 opacity-70 group-hover:scale-110 transition-transform">
              <XCircle className="w-14 h-14 sm:w-20 sm:h-20" />
           </div>
-          <div className="relative z-10">
-            <span className="text-slate-500 text-xs sm:text-sm font-bold uppercase tracking-wider">Invalidadas</span>
-            <div className="text-2xl sm:text-4xl font-black text-slate-600 dark:text-slate-300 mt-1.5 sm:mt-2">{summary.ANULADO || 0}</div>
+          <div className="relative z-10 h-full flex flex-col">
+            <div className="h-8 flex items-start">
+              <span className="text-slate-500 text-[11px] sm:text-xs font-bold uppercase tracking-wider leading-tight">Invalidadas</span>
+            </div>
+            <div className="text-2xl sm:text-4xl font-black text-slate-600 dark:text-slate-300">{summary.ANULADO || 0}</div>
           </div>
         </div>
+        </div>
 
-        {hasPermission('MANAGE_INVENTORY') && invSummary && invSummary.low_stock_count > 0 && (
-          <div 
-            onClick={() => navigate('/inventory?filter=low_stock')}
-            className={`cursor-pointer transition-all bg-white dark:bg-slate-800 p-3.5 sm:p-5 rounded-2xl border flex flex-col relative overflow-hidden group border-rose-100 dark:border-rose-900/50 shadow-sm shadow-rose-100/50 dark:shadow-rose-900/20 hover:shadow-md col-span-2 md:col-span-1 print:hidden`}
-          >
-            <div className="absolute -right-2 -top-2 sm:-right-4 sm:-top-4 text-rose-50 dark:text-rose-900/40 opacity-50 group-hover:scale-110 transition-transform">
-               <AlertCircle className="w-14 h-14 sm:w-20 sm:h-20" />
+        <div className="w-full xl:w-72 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-center items-center print:hidden">
+          <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-2 w-full text-center">Relación de Mantenimiento</h3>
+          {pieData.length > 0 ? (
+            <div className="h-32 w-full mt-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} paddingAngle={2} dataKey="value" stroke="none">
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(val: number) => [val, 'Órdenes']} 
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }} 
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-            <div className="relative z-10">
-              <span className="text-rose-600 text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-1">
-                Stock Crítico
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
-                </span>
-              </span>
-              <div className="text-2xl sm:text-4xl font-black text-slate-800 dark:text-slate-100 mt-1.5 sm:mt-2">{invSummary.low_stock_count || 0}</div>
-              <div className="text-[10px] sm:text-xs text-rose-600/70 font-medium mt-1 leading-tight">
-                Artículos con existencias al nivel mínimo o inferior
+          ) : (
+            <div className="h-32 w-full flex items-center justify-center">
+              <span className="text-xs text-slate-400">Sin datos</span>
+            </div>
+          )}
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-3">
+            {pieData.map((entry, index) => (
+              <div key={index} className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }}></span>
+                <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">{entry.name} ({entry.value})</span>
               </div>
-            </div>
+            ))}
           </div>
-        )}
+        </div>
       </div>
 
       {isLoading && workOrders.length === 0 ? (
@@ -612,6 +658,7 @@ export const Dashboard = () => {
                 <button 
                   onClick={() => { setActiveTab('ACTIVAS'); setStatusFilter(null); }}
                   className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === 'ACTIVAS' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                  title="Muestra todas las órdenes de trabajo activas y pendientes de toda la planta."
                 >
                   Vista General
                 </button>
@@ -619,12 +666,14 @@ export const Dashboard = () => {
               <button 
                 onClick={() => { setActiveTab('MIS_ORDENES'); setStatusFilter(null); }}
                 className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === 'MIS_ORDENES' ? 'bg-amber-100 text-amber-800 shadow-sm border border-amber-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                title="Muestra únicamente las órdenes de trabajo activas que te han sido asignadas."
               >
                 Mis Órdenes
               </button>
               <button 
                 onClick={() => { setActiveTab('HISTORIAL'); setStatusFilter(null); }}
                 className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === 'HISTORIAL' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                title="Archivo histórico: muestra exclusivamente órdenes ya finalizadas o anuladas."
               >
                 Historial
               </button>
