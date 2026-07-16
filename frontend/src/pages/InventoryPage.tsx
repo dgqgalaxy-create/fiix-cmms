@@ -924,6 +924,10 @@ export const InventoryPage = () => {
         onSaved={() => fetchData(true)}
         readOnly={isCatalogReadOnly}
         allItems={items}
+        onSelectItem={(selected) => {
+          setIsCatalogModalOpen(false);
+          handleOpenItemModal(selected);
+        }}
       />
 
       <QRDisplayModal

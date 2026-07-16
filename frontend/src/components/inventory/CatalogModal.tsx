@@ -14,9 +14,10 @@ interface Props {
   item?: any;
   readOnly?: boolean;
   allItems?: any[];
+  onSelectItem?: (item: any) => void;
 }
 
-export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, allItems }: Props) => {
+export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, allItems, onSelectItem }: Props) => {
   const [formData, setFormData] = useState<any>({
     internal_id: '',
     name: '',
@@ -258,7 +259,11 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
                 if (filtered.length === 0) return <p className="text-sm text-slate-500">No hay repuestos registrados.</p>;
                 
                 return filtered.map(i => (
-                  <div key={i.id} className="flex justify-between items-center p-3 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow transition-shadow">
+                  <div
+                    key={i.id}
+                    onClick={() => onSelectItem?.(i)}
+                    className={`flex justify-between items-center p-3 bg-white rounded-lg border border-slate-200 shadow-sm transition-shadow ${onSelectItem ? 'cursor-pointer hover:shadow hover:border-emerald-300' : ''}`}
+                  >
                     <div>
                       <p className="text-sm font-bold text-slate-800">{i.name}</p>
                       <p className="text-xs text-slate-500 font-mono mt-0.5">{i.internal_code}</p>
