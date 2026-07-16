@@ -6,6 +6,7 @@ import { ClipboardCheck, Plus, CheckCircle, Clock, AlertCircle, ChevronUp, Chevr
 import { getChecklistHistory, getTodayChecklist, createTodayChecklist } from '../api/checklists';
 import type { DailyChecklist } from '../api/checklists';
 import { useAuth } from '../context/AuthContext';
+import { parseDateOnly } from '../utils/dateUtils';
 
 export default function DailyChecklistsPage() {
   const [history, setHistory] = useState<DailyChecklist[]>([]);
@@ -146,7 +147,7 @@ export default function DailyChecklistsPage() {
                 sortedHistory.map((checklist) => (
                   <tr key={checklist.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                     <td className="px-6 py-4 text-slate-900 dark:text-slate-100 font-medium">
-                      {format(new Date(checklist.date), "EEEE, d 'de' MMMM", { locale: es })}
+                      {format(parseDateOnly(checklist.date), "EEEE, d 'de' MMMM", { locale: es })}
                     </td>
                     <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
                       {checklist.technician?.name || '-'}

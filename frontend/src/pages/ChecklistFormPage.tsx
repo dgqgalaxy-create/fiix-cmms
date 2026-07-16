@@ -6,6 +6,7 @@ import { ArrowLeft, Save, Check, X as XIcon, Minus, PenTool, CheckCircle, Printe
 import { getChecklistById, updateChecklistRow, submitChecklist, reviewChecklist } from '../api/checklists';
 import type { DailyChecklist, ChecklistRow } from '../api/checklists';
 import { useAuth } from '../context/AuthContext';
+import { parseDateOnly } from '../utils/dateUtils';
 
 export default function ChecklistFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -175,7 +176,7 @@ export default function ChecklistFormPage() {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-slate-900 print:text-xl">Check List Diario de Mantenimiento</h1>
             <p className="text-slate-500 font-medium mt-1 print:text-sm">
-              {format(new Date(checklist.date), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).toUpperCase()}
+              {format(parseDateOnly(checklist.date), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).toUpperCase()}
             </p>
           </div>
         </div>
