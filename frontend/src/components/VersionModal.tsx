@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.10.1";
+export const APP_VERSION = "1.11.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,7 +28,10 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   ];
   const changelog = [
     "Corrección: La fecha del Checklist Diario ya no se desfasa un día al crearlo o consultarlo en el historial.",
-    "Corrección: En Inventario, ahora puedes hacer clic en cualquier repuesto listado dentro del detalle de una Categoría, Ubicación o Proveedor para abrir su ficha completa (antes no reaccionaba al clic)."
+    "Corrección: En Inventario, ahora puedes hacer clic en cualquier repuesto listado dentro del detalle de una Categoría, Ubicación o Proveedor para abrir su ficha completa (antes no reaccionaba al clic).",
+    "Nuevo: El Código Interno de los Activos ahora se autoasigna con formato incremental (ACT-0001, ACT-0002...) y queda protegido: no se puede modificar una vez creado el equipo.",
+    "Nuevo: En Inventario → Ubicaciones se agregó barra de búsqueda y botón de escaneo QR, además de un botón para ver/imprimir el código QR de cada ubicación. Al escanearlo se abre el detalle con todos los repuestos que contiene.",
+    "Mejora: La tarjeta de 'Stock Crítico' en Inventario ahora tiene la misma altura que los botones de acciones a su costado."
   ];
 
   return (

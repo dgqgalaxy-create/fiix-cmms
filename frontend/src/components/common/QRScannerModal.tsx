@@ -63,6 +63,10 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose, onScan }) => 
         const id = data.replace('FIIX-ITEM:', '').trim();
         onClose();
         onScan(id);
+      } else if (data.startsWith('FIIX-LOCATION:')) {
+        const id = data.replace('FIIX-LOCATION:', '').trim();
+        onClose();
+        onScan(id);
       } else {
         setError("Código QR no reconocido por FIIX CMMS.");
         if (scannerRef.current) {
@@ -120,7 +124,7 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose, onScan }) => 
           
           <div className="mt-4 flex flex-col gap-3">
             <p className="text-center text-slate-500 text-sm">
-              Apunta la cámara al código QR de una máquina o repuesto. Se agregará automáticamente a la barra de búsqueda.
+              Apunta la cámara al código QR de una máquina, repuesto o ubicación.
             </p>
           </div>
         </div>

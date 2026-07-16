@@ -47,6 +47,8 @@ export const InventoryPage = () => {
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | undefined>(undefined);
   const [qrItem, setQrItem] = useState<Item | null>(null);
+  const [qrLocation, setQrLocation] = useState<ItemLocation | null>(null);
+  const [locationSearchTerm, setLocationSearchTerm] = useState('');
 
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [preselectedTransactionItemId, setPreselectedTransactionItemId] = useState<string | undefined>(undefined);
@@ -184,6 +186,15 @@ export const InventoryPage = () => {
     return list;
   }, [items, searchTerm, showLowStockOnly, sortBy, sortDirection]);
 
+  const filteredLocations = useMemo(() => {
+    if (!locationSearchTerm) return locations;
+    const term = locationSearchTerm.toLowerCase();
+    return locations.filter(l =>
+      (l.name || '').toLowerCase().includes(term) ||
+      (l.internal_id || '').toLowerCase().includes(term)
+    );
+  }, [locations, locationSearchTerm]);
+
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
@@ -236,6 +247,16 @@ export const InventoryPage = () => {
   };
 
   const handleScan = (scannedId: string) => {
+    if (activeTab === 'locations') {
+      const location = locations.find(l => l.id === scannedId || l.internal_id === scannedId);
+      if (location) {
+        handleOpenCatalogModal('location', location, true);
+      } else {
+        alert("No se encontró ninguna ubicación con el código escaneado.");
+      }
+      return;
+    }
+
     const item = items.find(i => i.id === scannedId || i.internal_code === scannedId);
     if (item) {
       setSearchTerm(item.internal_code || item.name);
@@ -650,31 +671,48 @@ export const InventoryPage = () => {
       case 'locations':
         return (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {locations.map((loc) => (
+            {filteredLocations.map((loc) => (
               <div 
                 key={loc.id} 
                 className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between hover:border-emerald-300 transition-colors cursor-pointer"
                 onClick={() => handleOpenCatalogModal('location', loc, true)}
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                     <MapPin size={20} />
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900">{loc.name}</h3>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-slate-900 truncate">{loc.name}</h3>
                     <p className="text-xs text-slate-500 font-mono">{loc.internal_id}</p>
                   </div>
                 </div>
-                {canManage && (
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); handleOpenCatalogModal('location', loc, false); }} 
-                    className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-                )}
+                <div className="flex items-center gap-1 shrink-0">
+                  {canManage && (
+                    <>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setQrLocation(loc); }} 
+                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        title="Ver / Imprimir QR"
+                      >
+                        <QrCode size={16} />
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleOpenCatalogModal('location', loc, false); }} 
+                        className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                        title="Editar"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             ))}
+            {filteredLocations.length === 0 && (
+              <div className="md:col-span-3 bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-500">
+                No se encontraron ubicaciones.
+              </div>
+            )}
           </div>
         );
 
@@ -747,10 +785,10 @@ export const InventoryPage = () => {
         {!isLoading && items.filter(i => i.is_active && i.stock <= i.minimum_inventory).length > 0 && (
           <div 
             onClick={() => { setShowLowStockOnly(true); setActiveTab('items'); }}
-            className="cursor-pointer transition-all bg-white dark:bg-slate-800 px-5 py-3 rounded-2xl border border-rose-200 dark:border-rose-900/50 shadow-sm hover:shadow-md flex items-center gap-4 group"
+            className="cursor-pointer transition-all bg-white dark:bg-slate-800 px-4 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 shadow-sm hover:shadow-md flex items-center gap-3 group"
           >
-            <div className="p-2.5 bg-rose-50 dark:bg-rose-900/30 rounded-xl">
-              <AlertCircle className="w-6 h-6 text-rose-500" />
+            <div className="p-2 bg-rose-50 dark:bg-rose-900/30 rounded-lg shrink-0">
+              <AlertCircle className="w-5 h-5 text-rose-500" />
             </div>
             <div className="flex-1 min-w-0">
               <span className="text-rose-600 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
@@ -760,9 +798,9 @@ export const InventoryPage = () => {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
                 </span>
               </span>
-              <span className="text-[11px] text-rose-500/70 font-medium">Artículos al mínimo o inferior</span>
+              <span className="text-[11px] text-rose-500/70 font-medium leading-tight">Artículos al mínimo o inferior</span>
             </div>
-            <div className="text-3xl font-black text-rose-600">{items.filter(i => i.is_active && i.stock <= i.minimum_inventory).length}</div>
+            <div className="text-xl font-black text-rose-600 leading-none">{items.filter(i => i.is_active && i.stock <= i.minimum_inventory).length}</div>
           </div>
         )}
 
@@ -885,6 +923,30 @@ export const InventoryPage = () => {
             </div>
           )}
 
+          {activeTab === 'locations' && (
+            <div className="mb-6 bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex items-center">
+              <div className="pl-3 pr-2 text-slate-400">
+                <Search size={20} />
+              </div>
+              <input
+                type="text"
+                placeholder="Buscar en ubicaciones..."
+                className="w-full bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 px-2 py-1.5 outline-none"
+                value={locationSearchTerm}
+                onChange={(e) => setLocationSearchTerm(e.target.value)}
+              />
+              {canUseScanner && (
+                <button
+                  onClick={() => setIsScannerOpen(true)}
+                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                  title="Escanear QR de una ubicación"
+                >
+                  <QrCode size={20} />
+                </button>
+              )}
+            </div>
+          )}
+
           {renderContent()}
         </div>
       </div>
@@ -936,6 +998,14 @@ export const InventoryPage = () => {
         title={qrItem?.name || ''}
         subtitle={qrItem?.internal_code || ''}
         value={qrItem ? `FIIX-ITEM:${qrItem.id}` : ''}
+      />
+
+      <QRDisplayModal
+        isOpen={!!qrLocation}
+        onClose={() => setQrLocation(null)}
+        title={qrLocation?.name || ''}
+        subtitle={qrLocation?.internal_id || ''}
+        value={qrLocation ? `FIIX-LOCATION:${qrLocation.id}` : ''}
       />
 
       <QRScannerModal

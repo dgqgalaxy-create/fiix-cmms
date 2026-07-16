@@ -3,6 +3,7 @@ import path from 'path';
 import { parse } from 'csv-parse';
 import prisma from './config/prisma';
 import bcrypt from 'bcrypt';
+import { generateInventoryCode } from './utils/codeGenerator';
 
 // Helper to parse dates like "20/2/2026 15:38:29" or "20/02/2026 20:25:25"
 function parseDate(dateStr: string): Date | null {
@@ -97,10 +98,13 @@ async function seedOrders() {
       if (!assetId) {
         let asset = await prisma.asset.findFirst({ where: { name: assetName } });
         if (!asset) {
+          // El código interno de los Activos es inmutable y sigue el formato
+          // incremental ACT-0001, ACT-0002, ... asignado automáticamente.
+          const internal_code = await generateInventoryCode('Asset', 'ACT-', 4);
           asset = await prisma.asset.create({ 
             data: { 
               name: assetName,
-              internal_code: `EQ-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+              internal_code,
               brand: 'Desconocida',
               model: 'Desconocido',
               status: 'OPERATIVO',

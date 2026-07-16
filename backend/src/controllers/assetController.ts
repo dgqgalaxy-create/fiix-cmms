@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
+import { generateInventoryCode } from '../utils/codeGenerator';
 
 export const getAssetMetrics = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -137,8 +138,12 @@ export const getAssetById = async (req: Request, res: Response): Promise<void> =
 
 export const createAsset = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { zone_id, vendor_id, price, internal_code, name, brand, model, serial_number, description, status } = req.body;
-    
+    const { zone_id, vendor_id, price, name, brand, model, serial_number, description, status } = req.body;
+
+    // El código interno es inmutable y autogenerado (ACT-0001, ACT-0002, ...).
+    // Se ignora cualquier valor enviado desde el cliente.
+    const internal_code = await generateInventoryCode('Asset', 'ACT-', 4);
+
     const assetData: any = {
       internal_code,
       name,
@@ -147,9 +152,15 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
       serial_number: serial_number || null,
       description: description || null,
       status,
-      vendor_id: vendor_id || null,
       price: price ? parseFloat(price) : null,
     };
+
+    // Prisma no permite mezclar el estilo de relación (connect) con la escritura
+    // directa del scalar de otra relación en la misma llamada; por eso "vendor"
+    // también se asigna con connect en vez de "vendor_id" plano.
+    if (vendor_id) {
+      assetData.vendor = { connect: { id: vendor_id } };
+    }
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (files?.['image']) {
@@ -169,6 +180,7 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
     const newAsset = await prisma.asset.create({ data: assetData });
     res.status(201).json(newAsset);
   } catch (error: any) {
+    console.error('Create Asset Error:', error);
     if (error.code === 'P2002') {
       res.status(400).json({ error: 'El internal_code ya existe' });
       return;
@@ -180,17 +192,24 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
 export const updateAsset = async (req: Request, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { zone_id, internal_code, name, brand, model, serial_number, description, status } = req.body;
+    // internal_code es inmutable una vez creado: se ignora deliberadamente
+    // cualquier valor recibido para este campo en la actualización.
+    const { zone_id, vendor_id, price, name, brand, model, serial_number, description, status } = req.body;
 
     const assetData: any = {};
-    if (internal_code) assetData.internal_code = internal_code;
     if (name) assetData.name = name;
     if (brand) assetData.brand = brand;
     if (model) assetData.model = model;
     if (serial_number !== undefined) assetData.serial_number = serial_number || null;
     if (description !== undefined) assetData.description = description || null;
     if (status) assetData.status = status;
+    if (price !== undefined) assetData.price = price ? parseFloat(price) : null;
     if (zone_id) assetData.zone = { connect: { id: zone_id } };
+    // "vendor" se asigna con connect/disconnect en vez del scalar "vendor_id"
+    // directo, ya que Prisma no permite mezclar ambos estilos en la misma llamada.
+    if (vendor_id !== undefined) {
+      assetData.vendor = vendor_id ? { connect: { id: vendor_id } } : { disconnect: true };
+    }
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (files?.['image']) {

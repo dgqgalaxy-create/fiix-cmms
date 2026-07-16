@@ -226,6 +226,15 @@ export const UserManual = () => {
                       Al abrir el detalle de una <strong>Categoría</strong>, <strong>Ubicación</strong> o <strong>Proveedor</strong> (pestañas dentro de Inventario), verás la lista de "Repuestos Asociados" a ese registro. Haz clic sobre cualquier repuesto de esa lista para abrir directamente su ficha completa de detalle, la misma vista que obtienes al abrirlo desde la pestaña de "Repuestos".
                     </p>
                   </div>
+
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
+                      <QrCode className="text-indigo-500" size={20} /> Búsqueda y Código QR en Ubicaciones
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                      La pestaña <strong>Ubicaciones</strong> ahora tiene su propia barra de búsqueda (por nombre o código) y un botón de escaneo QR, igual que la pestaña de Repuestos. Además, cada tarjeta de ubicación tiene un botón <strong>"Ver / Imprimir QR"</strong> que genera un código único para esa ubicación física (estante, almacén, área). Al pegar ese QR en el anaquel y escanearlo con el botón de la cámara, la app abre automáticamente el detalle de la ubicación mostrando todos los repuestos que contiene.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -247,7 +256,7 @@ export const UserManual = () => {
                   <div className="space-y-4">
                     <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200">Campos Obligatorios</h3>
                     <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
-                      <li><strong>Código (Asset Tag):</strong> Un ID único irrepetible (Ej. M-01).</li>
+                      <li><strong>Código Interno:</strong> Se autoasigna al guardar con formato incremental <strong>ACT-0001, ACT-0002...</strong> No se escribe manualmente y, una vez creado, no puede modificarse.</li>
                       <li><strong>Nombre:</strong> Descripción clara de la máquina.</li>
                       <li><strong>Zona:</strong> Área de la planta donde está ubicada (Ej. Producción Línea 1, Empaque).</li>
                     </ul>
@@ -261,6 +270,15 @@ export const UserManual = () => {
                       El CMMS genera un QR único para cada máquina. Imprímelo, pégalo en el chasis físico y permite que tus técnicos o solicitantes lo escaneen para abrir su expediente al instante sin teclear nada.
                     </p>
                   </div>
+                </div>
+
+                <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 p-5 rounded-2xl mt-6">
+                  <h3 className="font-bold text-amber-900 dark:text-amber-300 mb-2 flex items-center gap-2">
+                    <Shield size={18} /> Código Interno Inmutable
+                  </h3>
+                  <p className="text-amber-800 dark:text-amber-400/90 text-sm">
+                    Desde esta versión, el Código Interno del activo (ACT-0001, ACT-0002...) se genera automáticamente al crear el equipo y el campo queda bloqueado permanentemente, incluso al editar el activo después. Esto evita duplicados y asegura que la numeración de la planta sea siempre consistente y trazable.
+                  </p>
                 </div>
               </div>
             )}

@@ -1,7 +1,7 @@
 import prisma from '../config/prisma';
 
 export const generateInventoryCode = async (
-  model: 'ItemCategory' | 'ItemLocation' | 'Vendor' | 'Item',
+  model: 'ItemCategory' | 'ItemLocation' | 'Vendor' | 'Item' | 'Asset',
   prefix: string,
   padding: number = 3
 ): Promise<string> => {
@@ -15,6 +15,8 @@ export const generateInventoryCode = async (
     records = await prisma.vendor.findMany({ select: { internal_id: true } });
   } else if (model === 'Item') {
     records = await prisma.item.findMany({ select: { internal_code: true } });
+  } else if (model === 'Asset') {
+    records = await prisma.asset.findMany({ select: { internal_code: true } });
   }
 
   let maxNum = 0;

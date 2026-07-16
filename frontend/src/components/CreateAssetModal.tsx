@@ -95,7 +95,8 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
       setError('');
       
       const submitData = new FormData();
-      submitData.append('internal_code', internalCode);
+      // internal_code es inmutable y autogenerado por el servidor (formato ACT-0001);
+      // no se envía desde el cliente ni en creación ni en edición.
       submitData.append('name', name);
       submitData.append('brand', brand);
       submitData.append('model', model);
@@ -103,8 +104,8 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
       submitData.append('description', description);
       submitData.append('status', status);
       submitData.append('zone_id', zoneId);
-      if (vendorId) submitData.append('vendor_id', vendorId);
-      if (price) submitData.append('price', price);
+      submitData.append('vendor_id', vendorId);
+      submitData.append('price', price);
       
       if (imageFile) submitData.append('image', imageFile);
       if (documentFile) submitData.append('document', documentFile);
@@ -143,8 +144,14 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
           <form id="create-asset-form" onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Código Interno *</label>
-                <input type="text" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="Ej: BMB-001" value={internalCode} onChange={(e) => setInternalCode(e.target.value)} />
+                <label className="block text-sm font-medium text-slate-700 mb-1">Código Interno</label>
+                <input
+                  type="text"
+                  disabled
+                  className="w-full px-4 py-2.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-xl font-mono text-sm cursor-not-allowed"
+                  value={initialData ? internalCode : 'Se genera automáticamente al guardar (ACT-0001...)'}
+                />
+                <p className="text-xs text-slate-400 mt-1">Este código es permanente y no se puede modificar una vez asignado.</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Estado *</label>

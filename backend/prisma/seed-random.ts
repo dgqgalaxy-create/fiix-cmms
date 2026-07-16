@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import prisma from '../src/config/prisma';
 import { Role, AssetStatus, Priority, MaintenanceType, ProductionGroup, WorkOrderStatus } from '@prisma/client';
+import { generateInventoryCode } from '../src/utils/codeGenerator';
 
 async function main() {
   console.log('🔄 Iniciando la generación de datos de prueba aleatorios...');
@@ -111,7 +112,6 @@ async function main() {
   ];
 
   const assets = [];
-  let codeCounter = 100;
 
   for (let i = 0; i < 15; i++) {
     const template = assetTemplates[i % assetTemplates.length];
@@ -124,7 +124,9 @@ async function main() {
     const rand = Math.random();
     const status = rand < 0.75 ? AssetStatus.OPERATIVO : rand < 0.90 ? AssetStatus.EN_MANTENIMIENTO : AssetStatus.FUERA_DE_SERVICIO;
 
-    const internal_code = `${template.prefix}-${codeCounter++}`;
+    // El código interno de los Activos es inmutable y sigue el formato
+    // incremental ACT-0001, ACT-0002, ... asignado automáticamente.
+    const internal_code = await generateInventoryCode('Asset', 'ACT-', 4);
 
     const asset = await prisma.asset.create({
       data: {
