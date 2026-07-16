@@ -217,6 +217,15 @@ export const UserManual = () => {
                       Al crear una refacción defines un "Stock Mínimo". Cuando los técnicos consumen piezas en sus órdenes de trabajo, el sistema resta ese inventario matemáticamente de forma automática. Si llega al mínimo, la pieza se marca en rojo intenso alertando al comprador que es momento de reabastecer.
                     </p>
                   </div>
+
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
+                      <Package className="text-amber-500" size={20} /> Ver Detalle desde Categorías, Ubicaciones y Proveedores
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Al abrir el detalle de una <strong>Categoría</strong>, <strong>Ubicación</strong> o <strong>Proveedor</strong> (pestañas dentro de Inventario), verás la lista de "Repuestos Asociados" a ese registro. Haz clic sobre cualquier repuesto de esa lista para abrir directamente su ficha completa de detalle, la misma vista que obtienes al abrirlo desde la pestaña de "Repuestos".
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.10.0";
+export const APP_VERSION = "1.10.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "11 de Julio, 2026";
+  const updateDate = "16 de Julio, 2026";
   const modules = [
     "Panel Principal (Dashboard)",
     "Gestión de Activos (Equipos)",
@@ -27,11 +27,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
-    "Nuevo: Menú lateral reorganizable con drag & drop y persistencia en la base de datos por usuario.",
-    "Mejora UI: Unificación del diseño de las tablas (glassmorphism y sombras) y alineación de encabezados.",
-    "Modo Oscuro: Contraste mejorado en tarjetas del Dashboard, tablas principales y órdenes de compra.",
-    "Stock y movimientos más flexibles: permite registrar fracciones o decimales al escribir.",
-    "Habilitado el registro de movimientos para técnicos desde la vista de Repuestos."
+    "Corrección: La fecha del Checklist Diario ya no se desfasa un día al crearlo o consultarlo en el historial.",
+    "Corrección: En Inventario, ahora puedes hacer clic en cualquier repuesto listado dentro del detalle de una Categoría, Ubicación o Proveedor para abrir su ficha completa (antes no reaccionaba al clic)."
   ];
 
   return (

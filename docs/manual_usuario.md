@@ -1,5 +1,5 @@
 # Manual de Usuario - LPET CMMS
-*(Versión 1.9.1)*
+*(Versión 1.10.1 - 16 de Julio, 2026)*
 
 Bienvenido al manual de uso rápido del Sistema de Gestión de Mantenimiento Computarizado (CMMS). A continuación, te explicamos cómo utilizar las principales funciones agregadas recientemente.
 
@@ -17,6 +17,7 @@ Se han mejorado las reglas del almacén para prevenir errores y mejorar la fluid
 - **Validación de Stock Mínimo:** El sistema ya no permite configurar un stock mínimo igual a 0.
 - **Bloqueo de Inventario Negativo:** Si intentas sacar más piezas de las que existen actualmente, el sistema bloqueará la operación con una alerta.
 - **Ubicación Automática:** Si creas un nuevo repuesto o importas un CSV sin definir lugar, el sistema lo agrupará bajo la ubicación "Sin Asignación".
+- **Ver Detalle desde Categorías, Ubicaciones y Proveedores:** Al abrir el detalle de una Categoría, Ubicación o Proveedor, la lista de "Repuestos Asociados" ahora es clickeable: selecciona cualquier repuesto de esa lista para abrir su ficha completa de detalle, igual que si lo hubieras abierto desde la pestaña de "Repuestos".
 
 ## 3. Módulo Calendario (Roster)
 - **Corrección de Incidencias:** Se ha resuelto el problema que impedía guardar incidencias como (Falta, TXT, Vacaciones, etc.). Ahora basta con elegir la incidencia de la lista desplegable en el día del empleado y el sistema guardará la excepción inmediatamente.
