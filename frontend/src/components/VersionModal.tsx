@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.25.0";
+export const APP_VERSION = "1.25.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Escáner QR en celular por IP (HTTP): ya no tumba la app al cerrar; si la cámara en vivo está bloqueada, puedes escanear eligiendo una foto de la galería. La cámara en vivo requiere HTTPS.",
+    "Corrección: El escáner QR desde la barra de técnico ya no falla al abrir/cerrar la cámara (error «scanner is not running»).",
     "Nuevo: Capas móvil para técnicos: barra inferior (Mis OT, Escanear, Inventario, Inicio) y acciones rápidas Aceptar/Pausar/Finalizar/Reanudar en el detalle de la OT. Administradores y gestionadores conservan la interfaz completa.",
     "Mejora: Al abrir la app de cero (nueva sesión), entra en Inicio y no en Órdenes de Trabajo; los enlaces profundos a una OT o activo se respetan.",
     "Mejora: Las órdenes con foto ahora muestran el fondo fotográfico progresivo también en la tabla web de escritorio; en todas las vistas la imagen es 10% más visible sin comprometer la lectura.",

@@ -3,9 +3,16 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 17 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.25.0 (Actualización: 17 de Julio de 2026)
+## 🚀 Versión Actual: v1.25.2 (Actualización: 17 de Julio de 2026)
 
-### Novedades en v1.25.0 (Capa móvil para técnicos)
+### Novedades en v1.25.2 (QR en celular por HTTP)
+- **Causa:** en `http://IP` el navegador bloquea la cámara en vivo (solo HTTPS/localhost).
+- **Solución:** escaneo por foto/galería + cierre seguro del escáner sin tumbar la app.
+
+### Novedades Anteriores (v1.25.1 - Escáner QR estable)
+- **Corrección:** abrir Escanear desde la barra de técnico ya no rompe la app al iniciar/detener la cámara.
+
+### Novedades Anteriores (v1.25.0 - Capa móvil para técnicos)
 - **Barra inferior (solo TECNICO en celular):** Mis OT, Escanear QR, Inventario e Inicio.
 - **Acciones rápidas en detalle de OT:** Aceptar / Pausar / Finalizar / Reanudar fijas abajo; luego Guardar con evidencias.
 - **Admin/Gestionador:** sin cambios en la interfaz.

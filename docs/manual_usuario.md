@@ -71,6 +71,7 @@ Gestión de solicitudes (listado), sin el resumen gráfico:
 - **Asignación opcional al aceptar:** Los Administradores y Gestionadores conservan visible la sección **Técnicos Asignados** mientras la orden está abierta. Pueden seleccionar uno o varios técnicos antes de guardar; si dejan la lista vacía, se aplica la autoasignación descrita arriba.
 - **Vista para Técnicos:** Los técnicos pueden atender las órdenes que tengan asignadas, pero no pueden modificar la asignación de personal.
 - **Capa móvil de técnico:** En celular, el rol Técnico ve una barra inferior con Mis OT, Escanear QR, Inventario e Inicio. Al abrir una orden aparecen botones grandes de Aceptar / Pausar / Finalizar / Reanudar; completa evidencias y guarda. Administradores y gestionadores siguen con la interfaz completa (también en celular).
+- **Escanear QR en celular:** si entras por `http://IP` (sin HTTPS), el navegador bloquea la cámara en vivo; usa **Elegir foto / galería**. Con HTTPS o localhost la cámara en vivo sí funciona.
 - **Notificaciones Telegram:** Tanto las órdenes creadas desde **+ Nueva Orden** como las del **Portal de Solicitudes** (`/request`) disparan alerta a Telegram cuando la opción está activada en Configuración.
 - **Opciones de Ordenamiento:**
   En los filtros superiores, puedes elegir cómo organizar tus OTs:
