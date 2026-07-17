@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import type { WorkOrder } from '../api/workOrders';
-import { Clock, CheckCircle2, AlertCircle, Wrench, Calendar, MapPin, Tag, User, ChevronUp, ChevronDown } from 'lucide-react';
+import { Clock, CheckCircle2, AlertCircle, Wrench, Calendar, MapPin, Tag, User, ChevronUp, ChevronDown, Camera } from 'lucide-react';
 import { SlaBadge } from './SlaBadge';
 import { formatWorkOrderFolio } from '../utils/folio';
+import { BACKEND_URL } from '../api/axios';
 
 interface Props {
   workOrders: WorkOrder[];
@@ -125,12 +126,36 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
           className="group bg-white dark:bg-slate-900 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500 transition-all cursor-pointer overflow-hidden flex flex-col md:flex-row"
         >
           {/* Main Content Area */}
-          <div className="p-4 md:p-5 flex-1 flex flex-col">
-            <div className="flex justify-between items-start mb-2 gap-4">
+          <div className="relative isolate overflow-hidden p-4 md:p-5 flex-1 flex flex-col">
+            {wo.request_image_url && (
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-0 w-[68%] sm:w-[58%]" aria-hidden="true">
+                <img
+                  src={`${BACKEND_URL}${wo.request_image_url}`}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-0 h-full w-full scale-105 object-cover opacity-40 blur-[2px] dark:opacity-35"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/55 dark:from-slate-800 dark:via-slate-800/95 dark:to-slate-900/60" />
+                <div className="absolute inset-0 bg-gradient-to-t from-white/45 via-transparent to-white/25 dark:from-slate-900/60 dark:to-slate-800/30" />
+              </div>
+            )}
+
+            <div className="relative z-10 flex justify-between items-start mb-2 gap-4">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="bg-slate-800 text-white px-2 py-0.5 rounded text-xs font-bold tracking-wide">
                   {formatWorkOrderFolio(wo.folio)}
                 </span>
+
+                {wo.request_image_url && (
+                  <span
+                    className="inline-flex items-center justify-center rounded-full border border-emerald-200/80 bg-white/85 p-1 text-emerald-700 shadow-sm backdrop-blur-sm dark:border-emerald-800 dark:bg-slate-900/80 dark:text-emerald-300"
+                    title="Incluye foto de la solicitud"
+                    aria-label="Incluye foto de la solicitud"
+                  >
+                    <Camera size={12} />
+                  </span>
+                )}
                 
                 {wo.priority === 'URGENTE' && (
                   <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100 uppercase tracking-widest flex items-center gap-1">
@@ -150,12 +175,12 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
               </div>
             </div>
             
-            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1.5">
+            <h3 className="relative z-10 font-bold text-slate-900 dark:text-slate-100 text-base mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1.5">
               <User size={16} className="text-slate-400 dark:text-slate-400" />
               {wo.requester_name || wo.created_by?.name || 'Solicitante desconocido'}
             </h3>
             
-            <div className="mb-4">
+            <div className="relative z-10 mb-4">
               <p className="text-slate-700 dark:text-slate-200 dark:text-slate-300 font-medium text-sm leading-relaxed">
                 {wo.title}
               </p>
@@ -166,7 +191,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
               )}
             </div>
 
-            <div className="mt-auto flex flex-wrap items-center gap-3 text-xs text-slate-600 dark:text-slate-400 dark:text-slate-300">
+            <div className="relative z-10 mt-auto flex flex-wrap items-center gap-3 text-xs text-slate-600 dark:text-slate-400 dark:text-slate-300">
               <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-950 px-2.5 py-1 rounded-md border border-slate-100 dark:border-slate-800">
                 <div className="w-4 h-4 rounded bg-emerald-100 dark:bg-emerald-900/40 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 dark:text-emerald-400 flex items-center justify-center font-bold text-[8px] shrink-0">
                   {wo.asset.name.substring(0, 2).toUpperCase()}

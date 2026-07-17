@@ -3,9 +3,15 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 17 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.22.2 (Actualización: 17 de Julio de 2026)
+## 🚀 Versión Actual: v1.23.0 (Actualización: 17 de Julio de 2026)
 
-### Novedades en v1.22.2 (Foto en portal público)
+### Novedades en v1.23.0 (Tarjetas de solicitudes con foto)
+- **Órdenes de Trabajo responsive:** las tarjetas con `request_image_url` muestran la foto como fondo lateral desenfocado, protegido por degradados en modo claro y oscuro; incluye indicador de cámara y carga diferida.
+
+### Novedades Anteriores (v1.22.3 - Cámara móvil robusta)
+- **Portal `/request`:** comprime la foto en el dispositivo y recupera el borrador desde `sessionStorage` si el navegador recarga el formulario al abrir la cámara.
+
+### Novedades Anteriores (v1.22.2 - Foto en portal público)
 - **Portal `/request`:** carga opcional de fotografía (cámara o galería), misma evidencia `request_image_url` que en Órdenes de Trabajo.
 
 ### Novedades Anteriores (v1.22.1 - Calendario en servidor)
