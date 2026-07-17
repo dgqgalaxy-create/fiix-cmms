@@ -3,9 +3,12 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 17 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.25.3 (Actualización: 17 de Julio de 2026)
+## 🚀 Versión Actual: v1.25.4 (Actualización: 17 de Julio de 2026)
 
-### Novedades en v1.25.3 (QR de ubicación abre el detalle)
+### Novedades en v1.25.4 (Hosts Tailscale en Vite)
+- **Mejora:** `allowedHosts` incluye `.ts.net` para entrar por MagicDNS de Tailscale, además de `lpet-cmms`.
+
+### Novedades Anteriores (v1.25.3 - QR de ubicación abre el detalle)
 - **Corrección:** escanear una ubicación (código interno como `E2-0` o `FIIX-LOCATION:…`) abre el detalle con los repuestos asociados; el enlace profundo espera a que cargue el catálogo.
 
 ### Novedades Anteriores (v1.25.2 - QR en celular por HTTP)

@@ -7,7 +7,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 // https://vite.dev/config/
 export default defineConfig({
   server: {
-    allowedHosts: ['lpet-cmms']
+    // Hostnames del Header "Host" permitidos en Vite (dev / preview).
+    // "lpet-cmms" = nombre local en red; ".ts.net" = cualquier máquina MagicDNS de Tailscale.
+    allowedHosts: ['lpet-cmms', '.ts.net'],
   },
   plugins: [
     react(), 
