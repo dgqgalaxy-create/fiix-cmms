@@ -128,15 +128,15 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
           {/* Main Content Area */}
           <div className="relative isolate overflow-hidden p-4 md:p-5 flex-1 flex flex-col">
             {wo.request_image_url && (
-              <div className="pointer-events-none absolute inset-y-0 right-0 z-0 w-[68%] sm:w-[58%]" aria-hidden="true">
+              <div className="pointer-events-none absolute inset-0 z-0" aria-hidden="true">
                 <img
                   src={`${BACKEND_URL}${wo.request_image_url}`}
                   alt=""
                   loading="lazy"
                   decoding="async"
-                  className="absolute inset-0 h-full w-full scale-105 object-cover opacity-40 blur-[2px] dark:opacity-35"
+                  className="absolute inset-0 h-full w-full object-cover object-right opacity-[0.44] blur-[1.5px] dark:opacity-[0.39]"
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/55 dark:from-slate-800 dark:via-slate-800/95 dark:to-slate-900/60" />
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.99)_0%,rgba(255,255,255,0.97)_28%,rgba(255,255,255,0.88)_52%,rgba(255,255,255,0.65)_74%,rgba(255,255,255,0.38)_100%)] dark:bg-[linear-gradient(to_right,rgba(30,41,59,0.99)_0%,rgba(30,41,59,0.97)_28%,rgba(30,41,59,0.90)_52%,rgba(15,23,42,0.70)_74%,rgba(15,23,42,0.48)_100%)]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/45 via-transparent to-white/25 dark:from-slate-900/60 dark:to-slate-800/30" />
               </div>
             )}

@@ -63,6 +63,7 @@ Gestión de solicitudes (listado), sin el resumen gráfico:
 - **Vistas:** Vista General, Mis Órdenes e Historial.
 - **Búsqueda y filtros** por estado, fecha, prioridad, equipo y ordenamiento.
 - **Foto visible en tarjetas:** En celular y tablet, las órdenes que incluyen una foto de la solicitud la muestran como un fondo lateral desenfocado con degradado y un pequeño indicador de cámara. Las órdenes sin foto conservan su diseño habitual; toca cualquier tarjeta para consultar la evidencia completa.
+- **Atrás en celular:** Al abrir el detalle de una orden, el botón o gesto Atrás del teléfono cierra ese detalle y te deja en el listado de Órdenes de Trabajo. Solo vuelve a Inicio si esa era la pantalla anterior (por ejemplo, si entraste desde el resumen).
 - **Actualización Automática:** Si alguien genera una orden desde el *Portal de Solicitantes*, ya no necesitas recargar la página; aparecerá instantáneamente.
 - **Aceptar una orden como Administrador o Gestionador:** Abre una orden **Pendiente**, elige **Aceptar orden** en el desplegable de estado y sube la fotografía de evidencia “Antes”. Si no seleccionas ningún técnico, la orden se asignará automáticamente a tu usuario para que puedas atenderla.
 - **Ciclo de estado (acciones claras):** Pendiente → **Aceptar orden** (pasa a En Proceso). En Proceso → **Pausar** o **Finalizar**. En Espera → **Reanudar**.

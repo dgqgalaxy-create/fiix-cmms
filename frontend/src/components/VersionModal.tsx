@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.23.0";
+export const APP_VERSION = "1.23.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,7 +28,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
-    "Mejora: En celular y tablet, las tarjetas de Órdenes de Trabajo que incluyen foto de la solicitud muestran la imagen como fondo lateral desenfocado, con degradado para conservar legibles los datos, estados y SLA.",
+    "Corrección: En celular, al revisar el detalle de una orden en Órdenes de Trabajo, el botón o gesto Atrás cierra el modal y te deja en el listado (ya no salta a Inicio).",
+    "Mejora: En celular y tablet, las tarjetas de Órdenes de Trabajo con foto muestran un fondo plano y más nítido, revelado progresivamente de izquierda a derecha sin perder legibilidad en datos, estados y SLA.",
     "Corrección: En el Portal (/request) en celular, tomar o elegir foto ya no reinicia el formulario: se comprime la imagen en el dispositivo y se guarda un borrador local por si el navegador se recarga al abrir la cámara.",
     "Nuevo: En el Portal de Solicitudes (/request) puedes adjuntar una foto opcional desde la cámara o la galería; se guarda como evidencia de la falla en la OT.",
     "Corrección: El Calendario y las notificaciones ya no llaman a localhost; usan el host del servidor (necesario en Ubuntu / acceso por IP).",

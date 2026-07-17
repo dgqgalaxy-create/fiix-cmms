@@ -3,9 +3,12 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 17 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.23.0 (Actualización: 17 de Julio de 2026)
+## 🚀 Versión Actual: v1.23.1 (Actualización: 17 de Julio de 2026)
 
-### Novedades en v1.23.0 (Tarjetas de solicitudes con foto)
+### Novedades en v1.23.1 (Atrás móvil en detalle de OT)
+- **Botón/gesto Atrás en celular:** al revisar el detalle de una orden, Atrás cierra el modal y permanece en Órdenes de Trabajo (ya no salta a Inicio).
+
+### Novedades Anteriores (v1.23.0 - Tarjetas de solicitudes con foto)
 - **Órdenes de Trabajo responsive:** las tarjetas con `request_image_url` muestran la foto como fondo lateral desenfocado, protegido por degradados en modo claro y oscuro; incluye indicador de cámara y carga diferida.
 
 ### Novedades Anteriores (v1.22.3 - Cámara móvil robusta)

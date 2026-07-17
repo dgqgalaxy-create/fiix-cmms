@@ -36,17 +36,21 @@ export const Dashboard = () => {
       } else {
         setActiveTab(hasPermission('VIEW_ALL_WORK_ORDERS') ? 'ACTIVAS' : 'MIS_ORDENES');
       }
-    } else if (!searchParams.get('wo') && !searchParams.get('folio')) {
+    } else {
+      // Quitar filtro de estado de la URL sin forzar el tab (p. ej. al cerrar detalle con Atrás)
       setStatusFilter(null);
-      setActiveTab(hasPermission('VIEW_ALL_WORK_ORDERS') ? 'ACTIVAS' : 'MIS_ORDENES');
     }
   }, [searchParams, hasPermission]);
 
-  // Abrir detalle desde notificación (?wo=id o ?folio=NNNN)
+  // Sincronizar detalle con URL (?wo=id o ?folio=NNNN) para que el botón Atrás del teléfono cierre el modal
   useEffect(() => {
     const woId = searchParams.get('wo');
     const folioParam = searchParams.get('folio');
-    if (!woId && !folioParam) return;
+
+    if (!woId && !folioParam) {
+      setSelectedWorkOrder(null);
+      return;
+    }
 
     const openFromDeepLink = async () => {
       let found: WorkOrder | undefined;
@@ -68,18 +72,11 @@ export const Dashboard = () => {
       }
 
       if (!found) return;
-
       setSelectedWorkOrder(found);
-      if (found.status === 'FINALIZADO' || found.status === 'ANULADO') {
-        setActiveTab('HISTORIAL');
-      } else {
-        setActiveTab(hasPermission('VIEW_ALL_WORK_ORDERS') ? 'ACTIVAS' : 'MIS_ORDENES');
-      }
-      setStatusFilter(null);
     };
 
     openFromDeepLink();
-  }, [searchParams, workOrders, hasPermission]);
+  }, [searchParams, workOrders]);
 
   const clearDeepLinkParams = () => {
     if (!searchParams.get('wo') && !searchParams.get('folio')) return;
@@ -87,6 +84,16 @@ export const Dashboard = () => {
     next.delete('wo');
     next.delete('folio');
     setSearchParams(next, { replace: true });
+  };
+
+  /** Abre el detalle empujando ?wo= al historial (Atrás cierra el modal, no sale del módulo). */
+  const openWorkOrderDetail = (wo: WorkOrder) => {
+    setSelectedWorkOrder(wo);
+    const next = new URLSearchParams(searchParams);
+    const alreadyOpen = Boolean(searchParams.get('wo') || searchParams.get('folio'));
+    next.set('wo', wo.id);
+    next.delete('folio');
+    setSearchParams(next, { replace: alreadyOpen });
   };
 
   const handleCloseDetail = () => {
@@ -165,7 +172,7 @@ export const Dashboard = () => {
 
   const handleJoinWorkOrder = async (id: string) => {
     await joinWorkOrder(id);
-    setSelectedWorkOrder(null);
+    handleCloseDetail();
     await fetchWorkOrders();
   };
 
@@ -173,7 +180,7 @@ export const Dashboard = () => {
     if (confirm('¿Estás seguro de que deseas eliminar esta orden permanentemente?')) {
       try {
         await deleteWorkOrder(id);
-        setSelectedWorkOrder(null);
+        handleCloseDetail();
         await fetchWorkOrders();
       } catch (error) {
         console.error('Error al eliminar:', error);
@@ -450,7 +457,7 @@ export const Dashboard = () => {
 
           <WorkOrdersTable 
             workOrders={filteredList} 
-            onRowClick={setSelectedWorkOrder}
+            onRowClick={openWorkOrderDetail}
           />
         </div>
       )}
