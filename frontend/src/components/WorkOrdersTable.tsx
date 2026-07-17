@@ -134,9 +134,9 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
                   alt=""
                   loading="lazy"
                   decoding="async"
-                  className="absolute inset-0 h-full w-full object-cover object-right opacity-[0.44] blur-[1.5px] dark:opacity-[0.39]"
+                  className="absolute inset-0 h-full w-full object-cover object-right opacity-[0.49] blur-[1px] dark:opacity-[0.43]"
                 />
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.99)_0%,rgba(255,255,255,0.97)_28%,rgba(255,255,255,0.88)_52%,rgba(255,255,255,0.65)_74%,rgba(255,255,255,0.38)_100%)] dark:bg-[linear-gradient(to_right,rgba(30,41,59,0.99)_0%,rgba(30,41,59,0.97)_28%,rgba(30,41,59,0.90)_52%,rgba(15,23,42,0.70)_74%,rgba(15,23,42,0.48)_100%)]" />
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.99)_0%,rgba(255,255,255,0.96)_28%,rgba(255,255,255,0.84)_52%,rgba(255,255,255,0.58)_74%,rgba(255,255,255,0.28)_100%)] dark:bg-[linear-gradient(to_right,rgba(30,41,59,0.99)_0%,rgba(30,41,59,0.96)_28%,rgba(30,41,59,0.86)_52%,rgba(15,23,42,0.62)_74%,rgba(15,23,42,0.38)_100%)]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/45 via-transparent to-white/25 dark:from-slate-900/60 dark:to-slate-800/30" />
               </div>
             )}
@@ -287,16 +287,30 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
               {sortedWorkOrders.map((wo) => (
-                <tr 
+                <tr
                   key={wo.id} 
                   onClick={() => onRowClick && onRowClick(wo)}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
+                  className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group ${
+                    wo.request_image_url ? 'wo-photo-row' : ''
+                  }`}
+                  style={wo.request_image_url
+                    ? ({ '--wo-photo-url': `url("${BACKEND_URL}${wo.request_image_url}")` } as React.CSSProperties)
+                    : undefined}
                 >
                   <td className="px-6 py-4 align-top">
                     <div className="flex flex-col gap-1.5 items-start">
                       <span className="bg-slate-800 dark:bg-slate-700 text-white px-2.5 py-1 rounded-md text-xs font-bold tracking-wide">
                         {formatWorkOrderFolio(wo.folio)}
                       </span>
+                      {wo.request_image_url && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full border border-emerald-200/80 bg-white/90 px-2 py-0.5 text-[10px] font-bold text-emerald-700 backdrop-blur-sm dark:border-emerald-800 dark:bg-slate-900/85 dark:text-emerald-300"
+                          title="Incluye foto de la solicitud"
+                          aria-label="Incluye foto de la solicitud"
+                        >
+                          <Camera size={11} /> Foto
+                        </span>
+                      )}
                       {wo.priority === 'URGENTE' && (
                         <span className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100 dark:border-red-800 uppercase tracking-widest flex items-center gap-1">
                           <AlertCircle size={10} /> Urgente

@@ -3,9 +3,13 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 17 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.23.1 (Actualización: 17 de Julio de 2026)
+## 🚀 Versión Actual: v1.24.0 (Actualización: 17 de Julio de 2026)
 
-### Novedades en v1.23.1 (Atrás móvil en detalle de OT)
+### Novedades en v1.24.0 (Fotos de OT en todas las vistas)
+- **Escritorio incluido:** la tabla web muestra la foto de solicitud como fondo progresivo en las órdenes que tienen evidencia.
+- **Mayor nitidez:** la foto es 10% más visible en celular, tablet y escritorio, manteniendo el texto protegido por el degradado.
+
+### Novedades Anteriores (v1.23.1 - Atrás móvil en detalle de OT)
 - **Botón/gesto Atrás en celular:** al revisar el detalle de una orden, Atrás cierra el modal y permanece en Órdenes de Trabajo (ya no salta a Inicio).
 
 ### Novedades Anteriores (v1.23.0 - Tarjetas de solicitudes con foto)

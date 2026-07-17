@@ -172,6 +172,36 @@ body {
   min-height: 400px;
 }
 
+/* Evidencia fotográfica como fondo progresivo en filas de OT de escritorio. */
+.wo-photo-row {
+  background-image:
+    linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0.99) 0%,
+      rgba(255, 255, 255, 0.97) 28%,
+      rgba(255, 255, 255, 0.88) 52%,
+      rgba(255, 255, 255, 0.58) 74%,
+      rgba(255, 255, 255, 0.28) 100%
+    ),
+    var(--wo-photo-url);
+  background-position: center, right center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%, 55% 125%;
+}
+
+.dark .wo-photo-row {
+  background-image:
+    linear-gradient(
+      to right,
+      rgba(15, 23, 42, 0.99) 0%,
+      rgba(15, 23, 42, 0.97) 28%,
+      rgba(15, 23, 42, 0.88) 52%,
+      rgba(15, 23, 42, 0.64) 74%,
+      rgba(15, 23, 42, 0.38) 100%
+    ),
+    var(--wo-photo-url);
+}
+
 @media (max-width: 768px) {
   .rbc-toolbar {
     flex-direction: column;
