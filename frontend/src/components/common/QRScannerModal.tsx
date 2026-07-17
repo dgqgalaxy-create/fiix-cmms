@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { X, Camera, AlertCircle, Upload } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { useNavigate } from 'react-router-dom';
 
 interface Props {
   isOpen: boolean;
@@ -54,29 +53,25 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose, onScan }) => 
   }, [isOpen]);
 
   const handleScan = (data: string | null) => {
-    if (data) {
-      if (data.startsWith('FIIX-ASSET:')) {
-        const id = data.replace('FIIX-ASSET:', '').trim();
-        onClose();
-        onScan(id);
-      } else if (data.startsWith('FIIX-ITEM:')) {
-        const id = data.replace('FIIX-ITEM:', '').trim();
-        onClose();
-        onScan(id);
-      } else if (data.startsWith('FIIX-LOCATION:')) {
-        const id = data.replace('FIIX-LOCATION:', '').trim();
-        onClose();
-        onScan(id);
-      } else {
-        setError("Código QR no reconocido por FIIX CMMS.");
-        if (scannerRef.current) {
-            scannerRef.current.pause(true);
-            setTimeout(() => {
-                if (scannerRef.current) scannerRef.current.resume();
-                setError('');
-            }, 3000);
-        }
-      }
+    if (!data) return;
+
+    if (
+      data.startsWith('FIIX-ASSET:') ||
+      data.startsWith('FIIX-ITEM:') ||
+      data.startsWith('FIIX-LOCATION:')
+    ) {
+      onClose();
+      onScan(data.trim());
+      return;
+    }
+
+    setError('Código QR no reconocido por FIIX CMMS.');
+    if (scannerRef.current) {
+      scannerRef.current.pause(true);
+      setTimeout(() => {
+        if (scannerRef.current) scannerRef.current.resume();
+        setError('');
+      }, 3000);
     }
   };
 

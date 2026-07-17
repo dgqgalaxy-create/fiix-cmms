@@ -3,9 +3,14 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 17 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.24.1 (Actualización: 17 de Julio de 2026)
+## 🚀 Versión Actual: v1.25.0 (Actualización: 17 de Julio de 2026)
 
-### Novedades en v1.24.1 (Inicio al abrir la app)
+### Novedades en v1.25.0 (Capa móvil para técnicos)
+- **Barra inferior (solo TECNICO en celular):** Mis OT, Escanear QR, Inventario e Inicio.
+- **Acciones rápidas en detalle de OT:** Aceptar / Pausar / Finalizar / Reanudar fijas abajo; luego Guardar con evidencias.
+- **Admin/Gestionador:** sin cambios en la interfaz.
+
+### Novedades Anteriores (v1.24.1 - Inicio al abrir la app)
 - **Aterrizaje en Inicio:** al abrir el sistema en una sesión nueva del navegador, carga el módulo Inicio (no Órdenes de Trabajo). Se respetan portal público y enlaces profundos.
 
 ### Novedades Anteriores (v1.24.0 - Fotos de OT en todas las vistas)

@@ -29,6 +29,24 @@ export const Dashboard = () => {
 
   useEffect(() => {
     const status = searchParams.get('status');
+    const tab = searchParams.get('tab');
+
+    if (tab === 'mine' || tab === 'MIS_ORDENES') {
+      setActiveTab('MIS_ORDENES');
+      setStatusFilter(null);
+      return;
+    }
+    if (tab === 'history' || tab === 'HISTORIAL') {
+      setActiveTab('HISTORIAL');
+      setStatusFilter(null);
+      return;
+    }
+    if (tab === 'all' || tab === 'ACTIVAS') {
+      setActiveTab(hasPermission('VIEW_ALL_WORK_ORDERS') ? 'ACTIVAS' : 'MIS_ORDENES');
+      setStatusFilter(null);
+      return;
+    }
+
     if (status) {
       setStatusFilter(status);
       if (status === 'FINALIZADO' || status === 'ANULADO') {

@@ -64,7 +64,8 @@ export const AssetsPage = () => {
     a.internal_code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleScan = (scannedId: string) => {
+  const handleScan = (scanned: string) => {
+    const scannedId = scanned.replace(/^FIIX-(ASSET|ITEM|LOCATION):/, '').trim();
     const asset = assets.find(a => a.id === scannedId || a.internal_code === scannedId);
     if (asset) {
       setDetailAsset(asset);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, ChevronDown, CheckCircle2, Users } from 'lucide-react';
+import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, ChevronDown, CheckCircle2, Users, PauseCircle, PlayCircle } from 'lucide-react';
 import type { WorkOrder } from '../api/workOrders';
 import { getWorkOrderById } from '../api/workOrders';
 import { useAuth } from '../context/AuthContext';
@@ -17,6 +17,7 @@ import { SlaBadge } from './SlaBadge';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { useWorkOrderPresence } from '../hooks/useWorkOrderPresence';
 import { socket } from '../api/socket';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const STATUS_LABELS: Record<string, string> = {
   PENDIENTE: 'Pendiente',
@@ -40,6 +41,8 @@ interface Props {
 export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onDelete, onJoin }: Props) => {
   const { user, hasPermission } = useAuth();
   const { canEdit, remoteEditorName } = useWorkOrderPresence(workOrder?.id, isOpen);
+  const isMobile = useIsMobile();
+  const evidenceRef = useRef<HTMLDivElement>(null);
 
   const [liveWorkOrder, setLiveWorkOrder] = useState<WorkOrder | null>(workOrder);
   const [status, setStatus] = useState<string>('');
@@ -996,7 +999,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                 )}
 
                 {status === 'EN_PROCESO' && !workOrder.before_image_url && (
-                  <div className="pt-4 mt-2 border-t border-slate-100 dark:border-slate-800 lg:col-span-2">
+                  <div ref={evidenceRef} className="pt-4 mt-2 border-t border-slate-100 dark:border-slate-800 lg:col-span-2">
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">📸 Evidencia del Problema (Antes) *</label>
                     <div className="flex gap-2">
                       <label className="flex-1 flex flex-col items-center justify-center py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors text-slate-600 dark:text-slate-400">
@@ -1033,6 +1036,58 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
             </div>
           </form>
         </div>
+
+        {isMobile && user?.role === 'TECNICO' && !isReadOnly && !isClosed && (
+          <div className="px-3 pt-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 px-1">Acción rápida</p>
+            <div className="grid grid-cols-2 gap-2">
+              {workOrder.status === 'PENDIENTE' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatus('EN_PROCESO');
+                    setTimeout(() => evidenceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+                  }}
+                  className="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-sm font-bold text-white shadow-sm active:scale-[0.98]"
+                >
+                  <PlayCircle size={18} /> Aceptar orden
+                </button>
+              )}
+              {workOrder.status === 'EN_PROCESO' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setStatus('EN_ESPERA')}
+                    className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-3 py-3 text-sm font-bold text-white shadow-sm active:scale-[0.98]"
+                  >
+                    <PauseCircle size={18} /> Pausar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatus('FINALIZADO')}
+                    className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-3 text-sm font-bold text-white shadow-sm active:scale-[0.98]"
+                  >
+                    <CheckCircle2 size={18} /> Finalizar
+                  </button>
+                </>
+              )}
+              {workOrder.status === 'EN_ESPERA' && (
+                <button
+                  type="button"
+                  onClick={() => setStatus('EN_PROCESO')}
+                  className="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-sm font-bold text-white shadow-sm active:scale-[0.98]"
+                >
+                  <PlayCircle size={18} /> Reanudar
+                </button>
+              )}
+            </div>
+            {status !== workOrder.status && (
+              <p className="mt-2 text-center text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                Estado listo: {statusLabel(status)}. Completa lo requerido y pulsa Guardar.
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="px-4 py-4 sm:px-6 sm:py-5 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center bg-slate-50/50 dark:bg-slate-900/50 mt-auto">
           <div className="flex gap-2 justify-stretch sm:justify-start [&>button]:flex-1 [&>button]:sm:flex-initial">

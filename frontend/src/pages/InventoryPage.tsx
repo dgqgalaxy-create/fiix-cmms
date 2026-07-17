@@ -321,8 +321,9 @@ export const InventoryPage = () => {
     }
   };
 
-  const handleScan = (scannedId: string) => {
-    if (activeTab === 'locations') {
+  const handleScan = (scanned: string) => {
+    const scannedId = scanned.replace(/^FIIX-(ASSET|ITEM|LOCATION):/, '').trim();
+    if (activeTab === 'locations' || scanned.startsWith('FIIX-LOCATION:')) {
       const location = locations.find(l => l.id === scannedId || l.internal_id === scannedId);
       if (location) {
         handleOpenCatalogModal('location', location, true);
