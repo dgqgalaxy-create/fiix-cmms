@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check } from 'lucide-react';
+import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { VersionModal, APP_VERSION } from './VersionModal';
@@ -85,6 +85,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   useEffect(() => {
     const availableItems: NavItem[] = [
+      { name: 'Inicio', path: '/home', icon: <Home size={20} /> },
       { name: 'Órdenes de Trabajo', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
       { name: 'Activos', path: '/assets', icon: <Database size={20} /> },
       { name: 'Inventario', path: '/inventory', icon: <Package size={20} /> },
@@ -106,10 +107,10 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     if (hasPermission('MANAGE_USERS')) {
       availableItems.push({ name: 'Personal', path: '/users', icon: <Users size={20} /> });
     }
-    if (user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR') {
+    if (hasPermission('VIEW_RCA')) {
       availableItems.push({ name: 'Árbol de Fallas', path: '/rca', icon: <GitBranch size={20} /> });
     }
-    if (user?.role === 'ADMINISTRADOR') {
+    if (hasPermission('VIEW_SETTINGS')) {
       availableItems.push({ name: 'Configuración', path: '/settings', icon: <Settings size={20} /> });
     }
 
@@ -128,7 +129,12 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     // Add remaining items that are not in savedOrder (e.g. newly added features)
     availableItems.forEach(item => {
       if (!ordered.find(o => o.path === item.path)) {
-        ordered.push(item);
+        // Nuevo módulo Inicio: colocarlo al inicio aunque el usuario tenga un orden guardado
+        if (item.path === '/home') {
+          ordered.unshift(item);
+        } else {
+          ordered.push(item);
+        }
       }
     });
 

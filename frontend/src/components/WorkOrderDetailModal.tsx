@@ -177,7 +177,6 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
   let canSave = isDirty;
   if (canSave) {
     if (finalStatus === 'EN_PROCESO') {
-      if (user?.role !== 'TECNICO' && assignedTechniciansIds.length === 0) canSave = false;
       if (!beforeImage && !workOrder.before_image_url) canSave = false;
     } else if (finalStatus === 'FINALIZADO') {
       if (!resolutionNotes?.trim()) canSave = false;
@@ -197,11 +196,6 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
     }
 
     try {
-      if (finalStatus === 'EN_PROCESO' && user?.role !== 'TECNICO' && assignedTechniciansIds.length === 0) {
-        setError('Debes asignar al menos un técnico para poder poner la orden en proceso.');
-        return;
-      }
-
       // Validar foto antes de iniciar
       if (finalStatus === 'EN_PROCESO' && !beforeImage && !workOrder.before_image_url) {
         setError('Debes subir una foto de evidencia (Antes) para poder iniciar el trabajo.');

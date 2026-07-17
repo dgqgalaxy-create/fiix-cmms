@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.11.0";
+export const APP_VERSION = "1.11.10";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -14,7 +14,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   const version = APP_VERSION;
   const updateDate = "16 de Julio, 2026";
   const modules = [
-    "Panel Principal (Dashboard)",
+    "Inicio (Resumen Operativo)",
+    "Órdenes de Trabajo",
     "Gestión de Activos (Equipos)",
     "Catálogo de Inventario",
     "Planes Preventivos",
@@ -27,11 +28,20 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
-    "Corrección: La fecha del Checklist Diario ya no se desfasa un día al crearlo o consultarlo en el historial.",
-    "Corrección: En Inventario, ahora puedes hacer clic en cualquier repuesto listado dentro del detalle de una Categoría, Ubicación o Proveedor para abrir su ficha completa (antes no reaccionaba al clic).",
-    "Nuevo: El Código Interno de los Activos ahora se autoasigna con formato incremental (ACT-0001, ACT-0002...) y queda protegido: no se puede modificar una vez creado el equipo.",
-    "Nuevo: En Inventario → Ubicaciones se agregó barra de búsqueda y botón de escaneo QR, además de un botón para ver/imprimir el código QR de cada ubicación. Al escanearlo se abre el detalle con todos los repuestos que contiene.",
-    "Mejora: La tarjeta de 'Stock Crítico' en Inventario ahora tiene la misma altura que los botones de acciones a su costado."
+    "Corrección: La importación de CSV interpreta bien los tiempos de reparación con coma de miles (ej. \"2,140.22\" min), evitando MTTR distorsionado.",
+    "Mejora: Al importar los 7 CSV a la vez, el sistema los procesa siempre en el orden correcto y crea automáticamente los usuarios de inventario faltantes para no perder movimientos.",
+    "Corrección: Recálculo de KPIs (MTTR solo correctivas, backlog real, disponibilidad por paros, periodos por completed_at/started_at, metas en horas).",
+    "Mejora: KPIs rediseñados como scoreboard industrial: salud de planta, semáforo de metas, gráficos accionables y carga por técnico.",
+    "Corrección: KPIs y Metas ya no oculta el selector de periodo cuando no hay órdenes en el mes actual; puedes cambiar a Año o Histórico para ver métricas.",
+    "Mejora: El filtro de periodo en Inicio ahora encierra en un marco visual todas las tarjetas y gráficas a las que se aplica.",
+    "Mejora: La distribución de mantenimientos en Inicio estrena un diseño ejecutivo con gráfica de dona, total central, porcentajes y barras comparativas.",
+    "Mejora: Al hacer clic en una notificación de la campana se abre directamente el detalle de esa orden de trabajo.",
+    "Nuevo: En Inicio, resumen visual de órdenes finalizadas de la semana actual (Lunes a Domingo), con gráfica diaria y listado.",
+    "Nuevo: Módulo Inicio con el resumen operativo (Pareto, tarjetas de estado y gráfica de mantenimiento). Las Órdenes de Trabajo quedan solo con Vista General, Mis Órdenes, Historial, búsqueda y filtros.",
+    "Mejora: El Portal de Solicitudes ahora usa el mismo formulario que Nueva Orden (desplegable de solicitantes, zona, activo, etc.), sin asignación de técnicos ni foto.",
+    "Corrección: Las órdenes creadas desde Nueva Orden también envían notificación a Telegram cuando está activada.",
+    "Corrección: Calendario y Horarios se visualizan correctamente en celular y tablet (altura adaptativa y toolbar responsive).",
+    "Mejora: Todos los roles pueden consultar el Árbol de Fallas; solo Administrador y Gestionador pueden editarlo.",
   ];
 
   return (

@@ -1,52 +1,162 @@
-import { useState, useEffect } from 'react';
-import { getKPIs, updateKPIGoals, getChartData, getCostsByAsset, getTopFailingAssets, getAssetFailureOrders } from '../api/kpis';
-import type { KPIResponse, KPIMetric, ChartData, AssetCostData, TopFailingAsset, FailureOrder } from '../api/kpis';
+import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  getKPIs,
+  updateKPIGoals,
+  getChartData,
+  getCostsByAsset,
+  getTopFailingAssets,
+  getAssetFailureOrders,
+  getTechnicianPerformance,
+} from '../api/kpis';
+import type {
+  KPIResponse,
+  KPIMetric,
+  ChartData,
+  AssetCostData,
+  TopFailingAsset,
+  FailureOrder,
+  TechnicianPerformance,
+} from '../api/kpis';
 import { useAuth } from '../context/AuthContext';
-import { Target, TrendingUp, Clock, AlertTriangle, CheckCircle, Database, Settings, BarChart2, Download, X, RefreshCw, Users } from 'lucide-react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { getWorkOrders } from '../api/workOrders';
-import { getUsers } from '../api/users';
-import type { WorkOrder } from '../api/workOrders';
-import type { User } from '../api/users';
+import {
+  Target,
+  TrendingUp,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  Database,
+  Settings,
+  Download,
+  X,
+  RefreshCw,
+  Users,
+  Wrench,
+  Activity,
+  Package,
+} from 'lucide-react';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
+
+type MetricStatus = 'good' | 'warn' | 'bad' | 'neutral';
+
+const PERIOD_OPTIONS = [
+  { value: 'THIS_WEEK', label: 'Esta semana' },
+  { value: 'THIS_MONTH', label: 'Este mes' },
+  { value: 'LAST_MONTH', label: 'Mes pasado' },
+  { value: 'THIS_YEAR', label: 'Este año' },
+  { value: 'LAST_12_MONTHS', label: 'Últimos 12 meses' },
+  { value: 'ALL', label: 'Histórico' },
+];
+
+const GOAL_LABELS: Record<string, { label: string; unit: string; hint: string }> = {
+  COMPLETED_MONTHLY: { label: 'OT finalizadas', unit: 'órdenes', hint: 'Meta de órdenes cerradas en el periodo' },
+  MTTR: { label: 'MTTR', unit: 'horas', hint: 'Tiempo medio de reparación correctiva' },
+  RESPONSE_TIME: { label: 'Tiempo de respuesta', unit: 'horas', hint: 'Desde creación hasta inicio de trabajo' },
+  SLA: { label: 'Cumplimiento MTTR', unit: '%', hint: '% de correctivas bajo la meta de MTTR' },
+  BACKLOG: { label: 'Backlog', unit: 'órdenes', hint: 'Órdenes abiertas (pendiente, proceso, espera)' },
+  ASSET_AVAILABILITY: { label: 'Disponibilidad', unit: '%', hint: 'Tiempo productivo menos paros con máquina detenida' },
+  REINCIDENCIA: { label: 'Retrabajo', unit: '%', hint: 'Correctivas con falla previa ≤ 7 días' },
+};
+
+const getStatus = (metric: KPIMetric, moreIsBetter: boolean): MetricStatus => {
+  if (metric.isNull || metric.sampleSize === 0) return 'neutral';
+  const { value, goal } = metric;
+  const target = goal.targetValue;
+  if (moreIsBetter) {
+    if (value >= target) return 'good';
+    if (value >= target * 0.85) return 'warn';
+    return 'bad';
+  }
+  if (value <= target) return 'good';
+  if (value <= target * 1.15) return 'warn';
+  return 'bad';
+};
+
+const statusStyles: Record<MetricStatus, { card: string; value: string; chip: string; bar: string; label: string }> = {
+  good: {
+    card: 'border-emerald-200 bg-white',
+    value: 'text-emerald-700',
+    chip: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    bar: 'bg-emerald-500',
+    label: 'En meta',
+  },
+  warn: {
+    card: 'border-amber-200 bg-white',
+    value: 'text-amber-700',
+    chip: 'bg-amber-50 text-amber-700 border-amber-200',
+    bar: 'bg-amber-500',
+    label: 'Cerca de meta',
+  },
+  bad: {
+    card: 'border-rose-200 bg-white',
+    value: 'text-rose-700',
+    chip: 'bg-rose-50 text-rose-700 border-rose-200',
+    bar: 'bg-rose-500',
+    label: 'Fuera de meta',
+  },
+  neutral: {
+    card: 'border-slate-200 bg-white',
+    value: 'text-slate-700',
+    chip: 'bg-slate-50 text-slate-600 border-slate-200',
+    bar: 'bg-slate-400',
+    label: 'Sin muestra',
+  },
+};
+
+const progressPct = (metric: KPIMetric, moreIsBetter: boolean) => {
+  if (!metric.goal.targetValue) return 0;
+  if (moreIsBetter) return Math.min(100, (metric.value / metric.goal.targetValue) * 100);
+  if (metric.value <= 0) return 100;
+  return Math.min(100, (metric.goal.targetValue / Math.max(metric.value, 0.0001)) * 100);
+};
 
 export const KPIPage = () => {
-  const { user, hasPermission } = useAuth();
+  const navigate = useNavigate();
+  const { hasPermission } = useAuth();
   const [data, setData] = useState<KPIResponse | null>(null);
   const [charts, setCharts] = useState<ChartData[]>([]);
   const [assetCosts, setAssetCosts] = useState<AssetCostData[]>([]);
   const [topFailingAssets, setTopFailingAssets] = useState<TopFailingAsset[]>([]);
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
-  const [technicians, setTechnicians] = useState<User[]>([]);
+  const [techPerformance, setTechPerformance] = useState<TechnicianPerformance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [period, setPeriod] = useState<string>('THIS_MONTH');
+  const [period, setPeriod] = useState('THIS_MONTH');
+  const [loadError, setLoadError] = useState(false);
 
-  // Modal states for Top Failures
   const [selectedFailureAsset, setSelectedFailureAsset] = useState<{ id: string; name: string } | null>(null);
   const [failureOrders, setFailureOrders] = useState<FailureOrder[]>([]);
   const [isFetchingOrders, setIsFetchingOrders] = useState(false);
-
-  // Form state for editing goals
   const [goalsForm, setGoalsForm] = useState<Record<string, number>>({});
 
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const [kpiData, chartData, costData, topFailingData, woData, usersData] = await Promise.all([
+      setLoadError(false);
+      const [kpiData, chartData, costData, topFailingData, techData] = await Promise.all([
         getKPIs(period),
-        getChartData(period),
-        getCostsByAsset(period),
-        getTopFailingAssets(period),
-        getWorkOrders().catch(() => []),
-        getUsers().catch(() => [])
+        getChartData(period).catch(() => []),
+        getCostsByAsset(period).catch(() => []),
+        getTopFailingAssets(period).catch(() => []),
+        getTechnicianPerformance(period).catch(() => []),
       ]);
       setData(kpiData);
       setCharts(chartData);
       setAssetCosts(costData);
       setTopFailingAssets(topFailingData);
-      setWorkOrders(woData);
-      setTechnicians(usersData);
-      
+      setTechPerformance(techData);
+
       const formState: Record<string, number> = {};
       Object.entries(kpiData.metrics).forEach(([key, metric]) => {
         formState[key] = metric.goal.targetValue;
@@ -54,6 +164,8 @@ export const KPIPage = () => {
       setGoalsForm(formState);
     } catch (error) {
       console.error('Error fetching KPI data:', error);
+      setLoadError(true);
+      setData(null);
     } finally {
       setIsLoading(false);
     }
@@ -63,13 +175,22 @@ export const KPIPage = () => {
     fetchData();
   }, [period]);
 
+  useEffect(() => {
+    if (!selectedFailureAsset) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedFailureAsset(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedFailureAsset]);
+
   const handleSaveGoals = async () => {
     try {
       setIsLoading(true);
       const updated = Object.entries(goalsForm).map(([key, value]) => ({
         metricKey: key,
         targetValue: value,
-        unit: 'auto'
+        unit: GOAL_LABELS[key]?.unit || 'auto',
       }));
       await updateKPIGoals(updated);
       setIsEditing(false);
@@ -77,6 +198,7 @@ export const KPIPage = () => {
     } catch (error) {
       console.error(error);
       alert('Error al guardar las metas');
+      setIsLoading(false);
     }
   };
 
@@ -84,8 +206,7 @@ export const KPIPage = () => {
     setSelectedFailureAsset({ id: assetId, name: assetName });
     setIsFetchingOrders(true);
     try {
-      const orders = await getAssetFailureOrders(assetId, period);
-      setFailureOrders(orders);
+      setFailureOrders(await getAssetFailureOrders(assetId, period));
     } catch (error) {
       console.error(error);
       alert('Error al obtener el detalle de fallas');
@@ -94,391 +215,488 @@ export const KPIPage = () => {
     }
   };
 
-  const handleBarClick = async (data: any) => {
-    let assetData = data;
-    if (data && data.activePayload && data.activePayload.length > 0) {
-      assetData = data.activePayload[0].payload;
-    }
-    if (!assetData || !assetData.assetId) return;
-    
-    handleAssetClick(assetData.assetId, assetData.assetName);
+  const formatPeriodLabel = () => {
+    if (!data?.period) return PERIOD_OPTIONS.find((p) => p.value === period)?.label || period;
+    const start = new Date(data.period.start).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+    const end = new Date(data.period.end).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+    return `${start} — ${end}`;
   };
 
-  const handleExportPDF = () => {
-    window.print();
+  const renderKpiCard = (
+    title: string,
+    icon: ReactNode,
+    metric: KPIMetric,
+    moreIsBetter: boolean,
+    formatter: (val: number) => string,
+    unit: string,
+    tooltip: string,
+    onClick?: () => void,
+    hero = false,
+  ) => {
+    const status = getStatus(metric, moreIsBetter);
+    const styles = statusStyles[status];
+    const pct = progressPct(metric, moreIsBetter);
+
+    return (
+      <button
+        type="button"
+        title={tooltip}
+        onClick={onClick}
+        className={`text-left rounded-2xl border p-4 sm:p-5 shadow-sm transition hover:border-slate-300 ${styles.card} ${hero ? 'min-h-[150px]' : ''} ${onClick ? 'cursor-pointer' : 'cursor-default'}`}
+      >
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{title}</p>
+            <div className={`mt-1 flex items-baseline gap-1.5 ${styles.value}`}>
+              <span className={`font-black ${hero ? 'text-3xl sm:text-4xl' : 'text-2xl sm:text-3xl'}`}>
+                {metric.isNull || (metric.sampleSize === 0 && metric.value === 0 && title !== 'Backlog' && title !== 'OT finalizadas')
+                  ? '—'
+                  : formatter(metric.value)}
+              </span>
+              <span className="text-xs font-semibold text-slate-400">{unit}</span>
+            </div>
+          </div>
+          <div className="rounded-xl bg-slate-100 p-2 text-slate-600">{icon}</div>
+        </div>
+
+        <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+          <div className={`h-full rounded-full transition-all ${styles.bar}`} style={{ width: `${pct}%` }} />
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <span className="font-medium text-slate-500">
+            Meta: {formatter(metric.goal.targetValue)} {unit}
+          </span>
+          <span className={`rounded-full border px-2 py-0.5 font-bold ${styles.chip}`}>{styles.label}</span>
+        </div>
+        {typeof metric.sampleSize === 'number' && (
+          <p className="mt-2 text-[11px] text-slate-400">{metric.sampleSize} muestra{metric.sampleSize === 1 ? '' : 's'}</p>
+        )}
+      </button>
+    );
   };
 
   if (isLoading && !data) {
-    return <div className="p-8 text-center text-slate-500">Cargando métricas...</div>;
+    return <div className="p-8 text-center text-slate-500">Cargando indicadores...</div>;
   }
-
-  if (!data) return null;
-
-  if (data.totalOrders === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-slate-100 shadow-sm">
-        <Database size={48} className="text-slate-300 mb-4" />
-        <h2 className="text-xl font-bold text-slate-700 mb-2">Sin datos suficientes</h2>
-        <p className="text-slate-500 text-center max-w-md">
-          Actualmente no hay órdenes de trabajo registradas en el sistema. Los KPIs comenzarán a calcularse automáticamente una vez que se generen y procesen las primeras solicitudes.
-        </p>
-      </div>
-    );
-  }
-
-  const m = data.metrics;
-
-  const renderCard = (title: string, icon: any, metric: KPIMetric, isMoreBetter: boolean, formatter: (val: number) => string, currentUnit: string, tooltipText: string) => {
-    const isGood = isMoreBetter ? metric.value >= metric.goal.targetValue : metric.value <= metric.goal.targetValue;
-    return (
-      <div title={tooltipText} className={`p-4 sm:p-6 rounded-3xl border backdrop-blur-md relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl print:shadow-none print:break-inside-avoid ${isGood ? 'bg-gradient-to-br from-emerald-50/90 to-white border-emerald-100/50 shadow-emerald-500/10' : 'bg-gradient-to-br from-red-50/90 to-white border-red-100/50 shadow-red-500/10'}`}>
-        <div className="absolute -right-6 -top-6 w-24 h-24 bg-gradient-to-br opacity-20 rounded-full blur-2xl pointer-events-none" style={{ backgroundImage: `linear-gradient(to bottom right, ${isGood ? '#10b981, #fff' : '#ef4444, #fff'})`}}></div>
-        <div className="flex justify-between items-start mb-3 sm:mb-4 gap-2 relative z-10">
-          <h3 className="font-bold text-slate-700 text-sm sm:text-base leading-snug">{title}</h3>
-          <div className={`p-2 rounded-xl shrink-0 shadow-md ${isGood ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-emerald-200' : 'bg-gradient-to-br from-red-400 to-red-600 text-white shadow-red-200'}`}>
-            {icon}
-          </div>
-        </div>
-        <div className="mb-1 relative z-10">
-          <span className={`text-2xl sm:text-4xl font-black ${isGood ? 'text-emerald-600' : 'text-red-600'}`}>
-            {formatter(metric.value)}
-          </span>
-          <span className="text-xs sm:text-sm font-medium text-slate-400 ml-1">{currentUnit}</span>
-        </div>
-        <div className="flex items-center gap-2 mt-3 sm:mt-4 text-xs sm:text-sm font-medium text-slate-500 bg-white/60 print:bg-white print:border-slate-300 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl border border-slate-100/50 relative z-10">
-          <Target size={14} className={isGood ? "text-emerald-500" : "text-red-500"} />
-          <span>Meta: {formatter(metric.goal.targetValue)} {currentUnit}</span>
-        </div>
-      </div>
-    );
-  };
-
-  const getDatesFromPeriod = (p: string) => {
-    const now = new Date();
-    let start = new Date(now.getFullYear(), now.getMonth(), 1);
-    let end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-
-    if (p === 'THIS_WEEK') {
-      const day = now.getDay();
-      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-      start = new Date(now.setDate(diff));
-      start.setHours(0, 0, 0, 0);
-      end = new Date(start);
-      end.setDate(end.getDate() + 6);
-      end.setHours(23, 59, 59, 999);
-    } else if (p === 'LAST_MONTH') {
-      start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-    } else if (p === 'THIS_YEAR') {
-      start = new Date(now.getFullYear(), 0, 1);
-      end = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
-    } else if (p === 'LAST_12_MONTHS') {
-      start = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-      end = new Date();
-    } else if (p === 'ALL') {
-      start = new Date(2000, 0, 1);
-      end = new Date(2100, 0, 1);
-    }
-    return { start, end };
-  };
-
-  const { start, end } = getDatesFromPeriod(period);
-
-  const techPerformanceData = technicians
-    .filter(tech => tech.role !== 'ADMINISTRADOR')
-    .map(tech => {
-      const assignedOrders = workOrders.filter(wo => {
-        const created = new Date(wo.created_at);
-        if (created < start || created > end) return false;
-        return wo.assigned_technicians?.some(t => t.id === tech.id);
-      });
-
-      return {
-        name: tech.name.split(' ')[0],
-        Finalizadas: assignedOrders.filter(wo => wo.status === 'FINALIZADO').length,
-        EnProceso: assignedOrders.filter(wo => wo.status === 'EN_PROCESO').length,
-        Pendientes: assignedOrders.filter(wo => wo.status === 'PENDIENTE' || wo.status === 'EN_ESPERA').length,
-        Total: assignedOrders.length
-      };
-    }).sort((a, b) => b.Total - a.Total);
 
   return (
-    <div>
-      <div className="hidden print:flex justify-between items-end border-b-2 border-slate-800 pb-4 mb-6">
+    <div className="space-y-6">
+      <div className="hidden print:flex justify-between items-end border-b-2 border-slate-800 pb-4">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Reporte Gerencial de Mantenimiento</h1>
-          <p className="text-slate-500 mt-1">LPET CMMS - Indicadores de Desempeño</p>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Reporte de Indicadores</h1>
+          <p className="text-slate-500 mt-1">LPET CMMS — Mantenimiento</p>
         </div>
-        <div className="text-right">
-          <p className="text-sm font-bold text-slate-700">Fecha de Generación:</p>
-          <p className="text-slate-500 text-sm">{new Date().toLocaleDateString()}</p>
+        <div className="text-right text-sm text-slate-600">
+          <p className="font-bold">Generado:</p>
+          <p>{new Date().toLocaleString('es-MX')}</p>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 print:hidden relative z-10">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between print:hidden">
         <div>
-          <h1 className="text-2xl sm:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-indigo-600 pb-1">Indicadores de Desempeño</h1>
-          <p className="text-slate-500 dark:text-slate-300 mt-1 font-medium">Mide y analiza el rendimiento del departamento de mantenimiento.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Indicadores de mantenimiento</h1>
+          <p className="text-slate-500 mt-1 text-sm">
+            Periodo: <span className="font-semibold text-slate-700">{formatPeriodLabel()}</span>
+            {data ? ` · ${data.totalOrders} registros relevantes` : ''}
+          </p>
         </div>
-        <div className="flex items-center gap-3 print:hidden">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="sr-only" htmlFor="kpi-period">Periodo</label>
           <select
+            id="kpi-period"
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
-            className="px-4 py-2.5 bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-xl text-sm text-slate-700 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all"
+            className="px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
-            <option value="THIS_WEEK">Esta Semana</option>
-            <option value="THIS_MONTH">Este Mes</option>
-            <option value="LAST_MONTH">Mes Pasado</option>
-            <option value="THIS_YEAR">Este Año</option>
-            <option value="LAST_12_MONTHS">Últimos 12 Meses</option>
-            <option value="ALL">Histórico</option>
+            {PERIOD_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
-
-          <button 
-            onClick={handleExportPDF}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 border border-transparent text-white rounded-xl hover:bg-emerald-700 font-medium transition-colors shadow-sm"
+          <button
+            type="button"
+            onClick={() => fetchData()}
+            className="p-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+            title="Actualizar"
           >
-            <Download size={18} />
-            Exportar PDF
+            <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
           </button>
-          
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700"
+          >
+            <Download size={16} />
+            Exportar
+          </button>
           {hasPermission('MANAGE_KPIS') && (
-            <button 
-              onClick={() => setIsEditing(!isEditing)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-medium transition-colors shadow-sm"
+            <button
+              type="button"
+              onClick={() => setIsEditing((v) => !v)}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50"
             >
-              <Settings size={18} />
-              Configurar Metas
+              <Settings size={16} />
+              Metas
             </button>
           )}
         </div>
       </div>
 
-      <div id="kpi-dashboard" className="bg-slate-50/50 print:bg-white p-2 sm:p-4 print:p-0 rounded-3xl print:rounded-none -mx-2 sm:-mx-4 print:mx-0">
-        {isEditing ? (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8 animate-in fade-in slide-in-from-top-4">
-          <h2 className="text-xl font-bold text-slate-800 mb-6">Ajustar Metas (Setpoints)</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Object.keys(goalsForm).map(key => (
+      {loadError && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
+          <AlertTriangle className="mx-auto text-amber-500 mb-2" size={28} />
+          <p className="font-bold text-slate-800">No se pudieron cargar los indicadores</p>
+          <button type="button" onClick={() => fetchData()} className="mt-3 px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold">
+            Reintentar
+          </button>
+        </div>
+      )}
+
+      {isEditing && data && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm print:hidden">
+          <h2 className="text-lg font-bold text-slate-800 mb-4">Configurar metas</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {Object.keys(goalsForm).map((key) => (
               <div key={key}>
-                <label className="block text-sm font-medium text-slate-700 mb-1 capitalize">{key.replace('_', ' ')}</label>
-                <input type="number" className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500" value={goalsForm[key]} onChange={e => setGoalsForm({...goalsForm, [key]: Number(e.target.value)})} />
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  {GOAL_LABELS[key]?.label || key}
+                  <span className="ml-1 font-normal text-slate-400">({GOAL_LABELS[key]?.unit})</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:border-emerald-500"
+                  value={goalsForm[key]}
+                  onChange={(e) => setGoalsForm({ ...goalsForm, [key]: Number(e.target.value) })}
+                />
+                <p className="mt-1 text-[11px] text-slate-400">{GOAL_LABELS[key]?.hint}</p>
               </div>
             ))}
           </div>
-          <div className="mt-6 flex justify-end gap-3">
-            <button onClick={() => setIsEditing(false)} className="px-4 py-2 rounded-xl border border-slate-200 font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
-            <button onClick={handleSaveGoals} className="px-6 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md shadow-blue-500/20">Guardar Metas</button>
+          <div className="mt-4 flex justify-end gap-2">
+            <button type="button" onClick={() => setIsEditing(false)} className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-medium">
+              Cancelar
+            </button>
+            <button type="button" onClick={handleSaveGoals} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold">
+              Guardar metas
+            </button>
           </div>
         </div>
-      ) : null}
+      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 print:grid-cols-3 gap-6 print:gap-4 print:mb-8">
-        {renderCard("Órdenes Completadas", <CheckCircle size={24} />, m.COMPLETED_MONTHLY, true, (v) => v.toString(), "órdenes", "Total de órdenes de trabajo finalizadas en el periodo actual. Refleja la productividad general.")}
-        {renderCard("MTTR (Reparación)", <TrendingUp size={24} />, m.MTTR, false, (v) => (v / 3600000).toFixed(1), "horas", "Tiempo Medio de Reparación. Cuánto tiempo en promedio tarda el equipo en reparar una falla desde que inician los trabajos.")}
-        {renderCard("Tiempo Respuesta", <Clock size={24} />, m.RESPONSE_TIME, false, (v) => (v / 3600000).toFixed(1), "horas", "Tiempo promedio que transcurre desde que se crea una solicitud hasta que un técnico comienza a trabajar en ella.")}
-        {renderCard("Cumplimiento SLA", <Target size={24} />, m.SLA, true, (v) => v.toFixed(1), "%", "Porcentaje de reparaciones que se terminaron a tiempo de acuerdo con la meta establecida para el MTTR.")}
-        {renderCard("Backlog", <AlertTriangle size={24} />, m.BACKLOG, false, (v) => v.toString(), "órdenes", "Cantidad de órdenes de trabajo que aún no se han finalizado (Pendientes o En Espera).")}
-        {renderCard("Disponibilidad Activos", <Database size={24} />, m.ASSET_AVAILABILITY, true, (v) => v.toFixed(1), "%", "Porcentaje de tiempo operativo basado en 8467.27 horas anuales (descontando mantenimientos programados) para las líneas L1-L5, menos el tiempo de paros reales por fallas en el periodo seleccionado.")}
-        {m.REINCIDENCIA && renderCard("Reincidencia (Fallas Repetidas)", <RefreshCw size={24} />, m.REINCIDENCIA, false, (v) => v.toFixed(1), "%", "Porcentaje de órdenes correctivas creadas para equipos que ya habían sido reparados en los últimos 2 días. Mide la calidad del retrabajo.")}
-      </div>
+      {data && data.totalOrders === 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white py-16 text-center shadow-sm">
+          <Database size={40} className="mx-auto text-slate-300 mb-3" />
+          <h2 className="text-xl font-bold text-slate-700">Sin datos en este periodo</h2>
+          <p className="text-slate-500 mt-2 max-w-md mx-auto text-sm">
+            Cambia el periodo a <strong>Este año</strong> o <strong>Histórico</strong> para ver indicadores.
+          </p>
+          {period !== 'ALL' && (
+            <button
+              type="button"
+              onClick={() => setPeriod('ALL')}
+              className="mt-4 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold"
+            >
+              Ver histórico completo
+            </button>
+          )}
+        </div>
+      )}
 
-      {charts.length > 0 && (
-        <div className="mt-12 print:mt-4 grid grid-cols-1 xl:grid-cols-2 print:grid-cols-2 gap-8 print:gap-4 relative z-10">
-          <div className="bg-white/80 backdrop-blur-md p-6 print:p-4 rounded-3xl border border-slate-200/50 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:shadow-slate-200/50 transition-shadow print:shadow-none print:break-inside-avoid">
-            <div className="flex items-center gap-2 mb-6">
-              <BarChart2 className="text-indigo-600" size={24} />
-              <h2 className="text-lg font-bold text-slate-800">Costos de Mantenimiento</h2>
+      {data && data.totalOrders > 0 && (
+        <>
+          <section>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Salud de planta</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {renderKpiCard(
+                'Disponibilidad',
+                <Activity size={18} />,
+                data.metrics.ASSET_AVAILABILITY,
+                true,
+                (v) => v.toFixed(1),
+                '%',
+                'Tiempo productivo menos paros con máquina detenida, recortado al periodo.',
+                undefined,
+                true,
+              )}
+              {renderKpiCard(
+                'MTTR',
+                <Wrench size={18} />,
+                data.metrics.MTTR,
+                false,
+                (v) => v.toFixed(1),
+                'h',
+                'Tiempo medio de labor activa en correctivas finalizadas.',
+                undefined,
+                true,
+              )}
+              {renderKpiCard(
+                'Backlog',
+                <AlertTriangle size={18} />,
+                data.metrics.BACKLOG,
+                false,
+                (v) => v.toString(),
+                'OT',
+                'Órdenes abiertas ahora: pendientes, en proceso y en espera.',
+                () => navigate('/dashboard'),
+                true,
+              )}
             </div>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={charts}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dx={-10} tickFormatter={(val) => `$${val}`} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    formatter={(val: number) => [`$${val.toFixed(2)}`, 'Costo']}
-                  />
-                  <Bar dataKey="costos" fill="#4f46e5" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          </section>
 
-          <div className="bg-white/80 backdrop-blur-md p-6 print:p-4 rounded-3xl border border-slate-200/50 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:shadow-slate-200/50 transition-shadow print:shadow-none print:break-inside-avoid flex flex-col">
-            <div className="flex items-center gap-2 mb-6 shrink-0">
-              <Users className="text-blue-600" size={24} />
-              <h2 className="text-lg font-bold text-slate-800">Desempeño de Técnicos</h2>
+          <section>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Ejecución y calidad</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              {renderKpiCard(
+                'OT finalizadas',
+                <CheckCircle2 size={18} />,
+                data.metrics.COMPLETED_MONTHLY,
+                true,
+                (v) => v.toString(),
+                'OT',
+                'Órdenes finalizadas con completed_at dentro del periodo.',
+                () => navigate('/dashboard?status=FINALIZADO'),
+              )}
+              {renderKpiCard(
+                'Tiempo respuesta',
+                <Clock size={18} />,
+                data.metrics.RESPONSE_TIME,
+                false,
+                (v) => v.toFixed(1),
+                'h',
+                'Promedio desde creación hasta started_at.',
+              )}
+              {renderKpiCard(
+                'Cumpl. MTTR',
+                <Target size={18} />,
+                data.metrics.SLA,
+                true,
+                (v) => v.toFixed(1),
+                '%',
+                '% de correctivas finalizadas bajo la meta de MTTR.',
+              )}
+              {renderKpiCard(
+                'Retrabajo',
+                <RefreshCw size={18} />,
+                data.metrics.REINCIDENCIA,
+                false,
+                (v) => v.toFixed(1),
+                '%',
+                'Correctivas con falla previa del mismo equipo ≤ 7 días.',
+              )}
             </div>
-            {techPerformanceData.length > 0 ? (
-              <div className="w-full overflow-y-auto pr-2" style={{ maxHeight: '400px' }}>
-                <div style={{ height: `${Math.max(288, techPerformanceData.length * 45)}px`, width: '100%' }}>
+          </section>
+
+          <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="text-emerald-600" size={20} />
+                <div>
+                  <h3 className="font-bold text-slate-800">MTTR y MTBF</h3>
+                  <p className="text-xs text-slate-400">MTTR en correctivas · MTBF aproximado de flota</p>
+                </div>
+              </div>
+              <div className="h-72">
+                {charts.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={techPerformanceData} layout="vertical" margin={{ top: 0, right: 20, bottom: 0, left: 10 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
-                      <XAxis type="number" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-                      <YAxis type="category" dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} width={80} interval={0} />
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    <LineChart data={charts}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)' }} />
+                      <Legend />
+                      <Line type="monotone" dataKey="mttr" name="MTTR (h)" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 3 }} />
+                      <Line type="monotone" dataKey="mtbf" name="MTBF flota (h)" stroke="#059669" strokeWidth={2.5} dot={{ r: 3 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-slate-400 text-sm">Sin serie temporal</div>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <Package className="text-indigo-600" size={20} />
+                <div>
+                  <h3 className="font-bold text-slate-800">Costo de refacciones</h3>
+                  <p className="text-xs text-slate-400">Solo consumos de inventario ligados a OT</p>
+                </div>
+              </div>
+              <div className="h-72">
+                {charts.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={charts}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
+                      <Tooltip
+                        formatter={(val: number) => [`$${Number(val).toFixed(2)}`, 'Refacciones']}
+                        contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)' }}
                       />
-                      <Legend verticalAlign="top" height={36} />
-                      <Bar dataKey="Finalizadas" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} barSize={24} />
-                      <Bar dataKey="EnProceso" name="En Proceso" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} barSize={24} />
-                      <Bar dataKey="Pendientes" stackId="a" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={24} />
+                      <Bar dataKey="costos" fill="#4f46e5" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-slate-400 text-sm">Sin consumos en el periodo</div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <AlertTriangle className="text-amber-500" size={20} />
+                <div>
+                  <h3 className="font-bold text-slate-800">Equipos con más fallas</h3>
+                  <p className="text-xs text-slate-400">Correctivas · clic para ver detalle</p>
                 </div>
               </div>
-            ) : (
-              <div className="h-72 w-full flex items-center justify-center text-slate-400">
-                No hay técnicos registrados.
+              <div className="h-72">
+                {topFailingAssets.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={topFailingAssets} layout="vertical" margin={{ left: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal vertical={false} stroke="#e2e8f0" />
+                      <XAxis type="number" allowDecimals={false} tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <YAxis
+                        type="category"
+                        dataKey="assetName"
+                        width={120}
+                        tick={{ fill: '#64748b', fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(val) => (val.length > 16 ? `${val.slice(0, 16)}…` : val)}
+                      />
+                      <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)' }} />
+                      <Bar
+                        dataKey="count"
+                        name="Fallas"
+                        fill="#f59e0b"
+                        radius={[0, 4, 4, 0]}
+                        barSize={18}
+                        className="cursor-pointer"
+                        onClick={(row: any) => {
+                          if (row?.assetId) handleAssetClick(row.assetId, row.assetName);
+                        }}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-slate-400 text-sm">Sin fallas correctivas</div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
 
-          <div className="bg-white/80 backdrop-blur-md p-6 print:p-4 rounded-3xl border border-slate-200/50 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:shadow-slate-200/50 transition-shadow xl:col-span-2 print:col-span-2 print:shadow-none print:break-inside-avoid">
-            <div className="flex items-center gap-2 mb-6">
-              <Database className="text-rose-600" size={24} />
-              <h2 className="text-lg font-bold text-slate-800">Top Equipos por Costo de Mantenimiento</h2>
-            </div>
-            {assetCosts.length > 0 ? (
-              <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={assetCosts} layout="vertical" margin={{ left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={true} vertical={false} />
-                    <XAxis type="number" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} tickFormatter={(val) => `$${val}`} />
-                    <YAxis type="category" dataKey="assetName" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} width={140} tickFormatter={(val) => val.length > 18 ? val.substring(0, 18) + '...' : val} />
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                      formatter={(val: number) => [`$${val.toFixed(2)}`, 'Costo Total']}
-                      cursor={{ fill: '#f1f5f9' }}
-                    />
-                    <Bar dataKey="totalCost" fill="#e11d48" radius={[0, 4, 4, 0]} barSize={24} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="h-72 w-full flex items-center justify-center text-slate-400">
-                No hay consumos registrados en los últimos 6 meses.
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white/80 backdrop-blur-md p-6 print:p-4 rounded-3xl border border-slate-200/50 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:shadow-slate-200/50 transition-shadow xl:col-span-2 print:col-span-2 print:shadow-none print:break-inside-avoid">
-            <div className="flex items-center gap-2 mb-6">
-              <AlertTriangle className="text-amber-500" size={24} />
-              <h2 className="text-lg font-bold text-slate-800">Equipos con Más Fallas (Mantenimiento Correctivo)</h2>
-            </div>
-            {topFailingAssets.length > 0 ? (
-              <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={topFailingAssets} layout="vertical" margin={{ left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={true} vertical={false} />
-                    <XAxis type="number" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} allowDecimals={false} />
-                    <YAxis type="category" dataKey="assetName" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} width={140} tickFormatter={(val) => val.length > 18 ? val.substring(0, 18) + '...' : val} />
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                      formatter={(val: number) => [`${val}`, 'Fallas (Órdenes)'] }
-                      cursor={{ fill: '#f1f5f9' }}
-                    />
-                    <Bar dataKey="count" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={24} onClick={handleBarClick} className="cursor-pointer hover:opacity-80 transition-opacity" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="h-72 w-full flex items-center justify-center text-slate-400">
-                No hay fallas correctivas registradas en el periodo seleccionado.
-              </div>
-            )}
-          </div>
-
-          {/* Gráfico MTBF */}
-          <div className="bg-white/80 backdrop-blur-md p-6 print:p-4 rounded-3xl border border-slate-200/50 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:shadow-slate-200/50 transition-shadow print:shadow-none print:break-inside-avoid">
-            <div className="flex items-center gap-2 mb-6">
-              <TrendingUp className="text-emerald-600" size={24} />
-              <h2 className="text-lg font-bold text-slate-800">MTBF (Tiempo Medio Entre Fallas)</h2>
-            </div>
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={charts}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dx={-10} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    formatter={(val: number) => [`${val.toFixed(1)} hrs`, 'MTBF']}
-                  />
-                  <Line type="monotone" dataKey="mtbf" stroke="#059669" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Gráfico MTTR */}
-          <div className="bg-white p-6 print:p-4 rounded-2xl border border-slate-200 shadow-sm xl:col-span-2 print:col-span-2 print:shadow-none print:break-inside-avoid">
-            <div className="flex items-center gap-2 mb-6">
-              <Clock className="text-amber-500" size={24} />
-              <h2 className="text-lg font-bold text-slate-800">MTTR (Tiempo Medio de Reparación)</h2>
-            </div>
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={charts} barSize={40}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dx={-10} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    formatter={(val: number) => [`${val.toFixed(1)} hrs`, 'MTTR']}
-                    cursor={{ fill: '#f1f5f9' }}
-                  />
-                  <Bar dataKey="mttr" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Vista General Reincidentes */}
-          {m.REINCIDENCIA && (
-            <div className="bg-white/80 backdrop-blur-md p-6 print:p-4 rounded-3xl border border-slate-200/50 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:shadow-slate-200/50 transition-shadow xl:col-span-2 print:col-span-2 print:shadow-none print:break-inside-avoid">
-              <div className="flex flex-col md:flex-row md:items-center gap-2 mb-6 justify-between">
-                <div className="flex items-center gap-2">
-                  <RefreshCw className="text-rose-600" size={24} />
-                  <h2 className="text-lg font-bold text-slate-800">
-                    Equipos con Fallas Recurrentes
-                  </h2>
-                </div>
-                <div className="bg-rose-50 border border-rose-100 p-3 rounded-xl text-xs text-rose-800 shadow-sm max-w-sm">
-                  <strong className="block mb-1">Criterios de Reincidencia:</strong>
-                  <ul className="list-disc pl-4 space-y-0.5">
-                    <li>Es una falla Correctiva.</li>
-                    <li>Ocurre en el mismo equipo y la <strong>misma zona</strong>.</li>
-                    <li>Se reportó a menos de <strong>2 días</strong> de haberse cerrado una reparación anterior.</li>
-                  </ul>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <Database className="text-rose-600" size={20} />
+                <div>
+                  <h3 className="font-bold text-slate-800">Top equipos por costo de refacciones</h3>
+                  <p className="text-xs text-slate-400">Consumos de inventario del periodo</p>
                 </div>
               </div>
-              
-              {m.REINCIDENCIA.details && m.REINCIDENCIA.details.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm whitespace-nowrap">
-                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-xs font-bold">
+              <div className="h-72">
+                {assetCosts.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={assetCosts} layout="vertical" margin={{ left: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal vertical={false} stroke="#e2e8f0" />
+                      <XAxis type="number" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
+                      <YAxis
+                        type="category"
+                        dataKey="assetName"
+                        width={120}
+                        tick={{ fill: '#64748b', fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(val) => (val.length > 16 ? `${val.slice(0, 16)}…` : val)}
+                      />
+                      <Tooltip
+                        formatter={(val: number) => [`$${Number(val).toFixed(2)}`, 'Costo']}
+                        contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)' }}
+                      />
+                      <Bar dataKey="totalCost" fill="#e11d48" radius={[0, 4, 4, 0]} barSize={18} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-slate-400 text-sm">Sin consumos registrados en este periodo</div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <Users className="text-blue-600" size={20} />
+                <div>
+                  <h3 className="font-bold text-slate-800">Carga por técnico</h3>
+                  <p className="text-xs text-slate-400">Asignaciones abiertas y del periodo</p>
+                </div>
+              </div>
+              {techPerformance.length > 0 ? (
+                <div className="overflow-x-auto max-h-80">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
                       <tr>
-                        <th className="px-4 py-3 rounded-tl-lg">Equipo</th>
-                        <th className="px-4 py-3 rounded-tr-lg">Reincidencias</th>
+                        <th className="text-left px-3 py-2 font-bold">Técnico</th>
+                        <th className="text-right px-3 py-2 font-bold">Fin.</th>
+                        <th className="text-right px-3 py-2 font-bold">Proc.</th>
+                        <th className="text-right px-3 py-2 font-bold">Pend.</th>
+                        <th className="text-right px-3 py-2 font-bold">Total</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {m.REINCIDENCIA.details.map((asset: any) => (
-                        <tr 
-                          key={asset.id} 
-                          className="hover:bg-slate-100 cursor-pointer transition-colors"
+                      {techPerformance.map((row) => (
+                        <tr key={row.id} className="hover:bg-slate-50">
+                          <td className="px-3 py-2.5 font-medium text-slate-700">{row.name}</td>
+                          <td className="px-3 py-2.5 text-right text-emerald-700 font-semibold">{row.Finalizadas}</td>
+                          <td className="px-3 py-2.5 text-right text-blue-700 font-semibold">{row.EnProceso}</td>
+                          <td className="px-3 py-2.5 text-right text-amber-700 font-semibold">{row.Pendientes}</td>
+                          <td className="px-3 py-2.5 text-right font-bold text-slate-800">{row.Total}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="h-40 flex items-center justify-center text-slate-400 text-sm">Sin carga asignada en el periodo</div>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="text-rose-600" size={20} />
+                  <div>
+                    <h3 className="font-bold text-slate-800">Equipos con retrabajo</h3>
+                    <p className="text-xs text-slate-400">Misma falla o mismo equipo ≤ 7 días</p>
+                  </div>
+                </div>
+                <div className="text-[11px] text-rose-800 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 max-w-xs">
+                  Correctiva finalizada tras otra correctiva cerrada en los 7 días previos (mismo equipo; mismo problema si está capturado).
+                </div>
+              </div>
+              {data.metrics.REINCIDENCIA.details && data.metrics.REINCIDENCIA.details.length > 0 ? (
+                <div className="overflow-x-auto max-h-80">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                      <tr>
+                        <th className="text-left px-3 py-2 font-bold">Equipo</th>
+                        <th className="text-right px-3 py-2 font-bold">Retrabajos</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {data.metrics.REINCIDENCIA.details.map((asset) => (
+                        <tr
+                          key={asset.id}
+                          className="hover:bg-slate-50 cursor-pointer"
                           onClick={() => handleAssetClick(asset.id, asset.name)}
-                          title="Haga clic para ver el desglose de fallas"
                         >
-                          <td className="px-4 py-3 font-medium text-slate-700">{asset.name}</td>
-                          <td className="px-4 py-3">
-                            <span className="bg-rose-100 text-rose-700 font-bold px-2.5 py-1 rounded-full text-xs">
-                              {asset.count} {asset.count === 1 ? 'vez' : 'veces'}
+                          <td className="px-3 py-2.5 font-medium text-slate-700">{asset.name}</td>
+                          <td className="px-3 py-2.5 text-right">
+                            <span className="inline-flex rounded-full bg-rose-100 text-rose-700 px-2.5 py-0.5 text-xs font-bold">
+                              {asset.count}
                             </span>
                           </td>
                         </tr>
@@ -487,81 +705,73 @@ export const KPIPage = () => {
                   </table>
                 </div>
               ) : (
-                <div className="h-32 w-full flex flex-col items-center justify-center text-slate-400">
-                  <CheckCircle className="text-emerald-400 mb-2" size={32} />
-                  <p className="font-medium">Excelente: No hay equipos con fallas recurrentes en este periodo.</p>
+                <div className="h-40 flex flex-col items-center justify-center text-slate-400 text-sm">
+                  <CheckCircle2 className="text-emerald-400 mb-2" size={28} />
+                  Sin retrabajos en este periodo
                 </div>
               )}
             </div>
-          )}
-          </div>
-        )}
-      </div>
+          </section>
+        </>
+      )}
 
-      {/* Failure Orders Modal */}
       {selectedFailureAsset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm print:hidden">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="flex justify-between items-start p-6 border-b border-slate-100 bg-slate-50">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 print:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Desglose de fallas"
+        >
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex justify-between items-start p-5 border-b border-slate-100 bg-slate-50">
               <div>
-                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                  <AlertTriangle className="text-amber-500" size={24} />
-                  Desglose de Fallas
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <AlertTriangle className="text-amber-500" size={20} />
+                  Desglose de fallas
                 </h2>
-                <p className="text-slate-500 text-sm mt-1">
-                  Equipo: <span className="font-bold text-slate-700">{selectedFailureAsset.name}</span>
+                <p className="text-sm text-slate-500 mt-1">
+                  Equipo: <span className="font-semibold text-slate-700">{selectedFailureAsset.name}</span>
                 </p>
               </div>
-              <button 
+              <button
+                type="button"
                 onClick={() => setSelectedFailureAsset(null)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-full transition-colors shadow-sm"
+                className="p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-white"
+                aria-label="Cerrar"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
-            <div className="p-6 overflow-y-auto flex-1">
+            <div className="p-5 overflow-y-auto flex-1">
               {isFetchingOrders ? (
-                <div className="py-20 text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-                  <p className="text-slate-400 mt-4 text-sm font-medium">Obteniendo registro de eventos...</p>
-                </div>
+                <div className="py-16 text-center text-slate-400 text-sm">Cargando órdenes...</div>
               ) : failureOrders.length > 0 ? (
-                <div className="border border-slate-200 rounded-2xl overflow-hidden">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-medium">
-                      <tr>
-                        <th className="px-4 py-3">Folio</th>
-                        <th className="px-4 py-3">Fecha</th>
-                        <th className="px-4 py-3">Zona</th>
-                        <th className="px-4 py-3">Descripción de la Falla</th>
-                        <th className="px-4 py-3">Técnico</th>
-                        <th className="px-4 py-3">Estado</th>
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
+                    <tr>
+                      <th className="text-left px-3 py-2">Folio</th>
+                      <th className="text-left px-3 py-2">Título</th>
+                      <th className="text-left px-3 py-2">Estado</th>
+                      <th className="text-left px-3 py-2">Fecha</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {failureOrders.map((order) => (
+                      <tr key={order.id}>
+                        <td className="px-3 py-2 font-semibold text-slate-700">
+                          WO-{(order.folio || 0).toString().padStart(4, '0')}
+                        </td>
+                        <td className="px-3 py-2 text-slate-600">{order.title}</td>
+                        <td className="px-3 py-2 text-slate-500">{order.status}</td>
+                        <td className="px-3 py-2 text-slate-500">
+                          {new Date(order.created_at).toLocaleDateString('es-MX')}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {failureOrders.map(order => (
-                        <tr key={order.id} className="hover:bg-slate-50">
-                          <td className="px-4 py-3 font-bold text-slate-800">WO-{order.folio.toString().padStart(4, '0')}</td>
-                          <td className="px-4 py-3 text-slate-600">{new Date(order.created_at).toLocaleDateString()}</td>
-                          <td className="px-4 py-3 text-slate-600 font-medium">{order.zone?.name || 'N/A'}</td>
-                          <td className="px-4 py-3 text-slate-700">{order.title}</td>
-                          <td className="px-4 py-3 text-slate-600">
-                            {order.assigned_technicians && order.assigned_technicians.length > 0 
-                              ? order.assigned_technicians.map(t => t.name).join(', ') 
-                              : 'Sin asignar'}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold border border-slate-200">
-                              {order.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               ) : (
-                <div className="py-10 text-center text-slate-400">No se encontraron órdenes de trabajo.</div>
+                <div className="py-16 text-center text-slate-400 text-sm">Sin órdenes para este equipo</div>
               )}
             </div>
           </div>

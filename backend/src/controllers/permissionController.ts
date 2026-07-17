@@ -22,6 +22,9 @@ const defaultPermissions: Record<Role, any> = {
     MANAGE_PURCHASES: true,
     REGISTER_INVENTORY_ENTRIES: true,
     MANAGE_SHIFTS: true,
+    VIEW_RCA: true,
+    MANAGE_RCA: true,
+    VIEW_SETTINGS: true,
   },
   GESTIONADOR: {
     MANAGE_USERS: false,
@@ -42,6 +45,9 @@ const defaultPermissions: Record<Role, any> = {
     MANAGE_PURCHASES: true,
     REGISTER_INVENTORY_ENTRIES: true,
     MANAGE_SHIFTS: false,
+    VIEW_RCA: true,
+    MANAGE_RCA: true,
+    VIEW_SETTINGS: true,
   },
   TECNICO: {
     MANAGE_USERS: false,
@@ -62,6 +68,9 @@ const defaultPermissions: Record<Role, any> = {
     MANAGE_PURCHASES: false,
     REGISTER_INVENTORY_ENTRIES: false,
     MANAGE_SHIFTS: false,
+    VIEW_RCA: true,
+    MANAGE_RCA: false,
+    VIEW_SETTINGS: false,
   },
 };
 

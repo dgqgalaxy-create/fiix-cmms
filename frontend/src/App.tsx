@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
+import { HomePage } from './pages/HomePage';
 import { AssetsPage } from './pages/AssetsPage';
 import { UsersPage } from './pages/UsersPage';
 import { KPIPage } from './pages/KPIPage';
@@ -32,10 +33,11 @@ function App() {
     if (isNewSession) {
       sessionStorage.setItem('session_initialized', 'true');
       const token = localStorage.getItem('token');
-      // Si el usuario está autenticado, lo redirigimos al dashboard (excepto si va al portal público)
-      const excludeRedirect = ['/dashboard', '/request'];
-      if (token && !excludeRedirect.includes(window.location.pathname)) {
-        window.location.href = '/dashboard';
+      // Si el usuario está autenticado y abre la raíz o login, lo mandamos a Inicio.
+      // No forzar redirección desde otras rutas (KPIs, Activos, etc.) para no romper deep links ni refrescos.
+      const forceHomeFrom = ['/', '/login'];
+      if (token && forceHomeFrom.includes(window.location.pathname)) {
+        window.location.href = '/home';
       }
     }
 
@@ -72,8 +74,19 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/request" element={<RequestPortal />} />
           
-          <Route 
-            path="/dashboard" 
+          <Route
+            path="/home"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <HomePage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/dashboard"
             element={
               <ProtectedRoute>
                 <Layout>
@@ -82,6 +95,8 @@ function App() {
               </ProtectedRoute>
             } 
           />
+
+          <Route path="/" element={<Navigate to="/home" replace />} />
           
           <Route 
             path="/calendar" 

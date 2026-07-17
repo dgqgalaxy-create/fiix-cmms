@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import axios from 'axios';
-import { Wifi, WifiOff, CheckCircle2 } from 'lucide-react';
-import CreatableSelect from 'react-select/creatable';
-import Select from 'react-select';
+import { Wifi, WifiOff, CheckCircle2, Loader2 } from 'lucide-react';
+import { BACKEND_URL } from '../api/axios';
 
 interface Zone {
   id: string;
@@ -16,35 +15,35 @@ interface Asset {
   internal_code: string;
 }
 
+const PUBLIC_API = `${BACKEND_URL}/api/public`;
+
 export const RequestPortal = () => {
   const [zones, setZones] = useState<Zone[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [requesters, setRequesters] = useState<{ value: string; label: string }[]>([]);
+  const [requesters, setRequesters] = useState<string[]>([]);
 
-  // Form State
-  const [requesterName, setRequesterName] = useState<{ value: string; label: string } | null>(null);
-  const [productionGroup, setProductionGroup] = useState<{ value: string; label: string } | null>(null);
-  const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
-  const [machineStopped, setMachineStopped] = useState(false);
-  const [maintenanceType, setMaintenanceType] = useState<{ value: string; label: string } | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<{ value: string; label: string } | null>(null);
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [zoneId, setZoneId] = useState('');
+  const [assetId, setAssetId] = useState('');
+  const [priority, setPriority] = useState('NORMAL');
+  const [maintenanceType, setMaintenanceType] = useState('CORRECTIVO');
+  const [requesterName, setRequesterName] = useState('');
+  const [customRequester, setCustomRequester] = useState('');
+  const [productionGroup, setProductionGroup] = useState('NA');
+  const [machineStopped, setMachineStopped] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
-
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -54,37 +53,60 @@ export const RequestPortal = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setIsLoadingData(true);
         const [zonesRes, reqsRes] = await Promise.all([
-          axios.get('http://localhost:3000/api/public/zones'),
-          axios.get('http://localhost:3000/api/public/requesters')
+          axios.get(`${PUBLIC_API}/zones`),
+          axios.get(`${PUBLIC_API}/requesters`)
         ]);
         setZones(zonesRes.data);
-        setRequesters(reqsRes.data.map((name: string) => ({ value: name, label: name })));
+        setRequesters(Array.isArray(reqsRes.data) ? reqsRes.data : []);
       } catch (err) {
         console.error('Error fetching initial data', err);
+        setError('No se pudieron cargar zonas o solicitantes. Verifica la conexión con el servidor.');
+      } finally {
+        setIsLoadingData(false);
       }
     };
     fetchData();
   }, []);
 
   useEffect(() => {
-    if (selectedZone) {
-      axios.get(`http://localhost:3000/api/public/assets?zone_id=${selectedZone.id}`)
-        .then(res => setAssets(res.data))
-        .catch(err => console.error('Error fetching assets', err));
-    } else {
+    if (!zoneId) {
       setAssets([]);
-      setSelectedAsset(null);
+      setAssetId('');
+      return;
     }
-  }, [selectedZone]);
+    axios.get(`${PUBLIC_API}/assets?zone_id=${zoneId}`)
+      .then(res => setAssets(res.data))
+      .catch(err => console.error('Error fetching assets', err));
+  }, [zoneId]);
+
+  const resolvedRequesterName = requesterName === '__OTHER__'
+    ? customRequester.trim()
+    : requesterName.trim();
+
+  const resetForm = () => {
+    setSubmitted(false);
+    setTitle('');
+    setDescription('');
+    setZoneId('');
+    setAssetId('');
+    setPriority('NORMAL');
+    setMaintenanceType('CORRECTIVO');
+    setRequesterName('');
+    setCustomRequester('');
+    setProductionGroup('NA');
+    setMachineStopped(false);
+    setError('');
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!requesterName || !productionGroup || !selectedZone || !maintenanceType || !title || !priority || !selectedAsset) {
-      setError('Por favor completa todos los campos requeridos marcados con *');
+    if (!title.trim() || !zoneId || !assetId || !resolvedRequesterName || !productionGroup || !priority || !maintenanceType) {
+      setError('Por favor completa todos los campos requeridos.');
       return;
     }
-    
+
     if (!isOnline) {
       setError('No tienes conexión a internet. No se puede enviar la solicitud.');
       return;
@@ -94,16 +116,16 @@ export const RequestPortal = () => {
     setError('');
 
     try {
-      await axios.post('http://localhost:3000/api/public/requests', {
-        requester_name: requesterName.value,
-        production_group: productionGroup.value,
-        zone_id: selectedZone.id,
+      await axios.post(`${PUBLIC_API}/requests`, {
+        title: title.trim(),
+        description: description.trim(),
+        asset_id: assetId,
+        zone_id: zoneId,
+        priority,
+        maintenance_type: maintenanceType,
         machine_stopped: machineStopped,
-        maintenance_type: maintenanceType.value,
-        title,
-        description,
-        priority: priority.value,
-        asset_id: selectedAsset.id
+        requester_name: resolvedRequesterName,
+        production_group: productionGroup
       });
       setSubmitted(true);
     } catch (err) {
@@ -123,15 +145,8 @@ export const RequestPortal = () => {
           </div>
           <h2 className="text-2xl font-bold text-slate-800 mb-2">¡Solicitud Enviada!</h2>
           <p className="text-slate-600 mb-8">El equipo de mantenimiento ha sido notificado y la orden se ha creado exitosamente.</p>
-          <button 
-            onClick={() => {
-              setSubmitted(false);
-              setSelectedAsset(null);
-              setTitle('');
-              setDescription('');
-              setMachineStopped(false);
-              setSelectedLocation(null);
-            }}
+          <button
+            onClick={resetForm}
             className="w-full bg-slate-900 text-white font-bold py-3 px-4 rounded-xl hover:bg-slate-800 transition-colors"
           >
             Crear otra solicitud
@@ -141,33 +156,10 @@ export const RequestPortal = () => {
     );
   }
 
-  const zoneOptions = zones.map(z => ({ value: z, label: z.name }));
-  const assetOptions = assets.map(a => ({ value: a, label: `${a.internal_code} - ${a.name}` }));
-  
-  const groupOptions = [
-    { value: 'A', label: 'Grupo A' },
-    { value: 'B', label: 'Grupo B' },
-    { value: 'C', label: 'Grupo C' },
-    { value: 'D', label: 'Grupo D' },
-    { value: 'NA', label: 'No Aplica (NA)' },
-  ];
-
-  const maintenanceOptions = [
-    { value: 'CORRECTIVO', label: 'Correctivo' },
-    { value: 'PREVENTIVO', label: 'Preventivo' },
-    { value: 'SERVICIO', label: 'Servicio / Mejora' }
-  ];
-
-  const priorityOptions = [
-    { value: 'NORMAL', label: 'Normal' },
-    { value: 'URGENTE', label: 'Urgente' },
-    { value: 'BAJO', label: 'Baja' }
-  ];
-
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-slate-900 text-white p-4 shadow-md sticky top-0 z-10">
-        <div className="max-w-xl mx-auto flex items-center justify-between">
+        <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/icono_app.jpg" alt="Logo" className="w-10 h-10 rounded-lg object-cover" />
             <div>
@@ -189,141 +181,197 @@ export const RequestPortal = () => {
         </div>
       </header>
 
-      <main className="flex-1 p-4 w-full max-w-xl mx-auto">
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            
+      <main className="flex-1 p-4 w-full max-w-lg mx-auto">
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+            <h2 className="text-xl font-bold text-slate-800">Nueva Solicitud de Mantenimiento</h2>
+            <p className="text-sm text-slate-500 mt-1">Completa el formulario para reportar una falla.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="p-6 space-y-5">
             {error && (
-              <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">
+              <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm font-medium border border-red-100">
                 {error}
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Nombre del solicitante <span className="text-red-500">*</span></label>
-              <CreatableSelect 
-                options={requesters}
-                value={requesterName}
-                onChange={(opt) => setRequesterName(opt)}
-                placeholder="Escribe o busca tu nombre..."
-                formatCreateLabel={(inputValue) => `Añadir "${inputValue}"`}
-                className="react-select-container"
-                classNamePrefix="react-select"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Grupo <span className="text-red-500">*</span></label>
-                <Select 
-                  options={groupOptions}
-                  value={productionGroup}
-                  onChange={(opt) => setProductionGroup(opt)}
-                  placeholder="Selecciona..."
-                  className="react-select-container"
-                  classNamePrefix="react-select"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Prioridad <span className="text-red-500">*</span></label>
-                <Select 
-                  options={priorityOptions}
-                  value={priority}
-                  onChange={(opt) => setPriority(opt)}
-                  placeholder="Selecciona..."
-                  className="react-select-container"
-                  classNamePrefix="react-select"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Zona <span className="text-red-500">*</span></label>
-              <Select 
-                options={zoneOptions}
-                value={selectedZone ? { value: selectedZone, label: selectedZone.name } : null}
-                onChange={(opt) => {
-                  setSelectedZone(opt ? opt.value : null);
-                  setSelectedAsset(null); // Reset asset when zone changes
-                }}
-                placeholder="Selecciona la zona..."
-                className="react-select-container"
-                classNamePrefix="react-select"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Equipo <span className="text-red-500">*</span></label>
-              <Select 
-                options={assetOptions}
-                value={selectedAsset ? { value: selectedAsset, label: `${selectedAsset.internal_code} - ${selectedAsset.name}` } : null}
-                onChange={(opt) => setSelectedAsset(opt ? opt.value : null)}
-                placeholder={selectedZone ? "Selecciona la máquina..." : "Primero selecciona una zona"}
-                isDisabled={!selectedZone}
-                className="react-select-container"
-                classNamePrefix="react-select"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Tipo de mantenimiento <span className="text-red-500">*</span></label>
-              <Select 
-                options={maintenanceOptions}
-                value={maintenanceType}
-                onChange={(opt) => setMaintenanceType(opt)}
-                placeholder="Selecciona..."
-                className="react-select-container"
-                classNamePrefix="react-select"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Descripción de la falla <span className="text-red-500">*</span></label>
-              <input 
+              <label className="block text-sm font-medium text-slate-700 mb-1">Título <span className="text-red-500">*</span></label>
+              <input
                 type="text"
+                required
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all"
+                placeholder="Ej: Mantenimiento preventivo de bomba"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Breve resumen (Ej. Banda rota, ruido fuerte)"
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Detalles adicionales</label>
-              <textarea 
+              <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
+              <textarea
+                rows={3}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all resize-none"
+                placeholder="Detalla el problema o tarea a realizar..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe más detalles si es necesario..."
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all min-h-[80px] resize-y"
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Zona <span className="text-red-500">*</span></label>
+                {isLoadingData ? (
+                  <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 flex items-center gap-2">
+                    <Loader2 className="animate-spin" size={16} /> Cargando zonas...
+                  </div>
+                ) : (
+                  <select
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                    value={zoneId}
+                    onChange={(e) => {
+                      setZoneId(e.target.value);
+                      setAssetId('');
+                    }}
+                    required
+                  >
+                    <option value="" disabled>Selecciona una zona</option>
+                    {zones.map((zone) => (
+                      <option key={zone.id} value={zone.id}>{zone.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Activo asociado <span className="text-red-500">*</span></label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none disabled:opacity-50 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  value={assetId}
+                  onChange={(e) => setAssetId(e.target.value)}
+                  required
+                  disabled={!zoneId}
+                >
+                  <option value="" disabled>{zoneId ? 'Selecciona un activo' : 'Primero selecciona una zona'}</option>
+                  {assets.map((asset) => (
+                    <option key={asset.id} value={asset.id}>
+                      {asset.name} ({asset.internal_code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Prioridad <span className="text-red-500">*</span></label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value)}
+                  required
+                >
+                  <option value="BAJO">Bajo</option>
+                  <option value="NORMAL">Normal</option>
+                  <option value="URGENTE">Urgente</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Mantenimiento <span className="text-red-500">*</span></label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                  value={maintenanceType}
+                  onChange={(e) => setMaintenanceType(e.target.value)}
+                  required
+                >
+                  <option value="SERVICIO">Servicio</option>
+                  <option value="PREVENTIVO">Preventivo</option>
+                  <option value="CORRECTIVO">Correctivo</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del Solicitante <span className="text-red-500">*</span></label>
+                {isLoadingData ? (
+                  <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 flex items-center gap-2">
+                    <Loader2 className="animate-spin" size={16} /> Cargando solicitantes...
+                  </div>
+                ) : (
+                  <select
+                    required
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                    value={requesterName}
+                    onChange={(e) => {
+                      setRequesterName(e.target.value);
+                      if (e.target.value !== '__OTHER__') setCustomRequester('');
+                    }}
+                  >
+                    <option value="" disabled>Selecciona un solicitante</option>
+                    {requesters.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                    <option value="__OTHER__">Otro (escribir nombre)...</option>
+                  </select>
+                )}
+                {requesterName === '__OTHER__' && (
+                  <input
+                    type="text"
+                    required
+                    className="mt-2 w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all"
+                    placeholder="Escribe tu nombre completo"
+                    value={customRequester}
+                    onChange={(e) => setCustomRequester(e.target.value)}
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Grupo de Producción <span className="text-red-500">*</span></label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                  value={productionGroup}
+                  onChange={(e) => setProductionGroup(e.target.value)}
+                  required
+                >
+                  <option value="A">Grupo A</option>
+                  <option value="B">Grupo B</option>
+                  <option value="C">Grupo C</option>
+                  <option value="D">Grupo D</option>
+                  <option value="NA">N/A</option>
+                </select>
+              </div>
             </div>
 
             <div className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
-              <input 
-                type="checkbox"
-                id="machineStopped"
-                checked={machineStopped}
-                onChange={(e) => setMachineStopped(e.target.checked)}
-                className="w-5 h-5 text-red-500 rounded border-slate-300 focus:ring-red-500"
-              />
-              <label htmlFor="machineStopped" className="font-medium text-slate-700 cursor-pointer">
-                ¿Paró máquina por la falla? <span className="text-red-500">*</span>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-5 h-5 text-red-600 rounded border-slate-300 focus:ring-red-600"
+                  checked={machineStopped}
+                  onChange={(e) => setMachineStopped(e.target.checked)}
+                />
+                <div>
+                  <span className="font-medium text-slate-800 block">Paro de máquina</span>
+                  <span className="text-xs text-slate-500">¿Esta falla detuvo la producción?</span>
+                </div>
               </label>
             </div>
 
-            <button 
+            <button
               type="submit"
-              disabled={loading || !isOnline}
-              className={`w-full font-bold py-3 px-4 rounded-xl transition-all ${
-                loading || !isOnline 
-                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
-                  : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98] shadow-md shadow-blue-600/20'
+              disabled={loading || !isOnline || isLoadingData}
+              className={`w-full flex items-center justify-center gap-2 font-bold py-3 px-4 rounded-xl transition-all ${
+                loading || !isOnline || isLoadingData
+                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                  : 'bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.98] shadow-md shadow-emerald-700/20'
               }`}
             >
+              {loading ? <Loader2 className="animate-spin" size={18} /> : null}
               {loading ? 'Enviando...' : 'Enviar Solicitud'}
             </button>
-
           </form>
         </div>
       </main>

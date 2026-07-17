@@ -1,0 +1,478 @@
+import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Activity,
+  AlertCircle,
+  CalendarClock,
+  CheckCircle2,
+  Clock,
+  LayoutDashboard,
+  RefreshCw,
+  Wrench,
+  XCircle,
+} from 'lucide-react';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ComposedChart,
+  Legend,
+  Line,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import { getWorkOrders, getWorkOrdersSummary } from '../api/workOrders';
+import type { WorkOrder } from '../api/workOrders';
+import { socket } from '../api/socket';
+
+export const HomePage = () => {
+  const navigate = useNavigate();
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [summary, setSummary] = useState<Record<string, number>>({});
+  const [summaryStartDate, setSummaryStartDate] = useState('');
+  const [summaryEndDate, setSummaryEndDate] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchDashboard = async (backgroundFetch = false) => {
+    try {
+      if (!backgroundFetch) setIsLoading(true);
+      const [orders, summaryData] = await Promise.all([
+        getWorkOrders(),
+        getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined),
+      ]);
+      setWorkOrders(orders);
+      setSummary(summaryData);
+    } catch (error) {
+      console.error('Error fetching dashboard summary', error);
+    } finally {
+      if (!backgroundFetch) setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboard();
+    const handleRefresh = () => fetchDashboard(true);
+    socket.on('refresh_work_orders', handleRefresh);
+    return () => {
+      socket.off('refresh_work_orders', handleRefresh);
+    };
+  }, []);
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        setSummary(await getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined));
+      } catch (error) {
+        console.error('Error fetching dashboard summary', error);
+      }
+    };
+    fetchSummary();
+  }, [summaryStartDate, summaryEndDate]);
+
+  const isInSummaryRange = (workOrder: WorkOrder) => {
+    const created = new Date(workOrder.created_at);
+    const start = summaryStartDate ? new Date(`${summaryStartDate}T00:00:00`) : new Date(0);
+    const end = summaryEndDate ? new Date(`${summaryEndDate}T23:59:59`) : new Date(8640000000000000);
+    return created >= start && created <= end;
+  };
+
+  const countPendingByPriority = (priority: string) =>
+    workOrders.filter(wo => wo.status === 'PENDIENTE' && wo.priority === priority && isInSummaryRange(wo)).length;
+
+  const getTechsTextByStatus = (status: string) => {
+    const assignments: Record<string, number> = {};
+    workOrders
+      .filter(wo => wo.status === status && isInSummaryRange(wo))
+      .forEach(wo => wo.assigned_technicians?.forEach(tech => {
+        const firstName = tech.name.split(' ')[0];
+        assignments[firstName] = (assignments[firstName] || 0) + 1;
+      }));
+
+    const phrases = Object.entries(assignments).map(([name, count]) =>
+      `${count} Solicitud${count !== 1 ? 'es' : ''} ${name}`,
+    );
+    if (phrases.length <= 1) return phrases[0] || '';
+    const last = phrases.pop();
+    return `${phrases.join(', ')} & ${last}`;
+  };
+
+  const getParetoData = () => {
+    const problems: Record<string, number> = {};
+    workOrders.forEach(wo => {
+      if (wo.status === 'FINALIZADO' && wo.maintenance_type === 'CORRECTIVO' && (wo as any).failure_problem) {
+        const name = (wo as any).failure_problem.name;
+        problems[name] = (problems[name] || 0) + 1;
+      }
+    });
+    const sorted = Object.entries(problems)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+    const total = sorted.reduce((sum, item) => sum + item.count, 0);
+    let cumulative = 0;
+    return sorted.map(item => {
+      cumulative += item.count;
+      return {
+        name: item.name,
+        Frecuencia: item.count,
+        PorcentajeAcumulado: total ? (cumulative / total) * 100 : 0,
+      };
+    }).slice(0, 10);
+  };
+
+  const getMaintenanceTypeData = () => {
+    const counts = { PREVENTIVO: 0, CORRECTIVO: 0, SERVICIO: 0 };
+    workOrders
+      .filter(wo => wo.status !== 'ANULADO' && isInSummaryRange(wo))
+      .forEach(wo => {
+        if (wo.maintenance_type in counts) counts[wo.maintenance_type as keyof typeof counts]++;
+      });
+    return [
+      { name: 'Preventivo', value: counts.PREVENTIVO, color: '#10b981' },
+      { name: 'Correctivo', value: counts.CORRECTIVO, color: '#f59e0b' },
+      { name: 'Servicio', value: counts.SERVICIO, color: '#3b82f6' },
+    ].filter(item => item.value > 0);
+  };
+
+  const totalRecibidas = Object.entries(summary).reduce(
+    (total, [status, count]) => status === 'ANULADO' ? total : total + (count || 0),
+    0,
+  );
+  const paretoData = getParetoData();
+  const pieData = getMaintenanceTypeData();
+  const maintenanceTotal = pieData.reduce((total, entry) => total + entry.value, 0);
+  const urgentCount = countPendingByPriority('URGENTE');
+  const normalCount = countPendingByPriority('NORMAL');
+  const lowCount = countPendingByPriority('BAJO');
+  const activeTechsText = getTechsTextByStatus('EN_PROCESO');
+  const pausedTechsText = getTechsTextByStatus('EN_ESPERA');
+
+  const goToStatus = (status?: string) =>
+    navigate(status ? `/dashboard?status=${status}` : '/dashboard');
+
+  const getCurrentWeekRange = () => {
+    const now = new Date();
+    const day = now.getDay(); // 0 = Dom, 1 = Lun
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    const monday = new Date(now);
+    monday.setHours(0, 0, 0, 0);
+    monday.setDate(now.getDate() + mondayOffset);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+    return { monday, sunday };
+  };
+
+  const { monday: weekStart, sunday: weekEnd } = getCurrentWeekRange();
+
+  const finishedThisWeek = workOrders
+    .filter(wo => {
+      if (wo.status !== 'FINALIZADO') return false;
+      const doneAt = new Date(wo.completed_at || wo.updated_at);
+      return doneAt >= weekStart && doneAt <= weekEnd;
+    })
+    .sort((a, b) => {
+      const da = new Date(a.completed_at || a.updated_at).getTime();
+      const db = new Date(b.completed_at || b.updated_at).getTime();
+      return db - da;
+    });
+
+  const weekDayLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  const weeklyBarData = weekDayLabels.map((label, index) => {
+    const dayStart = new Date(weekStart);
+    dayStart.setDate(weekStart.getDate() + index);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setHours(23, 59, 59, 999);
+    const count = finishedThisWeek.filter(wo => {
+      const doneAt = new Date(wo.completed_at || wo.updated_at);
+      return doneAt >= dayStart && doneAt <= dayEnd;
+    }).length;
+    return { name: label, Finalizadas: count };
+  });
+
+  const formatWeekDate = (date: Date) =>
+    date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+
+  return (
+    <>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Inicio</h1>
+          <p className="text-slate-500 dark:text-slate-300 mt-1">Resumen operativo del mantenimiento.</p>
+        </div>
+        <button
+          onClick={() => fetchDashboard()}
+          className="p-2.5 text-slate-500 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors shadow-sm"
+          title="Actualizar"
+        >
+          <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+        </button>
+      </div>
+
+      {paretoData.length > 0 && (
+        <div className="mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <Activity size={20} className="text-orange-600" />
+            Top Problemas Frecuentes (Correctivo)
+          </h2>
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={paretoData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="left" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="right" orientation="right" stroke="#f97316" fontSize={12} tickLine={false} axisLine={false} tickFormatter={value => `${value}%`} />
+                <Tooltip
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  formatter={(value: any, name: any) => [name === 'PorcentajeAcumulado' ? `${Number(value).toFixed(1)}%` : value, name === 'PorcentajeAcumulado' ? '% Acumulado' : name]}
+                />
+                <Legend />
+                <Bar yAxisId="left" dataKey="Frecuencia" barSize={40} fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Line yAxisId="right" type="monotone" dataKey="PorcentajeAcumulado" stroke="#f97316" strokeWidth={3} dot={{ r: 4, fill: '#f97316', strokeWidth: 2, stroke: '#fff' }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      <section className="relative mb-8 rounded-3xl border-2 border-blue-200/80 bg-blue-50/30 p-3 sm:p-5 dark:border-blue-900/70 dark:bg-blue-950/10">
+        <div className="absolute -top-3 left-5 flex items-center gap-2 rounded-full border border-blue-200 bg-white px-3 py-1 text-xs font-bold uppercase tracking-wider text-blue-700 shadow-sm dark:border-blue-800 dark:bg-slate-900 dark:text-blue-300">
+          <CalendarClock size={14} />
+          Resumen por periodo
+        </div>
+        <p className="mb-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
+          El periodo seleccionado se aplica a todas las tarjetas y a la distribución de mantenimiento dentro de este marco.
+        </p>
+
+      <div className="flex flex-wrap gap-4 items-center mb-4 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+        <div className="flex items-center gap-2">
+          <CalendarClock size={18} className="text-slate-500" />
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Filtro para resumen superior:</span>
+        </div>
+        <label className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+          Desde:
+          <input type="date" value={summaryStartDate} onChange={e => setSummaryStartDate(e.target.value)} className="text-sm px-2 py-1.5 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-emerald-500" />
+        </label>
+        <label className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+          Hasta:
+          <input type="date" value={summaryEndDate} onChange={e => setSummaryEndDate(e.target.value)} className="text-sm px-2 py-1.5 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-emerald-500" />
+        </label>
+        {summaryStartDate || summaryEndDate ? (
+          <button onClick={() => { setSummaryStartDate(''); setSummaryEndDate(''); }} className="text-xs text-rose-500 hover:text-rose-700 font-medium px-2 py-1 bg-rose-50 rounded-lg">
+            Limpiar filtro
+          </button>
+        ) : (
+          <span className="text-xs px-2.5 py-1 bg-blue-50 text-blue-700 font-bold rounded-lg border border-blue-200 flex items-center gap-1.5">
+            <Activity size={14} /> Modo Histórico (Viendo Todo)
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-col xl:flex-row gap-4 mb-6 sm:mb-8">
+        <div className="flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-6 gap-3 sm:gap-4">
+          <SummaryCard title="Totales Recibidas" value={totalRecibidas} icon={<LayoutDashboard />} color="slate" onClick={() => goToStatus()} detail={(summaryStartDate && summaryEndDate) ? `${summaryStartDate} — ${summaryEndDate}` : 'Histórico completo'} />
+          <SummaryCard title="Pendientes" value={summary.PENDIENTE || 0} icon={<Clock />} color="amber" onClick={() => goToStatus('PENDIENTE')} detail={
+            <div className="flex flex-wrap gap-1">
+              {urgentCount > 0 && <span className="bg-rose-600 text-white px-1.5 py-0.5 rounded-sm">{urgentCount} URG</span>}
+              {normalCount > 0 && <span className="bg-amber-700 text-white px-1.5 py-0.5 rounded-sm">{normalCount} NOR</span>}
+              {lowCount > 0 && <span className="bg-emerald-700 text-white px-1.5 py-0.5 rounded-sm">{lowCount} BAJ</span>}
+            </div>
+          } />
+          <SummaryCard title="En Proceso" value={summary.EN_PROCESO || 0} icon={<Wrench />} color="blue" onClick={() => goToStatus('EN_PROCESO')} detail={activeTechsText && `👤 ${activeTechsText}`} />
+          <SummaryCard title="Pausadas" value={summary.EN_ESPERA || 0} icon={<AlertCircle />} color="purple" onClick={() => goToStatus('EN_ESPERA')} detail={pausedTechsText && `👤 ${pausedTechsText}`} />
+          <SummaryCard title="Finalizadas" value={summary.FINALIZADO || 0} icon={<CheckCircle2 />} color="emerald" onClick={() => goToStatus('FINALIZADO')} />
+          <SummaryCard title="Invalidadas" value={summary.ANULADO || 0} icon={<XCircle />} color="gray" onClick={() => goToStatus('ANULADO')} />
+        </div>
+
+        <div className="relative w-full xl:w-80 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-gradient-to-br from-white via-slate-50 to-emerald-50/60 dark:from-slate-800 dark:via-slate-800 dark:to-emerald-950/30 p-5 shadow-sm">
+          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-emerald-200/30 blur-2xl dark:bg-emerald-500/10" />
+          <div className="relative">
+            <div className="mb-2">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Distribución de mantenimiento</h3>
+              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">Proporción por tipo de orden</p>
+            </div>
+          {pieData.length > 0 ? (
+            <div className="relative mx-auto h-40 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={49}
+                    outerRadius={68}
+                    paddingAngle={4}
+                    cornerRadius={6}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {pieData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: any, _name: any, item: any) => [
+                      `${value} orden${Number(value) === 1 ? '' : 'es'}`,
+                      item.payload.name,
+                    ]}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 20px rgb(15 23 42 / 0.12)' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-3xl font-black leading-none text-slate-800 dark:text-white">{maintenanceTotal}</span>
+                <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Órdenes</span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex h-40 items-center justify-center text-xs text-slate-400">Sin datos para el periodo</div>
+          )}
+          <div className="space-y-2.5">
+            {pieData.map(entry => {
+              const percentage = maintenanceTotal ? Math.round((entry.value / maintenanceTotal) * 100) : 0;
+              return (
+              <div key={entry.name}>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full shadow-sm" style={{ backgroundColor: entry.color }} />
+                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{entry.name}</span>
+                  </div>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                    {entry.value} <span className="font-medium text-slate-400">· {percentage}%</span>
+                  </span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-700">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${percentage}%`, backgroundColor: entry.color }}
+                  />
+                </div>
+              </div>
+              );
+            })}
+          </div>
+          </div>
+        </div>
+      </div>
+      </section>
+
+      {/* Resumen semanal de finalizadas (Lunes → Domingo) */}
+      <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <CheckCircle2 size={20} className="text-emerald-600" />
+              Órdenes finalizadas esta semana
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Semana actual: {formatWeekDate(weekStart)} — {formatWeekDate(weekEnd)} (Lunes a Domingo)
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="px-4 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Total</span>
+              <div className="text-3xl font-black text-emerald-700 dark:text-emerald-300 leading-none mt-0.5">
+                {finishedThisWeek.length}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => goToStatus('FINALIZADO')}
+              className="text-sm font-semibold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-3 py-2 rounded-xl border border-emerald-200 transition-colors"
+            >
+              Ver historial
+            </button>
+          </div>
+        </div>
+
+        <div className="h-48 w-full mb-5">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={weeklyBarData} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+              <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis allowDecimals={false} stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+              <Tooltip
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                formatter={(value: any) => [value, 'Finalizadas']}
+              />
+              <Bar dataKey="Finalizadas" fill="#10b981" radius={[6, 6, 0, 0]} barSize={36} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {finishedThisWeek.length === 0 ? (
+          <p className="text-sm text-slate-400 text-center py-4 border-t border-slate-100 dark:border-slate-700">
+            Aún no hay órdenes finalizadas en esta semana.
+          </p>
+        ) : (
+          <div className="border-t border-slate-100 dark:border-slate-700 pt-4 space-y-2 max-h-64 overflow-y-auto">
+            {finishedThisWeek.slice(0, 12).map(wo => (
+              <button
+                key={wo.id}
+                type="button"
+                onClick={() => navigate(`/dashboard?wo=${wo.id}`)}
+                className="w-full flex items-center justify-between gap-3 text-left px-3 py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
+                    <span className="text-emerald-700 dark:text-emerald-400 mr-2">
+                      WO-{(wo.folio || 0).toString().padStart(4, '0')}
+                    </span>
+                    {wo.title}
+                  </p>
+                  <p className="text-xs text-slate-500 truncate">
+                    {wo.asset?.name || 'Sin equipo'}
+                    {wo.zone?.name ? ` · ${wo.zone.name}` : ''}
+                  </p>
+                </div>
+                <span className="text-[11px] text-slate-400 shrink-0">
+                  {new Date(wo.completed_at || wo.updated_at).toLocaleDateString('es-MX', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                  })}
+                </span>
+              </button>
+            ))}
+            {finishedThisWeek.length > 12 && (
+              <p className="text-xs text-center text-slate-400 pt-1">
+                +{finishedThisWeek.length - 12} más esta semana
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
+
+const cardColors: Record<string, string> = {
+  slate: 'bg-slate-900 text-white border-slate-900',
+  amber: 'bg-gradient-to-br from-amber-500 to-orange-500 text-white border-transparent shadow-[0_0_15px_rgba(245,158,11,0.5)]',
+  blue: 'bg-white dark:bg-slate-800 text-blue-600 border-blue-100',
+  purple: 'bg-white dark:bg-slate-800 text-purple-600 border-purple-100',
+  emerald: 'bg-white dark:bg-slate-800 text-emerald-600 border-emerald-100',
+  gray: 'bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-200',
+};
+
+const SummaryCard = ({ title, value, icon, color, onClick, detail }: {
+  title: string;
+  value: number;
+  icon: ReactNode;
+  color: string;
+  onClick: () => void;
+  detail?: ReactNode;
+}) => (
+  <button onClick={onClick} className={`text-left cursor-pointer transition-all hover:scale-[1.03] p-3.5 sm:p-4 rounded-2xl border flex flex-col relative overflow-hidden group shadow-sm min-h-[130px] ${cardColors[color]}`}>
+    <div className="absolute -right-2 -top-2 opacity-20 group-hover:scale-110 transition-transform [&>svg]:w-20 [&>svg]:h-20">{icon}</div>
+    <div className="relative z-10 h-full flex flex-col">
+      <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider leading-tight h-8">{title}</span>
+      <div className={`text-2xl sm:text-4xl font-black ${color === 'slate' || color === 'amber' ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>{value}</div>
+      {detail && <div className="mt-auto pt-2 text-[10px] font-semibold leading-tight line-clamp-2">{detail}</div>}
+    </div>
+  </button>
+);

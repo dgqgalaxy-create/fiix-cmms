@@ -22,7 +22,7 @@ export const Login = () => {
     try {
       const response = await api.post('/auth/login', { email, password });
       login(response.data.token, response.data.user);
-      navigate('/dashboard');
+      navigate('/home');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Ocurrió un error al iniciar sesión');
     } finally {

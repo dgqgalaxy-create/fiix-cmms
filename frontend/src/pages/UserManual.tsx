@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Search, Menu, Wrench, Users, Shield, Package, LayoutDashboard, ArrowLeft, Terminal, AlertTriangle, CheckCircle2, Info, FileText, QrCode, Clock, Filter, Printer } from 'lucide-react';
+import { BookOpen, Search, Menu, Wrench, Users, Shield, Package, LayoutDashboard, ArrowLeft, Terminal, AlertTriangle, CheckCircle2, Info, FileText, QrCode, Clock, Filter, Printer, Home } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const SECTIONS = [
   { id: 'intro', title: 'Introducción', icon: <BookOpen size={18} /> },
-  { id: 'dashboard', title: 'Dashboard y Órdenes', icon: <LayoutDashboard size={18} /> },
+  { id: 'home', title: 'Inicio', icon: <Home size={18} /> },
+  { id: 'dashboard', title: 'Órdenes de Trabajo', icon: <LayoutDashboard size={18} /> },
   { id: 'inventory', title: 'Inventario y Compras', icon: <Package size={18} /> },
   { id: 'assets', title: 'Activos (Maquinaria)', icon: <Wrench size={18} /> },
   { id: 'roles', title: 'Roles y Permisos', icon: <Shield size={18} /> },
@@ -112,13 +113,38 @@ export const UserManual = () => {
               </div>
             )}
 
+            {activeSection === 'home' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+                <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
+                  <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                    <Home size={28} />
+                  </div>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white">Inicio</h2>
+                </div>
+
+                <p className="text-slate-600 dark:text-slate-400">
+                  El módulo <strong>Inicio</strong> muestra el resumen operativo del mantenimiento: gráfico Pareto de problemas frecuentes, filtro de fechas, tarjetas por estado y la relación de tipos de mantenimiento.
+                </p>
+                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 p-5 rounded-2xl">
+                  <p className="text-sm text-blue-900 dark:text-blue-300 leading-relaxed">
+                    Al hacer clic en una tarjeta (Pendientes, En Proceso, etc.) se abre <strong>Órdenes de Trabajo</strong> con ese filtro ya aplicado, para pasar del panorama general al detalle de las solicitudes.
+                  </p>
+                </div>
+                <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/30 p-5 rounded-2xl">
+                  <p className="text-sm text-emerald-900 dark:text-emerald-300 leading-relaxed">
+                    Más abajo verás el <strong>resumen de órdenes finalizadas de la semana actual</strong> (de Lunes a Domingo): total, gráfica diaria y listado. También puedes abrir el detalle desde la campana de notificaciones.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {activeSection === 'dashboard' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
                 <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
                   <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
                     <LayoutDashboard size={28} />
                   </div>
-                  <h2 className="text-3xl font-black text-slate-900 dark:text-white">Dashboard y Órdenes</h2>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white">Órdenes de Trabajo</h2>
                 </div>
 
                 <div className="space-y-4">
@@ -127,7 +153,7 @@ export const UserManual = () => {
                     El Ciclo de Vida de una Orden
                   </h3>
                   <p className="text-slate-600 dark:text-slate-400">
-                    Las Órdenes de Trabajo (OT) son el núcleo de CMMS. Su ciclo de vida garantiza que una falla sea rastreada desde que se reporta hasta que se soluciona.
+                    Las Órdenes de Trabajo (OT) son el núcleo de CMMS. Su ciclo de vida garantiza que una falla sea rastreada desde que se reporta hasta que se soluciona. En este módulo gestionas las solicitudes con Vista General, Mis Órdenes e Historial.
                   </p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
@@ -149,10 +175,25 @@ export const UserManual = () => {
                 <div className="space-y-4 pt-4">
                   <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                     <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
+                    Aceptar y Autoasignarse una Orden
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-400">
+                    Un Administrador o Gestionador también puede atender solicitudes. Abre una orden <strong>PENDIENTE</strong>, cambia su estado a <strong>EN_PROCESO</strong> y sube la fotografía de evidencia “Antes”.
+                  </p>
+                  <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 p-5 rounded-2xl">
+                    <p className="text-sm text-blue-900 dark:text-blue-300 leading-relaxed">
+                      Si no seleccionas a nadie en <strong>Técnicos Asignados</strong>, la orden se asignará automáticamente a tu usuario al guardarla. Si otra persona atenderá el trabajo, selecciónala antes de guardar. Administradores y Gestionadores conservan estos controles; los Técnicos no pueden modificar la asignación.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-4">
+                  <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 w-8 h-8 rounded-full flex items-center justify-center text-sm">3</span>
                     Filtros y Búsquedas Avanzadas
                   </h3>
                   <p className="text-slate-600 dark:text-slate-400">
-                    No pierdas tiempo navegando entre páginas. El Dashboard cuenta con herramientas para encontrar exactamente la orden que necesitas.
+                    No pierdas tiempo navegando entre páginas. Órdenes de Trabajo cuenta con herramientas para encontrar exactamente la orden que necesitas.
                   </p>
                   <ul className="list-none space-y-3 mt-4">
                     <li className="flex items-start gap-3">
@@ -179,7 +220,7 @@ export const UserManual = () => {
                   <div>
                     <h3 className="font-bold text-emerald-900 dark:text-emerald-300 mb-1">WebSockets: Magia en Tiempo Real</h3>
                     <p className="text-emerald-800 dark:text-emerald-400/90 text-sm leading-relaxed">
-                      Si un operador escanea un código QR en la planta y levanta un reporte desde su celular, <strong>la orden aparecerá mágicamente en tu Dashboard sin que tengas que recargar la página</strong>. Esto es gracias a nuestra arquitectura de WebSockets bidireccionales.
+                      Si un operador escanea un código QR en la planta y levanta un reporte desde su celular, <strong>la orden aparecerá mágicamente en Órdenes de Trabajo sin que tengas que recargar la página</strong>. Esto es gracias a nuestra arquitectura de WebSockets bidireccionales.
                     </p>
                   </div>
                 </div>
@@ -307,13 +348,20 @@ export const UserManual = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="px-3 py-1 bg-blue-100 text-blue-700 font-bold text-xs rounded-full min-w-[120px] text-center">GESTIONADOR</span>
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Supervisores o Planeadores. Pueden asignar tareas y aprobar, pero no configurar el sistema.</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Supervisores o Planeadores. Pueden asignar tareas, aprobar y acceder a Configuración (excepto Roles y Permisos).</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="px-3 py-1 bg-green-100 text-green-700 font-bold text-xs rounded-full min-w-[120px] text-center">TECNICO</span>
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Personal de campo. Cierran órdenes, consumen inventario, pero no pueden borrar activos ni usuarios.</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Personal de campo. Cierran órdenes, consumen inventario y consultan el Árbol de Fallas, pero no lo editan ni ven Configuración.</span>
                     </div>
                   </div>
+                </div>
+
+                <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-900/30 p-5 rounded-2xl mt-8">
+                  <h3 className="font-bold text-indigo-900 dark:text-indigo-300 mb-2">Árbol de Fallas y Configuración</h3>
+                  <p className="text-indigo-800 dark:text-indigo-400/90 text-sm leading-relaxed">
+                    Todos los roles pueden <strong>ver</strong> el Árbol de Fallas. Solo Administrador y Gestionador pueden <strong>editarlo</strong>. El módulo de Configuración aparece para Administrador y Gestionador; el Técnico no lo ve.
+                  </p>
                 </div>
 
                 <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 p-5 rounded-2xl mt-8">

@@ -69,3 +69,48 @@ body {
   font-weight: bold;
   color: #1d4ed8; /* text-blue-700 */
 }
+
+.rbc-calendar {
+  height: 100%;
+  min-height: 400px;
+}
+
+@media (max-width: 768px) {
+  .rbc-toolbar {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .rbc-toolbar .rbc-toolbar-label {
+    text-align: center;
+    padding: 4px 0;
+  }
+  .rbc-toolbar .rbc-btn-group {
+    flex-wrap: wrap;
+    justify-content: center;
+    display: flex;
+  }
+  .rbc-toolbar button {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+  .rbc-event {
+    font-size: 10px !important;
+    padding: 0 2px !important;
+    line-height: 1.2 !important;
+  }
+  .rbc-month-row {
+    min-height: 64px;
+  }
+  .rbc-header {
+    font-size: 11px;
+    padding: 4px 2px;
+  }
+  .rbc-date-cell {
+    font-size: 11px;
+    padding-right: 4px;
+  }
+  .rbc-time-content {
+    min-width: 560px;
+  }
+}

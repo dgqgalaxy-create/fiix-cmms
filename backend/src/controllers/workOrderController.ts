@@ -160,7 +160,11 @@ export const createPublicWorkOrder = async (req: Request, res: Response): Promis
     io.emit('refresh_work_orders');
     
     // Disparar notificaciones
-    await triggerNewWorkOrderNotification(newWorkOrder);
+    try {
+      await triggerNewWorkOrderNotification(newWorkOrder);
+    } catch (notifyError) {
+      console.error('Error enviando notificaciones de solicitud pública:', notifyError);
+    }
 
     res.status(201).json(newWorkOrder);
   } catch (error) {
@@ -217,16 +221,25 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
         assigned_technicians: assigned_technicians_ids && assigned_technicians_ids.length > 0
           ? { connect: assigned_technicians_ids.map((id: string) => ({ id })) }
           : undefined
+      },
+      include: {
+        asset: true,
+        zone: true,
       }
     });
 
     getIO().emit('refresh_work_orders');
     
-    // Disparar notificaciones
-    await triggerNewWorkOrderNotification(newWorkOrder);
+    // Disparar notificaciones (Telegram + in-app). No debe fallar la creación si fallan.
+    try {
+      await triggerNewWorkOrderNotification(newWorkOrder);
+    } catch (notifyError) {
+      console.error('Error enviando notificaciones de nueva orden:', notifyError);
+    }
     
     res.status(201).json(newWorkOrder);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Error al crear orden de trabajo' });
   }
 };
@@ -234,7 +247,15 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
 export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { title, description, asset_id, status, hold_reason, resolution_notes, assigned_technicians_ids, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group, signature_clean_area, signature_delivery, used_items, failure_problem_id, failure_cause_id, failure_remedy_id, scheduled_date, due_date } = req.body;
+    const { title, description, asset_id, status, hold_reason, resolution_notes, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group, signature_clean_area, signature_delivery, used_items, failure_problem_id, failure_cause_id, failure_remedy_id, scheduled_date, due_date } = req.body;
+    let { assigned_technicians_ids } = req.body;
+    if (typeof assigned_technicians_ids === 'string') {
+      try {
+        assigned_technicians_ids = JSON.parse(assigned_technicians_ids);
+      } catch {
+        assigned_technicians_ids = assigned_technicians_ids ? [assigned_technicians_ids] : [];
+      }
+    }
     const userRole = req.user?.role;
     const userId = req.user?.userId;
 
@@ -261,17 +282,6 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
       }
     }
 
-    if (status === 'EN_PROCESO' && userRole !== 'TECNICO') {
-      const willHaveTechnicians = assigned_technicians_ids 
-        ? assigned_technicians_ids.length > 0 
-        : currentWorkOrder.assigned_technicians.length > 0;
-        
-      if (!willHaveTechnicians) {
-        res.status(400).json({ error: 'Debes asignar al menos un técnico para pasar la orden a EN PROCESO.' });
-        return;
-      }
-    }
-
     // Multer inyecta los archivos aquí
     const files = (req as any).files as { [fieldname: string]: Express.Multer.File[] };
     
@@ -291,16 +301,22 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
     if (scheduled_date !== undefined) updateData.scheduled_date = scheduled_date ? new Date(scheduled_date) : null;
     if (due_date !== undefined) updateData.due_date = due_date ? new Date(due_date) : null;
     
-    // Auto-asignación: Si un técnico la cambia a EN_PROCESO, se auto-asigna si la lista estaba vacía
-    if (userRole === 'TECNICO' && status === 'EN_PROCESO' && currentWorkOrder.status === 'PENDIENTE') {
-      if (currentWorkOrder.assigned_technicians.length === 0) {
-        updateData.assigned_technicians = { connect: [{ id: userId }] };
-      }
-    }
-
     // Solo permitir que Administradores y Gestionadores reasignen masivamente
     if (userRole !== 'TECNICO' && assigned_technicians_ids !== undefined) {
       updateData.assigned_technicians = { set: assigned_technicians_ids.map((tid: string) => ({ id: tid })) };
+    }
+
+    // Auto-asignación al aceptar la orden (pasar de PENDIENTE a EN_PROCESO):
+    // si no quedará ningún técnico asignado, se auto-asigna a quien la acepta,
+    // sin importar su rol (técnico, gestionador o administrador).
+    if (status === 'EN_PROCESO' && currentWorkOrder.status === 'PENDIENTE' && userId) {
+      const willHaveTechnicians = (userRole !== 'TECNICO' && assigned_technicians_ids !== undefined)
+        ? assigned_technicians_ids.length > 0
+        : currentWorkOrder.assigned_technicians.length > 0;
+
+      if (!willHaveTechnicians) {
+        updateData.assigned_technicians = { set: [{ id: userId }] };
+      }
     }
     
     if (status === 'EN_ESPERA') {

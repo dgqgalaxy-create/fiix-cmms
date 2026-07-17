@@ -279,9 +279,9 @@ export const RosterPage = () => {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-[1000px] print:block print:min-h-[auto]">
+      <div className="flex-1 flex flex-col lg:flex-row gap-4 lg:gap-6 min-h-0 lg:min-h-[700px] print:block print:min-h-[auto]">
         {/* Calendar Area */}
-        <div className="flex-1 bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col print:h-[650px] print:border-none print:shadow-none print:p-0">
+        <div className="flex-1 bg-white dark:bg-slate-800 rounded-3xl p-3 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col h-[60vh] min-h-[420px] lg:h-auto lg:min-h-[700px] print:h-[650px] print:border-none print:shadow-none print:p-0">
           {loading && !data ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -297,6 +297,7 @@ export const RosterPage = () => {
               views={['month', 'week']}
               defaultView="month"
               culture="es"
+              style={{ height: '100%', minHeight: 400 }}
               messages={{
                 next: 'Siguiente',
                 previous: 'Anterior',
@@ -313,13 +314,13 @@ export const RosterPage = () => {
               onSelectSlot={(slotInfo) => setSelectedDay(slotInfo.start)}
               draggableAccessor={() => false}
               onDropFromOutside={handleDropFromOutside}
-              popup={false}
+              popup={true}
             />
           )}
         </div>
 
         {/* Sidebar for Drag & Drop Exceptions */}
-        <div className="w-full lg:w-80 flex flex-col gap-6 print:hidden">
+        <div className="w-full lg:w-80 flex flex-col gap-6 print:hidden shrink-0">
           {canManageShifts && (
             <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
               <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">

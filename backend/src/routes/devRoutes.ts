@@ -268,6 +268,15 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
        return null;
     };
 
+    // Parseo robusto de números que pueden venir con coma como separador de miles
+    // (ej. "2,140.22" -> 2140.22). Sin esto parseFloat corta en la coma y devuelve 2.
+    const parseNumber = (val: any): number => {
+      if (val === null || val === undefined) return 0;
+      const cleaned = String(val).replace(/,/g, '').trim();
+      const n = parseFloat(cleaned);
+      return isNaN(n) ? 0 : n;
+    };
+
     const files = req.files as Express.Multer.File[];
     if (!files || files.length === 0) {
       res.status(400).json({ message: 'No se subieron archivos CSV.' });
@@ -477,8 +486,34 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
       const data = parse(invFile.buffer.toString('utf8'), { columns: true, skip_empty_lines: true });
       const allUsers = await prisma.user.findMany();
       const allItems = await prisma.item.findMany();
-      const userMap = Object.fromEntries(allUsers.map(u => [u.email, u.id]));
+      const userMap: Record<string, string> = Object.fromEntries(allUsers.map(u => [u.email, u.id]));
       const itemMap = Object.fromEntries(allItems.map(i => [i.internal_code, i.id]));
+
+      // Auto-crear usuarios que aparecen en movimientos pero no vienen en Users.csv,
+      // para no perder transacciones históricas de inventario.
+      const invDefaultHash = await bcrypt.hash('CMMS2026*', 10);
+      const missingEmails = new Set<string>();
+      for (const row of data as any[]) {
+        const email = row['User ID'] ? row['User ID'].trim() : '';
+        if (email && !userMap[email]) missingEmails.add(email);
+      }
+      for (const email of missingEmails) {
+        try {
+          const created = await prisma.user.create({
+            data: {
+              name: email.split('@')[0],
+              email,
+              password_hash: invDefaultHash,
+              role: Role.TECNICO,
+              is_active: false,
+            }
+          });
+          userMap[email] = created.id;
+          results.users++;
+        } catch (e) {
+          console.error('Inventory user auto-create error', email, e);
+        }
+      }
 
       await prisma.$executeRawUnsafe(`TRUNCATE TABLE "InventoryTransaction" CASCADE;`);
       
@@ -493,7 +528,7 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
           invCreates.push({
             item_id: itemMap[itemCode],
             user_id: userMap[email],
-            amount: parseFloat(row['Amount']) || 0,
+            amount: parseNumber(row['Amount']),
             reason: row['Reason'] || 'Sin motivo',
             created_at: date
           });
@@ -624,7 +659,7 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
                started_at,
                paused_at: parseSafeDate(row['HORA PAUSA']) || null,
                completed_at: status === WorkOrderStatus.ANULADO && !completed_at ? new Date() : completed_at,
-               accumulated_time_ms: row['TIEMPO REPARACIÓN'] ? Math.floor(parseFloat(row['TIEMPO REPARACIÓN']) * 60000) : 0,
+               accumulated_time_ms: Math.floor(parseNumber(row['TIEMPO REPARACIÓN']) * 60000),
                assigned_technicians: { connect: assignedUserIds }
             };
 

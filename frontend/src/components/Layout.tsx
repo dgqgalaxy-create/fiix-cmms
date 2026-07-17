@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { sendHeartbeat } from '../api/users';
 import { Menu, Wifi, WifiOff } from 'lucide-react';
 import { NotificationsBell } from './NotificationsBell';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
+  const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
+  const isWidePage = location.pathname.startsWith('/calendar') || location.pathname.startsWith('/roster');
 
   useEffect(() => {
     // Send initial heartbeat
@@ -102,7 +105,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
           )}
         </div>
 
-        <div className="max-w-6xl mx-auto">
+        <div className={isWidePage ? 'max-w-none' : 'max-w-6xl mx-auto'}>
           {children}
         </div>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
-import { Plus, Edit2, Trash2, GitBranch, AlertTriangle, Hammer, CheckCircle } from 'lucide-react';
+import { Plus, GitBranch, AlertTriangle, Hammer } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface RCAItem {
@@ -17,10 +17,8 @@ export const RCAPage = () => {
   const [selectedProblem, setSelectedProblem] = useState<string | null>(null);
   const [selectedCause, setSelectedCause] = useState<string | null>(null);
 
-  const [loading, setLoading] = useState(false);
-  const { token } = useAuth();
-
-  // Usa la instancia api importada, no se necesita axios.create local
+  const { hasPermission } = useAuth();
+  const canManage = hasPermission('MANAGE_RCA');
 
   useEffect(() => {
     fetchProblems();
@@ -70,6 +68,7 @@ export const RCAPage = () => {
   };
 
   const handleAdd = async (type: 'problem' | 'cause' | 'remedy') => {
+    if (!canManage) return;
     const name = prompt('Ingrese el nombre:');
     if (!name) return;
 
@@ -90,6 +89,7 @@ export const RCAPage = () => {
   };
 
   const handleToggleActive = async (type: 'problem' | 'cause' | 'remedy', item: RCAItem) => {
+    if (!canManage) return;
     try {
       const endpoint = type === 'problem' ? '/rca/problems' : type === 'cause' ? '/rca/causes' : '/rca/remedies';
       await api.put(`${endpoint}/${item.id}`, { name: item.name, is_active: !item.is_active });
@@ -109,13 +109,15 @@ export const RCAPage = () => {
           <Icon size={18} className="text-slate-500" />
           {title}
         </h3>
-        <button 
-          onClick={onAdd}
-          className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors"
-          title="Agregar nuevo"
-        >
-          <Plus size={16} />
-        </button>
+        {canManage && (
+          <button
+            onClick={onAdd}
+            className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors"
+            title="Agregar nuevo"
+          >
+            <Plus size={16} />
+          </button>
+        )}
       </div>
       <div className="flex-1 overflow-y-auto space-y-2 pr-2">
         {items.length === 0 ? (
@@ -134,16 +136,18 @@ export const RCAPage = () => {
               <span className={`text-sm font-medium ${!item.is_active ? 'line-through text-slate-400' : 'text-slate-700'}`}>
                 {item.name}
               </span>
-              <button 
-                onClick={(e) => { e.stopPropagation(); handleToggleActive(type, item); }}
-                className={`text-xs px-2 py-1 rounded-md font-medium transition-colors ${
-                  item.is_active 
-                    ? 'bg-red-50 text-red-600 hover:bg-red-100' 
-                    : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                }`}
-              >
-                {item.is_active ? 'Desactivar' : 'Activar'}
-              </button>
+              {canManage && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleToggleActive(type, item); }}
+                  className={`text-xs px-2 py-1 rounded-md font-medium transition-colors ${
+                    item.is_active
+                      ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                      : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                  }`}
+                >
+                  {item.is_active ? 'Desactivar' : 'Activar'}
+                </button>
+              )}
             </div>
           ))
         )}
@@ -159,7 +163,11 @@ export const RCAPage = () => {
             <GitBranch className="text-blue-600" />
             Árbol de Fallas (RCA)
           </h1>
-          <p className="text-slate-500 dark:text-slate-300 mt-1">Configura las categorías para el Análisis de Causa Raíz.</p>
+          <p className="text-slate-500 dark:text-slate-300 mt-1">
+            {canManage
+              ? 'Configura las categorías para el Análisis de Causa Raíz.'
+              : 'Consulta las categorías del Análisis de Causa Raíz.'}
+          </p>
         </div>
       </div>
 

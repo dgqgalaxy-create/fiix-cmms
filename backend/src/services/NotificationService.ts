@@ -22,7 +22,7 @@ export const triggerNewWorkOrderNotification = async (workOrder: any) => {
     user_id: user.id,
     title,
     message,
-    link: `/dashboard`
+    link: `/dashboard?wo=${workOrder.id}`
   }));
 
   if (notifications.length > 0) {

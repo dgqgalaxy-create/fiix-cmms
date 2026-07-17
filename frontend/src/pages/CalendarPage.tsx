@@ -188,10 +188,11 @@ export const CalendarPage = () => {
         </div>
       </div>
 
-      <div className="w-full h-[calc(100vh-160px)] bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row gap-6">
+      <div className="w-full min-h-[480px] h-[calc(100dvh-14rem)] md:h-[calc(100vh-160px)] bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row gap-4 md:gap-6">
         
         {/* Main Calendar Area */}
-        <div className="flex-1 h-full overflow-hidden">
+        <div className="flex-1 min-h-[420px] md:min-h-0 md:h-full overflow-x-auto overflow-y-hidden">
+          <div className="h-full min-w-[280px] md:min-w-0">
           {loading ? (
             <div className="h-full flex items-center justify-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -209,6 +210,7 @@ export const CalendarPage = () => {
               onView={(view) => setCurrentView(view)}
               views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
               culture="es"
+              style={{ height: '100%', minHeight: 420 }}
               messages={{
                 next: "Sig",
                 previous: "Ant",
@@ -269,11 +271,12 @@ export const CalendarPage = () => {
               }}
             />
           )}
+          </div>
         </div>
 
         {/* Sidebar for Unscheduled */}
         {canManageCalendar && (
-          <div className="w-full md:w-80 flex flex-col gap-4 h-full">
+          <div className="w-full md:w-80 flex flex-col gap-4 max-h-64 md:max-h-none md:h-full shrink-0">
             <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700 h-full flex flex-col overflow-hidden">
               <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2">

@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Bell } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { socket } from '../api/socket';
 
 export const NotificationsBell = () => {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -29,7 +30,6 @@ export const NotificationsBell = () => {
     if (socket) {
       socket.on('new_notification', () => {
         fetchNotifications();
-        // Optional: Play a sound
       });
     }
 
@@ -75,6 +75,25 @@ export const NotificationsBell = () => {
     }
   };
 
+  const resolveNotificationPath = (notif: { link?: string; title?: string }) => {
+    if (notif.link && notif.link.includes('wo=')) {
+      return notif.link;
+    }
+    const folioMatch = notif.title?.match(/WO-(\d+)/i);
+    if (folioMatch) {
+      return `/dashboard?folio=${parseInt(folioMatch[1], 10)}`;
+    }
+    return notif.link || '/dashboard';
+  };
+
+  const handleNotificationClick = async (notif: any) => {
+    setIsOpen(false);
+    if (!notif.is_read) {
+      await handleMarkAsRead(notif.id);
+    }
+    navigate(resolveNotificationPath(notif));
+  };
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button 
@@ -112,21 +131,20 @@ export const NotificationsBell = () => {
               </div>
             ) : (
               notifications.map((notif) => (
-                <div 
-                  key={notif.id} 
-                  className={`p-3 border-b border-slate-50 hover:bg-slate-50 transition-colors ${!notif.is_read ? 'bg-blue-50/50' : ''}`}
-                  onClick={() => handleMarkAsRead(notif.id)}
+                <button
+                  key={notif.id}
+                  type="button"
+                  className={`w-full text-left p-3 border-b border-slate-50 hover:bg-slate-50 transition-colors ${!notif.is_read ? 'bg-blue-50/50' : ''}`}
+                  onClick={() => handleNotificationClick(notif)}
                 >
-                  <Link to={notif.link || '/dashboard'} onClick={() => setIsOpen(false)} className="block">
-                    <p className={`text-sm ${!notif.is_read ? 'font-semibold text-slate-900' : 'text-slate-700'}`}>
-                      {notif.title}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1 line-clamp-2">{notif.message}</p>
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      {new Date(notif.created_at).toLocaleString()}
-                    </p>
-                  </Link>
-                </div>
+                  <p className={`text-sm ${!notif.is_read ? 'font-semibold text-slate-900' : 'text-slate-700'}`}>
+                    {notif.title}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1 line-clamp-2">{notif.message}</p>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    {new Date(notif.created_at).toLocaleString()}
+                  </p>
+                </button>
               ))
             )}
           </div>

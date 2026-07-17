@@ -50,6 +50,11 @@ export const getWorkOrders = async (): Promise<WorkOrder[]> => {
   return response.data;
 };
 
+export const getWorkOrderById = async (id: string): Promise<WorkOrder> => {
+  const response = await api.get(`/work-orders/${id}`);
+  return response.data;
+};
+
 export const getWorkOrdersSummary = async (startDate?: string, endDate?: string): Promise<Record<string, number>> => {
   let url = '/work-orders/summary';
   if (startDate && endDate) {
@@ -83,6 +88,9 @@ export const updateWorkOrder = async (id: string, data: any) => {
     if (data.failure_problem_id) formData.append('failure_problem_id', data.failure_problem_id);
     if (data.failure_cause_id) formData.append('failure_cause_id', data.failure_cause_id);
     if (data.failure_remedy_id) formData.append('failure_remedy_id', data.failure_remedy_id);
+    if (data.assigned_technicians_ids !== undefined) {
+      formData.append('assigned_technicians_ids', JSON.stringify(data.assigned_technicians_ids));
+    }
 
     const response = await api.patch(`/work-orders/${id}`, formData);
     return response.data;

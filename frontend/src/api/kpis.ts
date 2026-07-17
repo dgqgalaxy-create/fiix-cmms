@@ -6,11 +6,17 @@ export interface KPIMetric {
     targetValue: number;
     unit: string;
   };
-  details?: any[];
+  details?: Array<{ id: string; name: string; count: number }>;
+  sampleSize?: number;
+  isNull?: boolean;
 }
 
 export interface KPIResponse {
   totalOrders: number;
+  period?: {
+    start: string;
+    end: string;
+  };
   metrics: {
     COMPLETED_MONTHLY: KPIMetric;
     MTTR: KPIMetric;
@@ -28,8 +34,10 @@ export const getKPIs = async (period?: string): Promise<KPIResponse> => {
   return response.data;
 };
 
-export const updateKPIGoals = async (goals: { metricKey: string; targetValue: number; unit?: string }[]): Promise<void> => {
-  await api.post('/kpis/goals', { goals });
+export const updateKPIGoals = async (
+  goals: { metricKey: string; targetValue: number; unit?: string }[],
+): Promise<void> => {
+  await api.put('/kpis/goals', { goals });
 };
 
 export interface ChartData {
@@ -37,6 +45,7 @@ export interface ChartData {
   costos: number;
   mttr: number;
   mtbf: number;
+  mtbfSample?: number;
 }
 
 export const getChartData = async (period?: string): Promise<ChartData[]> => {
@@ -83,5 +92,20 @@ export interface FailureOrder {
 export const getAssetFailureOrders = async (assetId: string, period?: string): Promise<FailureOrder[]> => {
   const query = period ? `?period=${period}` : '';
   const response = await api.get(`/kpis/top-failures/${assetId}/orders${query}`);
+  return response.data;
+};
+
+export interface TechnicianPerformance {
+  id: string;
+  name: string;
+  Finalizadas: number;
+  EnProceso: number;
+  Pendientes: number;
+  Total: number;
+}
+
+export const getTechnicianPerformance = async (period?: string): Promise<TechnicianPerformance[]> => {
+  const query = period ? `?period=${period}` : '';
+  const response = await api.get(`/kpis/technician-performance${query}`);
   return response.data;
 };

@@ -1,0 +1,13 @@
+---
+description: Mantener versión, novedades y manual actualizados sin publicar automáticamente
+alwaysApply: true
+---
+
+# Versionado y documentación
+
+- Al corregir bugs o agregar mejoras, incrementar la versión semántica según corresponda.
+- Mantener sincronizadas las versiones visibles de la aplicación y las de `frontend/package.json` y `backend/package.json`.
+- Actualizar la fecha y las novedades en `frontend/src/components/VersionModal.tsx`.
+- Documentar nuevas funciones y cambios de uso en `docs/manual_usuario.md`.
+- Actualizar documentación adicional relevante, como README o roadmap, cuando corresponda.
+- No ejecutar `git push`, crear PR, publicar releases ni modificar repositorios remotos salvo petición explícita del usuario.
