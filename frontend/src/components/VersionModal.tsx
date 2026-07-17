@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.22.1";
+export const APP_VERSION = "1.22.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: En el Portal de Solicitudes (/request) puedes adjuntar una foto opcional desde la cámara o la galería; se guarda como evidencia de la falla en la OT.",
     "Corrección: El Calendario y las notificaciones ya no llaman a localhost; usan el host del servidor (necesario en Ubuntu / acceso por IP).",
     "Nuevo: Dashboard de técnicos en KPIs: carga del día, OTs pausadas, tiempo en espera y productividad semanal (cierres y horas de labor), con gráfica top 8.",
     "Mejora: Al pausar una OT (En espera) se registra la hora de pausa para medir el tiempo detenido con precisión.",

@@ -1,11 +1,16 @@
 import { Router } from 'express';
 import { createPublicWorkOrder } from '../controllers/workOrderController';
+import { upload } from '../middlewares/upload';
 import prisma from '../config/prisma';
 
 const router = Router();
 
-// Endpoint for public work order creation
-router.post('/requests', createPublicWorkOrder);
+// Endpoint for public work order creation (optional request_image via multipart)
+router.post(
+  '/requests',
+  upload.fields([{ name: 'request_image', maxCount: 1 }]),
+  createPublicWorkOrder
+);
 
 // Endpoints to populate the public form dropdowns without auth
 router.get('/locations', async (req, res) => {

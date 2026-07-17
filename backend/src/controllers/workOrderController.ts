@@ -152,6 +152,12 @@ export const createPublicWorkOrder = async (req: Request, res: Response): Promis
       return;
     }
 
+    const files = (req as any).files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    let request_image_url: string | undefined;
+    if (files && files['request_image']) {
+      request_image_url = `/uploads/${files['request_image'][0].filename}`;
+    }
+
     if (requester_name) {
       const nameTrimmed = requester_name.trim();
       const existingReq = await prisma.requester.findUnique({ where: { name: nameTrimmed } });
@@ -166,13 +172,14 @@ export const createPublicWorkOrder = async (req: Request, res: Response): Promis
         description: fullDescription,
         asset_id,
         zone_id,
-        machine_stopped: machine_stopped ?? false,
+        machine_stopped: machine_stopped === true || machine_stopped === 'true',
         requester_name,
         created_by_id: adminUser.id,
         status: 'PENDIENTE' as any,
         priority: (priority || 'NORMAL') as any,
         maintenance_type: (maintenance_type || 'CORRECTIVO') as any,
         production_group: (production_group || 'NA') as any,
+        request_image_url,
       },
       include: {
         asset: true,

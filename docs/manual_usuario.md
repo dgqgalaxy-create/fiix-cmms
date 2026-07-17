@@ -78,7 +78,7 @@ Gestión de solicitudes (listado), sin el resumen gráfico:
 ### Portal de Solicitudes (`/request`)
 Formulario público para reportar fallas. Es el mismo diseño que **+ Nueva Orden**, con estas diferencias:
 - No permite asignar técnicos.
-- No incluye carga de fotografía.
+- Permite adjuntar una foto opcional (cámara o galería); no es obligatoria para enviar.
 - El solicitante se elige de un desplegable; si no aparece tu nombre, elige **Otro (escribir nombre)...** y escríbelo.
 
 ## 6. Módulo de Personal (Directorio)
