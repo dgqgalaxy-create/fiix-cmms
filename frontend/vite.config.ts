@@ -20,6 +20,7 @@ export default defineConfig({
         short_name: 'Fiix',
         description: 'Gestor de Mantenimiento',
         theme_color: '#ffffff',
+        start_url: '/home',
         icons: [
           {
             src: 'icono_app.jpg',

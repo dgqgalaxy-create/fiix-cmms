@@ -28,16 +28,19 @@ import { RosterPage } from './pages/RosterPage';
 
 function App() {
   useEffect(() => {
-    // Verificamos si es una nueva sesión del navegador
+    // Nueva sesión del navegador (cierres de todas las pestañas / apertura en frío):
+    // aterrizar siempre en Inicio, salvo portal público o deep links (OT, activo, ítem).
     const isNewSession = !sessionStorage.getItem('session_initialized');
     if (isNewSession) {
       sessionStorage.setItem('session_initialized', 'true');
       const token = localStorage.getItem('token');
-      // Si el usuario está autenticado y abre la raíz o login, lo mandamos a Inicio.
-      // No forzar redirección desde otras rutas (KPIs, Activos, etc.) para no romper deep links ni refrescos.
-      const forceHomeFrom = ['/', '/login'];
-      if (token && forceHomeFrom.includes(window.location.pathname)) {
-        window.location.href = '/home';
+      const path = window.location.pathname;
+      const search = window.location.search;
+      const isPublic = path === '/request' || path === '/manual';
+      const isDeepLink =
+        /[?&](wo|folio|asset|item)=/.test(search);
+      if (token && !isPublic && !isDeepLink && path !== '/home') {
+        window.location.replace('/home');
       }
     }
 

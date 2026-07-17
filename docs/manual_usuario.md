@@ -48,7 +48,7 @@ Se han mejorado las reglas del almacén para prevenir errores y mejorar la fluid
 
 ## 4. Módulo Inicio
 
-Pantalla de resumen operativo (antes mezclada con el listado de órdenes):
+Pantalla de resumen operativo (antes mezclada con el listado de órdenes). Es la pantalla de entrada al abrir el sistema en una sesión nueva.
 - **Pareto de problemas frecuentes** (correctivo) y distribución visual de mantenimiento. La gráfica de dona muestra el total en el centro y desglosa cada tipo con cantidad, porcentaje y barra comparativa.
 - **Filtro de fechas** para el resumen superior (o modo histórico si no hay rango). El selector, las tarjetas y la distribución de mantenimiento están dentro del marco **Resumen por periodo**, indicando claramente qué elementos afecta.
 - **Tarjetas de estado:** **Total recibidas** es únicamente informativa y muestra la cifra general con mayor énfasis. Pendientes, En Proceso, Pausadas, Finalizadas e Invalidadas sí abren **Órdenes de Trabajo** con el filtro correspondiente.
