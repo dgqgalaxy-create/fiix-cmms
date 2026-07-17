@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Calendar as BigCalendar, dateFnsLocalizer, Views } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import es from 'date-fns/locale/es';
@@ -8,7 +7,7 @@ import withDragAndDropRaw from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useAuth } from '../context/AuthContext';
 import { Calendar, LayoutList, CheckCircle2, ArrowRight, X } from 'lucide-react';
-import { updateWorkOrder, joinWorkOrder, deleteWorkOrder } from '../api/workOrders';
+import { getWorkOrders, updateWorkOrder, joinWorkOrder, deleteWorkOrder } from '../api/workOrders';
 import type { WorkOrder } from '../api/workOrders';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
@@ -53,10 +52,7 @@ export const CalendarPage = () => {
 
   const fetchOrders = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/work-orders', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data: WorkOrder[] = response.data;
+      const data = await getWorkOrders();
       setWorkOrders(data);
       
       const newEvents: CustomEvent[] = [];
@@ -121,13 +117,7 @@ export const CalendarPage = () => {
       // Default to 1 hour if end date is not provided
       const due_date = (end || new Date(start.getTime() + 60 * 60 * 1000)).toISOString();
       
-      await axios.patch(`http://localhost:3000/api/work-orders/${orderId}`, {
-        scheduled_date,
-        due_date
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
+      await updateWorkOrder(orderId, { scheduled_date, due_date });
       await fetchOrders();
     } catch (error) {
       console.error('Error scheduling order:', error);
@@ -139,13 +129,7 @@ export const CalendarPage = () => {
   const handleUnschedule = async (orderId: string) => {
     try {
       setIsUpdating(true);
-      await axios.patch(`http://localhost:3000/api/work-orders/${orderId}`, {
-        scheduled_date: null,
-        due_date: null
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
+      await updateWorkOrder(orderId, { scheduled_date: null, due_date: null });
       await fetchOrders();
     } catch (error) {
       console.error('Error unscheduling order:', error);

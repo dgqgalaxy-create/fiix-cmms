@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { socket } from '../api/socket';
+import { BACKEND_URL } from '../api/axios';
 import { parseWorkOrderFolio } from '../utils/folio';
 
 export const NotificationsBell = () => {
@@ -13,7 +14,7 @@ export const NotificationsBell = () => {
   const fetchNotifications = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3000/api/notifications', {
+      const res = await fetch(`${BACKEND_URL}/api/notifications`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -53,7 +54,7 @@ export const NotificationsBell = () => {
   const handleMarkAsRead = async (id: string) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`http://localhost:3000/api/notifications/${id}/read`, {
+      await fetch(`${BACKEND_URL}/api/notifications/${id}/read`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -66,7 +67,7 @@ export const NotificationsBell = () => {
   const handleMarkAllAsRead = async () => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`http://localhost:3000/api/notifications/read-all`, {
+      await fetch(`${BACKEND_URL}/api/notifications/read-all`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}` }
       });

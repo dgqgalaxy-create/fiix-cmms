@@ -127,6 +127,7 @@ Panel de indicadores de mantenimiento:
   - **OTs pausadas** y **tiempo en espera** acumulado (reloj desde que se pausó la orden).
   - **Productividad semanal** (lunes–domingo): órdenes finalizadas y horas de labor registradas al cerrar.
   - Tabla por técnico (incluye también Fin./Proc./Pend. del periodo seleccionado) y gráfica top 8 de la semana.
+- **Calendario (pendientes):** la lista lateral de OT pendientes sin programar requiere el permiso **Administrar Calendario**. El módulo usa la misma URL del API que el resto del sistema (host del servidor), no `localhost`.
 - **Nota:** el gráfico de costos representa **refacciones consumidas**, no el costo total de mantenimiento.
 
 ## 8.1 Apariencia y consistencia visual

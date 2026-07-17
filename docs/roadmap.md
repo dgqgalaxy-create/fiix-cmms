@@ -3,9 +3,12 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 17 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.22.0 (Actualización: 17 de Julio de 2026)
+## 🚀 Versión Actual: v1.22.1 (Actualización: 17 de Julio de 2026)
 
-### Novedades en v1.22.0 (Dashboard de técnicos)
+### Novedades en v1.22.1 (Calendario en servidor)
+- **Conexión corregida:** Calendario y notificaciones usan el host del servidor en lugar de `localhost`, para funcionar al acceder a Ubuntu por IP o dominio.
+
+### Novedades Anteriores (v1.22.0 - Dashboard de técnicos)
 - **KPIs → Dashboard de técnicos:** carga del día, OTs pausadas, tiempo en espera y productividad semanal (cierres + horas de labor), con gráfica top 8.
 - **Reloj de pausa:** al pasar una OT a En espera se guarda `paused_at` para medir el tiempo detenido.
 
