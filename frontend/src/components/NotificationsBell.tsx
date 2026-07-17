@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { socket } from '../api/socket';
+import { parseWorkOrderFolio } from '../utils/folio';
 
 export const NotificationsBell = () => {
   const navigate = useNavigate();
@@ -79,9 +80,9 @@ export const NotificationsBell = () => {
     if (notif.link && notif.link.includes('wo=')) {
       return notif.link;
     }
-    const folioMatch = notif.title?.match(/WO-(\d+)/i);
-    if (folioMatch) {
-      return `/dashboard?folio=${parseInt(folioMatch[1], 10)}`;
+    const folioNum = parseWorkOrderFolio(notif.title?.match(/(?:FOL-|WO-)\d+/i)?.[0] || '');
+    if (folioNum) {
+      return `/dashboard?folio=${folioNum}`;
     }
     return notif.link || '/dashboard';
   };

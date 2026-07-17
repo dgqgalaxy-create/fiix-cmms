@@ -4,6 +4,7 @@ import { getAllPermissions, updateRolePermissions } from '../api/permissions';
 import type { RolePermission } from '../api/permissions';
 import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
+import { useSocketRefresh } from '../hooks/useSocketRefresh';
 
 const AVAILABLE_PERMISSIONS = [
   { key: 'MANAGE_USERS', label: 'Administrar Usuarios', description: 'Crear, editar y eliminar usuarios del sistema.' },
@@ -37,21 +38,23 @@ export const PermissionsPage = () => {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  useEffect(() => {
-    fetchPermissions();
-  }, []);
-
-  const fetchPermissions = async () => {
+  const fetchPermissions = async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) setLoading(true);
       const data = await getAllPermissions();
       setRolePermissions(data);
     } catch (err: any) {
       setError('Error al cargar la configuración de permisos.');
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchPermissions();
+  }, []);
+
+  useSocketRefresh('refresh_permissions', () => { void fetchPermissions(true); });
 
   if (!hasPermission('MANAGE_PERMISSIONS')) {
     return <Navigate to="/home" replace />;

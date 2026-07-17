@@ -39,6 +39,7 @@ import settingsRoutes from './routes/settingsRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import requesterRoutes from './routes/requesterRoutes';
 import rosterRoutes from './routes/rosterRoutes';
+import searchRoutes from './routes/searchRoutes';
 import { initCronJobs } from './utils/cronJobs';
 
 app.get('/api/health', (req: Request, res: Response) => {
@@ -64,6 +65,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/requesters', requesterRoutes);
 app.use('/api/roster', rosterRoutes);
+app.use('/api/search', searchRoutes);
 
 // Initialize Cron Jobs
 initCronJobs();

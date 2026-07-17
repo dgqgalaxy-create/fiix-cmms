@@ -43,6 +43,31 @@ export interface WorkOrder {
   signature_delivery?: string;
   resolution_notes?: string;
   maintenance_plan_id?: string;
+  sla?: {
+    overall: 'OK' | 'RISK' | 'BREACHED' | 'N/A';
+    response: 'OK' | 'RISK' | 'BREACHED' | 'N/A';
+    hold: 'OK' | 'RISK' | 'BREACHED' | 'N/A';
+    resolution: 'OK' | 'RISK' | 'BREACHED' | 'N/A';
+    elapsed?: {
+      response_h: number | null;
+      hold_h: number | null;
+      resolution_h: number | null;
+    };
+  };
+  inventory_transactions?: Array<{
+    id: string;
+    amount: number;
+    unit_cost?: number | null;
+    reason: string;
+    item: {
+      id: string;
+      name: string;
+      internal_code: string;
+      uom: string;
+      purchase_cost?: number | null;
+    };
+  }>;
+  parts_cost_total?: number;
 }
 
 export const getWorkOrders = async (): Promise<WorkOrder[]> => {

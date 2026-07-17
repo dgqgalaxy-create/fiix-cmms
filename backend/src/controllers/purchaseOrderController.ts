@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import prisma from '../config/prisma';
+import { emitRefresh } from '../utils/socket';
 
 export const getPurchaseOrders = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -54,10 +55,98 @@ export const createPurchaseOrder = async (req: AuthRequest, res: Response): Prom
       }
     });
 
+    emitRefresh('refresh_purchase_orders');
     res.status(201).json(order);
   } catch (error) {
     console.error('Error creating purchase order:', error);
     res.status(500).json({ error: 'Error al crear la orden de compra' });
+  }
+};
+
+/** Crea borradores de OC agrupados por proveedor con ítems bajo stock mínimo. */
+export const createDraftsFromLowStock = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const user_id = req.user?.userId;
+    if (!user_id) {
+      res.status(401).json({ error: 'No autorizado' });
+      return;
+    }
+
+    const critical = (await prisma.item.findMany({
+      where: { is_active: true },
+      include: { vendor: { select: { id: true, name: true } } },
+      orderBy: { name: 'asc' },
+    })).filter((item) => item.stock <= item.minimum_inventory);
+
+    if (critical.length === 0) {
+      res.status(400).json({ error: 'No hay ítems activos con stock crítico' });
+      return;
+    }
+
+    const skippedNoVendor: Array<{ id: string; internal_code: string; name: string }> = [];
+    const byVendor = new Map<string, typeof critical>();
+
+    for (const item of critical) {
+      if (!item.vendor_id) {
+        skippedNoVendor.push({
+          id: item.id,
+          internal_code: item.internal_code,
+          name: item.name,
+        });
+        continue;
+      }
+      const list = byVendor.get(item.vendor_id) || [];
+      list.push(item);
+      byVendor.set(item.vendor_id, list);
+    }
+
+    if (byVendor.size === 0) {
+      res.status(400).json({
+        error: 'Los ítems en stock crítico no tienen proveedor asignado. Asigna proveedor en el catálogo e intenta de nuevo.',
+        skipped_no_vendor: skippedNoVendor,
+      });
+      return;
+    }
+
+    const created = await prisma.$transaction(async (tx) => {
+      const orders = [];
+      for (const [vendorId, items] of byVendor.entries()) {
+        const order = await tx.purchaseOrder.create({
+          data: {
+            vendor_id: vendorId,
+            created_by_id: user_id,
+            status: 'BORRADOR',
+            items: {
+              create: items.map((item) => ({
+                item_id: item.id,
+                quantity: Math.max(item.minimum_inventory - item.stock, 1),
+                unit_cost: item.purchase_cost ?? 0,
+              })),
+            },
+          },
+          include: {
+            vendor: { select: { id: true, name: true } },
+            items: { include: { item: { select: { id: true, name: true, internal_code: true, uom: true } } } },
+          },
+        });
+        orders.push(order);
+      }
+      return orders;
+    });
+
+    emitRefresh('refresh_purchase_orders');
+    res.status(201).json({
+      created,
+      skipped_no_vendor: skippedNoVendor,
+      summary: {
+        drafts: created.length,
+        items_included: created.reduce((sum, o) => sum + o.items.length, 0),
+        items_skipped: skippedNoVendor.length,
+      },
+    });
+  } catch (error) {
+    console.error('Error creating draft POs from low stock:', error);
+    res.status(500).json({ error: 'Error al generar borradores de orden de compra' });
   }
 };
 
@@ -131,6 +220,8 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
           });
         }
       });
+      emitRefresh('refresh_purchase_orders');
+      emitRefresh('refresh_inventory');
       res.json({ message: 'Orden recibida y el inventario ha sido actualizado' });
       return;
     }
@@ -145,6 +236,7 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
       }
     });
 
+    emitRefresh('refresh_purchase_orders');
     res.json(updatedOrder);
   } catch (error) {
     console.error('Error updating purchase order status:', error);

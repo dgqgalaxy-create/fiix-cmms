@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { Role } from '@prisma/client';
+import { emitRefresh } from '../utils/socket';
 
 const defaultPermissions: Record<Role, any> = {
   ADMINISTRADOR: {
@@ -162,6 +163,7 @@ export const updateRolePermissions = async (req: Request, res: Response): Promis
       create: { role, permissions },
     });
 
+    emitRefresh('refresh_permissions');
     res.json(updated);
   } catch (error) {
     res.status(500).json({ error: 'Error al actualizar permisos' });

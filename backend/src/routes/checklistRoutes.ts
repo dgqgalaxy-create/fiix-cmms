@@ -7,6 +7,8 @@ import {
   reviewChecklist, 
   getChecklistHistory,
   getChecklistById,
+  getChecklistConfig,
+  updateChecklistConfig,
   getActivities,
   createActivity,
   updateActivity,
@@ -21,6 +23,8 @@ const router = Router();
 router.use(authenticate);
 
 // Catálogo de Actividades
+router.get('/config', getChecklistConfig);
+router.put('/config', requirePermission('MANAGE_CHECKLIST_CATALOG'), updateChecklistConfig);
 router.get('/activities', getActivities);
 router.post('/activities', requirePermission('MANAGE_CHECKLIST_CATALOG'), createActivity);
 router.post('/activities/restore-defaults', requirePermission('MANAGE_CHECKLIST_CATALOG'), restoreDefaultActivities);

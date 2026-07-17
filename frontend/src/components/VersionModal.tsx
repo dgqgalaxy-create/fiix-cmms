@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.12.9";
+export const APP_VERSION = "1.22.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "16 de Julio, 2026";
+  const updateDate = "17 de Julio, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -28,6 +28,31 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Dashboard de técnicos en KPIs: carga del día, OTs pausadas, tiempo en espera y productividad semanal (cierres y horas de labor), con gráfica top 8.",
+    "Mejora: Al pausar una OT (En espera) se registra la hora de pausa para medir el tiempo detenido con precisión.",
+    "Nuevo: Actualización casi en tiempo real en todo el sitio (órdenes, inventario, activos, compras, checklist, roster, RCA, zonas, usuarios, etc.) vía Socket.IO, sin necesidad de refrescar la página.",
+    "Nuevo: Bloqueo suave de Órdenes de Trabajo: si alguien tiene una OT abierta, los demás la ven en solo lectura con el aviso «En edición por…». Al cerrar o perder conexión, el candado se libera.",
+    "Mejora: Al aceptar/cambiar estado de una OT, si otro usuario ya la movió, el sistema responde con conflicto (409) y evita pisar el cambio.",
+    "Nuevo: En el Catálogo de Checklist puedes definir el número de columnas (máquinas L1…Ln, hasta 12). Los checklists nuevos usan ese conteo; los históricos conservan el suyo.",
+    "Nuevo: En Configuración → Catálogo de Checklist, cada tarea tiene un selector Check / Número / Texto para definir el tipo de respuesta en los próximos checklists diarios.",
+    "Nuevo: Desde la tarjeta de Stock Crítico en Inventario puedes generar, en un clic, borradores de Orden de Compra con los ítems bajo mínimo (agrupados por proveedor).",
+    "Mejora: Se eliminó el filtro duplicado «Stock Crítico» junto a la búsqueda y el botón «Generar Pedido» (lista .txt); el flujo queda en la tarjeta superior y en Órdenes de Compra.",
+    "Nuevo: Impresión QR masiva disponible tanto en Repuestos como en Ubicaciones, con selección por filtros y hoja de etiquetas.",
+    "Mejora: El detalle de las órdenes usa una ventana más amplia y compacta, distribuye mejor la información, permite textos completos y muestra evidencias sin recortarlas.",
+    "Mejora: El Árbol de Fallas (RCA) al finalizar una correctiva queda opcional, para no forzar datos incorrectos cuando el caso aún no está en el catálogo.",
+    "Nuevo: Los folios de órdenes se estandarizan como FOL-#### (inmutables, autogenerados). La importación CSV ya usa la columna FOLIO con ese formato.",
+    "Mejora: La búsqueda global muestra el atajo Ctrl/Cmd+K (Windows y Mac).",
+    "Mejora: En el vistazo del activo, las etiquetas RCA, PMs y stock crítico muestran ayuda al pasar el puntero.",
+    "Nuevo: Al finalizar una OT, los repuestos registrados se descontan del almacén de forma atómica, quedan ligados a esa orden y el costo de refacciones se muestra en el detalle.",
+    "Nuevo: Historial del activo «de un vistazo»: al abrir o escanear un equipo ves últimas OTs, fallas RCA, PMs próximos, stock crítico relacionado y costo acumulado.",
+    "Nuevo: Búsqueda global con Ctrl/Cmd+K para activos, repuestos, ubicaciones y folios de OT.",
+    "Nuevo: Impresión masiva de etiquetas QR desde Activos y desde Ubicaciones de inventario.",
+    "Mejora: Configuración estrena la pestaña «SLA y tiempos» con formulario por prioridad (Urgente/Normal/Bajo) para editar horas de recordatorio y escalamiento sin tocar código.",
+    "Corrección: SLA ya no satura Telegram con el rezago histórico: al arrancar marca en silencio las OT vencidas, y si hay muchos avisos nuevos envía un solo resumen.",
+    "Nuevo: SLA y escalamiento por prioridad (respuesta, OT detenida y resolución) con recordatorios automáticos cada 15 min, Telegram al grupo e in-app a gestores/admins.",
+    "Nuevo: Configuración de umbrales SLA editables en Configuración → Notificaciones, con badges Dentro de SLA / En riesgo / Vencido en órdenes.",
+    "Nuevo: Migración de códigos de activos históricos (EQ-XXXXX u otros) al formato estándar ACT-0001 desde Opciones de Desarrollador, con vista previa y mapa de equivalencias descargable.",
+    "Corrección: La importación CSV de órdenes ya crea activos faltantes con código ACT-XXXX (ya no genera EQ- aleatorios).",
     "Mejora: El degradado del Manual ahora aparece progresivamente según el desplazamiento y el contenido llega hasta el borde inferior disponible.",
     "Mejora: El contenido del Manual se desvanece bajo un degradado al desplazarse detrás del encabezado y temario fijos.",
     "Mejora: En el Manual, el encabezado y el temario permanecen fijos; únicamente se desplaza la información del tema seleccionado.",

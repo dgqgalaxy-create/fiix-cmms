@@ -3,9 +3,10 @@ import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { sendHeartbeat } from '../api/users';
-import { Menu, Wifi, WifiOff, Info } from 'lucide-react';
+import { Menu, Wifi, WifiOff, Info, Search } from 'lucide-react';
 import { NotificationsBell } from './NotificationsBell';
 import { VersionModal, APP_VERSION } from './VersionModal';
+import { GlobalSearchModal, GlobalSearchTrigger } from './GlobalSearchModal';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
@@ -73,6 +74,15 @@ export const Layout = ({ children }: { children: ReactNode }) => {
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
+            onClick={() => window.dispatchEvent(new Event('open-global-search'))}
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+            title="Buscar (Ctrl+K)"
+            aria-label="Búsqueda global"
+          >
+            <Search size={18} />
+          </button>
+          <button
+            type="button"
             onClick={() => setIsVersionModalOpen(true)}
             className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-emerald-300 bg-emerald-400/10 hover:bg-emerald-400/20 transition-colors"
             title="Versión, novedades y manual"
@@ -100,6 +110,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
         
         {/* Desktop Online/Offline Indicator & Notifications */}
         <div className="hidden md:flex justify-end items-center gap-4 mb-6 z-20 print:hidden">
+          <GlobalSearchTrigger />
           <div className="bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 transition-colors duration-200">
             <NotificationsBell />
           </div>
@@ -122,6 +133,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
         </div>
       </div>
 
+      <GlobalSearchModal />
       <VersionModal
         isOpen={isVersionModalOpen}
         onClose={() => setIsVersionModalOpen(false)}

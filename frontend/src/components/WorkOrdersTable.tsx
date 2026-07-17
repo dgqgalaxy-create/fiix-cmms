@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import type { WorkOrder } from '../api/workOrders';
 import { Clock, CheckCircle2, AlertCircle, Wrench, Calendar, MapPin, Tag, User, ChevronUp, ChevronDown } from 'lucide-react';
+import { SlaBadge } from './SlaBadge';
+import { formatWorkOrderFolio } from '../utils/folio';
 
 interface Props {
   workOrders: WorkOrder[];
@@ -127,7 +129,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
             <div className="flex justify-between items-start mb-2 gap-4">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="bg-slate-800 text-white px-2 py-0.5 rounded text-xs font-bold tracking-wide">
-                  WO-{(wo.folio || 0).toString().padStart(4, '0')}
+                  {formatWorkOrderFolio(wo.folio)}
                 </span>
                 
                 {wo.priority === 'URGENTE' && (
@@ -141,6 +143,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
                     <Clock size={10} /> Auto
                   </span>
                 )}
+                <SlaBadge sla={wo.sla} compact />
               </div>
               <div className="md:hidden">
                 {getStatusBadge(wo.status)}
@@ -267,13 +270,14 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
                   <td className="px-6 py-4 align-top">
                     <div className="flex flex-col gap-1.5 items-start">
                       <span className="bg-slate-800 dark:bg-slate-700 text-white px-2.5 py-1 rounded-md text-xs font-bold tracking-wide">
-                        WO-{(wo.folio || 0).toString().padStart(4, '0')}
+                        {formatWorkOrderFolio(wo.folio)}
                       </span>
                       {wo.priority === 'URGENTE' && (
                         <span className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100 dark:border-red-800 uppercase tracking-widest flex items-center gap-1">
                           <AlertCircle size={10} /> Urgente
                         </span>
                       )}
+                      <SlaBadge sla={wo.sla} compact />
                     </div>
                   </td>
                   <td className="px-6 py-4 align-top">

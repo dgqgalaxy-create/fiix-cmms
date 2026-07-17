@@ -7,6 +7,7 @@ import { getAssets } from '../api/assets';
 import type { Item } from '../api/inventory';
 import { getItems } from '../api/inventory';
 import { MaintenancePlanModal } from '../components/maintenance/MaintenancePlanModal';
+import { useSocketRefresh } from '../hooks/useSocketRefresh';
 
 export const MaintenancePlansPage = () => {
   const [plans, setPlans] = useState<MaintenancePlan[]>([]);
@@ -37,6 +38,8 @@ export const MaintenancePlansPage = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  useSocketRefresh(['refresh_maintenance', 'refresh_assets', 'refresh_inventory'], () => { void loadData(); });
 
   const handleCreate = () => {
     setSelectedPlan(undefined);

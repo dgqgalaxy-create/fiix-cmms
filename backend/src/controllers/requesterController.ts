@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
+import { emitRefresh } from '../utils/socket';
 
 export const getRequesters = async (req: Request, res: Response) => {
   try {
@@ -38,6 +39,7 @@ export const createRequester = async (req: Request, res: Response) => {
       }
     });
 
+    emitRefresh('refresh_requesters');
     res.status(201).json(requester);
   } catch (error) {
     console.error('Error in createRequester:', error);
@@ -72,6 +74,7 @@ export const updateRequester = async (req: Request, res: Response) => {
       }
     });
 
+    emitRefresh('refresh_requesters');
     res.json(requester);
   } catch (error) {
     console.error('Error in updateRequester:', error);
@@ -85,6 +88,7 @@ export const deleteRequester = async (req: Request, res: Response) => {
     await prisma.requester.delete({
       where: { id }
     });
+    emitRefresh('refresh_requesters');
     res.status(204).send();
   } catch (error) {
     console.error('Error in deleteRequester:', error);

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
+import { emitRefresh } from '../utils/socket';
 
 export const getMaintenancePlans = async (req: Request, res: Response) => {
   try {
@@ -62,6 +63,7 @@ export const createMaintenancePlan = async (req: Request, res: Response) => {
       }
     });
 
+    emitRefresh('refresh_maintenance');
     res.status(201).json(plan);
   } catch (error) {
     console.error('Error creating maintenance plan:', error);
@@ -130,6 +132,7 @@ export const updateMaintenancePlan = async (req: Request, res: Response) => {
       });
     });
 
+    emitRefresh('refresh_maintenance');
     res.json(plan);
   } catch (error) {
     console.error('Error updating maintenance plan:', error);
@@ -150,6 +153,7 @@ export const deleteMaintenancePlan = async (req: Request, res: Response) => {
       where: { id }
     });
 
+    emitRefresh('refresh_maintenance');
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting maintenance plan:', error);

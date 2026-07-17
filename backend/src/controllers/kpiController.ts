@@ -557,7 +557,7 @@ export const getCostsByAsset = async (req: AuthRequest, res: Response): Promise<
 
     const folios = new Set<number>();
     for (const tx of transactions) {
-      const match = tx.reason.match(/WO-(\d+)/);
+      const match = tx.reason.match(/(?:FOL-|WO-)(\d+)/i);
       if (match) folios.add(parseInt(match[1], 10));
     }
 
@@ -571,7 +571,7 @@ export const getCostsByAsset = async (req: AuthRequest, res: Response): Promise<
 
     const assetCosts: Record<string, { assetId: string; assetName: string; totalCost: number }> = {};
     for (const tx of transactions) {
-      const match = tx.reason.match(/WO-(\d+)/);
+      const match = tx.reason.match(/(?:FOL-|WO-)(\d+)/i);
       if (!match) continue;
       const wo = woMap.get(parseInt(match[1], 10));
       if (!wo?.asset) continue;
@@ -598,10 +598,20 @@ export const getCostsByAsset = async (req: AuthRequest, res: Response): Promise<
   }
 };
 
+const roundHours = (ms: number): number => Math.round((ms / MS_PER_HOUR) * 10) / 10;
+
+const holdElapsedMs = (wo: { status: string; paused_at: Date | null; updated_at: Date }, now: Date): number => {
+  if (wo.status !== 'EN_ESPERA') return 0;
+  const holdStart = wo.paused_at ?? wo.updated_at;
+  return Math.max(0, now.getTime() - holdStart.getTime());
+};
+
 export const getTechnicianPerformance = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const period = req.query.period as string;
     const { start, effectiveEnd } = getDateRange(period);
+    const { start: weekStart, effectiveEnd: weekEnd } = getDateRange('THIS_WEEK');
+    const now = new Date();
 
     const [technicians, workOrders] = await Promise.all([
       prisma.user.findMany({
@@ -617,10 +627,18 @@ export const getTechnicianPerformance = async (req: AuthRequest, res: Response):
           OR: [
             { completed_at: { gte: start, lte: effectiveEnd } },
             { created_at: { gte: start, lte: effectiveEnd } },
+            { completed_at: { gte: weekStart, lte: weekEnd } },
             { status: { in: ['PENDIENTE', 'EN_PROCESO', 'EN_ESPERA'] } },
           ],
         },
-        include: {
+        select: {
+          id: true,
+          status: true,
+          created_at: true,
+          completed_at: true,
+          updated_at: true,
+          paused_at: true,
+          accumulated_time_ms: true,
           assigned_technicians: { select: { id: true, name: true } },
         },
       }),
@@ -637,17 +655,44 @@ export const getTechnicianPerformance = async (req: AuthRequest, res: Response):
           return wo.created_at >= start && wo.created_at <= effectiveEnd;
         });
 
+        const open = assigned.filter((wo) =>
+          ['PENDIENTE', 'EN_PROCESO', 'EN_ESPERA'].includes(wo.status),
+        );
+        const paused = open.filter((wo) => wo.status === 'EN_ESPERA');
+        const completedThisWeek = assigned.filter(
+          (wo) =>
+            wo.status === 'FINALIZADO' &&
+            wo.completed_at &&
+            wo.completed_at >= weekStart &&
+            wo.completed_at <= weekEnd,
+        );
+        const waitMs = paused.reduce((sum, wo) => sum + holdElapsedMs(wo, now), 0);
+        const laborMs = completedThisWeek.reduce((sum, wo) => sum + (wo.accumulated_time_ms || 0), 0);
+
+        const Finalizadas = inPeriodOrOpen.filter((wo) => wo.status === 'FINALIZADO').length;
+        const EnProceso = inPeriodOrOpen.filter((wo) => wo.status === 'EN_PROCESO').length;
+        const Pendientes = inPeriodOrOpen.filter((wo) => wo.status === 'PENDIENTE').length;
+        const Pausadas = paused.length;
+        const CargaHoy = open.length;
+        const FinalizadasSemana = completedThisWeek.length;
+        const Total = inPeriodOrOpen.length;
+
         return {
           id: tech.id,
           name: tech.name,
-          Finalizadas: inPeriodOrOpen.filter((wo) => wo.status === 'FINALIZADO').length,
-          EnProceso: inPeriodOrOpen.filter((wo) => wo.status === 'EN_PROCESO').length,
-          Pendientes: inPeriodOrOpen.filter((wo) => wo.status === 'PENDIENTE' || wo.status === 'EN_ESPERA').length,
-          Total: inPeriodOrOpen.length,
+          Finalizadas,
+          EnProceso,
+          Pendientes,
+          Pausadas,
+          Total,
+          CargaHoy,
+          TiempoEsperaHoras: roundHours(waitMs),
+          FinalizadasSemana,
+          HorasLaborSemana: roundHours(laborMs),
         };
       })
-      .filter((row) => row.Total > 0)
-      .sort((a, b) => b.Total - a.Total);
+      .filter((row) => row.Total > 0 || row.CargaHoy > 0 || row.FinalizadasSemana > 0)
+      .sort((a, b) => b.CargaHoy - a.CargaHoy || b.FinalizadasSemana - a.FinalizadasSemana || b.Total - a.Total);
 
     res.json(rows);
   } catch (error) {

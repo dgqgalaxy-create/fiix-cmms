@@ -44,6 +44,21 @@ export const createPurchaseOrder = async (orderData: { vendor_id: string; expect
   return data;
 };
 
+export interface LowStockDraftResult {
+  created: PurchaseOrder[];
+  skipped_no_vendor: Array<{ id: string; internal_code: string; name: string }>;
+  summary: {
+    drafts: number;
+    items_included: number;
+    items_skipped: number;
+  };
+}
+
+export const createDraftsFromLowStock = async (): Promise<LowStockDraftResult> => {
+  const { data } = await api.post('/purchase-orders/draft-from-low-stock');
+  return data;
+};
+
 export const updatePurchaseOrderStatus = async (id: string, status: string): Promise<PurchaseOrder> => {
   const { data } = await api.patch(`/purchase-orders/${id}/status`, { status });
   return data;

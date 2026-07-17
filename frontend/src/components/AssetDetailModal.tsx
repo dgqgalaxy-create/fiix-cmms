@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck, AlertTriangle, Clock, Wrench } from 'lucide-react';
+import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck, AlertTriangle, Clock, Wrench, Package, CalendarClock, HelpCircle } from 'lucide-react';
 import type { Asset } from '../api/assets';
 import { BACKEND_URL } from '../api/axios';
 import { getAssetMetrics } from '../api/assets';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { formatWorkOrderFolio } from '../utils/folio';
 
 interface Props {
   asset: Asset | null;
@@ -13,14 +14,22 @@ interface Props {
   onClose: () => void;
 }
 
+const WO_STATUS_LABELS: Record<string, string> = {
+  PENDIENTE: 'Pendiente',
+  EN_PROCESO: 'En Proceso',
+  EN_ESPERA: 'En Espera',
+  FINALIZADO: 'Finalizado',
+  ANULADO: 'Anulado',
+};
+
 export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
-  const [activeTab, setActiveTab] = useState<'info' | 'metrics' | 'history'>('info');
+  const [activeTab, setActiveTab] = useState<'overview' | 'info' | 'metrics' | 'history'>('overview');
   const [metrics, setMetrics] = useState<any>(null);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
 
   useEffect(() => {
     if (isOpen && asset) {
-      setActiveTab('info');
+      setActiveTab('overview');
       fetchMetrics();
     }
   }, [isOpen, asset]);
@@ -39,6 +48,10 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
   };
 
   if (!isOpen || !asset) return null;
+
+  const overview = metrics?.overview;
+  const formatMoney = (n: number) =>
+    new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n || 0);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -94,33 +107,170 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
         </div>
 
         {/* Tabs */}
-        <div className="px-6 pt-4 border-b border-slate-100 dark:border-slate-800 flex gap-6">
-          <button
-            onClick={() => setActiveTab('info')}
-            className={`pb-4 text-sm font-medium transition-colors relative ${activeTab === 'info' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200'}`}
-          >
-            Información General
-            {activeTab === 'info' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 dark:bg-emerald-500 rounded-t-full" />}
-          </button>
-          <button
-            onClick={() => setActiveTab('metrics')}
-            className={`pb-4 text-sm font-medium transition-colors relative ${activeTab === 'metrics' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200'}`}
-          >
-            Monitoreo y KPIs
-            {activeTab === 'metrics' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 dark:bg-emerald-500 rounded-t-full" />}
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={`pb-4 text-sm font-medium transition-colors relative ${activeTab === 'history' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200'}`}
-          >
-            Historial de Órdenes
-            {activeTab === 'history' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 dark:bg-emerald-500 rounded-t-full" />}
-          </button>
+        <div className="px-6 pt-4 border-b border-slate-100 dark:border-slate-800 flex gap-4 sm:gap-6 overflow-x-auto">
+          {([
+            ['overview', 'De un vistazo'],
+            ['info', 'Información'],
+            ['metrics', 'KPIs'],
+            ['history', 'Historial'],
+          ] as const).map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`pb-4 text-sm font-medium transition-colors relative whitespace-nowrap ${activeTab === id ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200'}`}
+            >
+              {label}
+              {activeTab === id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 dark:bg-emerald-500 rounded-t-full" />}
+            </button>
+          ))}
         </div>
 
         {/* Content */}
         <div className="p-6 overflow-y-auto flex-1 bg-slate-50 dark:bg-slate-950/30">
-          
+
+          {activeTab === 'overview' && (
+            <div className="space-y-5">
+              {isLoadingMetrics ? (
+                <div className="flex items-center justify-center py-20 text-slate-400">
+                  <Activity className="animate-spin mr-2" /> Cargando resumen...
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                      <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Costo refacciones</div>
+                      <div className="text-lg font-black text-slate-800 dark:text-slate-100">{formatMoney(overview?.parts_cost_total || 0)}</div>
+                    </div>
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                      <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Valor activo</div>
+                      <div className="text-lg font-black text-slate-800 dark:text-slate-100">{formatMoney(overview?.asset_price || asset.price || 0)}</div>
+                    </div>
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                      <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Costo acumulado</div>
+                      <div className="text-lg font-black text-emerald-700 dark:text-emerald-400">{formatMoney(overview?.total_cost || 0)}</div>
+                    </div>
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                      <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">MTTR / MTBF</div>
+                      <div className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                        {metrics?.mttr_hours > 0 ? `${metrics.mttr_hours}h` : '—'} / {metrics?.mtbf_hours > 0 ? `${metrics.mtbf_hours}h` : '—'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                      <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2">
+                        <Wrench size={16} className="text-blue-500" /> Últimas órdenes
+                      </h3>
+                      {overview?.recent_orders?.length ? (
+                        <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {overview.recent_orders.map((wo: any) => (
+                            <li key={wo.id} className="py-2.5 flex justify-between gap-2 text-sm">
+                              <div className="min-w-0">
+                                <div className="font-medium text-slate-800 dark:text-slate-100 truncate">
+                                  {formatWorkOrderFolio(wo.folio)} · {wo.title}
+                                </div>
+                                <div className="text-xs text-slate-400">
+                                  {format(new Date(wo.created_at), 'dd MMM yyyy', { locale: es })} · {wo.maintenance_type}
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-bold uppercase shrink-0 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 h-fit">
+                                {WO_STATUS_LABELS[wo.status] || wo.status}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-slate-400 py-4 text-center">Sin órdenes registradas</p>
+                      )}
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                      <h3
+                        className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2"
+                        title="Análisis de Causa Raíz (RCA): problemas y causas más frecuentes registrados en el Árbol de Fallas de las órdenes correctivas de este activo."
+                      >
+                        <AlertTriangle size={16} className="text-orange-500" /> Fallas RCA frecuentes
+                        <HelpCircle size={14} className="text-slate-400" />
+                      </h3>
+                      {overview?.top_failures?.length ? (
+                        <ul className="space-y-2">
+                          {overview.top_failures.map((f: any, idx: number) => (
+                            <li key={idx} className="flex justify-between items-start gap-2 text-sm p-2 rounded-xl bg-slate-50 dark:bg-slate-950/50">
+                              <div>
+                                <div className="font-medium text-slate-800 dark:text-slate-100">{f.problem}</div>
+                                {f.cause && <div className="text-xs text-slate-500">{f.cause}</div>}
+                              </div>
+                              <span className="text-xs font-bold text-orange-600 bg-orange-50 dark:bg-orange-950/40 px-2 py-0.5 rounded-full">{f.count}×</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-slate-400 py-4 text-center">Sin RCA registrado en correctivas</p>
+                      )}
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                      <h3
+                        className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2"
+                        title="Mantenimientos Preventivos (PM): planes activos de este equipo cuya próxima fecha de vencimiento ya pasó o cae en los próximos 60 días."
+                      >
+                        <CalendarClock size={16} className="text-violet-500" /> PMs próximos / vencidos
+                        <HelpCircle size={14} className="text-slate-400" />
+                      </h3>
+                      {overview?.upcoming_pms?.length ? (
+                        <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {overview.upcoming_pms.map((pm: any) => {
+                            const due = new Date(pm.next_due_date);
+                            const overdue = due < new Date();
+                            return (
+                              <li key={pm.id} className="py-2.5 flex justify-between gap-2 text-sm">
+                                <span className="font-medium text-slate-800 dark:text-slate-100 truncate">{pm.title}</span>
+                                <span className={`text-xs font-semibold shrink-0 ${overdue ? 'text-red-600' : 'text-slate-500'}`}>
+                                  {format(due, 'dd MMM yyyy', { locale: es })}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-slate-400 py-4 text-center">Sin preventivos en los próximos 60 días</p>
+                      )}
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                      <h3
+                        className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2"
+                        title="Repuestos ligados a los planes preventivos de este activo cuyo stock actual es igual o menor al mínimo configurado."
+                      >
+                        <Package size={16} className="text-red-500" /> Stock crítico relacionado
+                        <HelpCircle size={14} className="text-slate-400" />
+                      </h3>
+                      {overview?.critical_stock?.length ? (
+                        <ul className="space-y-2">
+                          {overview.critical_stock.map((item: any) => (
+                            <li key={item.id} className="flex justify-between text-sm p-2 rounded-xl bg-red-50/60 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40">
+                              <div>
+                                <div className="font-medium text-slate-800 dark:text-slate-100">{item.internal_code}</div>
+                                <div className="text-xs text-slate-500 truncate max-w-[180px]">{item.name}</div>
+                              </div>
+                              <div className="text-right text-xs">
+                                <div className="font-bold text-red-600">{item.stock} {item.uom}</div>
+                                <div className="text-slate-400">mín {item.minimum_inventory}</div>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-slate-400 py-4 text-center">Sin alertas de stock en repuestos del plan</p>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+      
           {/* TAB: INFO */}
           {activeTab === 'info' && (
             <div className="space-y-6">
@@ -337,7 +487,7 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                           <div className="flex justify-between items-start mb-2">
                             <div>
                               <h4 className="font-bold text-slate-800 dark:text-slate-100 inline-flex items-center gap-2">
-                                OT-{wo.folio}: {wo.title}
+                                {formatWorkOrderFolio(wo.folio)}: {wo.title}
                                 <span className="text-xs font-normal text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 px-2 py-0.5 rounded-full border border-slate-100 dark:border-slate-800">
                                   {techs}
                                 </span>

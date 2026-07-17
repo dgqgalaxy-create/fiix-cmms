@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
+import { emitRefresh } from '../utils/socket';
 
 export const getZones = async (req: Request, res: Response) => {
   try {
@@ -29,6 +30,7 @@ export const createZone = async (req: Request, res: Response): Promise<void> => 
     }
 
     const newZone = await prisma.zone.create({ data: { name } });
+    emitRefresh('refresh_zones');
     res.status(201).json(newZone);
   } catch (error) {
     console.error(error);
@@ -48,6 +50,7 @@ export const deleteZone = async (req: Request, res: Response): Promise<void> => 
     }
 
     await prisma.zone.delete({ where: { id } });
+    emitRefresh('refresh_zones');
     res.json({ message: 'Zona eliminada correctamente' });
   } catch (error) {
     console.error(error);

@@ -14,10 +14,14 @@ interface BadgeProps {
   children: ReactNode;
   tone?: BadgeTone;
   className?: string;
+  title?: string;
 }
 
-export const Badge = ({ children, tone = 'neutral', className = '' }: BadgeProps) => (
-  <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold ${tones[tone]} ${className}`.trim()}>
+export const Badge = ({ children, tone = 'neutral', className = '', title }: BadgeProps) => (
+  <span
+    title={title}
+    className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold ${tones[tone]} ${className}`.trim()}
+  >
     {children}
   </span>
 );

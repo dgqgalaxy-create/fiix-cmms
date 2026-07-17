@@ -13,9 +13,22 @@ interface Props {
   onRowClick?: (asset: Asset) => void;
   onPrintQR?: (asset: Asset) => void;
   canManage: boolean;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
-export const AssetsTable = ({ assets, onDelete, onEdit, onRowClick, onPrintQR, canManage }: Props) => {
+export const AssetsTable = ({
+  assets,
+  onDelete,
+  onEdit,
+  onRowClick,
+  onPrintQR,
+  canManage,
+  selectionMode = false,
+  selectedIds,
+  onToggleSelect,
+}: Props) => {
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -106,13 +119,28 @@ export const AssetsTable = ({ assets, onDelete, onEdit, onRowClick, onPrintQR, c
         {sortedAssets.map((asset) => (
           <div
             key={asset.id}
-            onClick={() => onRowClick?.(asset)}
-            className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-150 shadow-sm active:bg-slate-50 dark:active:bg-slate-800 transition-colors cursor-pointer"
+            onClick={() => (selectionMode ? onToggleSelect?.(asset.id) : onRowClick?.(asset))}
+            className={`bg-white dark:bg-slate-900 p-4 rounded-2xl border shadow-sm active:bg-slate-50 dark:active:bg-slate-800 transition-colors cursor-pointer ${
+              selectionMode && selectedIds?.has(asset.id)
+                ? 'border-emerald-400 ring-2 ring-emerald-200 dark:ring-emerald-900'
+                : 'border-slate-150'
+            }`}
           >
             <div className="flex justify-between items-start mb-2 gap-2">
-              <span className="font-mono text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                {asset.internal_code}
-              </span>
+              <div className="flex items-center gap-2">
+                {selectionMode && (
+                  <input
+                    type="checkbox"
+                    checked={!!selectedIds?.has(asset.id)}
+                    onChange={() => onToggleSelect?.(asset.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                )}
+                <span className="font-mono text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                  {asset.internal_code}
+                </span>
+              </div>
               <div className="flex-shrink-0">
                 {getStatusBadge(asset.status)}
               </div>
@@ -185,6 +213,7 @@ export const AssetsTable = ({ assets, onDelete, onEdit, onRowClick, onPrintQR, c
           <table className="w-full text-left text-sm text-slate-600 dark:text-slate-400">
             <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold shadow-md shadow-[#739239]/40 dark:shadow-[#739239]/20 relative z-10">
               <tr>
+                {selectionMode && <th className="px-4 py-4 w-10" />}
                 <th className="px-6 py-4 hidden sm:table-cell cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 transition-colors group" onClick={() => handleSort('internal_code')}>
                   <div className="flex items-center gap-1.5">Código {sortField === 'internal_code' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
                 </th>
@@ -210,9 +239,21 @@ export const AssetsTable = ({ assets, onDelete, onEdit, onRowClick, onPrintQR, c
               {sortedAssets.map((asset) => (
                 <tr
                   key={asset.id}
-                  onClick={() => onRowClick?.(asset)}
-                  className={`transition-colors ${onRowClick ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                  onClick={() => (selectionMode ? onToggleSelect?.(asset.id) : onRowClick?.(asset))}
+                  className={`transition-colors ${
+                    selectionMode && selectedIds?.has(asset.id) ? 'bg-emerald-50/70 dark:bg-emerald-950/30' : ''
+                  } ${onRowClick || selectionMode ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                 >
+                  {selectionMode && (
+                    <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={!!selectedIds?.has(asset.id)}
+                        onChange={() => onToggleSelect?.(asset.id)}
+                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                    </td>
+                  )}
                   <td className="px-6 py-4 font-mono text-sm text-slate-500 dark:text-slate-400 hidden sm:table-cell">
                     {asset.internal_code}
                   </td>

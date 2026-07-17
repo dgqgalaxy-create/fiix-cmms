@@ -1,19 +1,40 @@
 import { io, Socket } from 'socket.io-client';
 import { BACKEND_URL } from './axios';
 
-// Singleton de conexión a socket.io
-// Lo exportamos para usarlo en cualquier componente que lo necesite
-export const socket: Socket = io(BACKEND_URL, {
-  autoConnect: true,
-  reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 2000,
-});
+let socketInstance: Socket | null = null;
 
-socket.on('connect', () => {
-  // Conectado al servidor en tiempo real
-});
+function createSocket(token?: string | null): Socket {
+  return io(BACKEND_URL, {
+    autoConnect: !!token,
+    reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 2000,
+    auth: token ? { token } : {},
+  });
+}
 
-socket.on('disconnect', () => {
-  // Desconectado del servidor
+/** Singleton; call setSocketAuth after login/logout. */
+export const socket: Socket = (() => {
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+  socketInstance = createSocket(token);
+  return socketInstance;
+})();
+
+export function setSocketAuth(token: string | null) {
+  if (!socketInstance) return;
+  socketInstance.auth = token ? { token } : {};
+  if (token) {
+    if (socketInstance.connected) {
+      socketInstance.disconnect();
+    }
+    socketInstance.connect();
+  } else {
+    socketInstance.disconnect();
+  }
+}
+
+socket.on('connect_error', (err) => {
+  if (err.message === 'Unauthorized' || /unauthorized/i.test(err.message)) {
+    // Token missing/invalid — stay disconnected until login
+  }
 });

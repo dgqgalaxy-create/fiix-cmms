@@ -7,8 +7,9 @@ import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { getWorkOrders, getWorkOrderById, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder } from '../api/workOrders';
 import type { WorkOrder } from '../api/workOrders';
-import { socket } from '../api/socket';
 import { useSearchParams } from 'react-router-dom';
+import { formatWorkOrderFolio } from '../utils/folio';
+import { useSocketRefresh } from '../hooks/useSocketRefresh';
 
 export const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -105,7 +106,7 @@ export const Dashboard = () => {
     const list = getFilteredWorkOrders();
     const headers = ['Folio', 'Titulo', 'Equipo', 'Zona', 'Prioridad', 'Estado', 'Fecha Creacion'];
     const rows = list.map(wo => {
-      const folio = `WO-${(wo.folio || 0).toString().padStart(4, '0')}`;
+      const folio = formatWorkOrderFolio(wo.folio);
       const title = `"${wo.title?.replace(/"/g, '""') || ''}"`;
       const asset = `"${wo.asset?.name?.replace(/"/g, '""') || ''}"`;
       const zone = `"${wo.zone?.name?.replace(/"/g, '""') || ''}"`;
@@ -135,6 +136,10 @@ export const Dashboard = () => {
       if (!backgroundFetch) setIsLoading(true);
       const data = await getWorkOrders();
       setWorkOrders(data);
+      setSelectedWorkOrder((prev) => {
+        if (!prev) return null;
+        return data.find((w) => w.id === prev.id) || prev;
+      });
     } catch (error) {
       console.error('Error fetching work orders', error);
     } finally {
@@ -144,17 +149,9 @@ export const Dashboard = () => {
 
   useEffect(() => {
     fetchWorkOrders();
-
-    const handleRefresh = () => {
-      fetchWorkOrders(true);
-    };
-
-    socket.on('refresh_work_orders', handleRefresh);
-
-    return () => {
-      socket.off('refresh_work_orders', handleRefresh);
-    };
   }, []);
+
+  useSocketRefresh('refresh_work_orders', () => fetchWorkOrders(true));
 
   const handleCreateWorkOrder = async (data: any) => {
     await createWorkOrder(data);

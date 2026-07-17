@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
+import { emitRefresh } from '../utils/socket';
 
 export const getRoster = async (req: Request, res: Response) => {
   try {
@@ -54,6 +55,7 @@ export const assignPattern = async (req: Request, res: Response) => {
       create: { user_id, pattern_type, start_date: new Date(start_date) }
     });
     
+    emitRefresh('refresh_roster');
     res.json(pattern);
   } catch (error) {
     console.error(error);
@@ -74,6 +76,7 @@ export const addException = async (req: Request, res: Response) => {
       }
     });
     
+    emitRefresh('refresh_roster');
     res.json(exception);
   } catch (error) {
     console.error(error);
@@ -85,6 +88,7 @@ export const removeException = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     await prisma.technicianException.delete({ where: { id: id as string } });
+    emitRefresh('refresh_roster');
     res.json({ success: true });
   } catch (error) {
     console.error(error);

@@ -1,5 +1,5 @@
 # Manual de Usuario - LPET CMMS
-*(Versión 1.12.9 - 16 de Julio, 2026)*
+*(Versión 1.21.0 - 17 de Julio, 2026)*
 
 LPET CMMS centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 
@@ -11,11 +11,25 @@ Sus pilares son **Rapidez** (menos formatos y pasos), **Trazabilidad** (responsa
 
 En celular, el temario del manual aparece como una barra horizontal deslizable. Toca un tema para mostrarlo debajo con una transición de entrada de derecha a izquierda. El encabezado, el temario y el botón **Volver** permanecen fijos; únicamente se desplaza la información del tema hasta el borde inferior, con un degradado superior que aparece progresivamente.
 
+## 0. Operación diaria (v1.15–1.21)
+- **Tiempo real:** Los listados y catálogos se actualizan casi al momento cuando otro usuario crea, edita o elimina datos (órdenes, inventario, activos, compras, checklist, turnos, RCA, zonas, usuarios, etc.). No hace falta pulsar F5.
+- **Edición concurrente de OT:** Si abres una orden de trabajo, eres el editor. Quien abra la misma orden después la verá en **solo lectura** con el mensaje «En edición por {nombre}». Al cerrar el detalle (o si se pierde la conexión ~40 s), otro puede tomarla. Si dos intentan aceptar la misma orden a la vez, el segundo recibe un aviso de conflicto y debe recargar.
+- **Folios FOL-####:** Cada orden recibe un folio automático e inmutable (`FOL-0001`, `FOL-0002`…). No se edita. En importación CSV se usa la columna `FOLIO` (acepta `FOL-####` o el número).
+- **Códigos de refacciones MTTO-####:** Ya se generan así al crear el repuesto y el código queda bloqueado (no editable).
+- **Consumo de refacciones desde la OT:** Al finalizar una orden, en «Repuestos a descontar del almacén» agrega las piezas usadas. El sistema valida stock, descuenta en una sola operación y liga el movimiento a esa OT. En el detalle de una OT finalizada verás los repuestos consumidos y el **costo de refacciones** de esa orden.
+- **Historial del activo de un vistazo:** Al abrir un activo (o escanear su QR) la pestaña **De un vistazo** muestra últimas OTs, fallas RCA frecuentes, PMs próximos/vencidos, stock crítico de repuestos del plan y costo acumulado (valor del activo + refacciones). Pasa el puntero sobre las etiquetas (icono ?) para ver la definición de RCA, PM y stock crítico.
+- **Búsqueda global (Ctrl/Cmd+K):** Desde cualquier pantalla abre el buscador único para activos, repuestos, ubicaciones y folios FOL. En celular usa el icono de lupa en la barra superior.
+- **Impresión masiva de QR:** En **Activos**, Inventario → **Repuestos** o Inventario → **Ubicaciones**, usa **QR masivo**, selecciona registros (incluidos todos los filtrados) e imprime una hoja con las etiquetas.
+- **Detalle compacto de OT:** La ventana de detalle aprovecha mejor el ancho de pantalla, muestra campos en columnas, permite que nombres y textos largos ocupen varias líneas y presenta las fotografías completas sin recortarlas.
+- **Borrador de compra desde Stock Crítico:** En Inventario, la tarjeta superior muestra cuántos ítems están bajo mínimo. Un clic filtra la lista; con permiso de compras, **Generar borrador OC** crea Órdenes de Compra en estado Borrador (una por proveedor, cantidad = lo faltante para llegar al mínimo). Los ítems sin proveedor se omiten y se listan en el aviso. Revisa y avanza el flujo en **Órdenes de Compra**.
+
 ## 1. Módulo Checklist: Campos Numéricos y de Texto
 Las actividades del Checklist ahora son más flexibles:
+- **Tipo por tarea (Catálogo):** En Configuración → Catálogo de Checklist, cada pregunta tiene un selector **Check / Número / Texto**. Check usa OK/Falla/N/A; Número y Texto muestran un campo para capturar lecturas. El cambio aplica a los checklists nuevos.
+- **Columnas / máquinas:** En el mismo catálogo, el campo **Columnas** define cuántas líneas (L1, L2…) tendrá el formulario (1 a 12). Si agregas una máquina, aumenta el número; el siguiente checklist diario ya mostrará la columna nueva. Los checklists ya creados conservan el número con el que se generaron.
 - **Campos Mixtos:** Además de los clásicos checks (✔️/❌), algunas actividades específicas (como temperatura o lecturas de agua) mostrarán un pequeño campo de texto.
 - **Uso:** Simplemente haz clic en la línea correspondiente y teclea el valor numérico (ej. 45.5) o un texto corto. El sistema guardará la información tal como si fuese un check tradicional.
-- **Configuración:** Para que estos campos aparezcan, asegúrate de ir a las *Opciones de Desarrollador* en el menú y hacer clic en **"Restaurar Actividades por Defecto"**.
+- **Configuración:** Para restaurar el listado estándar (con temperaturas en Número y lecturas de agua en Texto), ve a Configuración → Catálogo de Checklist y pulsa **"Restaurar por Defecto"**.
 
 ## 2. Módulo Inventario: Mejoras y Restricciones
 Se han mejorado las reglas del almacén para prevenir errores y mejorar la fluidez:
@@ -27,6 +41,7 @@ Se han mejorado las reglas del almacén para prevenir errores y mejorar la fluid
 - **Ubicación Automática:** Si creas un nuevo repuesto o importas un CSV sin definir lugar, el sistema lo agrupará bajo la ubicación "Sin Asignación".
 - **Ver Detalle desde Categorías, Ubicaciones y Proveedores:** Al abrir el detalle de una Categoría, Ubicación o Proveedor, la lista de "Repuestos Asociados" ahora es clickeable: selecciona cualquier repuesto de esa lista para abrir su ficha completa de detalle, igual que si lo hubieras abierto desde la pestaña de "Repuestos".
 - **Búsqueda y QR en Ubicaciones:** La pestaña "Ubicaciones" ahora tiene barra de búsqueda (por nombre o código) y botón de escaneo QR, igual que la pestaña de Repuestos. Cada tarjeta de ubicación incluye un botón "Ver / Imprimir QR" para generar el código de esa ubicación física; al escanearlo se abre automáticamente el detalle con todos los repuestos que contiene.
+- **Stock Crítico accionable:** La tarjeta superior indica la cantidad de ítems bajo mínimo. Haz clic en ella para filtrar la lista (puedes quitar el filtro con la pastilla). Con permiso **Gestionar compras**, usa **Generar borrador OC** para crear borradores de Orden de Compra agrupados por proveedor. Ya no hace falta el filtro duplicado junto a la búsqueda ni descargar una lista .txt.
 
 ## 3. Módulo Calendario (Roster)
 - **Corrección de Incidencias:** Se ha resuelto el problema que impedía guardar incidencias como (Falta, TXT, Vacaciones, etc.). Ahora basta con elegir la incidencia de la lista desplegable en el día del empleado y el sistema guardará la excepción inmediatamente.
@@ -93,6 +108,7 @@ Para los administradores, modificar lo que puede hacer cada usuario es ahora má
 
 ### Árbol de Fallas (RCA)
 - Su jerarquía es **Problema → Causa → Solución**.
+- Al finalizar una orden **correctiva**, el RCA es **opcional**: si el caso no está en el catálogo, deja vacío el árbol y cierra con notas/evidencia; Admin/Gestionador pueden ampliar el catálogo después. Así se evita elegir una opción incorrecta solo para poder guardar.
 - En celular, selecciona primero el Problema; la pantalla avanzará automáticamente a Causa y luego a Solución.
 - La franja superior muestra el paso actual y la ruta elegida. Puedes tocar un paso anterior o usar **Volver al paso anterior** para corregir la selección.
 - “Solución” es el nuevo nombre visible del catálogo que internamente conserva compatibilidad con los registros históricos de remedios.
@@ -106,6 +122,11 @@ Panel de indicadores de mantenimiento:
 - **Gráfica MTTR/MTBF:** el eje horizontal son los meses/periodos; el vertical son **horas**. MTTR = tiempo medio de reparación (más bajo mejor); MTBF = tiempo medio entre fallas de flota (más alto mejor). La leyenda aparece arriba para no tapar el eje.
 - **Semáforo:** cada tarjeta muestra meta, barra de avance y estado En meta / Cerca / Fuera.
 - **Metas:** se configuran en horas, % u órdenes (ya no en milisegundos). Requiere permiso de gestionar KPIs.
+- **Dashboard de técnicos:** complemento operativo a los KPIs de planta. Muestra:
+  - **Carga del día:** órdenes abiertas asignadas (pendiente + en proceso + en espera).
+  - **OTs pausadas** y **tiempo en espera** acumulado (reloj desde que se pausó la orden).
+  - **Productividad semanal** (lunes–domingo): órdenes finalizadas y horas de labor registradas al cerrar.
+  - Tabla por técnico (incluye también Fin./Proc./Pend. del periodo seleccionado) y gráfica top 8 de la semana.
 - **Nota:** el gráfico de costos representa **refacciones consumidas**, no el costo total de mantenimiento.
 
 ## 8.1 Apariencia y consistencia visual
@@ -119,6 +140,17 @@ Panel de indicadores de mantenimiento:
 - **Autoasignación:** Al registrar un nuevo activo (máquina, equipo), ya no se escribe el "Código Interno" manualmente. El sistema lo genera solo, de forma incremental, con el formato **ACT-0001, ACT-0002, ACT-0003...**
 - **Inmutable:** Una vez creado el activo, ese código ya no puede editarse ni desde el formulario de edición ni por ningún otro medio. Esto garantiza que la numeración de la planta sea siempre única y trazable, evitando duplicados o cambios accidentales.
 - **Migraciones de datos:** Cualquier importación o migración masiva de activos (histórica o futura) asigna este mismo formato de código automáticamente.
+- **Migración de códigos históricos:** Si la planta aún tiene activos con formatos antiguos (por ejemplo `EQ-28754`), en *Configuración → Opciones de Desarrollador → Herramientas locales* existe la acción **Migrar códigos de activos → ACT-0001**. Muestra una vista previa del mapa antiguo→nuevo, aplica el cambio en una sola operación y descarga el archivo JSON de equivalencias. Los códigos QR de activos **no se invalidan** porque usan el ID interno (UUID), no el código visible.
+
+## 9.1 SLA (Acuerdo de Nivel de Servicio) y Escalamiento de Órdenes
+
+- **Qué mide:** tres relojes por prioridad (URGENTE / NORMAL / BAJO):
+  - **Respuesta:** tiempo en estado Pendiente hasta que alguien acepta la orden.
+  - **Detenida:** tiempo en En Espera (desde que se pausa).
+  - **Resolución:** tiempo desde la creación hasta el cierre.
+- **Automatización:** cada 15 minutos el sistema revisa órdenes abiertas. Si se cruza el umbral de recordatorio o de escalamiento, envía aviso a Telegram (mismo grupo) y notificaciones in-app. El escalamiento va a roles **Gestionador** y **Administrador**.
+- **Sin spam:** cada tipo de aviso (recordatorio/escalamiento × reloj) se envía **una sola vez** por orden. Al arrancar el servidor, el rezago histórico se marca en silencio (sin Telegram). Si en un ciclo aparecen más de 5 avisos nuevos, se envía **un solo resumen** al grupo en lugar de saturar con mensajes individuales.
+- **Configuración:** en *Configuración → SLA (Acuerdo de Nivel de Servicio)* puedes activar/desactivar el seguimiento y editar con un formulario (por prioridad Urgente / Normal / Bajo) las horas de recordatorio, máximo y escalamiento. En el listado y detalle de la OT verás el badge **Dentro de SLA / En riesgo / Vencido**.
 
 ## 10. Importación masiva por CSV (Opciones de Desarrollador)
 

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, ChevronDown, CheckCircle2, Users } from 'lucide-react';
 import type { WorkOrder } from '../api/workOrders';
+import { getWorkOrderById } from '../api/workOrders';
 import { useAuth } from '../context/AuthContext';
 import { getUsers } from '../api/users';
 import type { User } from '../api/users';
@@ -9,10 +10,13 @@ import type { Item } from '../api/inventory';
 import { SignatureField } from './SignatureField';
 import api, { BACKEND_URL } from '../api/axios';
 import type { SignatureFieldRef } from './SignatureField';
-import { useRef } from 'react';
 import { Download } from 'lucide-react';
 import { ErrorBoundary } from './ErrorBoundary';
 import { generateWorkOrderPDF } from '../utils/pdfGenerator';
+import { SlaBadge } from './SlaBadge';
+import { formatWorkOrderFolio } from '../utils/folio';
+import { useWorkOrderPresence } from '../hooks/useWorkOrderPresence';
+import { socket } from '../api/socket';
 
 const STATUS_LABELS: Record<string, string> = {
   PENDIENTE: 'Pendiente',
@@ -35,7 +39,9 @@ interface Props {
 
 export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onDelete, onJoin }: Props) => {
   const { user, hasPermission } = useAuth();
+  const { canEdit, remoteEditorName } = useWorkOrderPresence(workOrder?.id, isOpen);
 
+  const [liveWorkOrder, setLiveWorkOrder] = useState<WorkOrder | null>(workOrder);
   const [status, setStatus] = useState<string>('');
   const [holdReason, setHoldReason] = useState<string>('');
   const [resolutionNotes, setResolutionNotes] = useState<string>('');
@@ -69,31 +75,77 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
   const [failureProblemId, setFailureProblemId] = useState<string>('');
   const [failureCauseId, setFailureCauseId] = useState<string>('');
   const [failureRemedyId, setFailureRemedyId] = useState<string>('');
+  const [consumedParts, setConsumedParts] = useState<NonNullable<WorkOrder['inventory_transactions']>>([]);
+  const [partsCostTotal, setPartsCostTotal] = useState(0);
 
   useEffect(() => {
-    if (workOrder) {
-      setStatus(workOrder.status);
-      setHoldReason(workOrder.hold_reason || '');
-      setResolutionNotes(workOrder.resolution_notes || '');
-      setSignatureCleanArea(workOrder.signature_clean_area || '');
-      setSignatureDelivery(workOrder.signature_delivery || '');
-      setAssignedTechniciansIds(workOrder.assigned_technicians?.map(t => t.id) || []);
-      setBeforeImage(null);
-      setAfterImage(null);
-      setError('');
-      setUsedItems([]);
-      setSelectedItemToAdd('');
-      setItemSearchText('');
-      setShowDropdown(false);
-      setAmountToAdd('');
-      setSigCleanAreaEmpty(!workOrder.signature_clean_area);
-      setSigDeliveryEmpty(!workOrder.signature_delivery);
-
-      setFailureProblemId((workOrder as any).failure_problem_id || '');
-      setFailureCauseId((workOrder as any).failure_cause_id || '');
-      setFailureRemedyId((workOrder as any).failure_remedy_id || '');
-    }
+    if (workOrder) setLiveWorkOrder(workOrder);
   }, [workOrder]);
+
+  // Sync detalle en vivo (sobre todo si otro usuario es el editor)
+  useEffect(() => {
+    if (!isOpen || !workOrder?.id) return;
+
+    const refreshDetail = async () => {
+      try {
+        const full = await getWorkOrderById(workOrder.id);
+        setLiveWorkOrder(full);
+      } catch {
+        // ignore
+      }
+    };
+
+    const onUpdated = (payload: { id?: string }) => {
+      if (payload?.id === workOrder.id) void refreshDetail();
+    };
+
+    const onRefresh = () => {
+      // Solo forzar sync si no somos el editor (evita pisar cambios locales)
+      if (!canEdit) void refreshDetail();
+    };
+
+    socket.on('work_order_updated', onUpdated);
+    socket.on('refresh_work_orders', onRefresh);
+    return () => {
+      socket.off('work_order_updated', onUpdated);
+      socket.off('refresh_work_orders', onRefresh);
+    };
+  }, [isOpen, workOrder?.id, canEdit]);
+
+  useEffect(() => {
+    const wo = liveWorkOrder || workOrder;
+    if (wo) {
+      setStatus(wo.status);
+      setHoldReason(wo.hold_reason || '');
+      setResolutionNotes(wo.resolution_notes || '');
+      setSignatureCleanArea(wo.signature_clean_area || '');
+      setSignatureDelivery(wo.signature_delivery || '');
+      setAssignedTechniciansIds(wo.assigned_technicians?.map(t => t.id) || []);
+      if (!canEdit) {
+        setBeforeImage(null);
+        setAfterImage(null);
+        setUsedItems([]);
+      }
+      setError('');
+      setSigCleanAreaEmpty(!wo.signature_clean_area);
+      setSigDeliveryEmpty(!wo.signature_delivery);
+
+      setFailureProblemId((wo as any).failure_problem_id || '');
+      setFailureCauseId((wo as any).failure_cause_id || '');
+      setFailureRemedyId((wo as any).failure_remedy_id || '');
+      setConsumedParts(wo.inventory_transactions || []);
+      setPartsCostTotal(wo.parts_cost_total || 0);
+
+      if (wo.status === 'FINALIZADO') {
+        getWorkOrderById(wo.id)
+          .then((full) => {
+            setConsumedParts(full.inventory_transactions || []);
+            setPartsCostTotal(full.parts_cost_total || 0);
+          })
+          .catch(() => {});
+      }
+    }
+  }, [liveWorkOrder, workOrder, canEdit]);
 
   useEffect(() => {
     if (isOpen && user?.role !== 'TECNICO') {
@@ -107,7 +159,9 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
 
   if (!isOpen || !workOrder) return null;
 
-  const isClosed = workOrder.status === 'FINALIZADO' || workOrder.status === 'ANULADO';
+  const displayWO = liveWorkOrder || workOrder;
+  const isClosed = displayWO.status === 'FINALIZADO' || displayWO.status === 'ANULADO';
+  const isReadOnly = isClosed || !canEdit;
 
   const canDownloadPDF = workOrder.status === 'FINALIZADO' && (
     user?.role === 'ADMINISTRADOR' ||
@@ -184,7 +238,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
     !sigDeliveryEmpty !== !!workOrder.signature_delivery ||
     (user?.role !== 'TECNICO' && JSON.stringify([...assignedTechniciansIds].sort()) !== JSON.stringify([...(workOrder.assigned_technicians?.map(t => t.id) || [])].sort()));
 
-  let canSave = isDirty;
+  let canSave = isDirty && canEdit;
   if (canSave) {
     if (finalStatus === 'EN_PROCESO') {
       if (!beforeImage && !workOrder.before_image_url) canSave = false;
@@ -237,11 +291,6 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
           setError('Debes ingresar las firmas de liberación de área y entrega de trabajo para finalizar.');
           return;
         }
-
-        if (workOrder.maintenance_type === 'CORRECTIVO' && (!failureProblemId || !failureCauseId || !failureRemedyId)) {
-          setError('Al finalizar un mantenimiento CORRECTIVO, es obligatorio llenar el Árbol de Fallas (RCA).');
-          return;
-        }
       }
 
       if (finalStatus === 'EN_ESPERA' && !holdReason?.trim()) {
@@ -283,6 +332,12 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
       onClose();
     } catch (err: any) {
       console.error("Error in handleSubmit:", err);
+      if (err.response?.status === 409) {
+        try {
+          const full = await getWorkOrderById(workOrder.id);
+          setLiveWorkOrder(full);
+        } catch { /* ignore */ }
+      }
       setError(err.response?.data?.error || err.message || 'Error inesperado al procesar la orden.');
     } finally {
       setIsSubmitting(false);
@@ -328,19 +383,22 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
 
   return (
     <ErrorBoundary>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
         <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}></div>
 
-        <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-start bg-slate-50/50 dark:bg-slate-900/50">
-          <div>
-            <div className="flex items-center gap-3">
-              <span className="bg-slate-200 text-slate-700 dark:text-slate-200 px-2.5 py-1 rounded-lg text-sm font-bold border border-slate-300">
-                WO-{(workOrder.folio || 0).toString().padStart(4, '0')}
+        <div className="relative bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[96vh] sm:max-h-[92vh]">
+        <div className="px-4 py-3 sm:px-5 sm:py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-start gap-3 bg-slate-50/50 dark:bg-slate-900/50">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className="bg-slate-200 text-slate-700 dark:text-slate-200 px-2.5 py-1 rounded-lg text-sm font-bold border border-slate-300 font-mono"
+                title="Folio inmutable (FOL-####). Se asigna al crear la orden y no se puede editar."
+              >
+                {formatWorkOrderFolio(workOrder.folio)}
               </span>
-              <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">{workOrder.title}</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 break-words min-w-0">{workOrder.title}</h2>
             </div>
-            <div className="flex gap-4 items-center mt-2">
+            <div className="flex flex-wrap gap-2 sm:gap-4 items-center mt-1.5">
               <p className="text-sm text-slate-500 dark:text-slate-400">Orden Creada el {new Date(workOrder.created_at).toLocaleDateString()}</p>
               {workOrder.status === 'FINALIZADO' && getDuration() && (
                 <div className="flex items-center gap-1 text-sm text-emerald-800 dark:text-emerald-300 bg-blue-50 px-2 py-0.5 rounded-md font-medium border border-blue-100">
@@ -360,27 +418,38 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto">
+        <div className="p-4 sm:p-5 overflow-y-auto">
+          {remoteEditorName && (
+            <div className="mb-4 p-3 sm:p-4 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 rounded-xl text-sm font-medium border border-amber-200 dark:border-amber-800 flex items-start gap-2">
+              <Users size={18} className="shrink-0 mt-0.5" />
+              <div>
+                <strong>En edición por {remoteEditorName}.</strong>
+                <span className="block text-amber-800/90 dark:text-amber-300/90 font-normal mt-0.5">
+                  Puedes ver la orden en solo lectura. Cuando libere el detalle, podrás editarla.
+                </span>
+              </div>
+            </div>
+          )}
           {error && (
             <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl text-sm font-medium border border-red-100">
               {error}
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+            <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 gap-3">
               <div>
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Activo Asociado</span>
-                <div className="font-medium text-slate-800 dark:text-slate-100">{workOrder.asset?.name || 'Desconocido'}</div>
+                <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{workOrder.asset?.name || 'Desconocido'}</div>
               </div>
-              <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700/60">
+              <div className="sm:border-l sm:pl-3 md:border-l-0 md:pl-0 lg:border-l lg:pl-3 border-slate-200 dark:border-slate-700/60">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Zona</span>
-                <div className="font-medium text-slate-800 dark:text-slate-100">{workOrder.zone?.name || 'Sin Zona'}</div>
+                <div className="font-medium text-slate-800 dark:text-slate-100 break-words">{workOrder.zone?.name || 'Sin Zona'}</div>
               </div>
             </div>
 
             {workOrder.status === 'FINALIZADO' && workOrder.started_at && workOrder.completed_at ? (
-              <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
+              <div className="bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-xl border border-blue-100 dark:border-blue-900/50">
                 <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider block mb-2 flex items-center gap-1">
                   <Clock size={14} /> Registro de Tiempos
                 </span>
@@ -406,14 +475,14 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                 </div>
               </div>
             ) : (
-              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+              <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Estado Actual</span>
                 <div className="font-medium text-slate-800 dark:text-slate-100">{statusLabel(workOrder.status)}</div>
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-4">
             <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Prioridad</span>
               <div className={`text-sm font-bold ${
@@ -422,12 +491,18 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
               }`}>{workOrder.priority}</div>
             </div>
             <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1" title="Acuerdo de Nivel de Servicio">SLA</span>
+              <div className="mt-0.5">
+                <SlaBadge sla={workOrder.sla} />
+              </div>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Tipo</span>
               <div className="text-sm font-medium text-slate-700 dark:text-slate-200">{workOrder.maintenance_type}</div>
             </div>
             <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Solicitante</span>
-              <div className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate" title={workOrder.requester_name}>{workOrder.requester_name || '-'}</div>
+              <div className="text-sm font-medium text-slate-700 dark:text-slate-200 break-words">{workOrder.requester_name || '-'}</div>
             </div>
             <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Grupo</span>
@@ -436,12 +511,12 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
           </div>
 
           {workOrder.machine_stopped && (
-            <div className="mb-6 p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-700 font-medium text-sm">
+            <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-700 font-medium text-sm">
               <Ban size={16} /> ¡Esta falla reporta paro de máquina!
             </div>
           )}
 
-          <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 mb-8">
+          <div className="bg-slate-50 dark:bg-slate-950 p-3 sm:p-4 rounded-xl border border-slate-100 dark:border-slate-800 mb-4">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Descripción del Problema</span>
             <div className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap">
               {workOrder.description || <span className="italic text-slate-400">Sin descripción...</span>}
@@ -450,22 +525,22 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
             {workOrder.request_image_url && (
               <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-3">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">📸 Foto al reportar la falla</span>
-                <img src={`${BACKEND_URL}${workOrder.request_image_url}`} alt="Falla Reportada" className="w-full h-32 object-cover rounded-xl border border-slate-200 dark:border-slate-700" />
+                <img src={`${BACKEND_URL}${workOrder.request_image_url}`} alt="Falla Reportada" className="w-full max-h-64 object-contain bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700" />
               </div>
             )}
 
             {workOrder.before_image_url && (
               <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-3">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">📸 Evidencia Técnica (Antes de reparar)</span>
-                <img src={`${BACKEND_URL}${workOrder.before_image_url}`} alt="Antes" className="w-full h-32 object-cover rounded-xl border border-slate-200 dark:border-slate-700" />
+                <img src={`${BACKEND_URL}${workOrder.before_image_url}`} alt="Antes" className="w-full max-h-64 object-contain bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700" />
               </div>
             )}
           </div>
 
           {workOrder.after_image_url && (
-            <div className="mb-8 bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
+            <div className="mb-4 bg-emerald-50 dark:bg-emerald-950/20 p-3 sm:p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/50">
                <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider block mb-2">📸 Evidencia de Reparación (Después)</span>
-               <img src={`${BACKEND_URL}${workOrder.after_image_url}`} alt="Después" className="w-full h-48 object-cover rounded-xl border border-emerald-200" />
+               <img src={`${BACKEND_URL}${workOrder.after_image_url}`} alt="Después" className="w-full max-h-72 object-contain bg-white dark:bg-slate-900 rounded-xl border border-emerald-200 dark:border-emerald-900" />
 
                {workOrder.signature_clean_area && workOrder.signature_delivery && (
                  <div className="mt-4 pt-4 border-t border-emerald-200/50 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -490,14 +565,15 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
             </div>
           )}
 
-          <form id="update-wo-form" onSubmit={handleSubmit} className="space-y-5">
-            <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
-                {isClosed ? 'Información de Cierre' : 'Actualización (Técnico / Admin)'}
-                {!isClosed && <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest font-black">Área Editable</span>}
+          <form id="update-wo-form" onSubmit={handleSubmit} className="space-y-4">
+            <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2">
+                {isClosed ? 'Información de Cierre' : isReadOnly ? 'Solo lectura' : 'Actualización (Técnico / Admin)'}
+                {!isClosed && !isReadOnly && <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest font-black">Área Editable</span>}
+                {isReadOnly && !isClosed && <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest font-black">Bloqueada</span>}
               </h3>
 
-              <div className="grid grid-cols-1 gap-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <div className={`p-4 rounded-2xl border relative overflow-hidden ${
                   isClosed
                     ? 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800'
@@ -510,7 +586,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                     isClosed ? 'text-slate-500 dark:text-slate-400' : 'text-emerald-900 dark:text-emerald-200'
                   }`}>
                     Estado de la Orden
-                    {!isClosed && (
+                    {!isReadOnly && (
                       <span className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider animate-pulse flex items-center gap-1 font-bold">
                         👉 Haz clic para cambiar
                       </span>
@@ -559,7 +635,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                   )}
                 </div>
 
-                {user?.role !== 'TECNICO' && !isClosed ? (
+                {user?.role !== 'TECNICO' && !isReadOnly ? (
                   <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Técnicos Asignados</label>
                     <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2">
@@ -602,7 +678,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                         <span className="text-sm text-slate-500 dark:text-slate-400 italic">Nadie asignado</span>
                       )}
                     </div>
-                    {!isClosed && workOrder.assigned_technicians && workOrder.assigned_technicians.length > 0 && !workOrder.assigned_technicians.some(t => t.id === (user as any).userId || t.id === (user as any).id) && (workOrder.status === 'EN_PROCESO' || workOrder.status === 'PENDIENTE') && (
+                    {!isReadOnly && workOrder.assigned_technicians && workOrder.assigned_technicians.length > 0 && !workOrder.assigned_technicians.some(t => t.id === (user as any).userId || t.id === (user as any).id) && (workOrder.status === 'EN_PROCESO' || workOrder.status === 'PENDIENTE') && (
                       <button
                         type="button"
                         onClick={handleJoin}
@@ -616,7 +692,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                 )}
 
                 {status === 'EN_ESPERA' && (
-                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-300 lg:col-span-2">
                     <label className="block text-sm font-medium text-red-600 mb-1">Motivo de Espera *</label>
                     <input
                       type="text"
@@ -625,13 +701,13 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                       className={`w-full px-4 py-3 bg-red-50/50 border border-red-200 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-red-500 outline-none transition-all ${isClosed || workOrder.status === 'EN_ESPERA' ? 'opacity-70 cursor-not-allowed' : ''}`}
                       value={holdReason}
                       onChange={(e) => setHoldReason(e.target.value)}
-                      disabled={isClosed || workOrder.status === 'EN_ESPERA'}
+                      disabled={isReadOnly || workOrder.status === 'EN_ESPERA'}
                     />
                   </div>
                 )}
 
                 {(status === 'FINALIZADO' || status === 'ANULADO') && (
-                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-300 lg:col-span-2">
                     <label className={`block text-sm font-medium mb-1 ${status === 'ANULADO' ? 'text-red-700' : 'text-emerald-700'}`}>
                       {status === 'ANULADO' ? 'Motivo de Anulación' : 'Notas de Resolución'} *
                     </label>
@@ -644,14 +720,17 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                       } ${isClosed ? 'opacity-70 cursor-not-allowed' : ''}`}
                       value={resolutionNotes}
                       onChange={(e) => setResolutionNotes(e.target.value)}
-                      disabled={isClosed}
+                      disabled={isReadOnly}
                     />
 
-                    {!isClosed && status === 'FINALIZADO' && workOrder.maintenance_type === 'CORRECTIVO' && (
+                    {!isReadOnly && status === 'FINALIZADO' && workOrder.maintenance_type === 'CORRECTIVO' && (
                       <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
-                        <label className="block text-sm font-bold text-orange-800 mb-3 flex items-center gap-2">
-                          <GitBranch size={16} /> Árbol de Fallas (RCA) *
+                        <label className="block text-sm font-bold text-orange-800 mb-1 flex items-center gap-2">
+                          <GitBranch size={16} /> Árbol de Fallas (RCA) — opcional
                         </label>
+                        <p className="text-xs text-orange-700/80 mb-3">
+                          Úsalo solo si el problema/causa/solución ya existen en el catálogo. Si no está, deja vacío y reporta el caso para ampliar el árbol.
+                        </p>
                         <div className="space-y-3">
                           <div>
                             <span className="text-xs font-semibold text-orange-700 block mb-1">Problema Encontrado</span>
@@ -711,13 +790,54 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                       </div>
                     )}
 
-                    {!isClosed && (
+                    {isClosed && workOrder.status === 'FINALIZADO' && (
+                      <div className="mt-4 p-4 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-xl">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                          <label className="text-sm font-medium text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                            <Package size={16} /> Repuestos consumidos
+                          </label>
+                          <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                            Costo OT:{' '}
+                            {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(partsCostTotal || 0)}
+                          </span>
+                        </div>
+                        {consumedParts.length > 0 ? (
+                          <ul className="bg-white dark:bg-slate-900 rounded-lg border border-blue-100 dark:border-blue-900 divide-y divide-blue-50 dark:divide-slate-800">
+                            {consumedParts.map((tx) => {
+                              const qty = Math.abs(tx.amount);
+                              const unit = tx.unit_cost ?? tx.item.purchase_cost ?? 0;
+                              return (
+                                <li key={tx.id} className="px-4 py-2.5 flex justify-between items-center text-sm gap-3">
+                                  <div className="min-w-0">
+                                    <span className="font-mono text-xs text-slate-400 mr-2">{tx.item.internal_code}</span>
+                                    <span className="font-medium text-slate-700 dark:text-slate-200">{tx.item.name}</span>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <div className="text-slate-600 dark:text-slate-300">{qty} {tx.item.uom}</div>
+                                    <div className="text-xs text-slate-400">
+                                      {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(qty * unit)}
+                                    </div>
+                                  </div>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        ) : (
+                          <p className="text-sm text-slate-400 italic">Esta OT no registró consumo de refacciones.</p>
+                        )}
+                      </div>
+                    )}
+
+                    {!isReadOnly && (
                       <div className="mt-4 space-y-6">
                         {/* SECCION DE REPUESTOS */}
                         <div className="p-4 bg-blue-50/50 border border-blue-200 rounded-xl">
                           <label className="block text-sm font-medium text-emerald-800 dark:text-emerald-300 mb-3 flex items-center gap-2">
-                            <Package size={16} /> Repuestos Utilizados (Opcional)
+                            <Package size={16} /> Repuestos a descontar del almacén
                           </label>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                            Al finalizar, se descontará el stock y el costo quedará ligado a esta OT.
+                          </p>
 
                           <div className="flex flex-col sm:flex-row gap-2 mb-4">
                             <div className="flex-1 relative">
@@ -876,7 +996,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                 )}
 
                 {status === 'EN_PROCESO' && !workOrder.before_image_url && (
-                  <div className="pt-4 mt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="pt-4 mt-2 border-t border-slate-100 dark:border-slate-800 lg:col-span-2">
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">📸 Evidencia del Problema (Antes) *</label>
                     <div className="flex gap-2">
                       <label className="flex-1 flex flex-col items-center justify-center py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors text-slate-600 dark:text-slate-400">
@@ -916,7 +1036,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
 
         <div className="px-4 py-4 sm:px-6 sm:py-5 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center bg-slate-50/50 dark:bg-slate-900/50 mt-auto">
           <div className="flex gap-2 justify-stretch sm:justify-start [&>button]:flex-1 [&>button]:sm:flex-initial">
-            {hasPermission('DELETE_WORK_ORDERS') && onDelete && workOrder.status !== 'FINALIZADO' && (
+            {hasPermission('DELETE_WORK_ORDERS') && onDelete && workOrder.status !== 'FINALIZADO' && canEdit && (
               <>
                 <button type="button" onClick={() => onDelete(workOrder.id)} className="px-3 sm:px-4 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors">
                   <Trash2 size={15} /> Eliminar
@@ -944,7 +1064,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
             <button type="button" onClick={onClose} className="px-3 sm:px-5 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">
               Cerrar
             </button>
-            {!isClosed && canSave && (
+            {!isReadOnly && canSave && (
               <button type="submit" form="update-wo-form" disabled={isSubmitting} className="px-4 sm:px-6 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-emerald-950 disabled:opacity-70 rounded-xl shadow-sm shadow-emerald-700/20 transition-colors animate-in fade-in zoom-in-95 duration-200">
                 {isSubmitting ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />}
                 Guardar

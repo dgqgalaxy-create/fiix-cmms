@@ -1,14 +1,19 @@
 import api from './axios';
 
+export type ChecklistFieldType = 'CHECKBOX' | 'NUMBER' | 'TEXT';
+
 export interface ChecklistRow {
   id: string;
   activity_name: string;
   order: number;
-  L1_status: string | null;
-  L2_status: string | null;
-  L3_status: string | null;
-  L4_status: string | null;
-  L5_status: string | null;
+  field_type?: ChecklistFieldType;
+  line_statuses?: Record<string, string | null>;
+  /** @deprecated legacy keys kept optional for older payloads */
+  L1_status?: string | null;
+  L2_status?: string | null;
+  L3_status?: string | null;
+  L4_status?: string | null;
+  L5_status?: string | null;
   observations: string | null;
 }
 
@@ -16,11 +21,18 @@ export interface DailyChecklist {
   id: string;
   date: string;
   status: 'DRAFT' | 'COMPLETED' | 'REVIEWED';
+  column_count?: number;
   technician_id: string;
   technician?: { name: string };
   leader_id?: string;
   leader?: { name: string };
   rows?: ChecklistRow[];
+}
+
+export interface ChecklistConfig {
+  column_count: number;
+  min: number;
+  max: number;
 }
 
 export const getTodayChecklist = async () => {
@@ -34,8 +46,13 @@ export const createTodayChecklist = async () => {
 };
 
 export const updateChecklistRow = async (
-  rowId: string, 
-  data: Partial<ChecklistRow>
+  rowId: string,
+  data: {
+    observations?: string | null;
+    line?: number;
+    status?: string | null;
+    line_statuses?: Record<string, string | null>;
+  }
 ) => {
   const response = await api.put(`/checklists/row/${rowId}`, data);
   return response.data;
@@ -61,6 +78,16 @@ export const getChecklistById = async (id: string) => {
   return response.data;
 };
 
+export const getChecklistConfig = async (): Promise<ChecklistConfig> => {
+  const response = await api.get('/checklists/config');
+  return response.data;
+};
+
+export const updateChecklistConfig = async (column_count: number): Promise<ChecklistConfig> => {
+  const response = await api.put('/checklists/config', { column_count });
+  return response.data;
+};
+
 // ==============================
 // CATÁLOGO DE ACTIVIDADES
 // ==============================
@@ -69,6 +96,7 @@ export interface ChecklistActivity {
   id: string;
   name: string;
   order: number;
+  field_type: ChecklistFieldType;
   is_active: boolean;
 }
 
@@ -77,12 +105,12 @@ export const getChecklistActivities = async (): Promise<ChecklistActivity[]> => 
   return response.data;
 };
 
-export const createChecklistActivity = async (data: { name: string; is_active?: boolean }) => {
+export const createChecklistActivity = async (data: { name: string; field_type?: ChecklistFieldType; is_active?: boolean }) => {
   const response = await api.post('/checklists/activities', data);
   return response.data;
 };
 
-export const updateChecklistActivity = async (id: string, data: { name?: string; is_active?: boolean }) => {
+export const updateChecklistActivity = async (id: string, data: { name?: string; field_type?: ChecklistFieldType; is_active?: boolean }) => {
   const response = await api.put(`/checklists/activities/${id}`, data);
   return response.data;
 };
@@ -100,4 +128,13 @@ export const reorderChecklistActivities = async (orderedIds: { id: string; order
 export const restoreDefaultChecklistActivities = async () => {
   const response = await api.post(`/checklists/activities/restore-defaults`);
   return response.data;
+};
+
+export const getRowLineStatus = (row: ChecklistRow, line: number): string => {
+  const key = String(line);
+  if (row.line_statuses && key in row.line_statuses) {
+    return row.line_statuses[key] || '';
+  }
+  const legacy = (row as any)[`L${line}_status`];
+  return legacy || '';
 };

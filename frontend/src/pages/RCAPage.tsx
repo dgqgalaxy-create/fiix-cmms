@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import { Plus, GitBranch, AlertTriangle, Lightbulb, ChevronRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useSocketRefresh } from '../hooks/useSocketRefresh';
 
 interface RCAItem {
   id: string;
@@ -150,6 +151,10 @@ export const RCAPage = () => {
     }
   }
 
+  const reloadProblems = () => {
+    api.get('/rca/problems').then((res) => setProblems(res.data)).catch(console.error);
+  };
+
   useEffect(() => {
     let cancelled = false;
     api.get('/rca/problems')
@@ -161,6 +166,16 @@ export const RCAPage = () => {
       cancelled = true;
     };
   }, []);
+
+  useSocketRefresh('refresh_rca', () => {
+    reloadProblems();
+    if (selectedProblem) {
+      api.get(`/rca/problems/${selectedProblem}/causes`).then((res) => setCauses(res.data)).catch(console.error);
+    }
+    if (selectedCause) {
+      api.get(`/rca/causes/${selectedCause}/remedies`).then((res) => setRemedies(res.data)).catch(console.error);
+    }
+  });
 
   useEffect(() => {
     if (!selectedProblem) return;

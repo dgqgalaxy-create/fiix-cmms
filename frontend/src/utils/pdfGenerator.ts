@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import type { WorkOrder } from '../api/workOrders';
 import { BACKEND_URL } from '../api/axios';
+import { formatWorkOrderFolio } from './folio';
 
 const loadImgAsBase64 = (url: string): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -30,7 +31,7 @@ export const generateWorkOrderPDF = async (workOrder: WorkOrder) => {
   
   doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
-  doc.text(`Folio: WO-${(workOrder.folio || 0).toString().padStart(4, '0')}`, 20, 30);
+  doc.text(`Folio: ${formatWorkOrderFolio(workOrder.folio)}`, 20, 30);
   doc.text(`Generado el: ${new Date().toLocaleDateString()}`, 140, 30);
   
   doc.line(20, 35, 190, 35);
@@ -171,5 +172,5 @@ export const generateWorkOrderPDF = async (workOrder: WorkOrder) => {
     }
   }
 
-  doc.save(`WO-${(workOrder.folio || 0).toString().padStart(4, '0')}.pdf`);
+  doc.save(`${formatWorkOrderFolio(workOrder.folio)}.pdf`);
 };

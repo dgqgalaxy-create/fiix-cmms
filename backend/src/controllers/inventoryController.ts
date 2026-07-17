@@ -3,7 +3,7 @@ import prisma from '../config/prisma';
 import { generateInventoryCode } from '../utils/codeGenerator';
 import { imageSearch } from '@mudbill/duckduckgo-images-api';
 import axios from 'axios';
-import { getIO } from '../utils/socket';
+import { emitRefresh } from '../utils/socket';
 
 // ==========================================
 // ITEM CATEGORY
@@ -24,7 +24,7 @@ export const createCategory = async (req: Request, res: Response): Promise<void>
     const category = await prisma.itemCategory.create({
       data: { internal_id, name, is_active }
     });
-    getIO().emit('refresh_inventory');
+    emitRefresh('refresh_inventory');
     res.status(201).json(category);
   } catch (error) {
     res.status(500).json({ error: 'Error al crear categoría' });
@@ -39,7 +39,7 @@ export const updateCategory = async (req: Request, res: Response): Promise<void>
       where: { id },
       data: { name, is_active }
     });
-    getIO().emit('refresh_inventory');
+    emitRefresh('refresh_inventory');
     res.json(category);
   } catch (error) {
     res.status(500).json({ error: 'Error al actualizar categoría' });
@@ -55,7 +55,7 @@ export const deleteCategory = async (req: Request, res: Response): Promise<void>
       return;
     }
     await prisma.itemCategory.delete({ where: { id } });
-    getIO().emit('refresh_inventory');
+    emitRefresh('refresh_inventory');
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar categoría' });
@@ -81,7 +81,7 @@ export const createLocation = async (req: Request, res: Response): Promise<void>
     const location = await prisma.itemLocation.create({
       data: { internal_id, name, is_active }
     });
-    getIO().emit('refresh_inventory');
+    emitRefresh('refresh_inventory');
     res.status(201).json(location);
   } catch (error) {
     res.status(500).json({ error: 'Error al crear ubicación' });
@@ -96,7 +96,7 @@ export const updateLocation = async (req: Request, res: Response): Promise<void>
       where: { id },
       data: { name, is_active }
     });
-    getIO().emit('refresh_inventory');
+    emitRefresh('refresh_inventory');
     res.json(location);
   } catch (error) {
     res.status(500).json({ error: 'Error al actualizar ubicación' });
@@ -112,7 +112,7 @@ export const deleteLocation = async (req: Request, res: Response): Promise<void>
       return;
     }
     await prisma.itemLocation.delete({ where: { id } });
-    getIO().emit('refresh_inventory');
+    emitRefresh('refresh_inventory');
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar ubicación' });
@@ -138,7 +138,7 @@ export const createVendor = async (req: Request, res: Response): Promise<void> =
     const vendor = await prisma.vendor.create({
       data: { internal_id, name, website_url, phone, email, address, is_active }
     });
-    getIO().emit('refresh_inventory');
+    emitRefresh('refresh_inventory');
     res.status(201).json(vendor);
   } catch (error) {
     res.status(500).json({ error: 'Error al crear proveedor' });
@@ -153,7 +153,7 @@ export const updateVendor = async (req: Request, res: Response): Promise<void> =
       where: { id },
       data: { name, website_url, phone, email, address, is_active }
     });
-    getIO().emit('refresh_inventory');
+    emitRefresh('refresh_inventory');
     res.json(vendor);
   } catch (error) {
     res.status(500).json({ error: 'Error al actualizar proveedor' });
@@ -169,7 +169,7 @@ export const deleteVendor = async (req: Request, res: Response): Promise<void> =
       return;
     }
     await prisma.vendor.delete({ where: { id } });
-    getIO().emit('refresh_inventory');
+    emitRefresh('refresh_inventory');
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar proveedor' });
@@ -235,7 +235,7 @@ export const createItem = async (req: Request, res: Response): Promise<void> => 
     }
 
     const newItem = await prisma.item.create({ data: itemData });
-    getIO().emit('refresh_inventory');
+    emitRefresh('refresh_inventory');
     res.status(201).json(newItem);
   } catch (error: any) {
     if (error.code === 'P2002') {
@@ -288,7 +288,7 @@ export const updateItem = async (req: Request, res: Response): Promise<void> => 
       where: { id },
       data: itemData
     });
-    getIO().emit('refresh_inventory');
+    emitRefresh('refresh_inventory');
     res.json(updatedItem);
   } catch (error) {
     res.status(500).json({ error: 'Error al actualizar repuesto' });
@@ -382,7 +382,7 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
       return [newTx, updatedItem];
     });
 
-    getIO().emit('refresh_inventory');
+    emitRefresh('refresh_inventory');
     res.status(201).json({ transaction, stock_actual: item.stock });
   } catch (error: any) {
     if (error.message === 'INSUFFICIENT_STOCK') {

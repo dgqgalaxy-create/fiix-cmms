@@ -1,8 +1,10 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
-import { getIO } from '../utils/socket';
+import { emitRefresh, emitWorkOrderUpdated } from '../utils/socket';
 import { triggerNewWorkOrderNotification } from '../services/NotificationService';
+import { computeWorkOrderSla, getSlaSettings } from '../services/SlaService';
+import { formatWorkOrderFolio } from '../utils/folio';
 
 export const getRequesters = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -38,7 +40,13 @@ export const getWorkOrders = async (req: AuthRequest, res: Response): Promise<vo
       },
       orderBy: { created_at: 'desc' } // Opcional, pero bueno para ordenar las más recientes primero
     });
-    res.json(workOrders);
+
+    const { sla_policy } = await getSlaSettings();
+    const withSla = workOrders.map((wo) => ({
+      ...wo,
+      sla: computeWorkOrderSla(wo, sla_policy),
+    }));
+    res.json(withSla);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al obtener órdenes de trabajo' });
@@ -96,14 +104,31 @@ export const getWorkOrderById = async (req: AuthRequest, res: Response): Promise
         assigned_technicians: { select: { id: true, name: true } },
         failure_problem: true,
         failure_cause: true,
-        failure_remedy: true
+        failure_remedy: true,
+        inventory_transactions: {
+          where: { amount: { lt: 0 } },
+          include: {
+            item: { select: { id: true, name: true, internal_code: true, uom: true, purchase_cost: true } },
+          },
+          orderBy: { created_at: 'asc' },
+        },
       }
     });
     if (!workOrder) {
       res.status(404).json({ error: 'Orden no encontrada' });
       return;
     }
-    res.json(workOrder);
+    const parts_cost_total = workOrder.inventory_transactions.reduce((sum, tx) => {
+      const qty = Math.abs(tx.amount);
+      const unit = tx.unit_cost ?? tx.item.purchase_cost ?? 0;
+      return sum + qty * unit;
+    }, 0);
+    const { sla_policy } = await getSlaSettings();
+    res.json({
+      ...workOrder,
+      parts_cost_total: parseFloat(parts_cost_total.toFixed(2)),
+      sla: computeWorkOrderSla(workOrder, sla_policy),
+    });
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener orden de trabajo' });
   }
@@ -155,9 +180,7 @@ export const createPublicWorkOrder = async (req: Request, res: Response): Promis
       }
     });
 
-    const io = getIO();
-    io.emit('new_work_order', newWorkOrder);
-    io.emit('refresh_work_orders');
+    emitWorkOrderUpdated(newWorkOrder.id);
     
     // Disparar notificaciones
     try {
@@ -228,9 +251,7 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
       }
     });
 
-    getIO().emit('refresh_work_orders');
-    
-    // Disparar notificaciones (Telegram + in-app). No debe fallar la creación si fallan.
+    emitWorkOrderUpdated(newWorkOrder.id);
     try {
       await triggerNewWorkOrderNotification(newWorkOrder);
     } catch (notifyError) {
@@ -293,6 +314,25 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
       }
     }
 
+    // Transiciones críticas: solo si el estado en BD sigue siendo el esperado
+    if (status && status !== currentWorkOrder.status) {
+      const allowedFrom: Record<string, string[]> = {
+        PENDIENTE: ['EN_PROCESO', 'ANULADO'],
+        EN_PROCESO: ['EN_ESPERA', 'FINALIZADO', 'ANULADO'],
+        EN_ESPERA: ['EN_PROCESO', 'FINALIZADO', 'ANULADO'],
+        FINALIZADO: [],
+        ANULADO: [],
+      };
+      const from = currentWorkOrder.status;
+      if (!(allowedFrom[from] || []).includes(status)) {
+        res.status(409).json({
+          error: `No se puede pasar de ${from} a ${status}. Otro usuario pudo haber actualizado la orden.`,
+          current_status: from,
+        });
+        return;
+      }
+    }
+
     // Multer inyecta los archivos aquí
     const files = (req as any).files as { [fieldname: string]: Express.Multer.File[] };
     
@@ -332,8 +372,17 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
     
     if (status === 'EN_ESPERA') {
       updateData.hold_reason = hold_reason;
+      if (currentWorkOrder.status !== 'EN_ESPERA') {
+        updateData.paused_at = new Date();
+      }
+    }
+
+    if (status && status !== 'EN_ESPERA' && currentWorkOrder.status === 'EN_ESPERA') {
+      updateData.paused_at = null;
     }
     
+    let didConsumeInventory = false;
+
     if (status === 'FINALIZADO' && currentWorkOrder.status !== 'FINALIZADO') {
       updateData.completed_at = new Date();
 
@@ -347,26 +396,44 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
         }
       }
 
-      // Descontar inventario si se enviaron repuestos usados
-      if (parsedUsedItems && Array.isArray(parsedUsedItems) && userId) {
-        for (const part of parsedUsedItems) {
-          if (part.item_id && part.amount) {
-            const amountToDeduct = Math.abs(Number(part.amount));
-            // 1. Crear transacción de salida
-            await prisma.inventoryTransaction.create({
-              data: {
-                item_id: part.item_id,
-                user_id: userId,
-                amount: -amountToDeduct,
-                reason: `Consumo OT WO-${currentWorkOrder.folio.toString().padStart(4, '0')}`
+      // Descontar inventario si se enviaron repuestos usados (atómico + ligado a la OT)
+      if (parsedUsedItems && Array.isArray(parsedUsedItems) && parsedUsedItems.length > 0 && userId) {
+        const folioLabel = formatWorkOrderFolio(currentWorkOrder.folio);
+        try {
+          await prisma.$transaction(async (tx) => {
+            for (const part of parsedUsedItems) {
+              if (!part.item_id || !part.amount) continue;
+              const amountToDeduct = Math.abs(Number(part.amount));
+              if (amountToDeduct <= 0) continue;
+
+              const item = await tx.item.findUnique({ where: { id: part.item_id } });
+              if (!item) {
+                throw new Error(`Repuesto no encontrado (${part.item_id})`);
               }
-            });
-            // 2. Descontar del stock
-            await prisma.item.update({
-              where: { id: part.item_id },
-              data: { stock: { decrement: amountToDeduct } }
-            });
-          }
+              if (item.stock < amountToDeduct) {
+                throw new Error(`Stock insuficiente de "${item.name}". Disponible: ${item.stock} ${item.uom}`);
+              }
+
+              await tx.inventoryTransaction.create({
+                data: {
+                  item_id: part.item_id,
+                  user_id: userId,
+                  work_order_id: id,
+                  unit_cost: item.purchase_cost ?? 0,
+                  amount: -amountToDeduct,
+                  reason: `Consumo OT ${folioLabel}`,
+                },
+              });
+              await tx.item.update({
+                where: { id: part.item_id },
+                data: { stock: { decrement: amountToDeduct } },
+              });
+              didConsumeInventory = true;
+            }
+          });
+        } catch (consumeError: any) {
+          res.status(400).json({ error: consumeError.message || 'No se pudo descontar el inventario al cerrar la OT' });
+          return;
         }
       }
     }
@@ -394,13 +461,42 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
       updateData.after_image_url = `/uploads/${files['after_image'][0].filename}`;
     }
 
-    const updated = await prisma.workOrder.update({
-      where: { id },
-      data: updateData
-    });
+    // Comparar-y-actualizar: si el estado cambió en paralelo, 409
+    try {
+      const updated = await prisma.$transaction(async (tx) => {
+        const fresh = await tx.workOrder.findUnique({ where: { id } });
+        if (!fresh) {
+          throw Object.assign(new Error('NOT_FOUND'), { code: 'NOT_FOUND' });
+        }
+        if (status && status !== currentWorkOrder.status && fresh.status !== currentWorkOrder.status) {
+          throw Object.assign(new Error('CONFLICT'), {
+            code: 'CONFLICT',
+            current_status: fresh.status,
+          });
+        }
+        return tx.workOrder.update({
+          where: { id },
+          data: updateData,
+        });
+      });
 
-    getIO().emit('refresh_work_orders');
-    res.json(updated);
+      emitWorkOrderUpdated(id);
+      if (didConsumeInventory) emitRefresh('refresh_inventory');
+      res.json(updated);
+    } catch (txError: any) {
+      if (txError?.code === 'NOT_FOUND') {
+        res.status(404).json({ error: 'Orden no encontrada' });
+        return;
+      }
+      if (txError?.code === 'CONFLICT') {
+        res.status(409).json({
+          error: 'Otro usuario ya actualizó el estado de esta orden. Recarga e inténtalo de nuevo.',
+          current_status: txError.current_status,
+        });
+        return;
+      }
+      throw txError;
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al actualizar orden de trabajo' });
@@ -424,7 +520,7 @@ export const deleteWorkOrder = async (req: AuthRequest, res: Response): Promise<
     }
 
     await prisma.workOrder.delete({ where: { id } });
-    getIO().emit('refresh_work_orders');
+    emitWorkOrderUpdated(id);
     res.json({ message: 'Orden eliminada con éxito' });
   } catch (error) {
     console.error(error);
@@ -473,7 +569,7 @@ export const joinWorkOrder = async (req: AuthRequest, res: Response): Promise<vo
       }
     });
 
-    getIO().emit('refresh_work_orders');
+    emitWorkOrderUpdated(id);
     res.json(updated);
   } catch (error) {
     console.error(error);

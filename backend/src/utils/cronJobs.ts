@@ -1,5 +1,7 @@
 import cron from 'node-cron';
 import prisma from '../config/prisma';
+import { evaluateOpenWorkOrders, silentBackfillSlaEvents } from '../services/SlaService';
+import { emitRefresh } from './socket';
 
 // This cron job will run every day at 00:01
 export const initCronJobs = () => {
@@ -8,11 +10,36 @@ export const initCronJobs = () => {
     await checkAndGenerateMaintenanceOrders();
   });
 
-  // For development and testing, run it once immediately on startup
+  // SLA reminders / escalations every 15 minutes (con digest si hay muchos)
+  cron.schedule('*/15 * * * *', async () => {
+    console.log('Running SLA evaluation...');
+    try {
+      const result = await evaluateOpenWorkOrders({ mode: 'notify' });
+      console.log(
+        `SLA check done. Open WOs: ${result.checked}, events: ${result.emitted}, messages: ${result.notified}`
+      );
+    } catch (error) {
+      console.error('Error evaluating SLA:', error);
+    }
+  });
+
+  // For development and testing, run PM once immediately on startup
   setTimeout(() => {
     console.log('Running initial PM check on startup...');
     checkAndGenerateMaintenanceOrders();
   }, 5000);
+
+  // Arranque: baseline silencioso del rezago (sin Telegram) para no saturar el canal
+  setTimeout(() => {
+    console.log('Running silent SLA backfill on startup (no Telegram flood)...');
+    silentBackfillSlaEvents()
+      .then((result) => {
+        console.log(
+          `Silent SLA backfill done. Open WOs: ${result.checked}, events recorded: ${result.emitted}`
+        );
+      })
+      .catch((error) => console.error('Error in silent SLA backfill:', error));
+  }, 8000);
 };
 
 export const checkAndGenerateMaintenanceOrders = async () => {
@@ -106,6 +133,8 @@ export const checkAndGenerateMaintenanceOrders = async () => {
           }
         });
 
+        emitRefresh('refresh_work_orders');
+        emitRefresh('refresh_maintenance');
         console.log(`Successfully generated WO for PM Plan: ${plan.title}`);
       }
     }

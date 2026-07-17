@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
+import { emitRefresh } from '../utils/socket';
 
 export const getRcaTree = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -41,6 +42,7 @@ export const createProblem = async (req: Request, res: Response): Promise<void> 
   try {
     const { name } = req.body;
     const problem = await prisma.failureProblem.create({ data: { name } });
+    emitRefresh('refresh_rca');
     res.status(201).json(problem);
   } catch (error) {
     res.status(500).json({ error: 'Error creating problem' });
@@ -55,6 +57,7 @@ export const updateProblem = async (req: Request, res: Response): Promise<void> 
       where: { id },
       data: { name, is_active }
     });
+    emitRefresh('refresh_rca');
     res.json(problem);
   } catch (error) {
     res.status(500).json({ error: 'Error updating problem' });
@@ -82,6 +85,7 @@ export const createCause = async (req: Request, res: Response): Promise<void> =>
   try {
     const { name, problem_id } = req.body;
     const cause = await prisma.failureCause.create({ data: { name, problem_id } });
+    emitRefresh('refresh_rca');
     res.status(201).json(cause);
   } catch (error) {
     res.status(500).json({ error: 'Error creating cause' });
@@ -96,6 +100,7 @@ export const updateCause = async (req: Request, res: Response): Promise<void> =>
       where: { id },
       data: { name, is_active }
     });
+    emitRefresh('refresh_rca');
     res.json(cause);
   } catch (error) {
     res.status(500).json({ error: 'Error updating cause' });
@@ -116,6 +121,7 @@ export const createRemedy = async (req: Request, res: Response): Promise<void> =
   try {
     const { name, cause_id } = req.body;
     const remedy = await prisma.failureRemedy.create({ data: { name, cause_id } });
+    emitRefresh('refresh_rca');
     res.status(201).json(remedy);
   } catch (error) {
     res.status(500).json({ error: 'Error creating remedy' });
@@ -130,6 +136,7 @@ export const updateRemedy = async (req: Request, res: Response): Promise<void> =
       where: { id },
       data: { name, is_active }
     });
+    emitRefresh('refresh_rca');
     res.json(remedy);
   } catch (error) {
     res.status(500).json({ error: 'Error updating remedy' });

@@ -13,8 +13,27 @@ import {
   HardDrive,
   RefreshCw,
   LockKeyhole,
+  Tags,
 } from 'lucide-react';
 import axios, { BACKEND_URL } from '../api/axios';
+
+type AssetCodeMapping = {
+  id: string;
+  name: string;
+  old_code: string;
+  new_code: string;
+  changed: boolean;
+};
+
+type AssetCodeMigrationPlan = {
+  total: number;
+  to_change: number;
+  unchanged: number;
+  already_compliant: number;
+  mappings: AssetCodeMapping[];
+  message?: string;
+  success?: boolean;
+};
 
 export const DeveloperOptions = () => {
   const [password, setPassword] = useState('');
@@ -28,6 +47,9 @@ export const DeveloperOptions = () => {
   const [telegramToken, setTelegramToken] = useState('');
   const [telegramChatId, setTelegramChatId] = useState('');
   const [isSavingTelegram, setIsSavingTelegram] = useState(false);
+  const [assetCodePlan, setAssetCodePlan] = useState<AssetCodeMigrationPlan | null>(null);
+  const [isAssetCodePreviewOpen, setIsAssetCodePreviewOpen] = useState(false);
+  const [isAssetCodeLoading, setIsAssetCodeLoading] = useState(false);
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -70,6 +92,66 @@ export const DeveloperOptions = () => {
       setError('Error al guardar la configuración de Telegram.');
     } finally {
       setIsSavingTelegram(false);
+    }
+  };
+
+  const downloadAssetCodeMap = (plan: AssetCodeMigrationPlan) => {
+    const changed = plan.mappings.filter((m) => m.changed);
+    const blob = new Blob(
+      [JSON.stringify({ generated_at: new Date().toISOString(), ...plan, changed }, null, 2)],
+      { type: 'application/json' }
+    );
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mapa-codigos-activos-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handlePreviewAssetCodes = async () => {
+    setIsAssetCodeLoading(true);
+    setError(null);
+    try {
+      const res = await axios.get('/dev/migrate-asset-codes/preview', {
+        headers: { 'x-dev-password': password },
+      });
+      setAssetCodePlan(res.data);
+      setIsAssetCodePreviewOpen(true);
+    } catch {
+      setError('No se pudo generar la vista previa de códigos de activos.');
+    } finally {
+      setIsAssetCodeLoading(false);
+    }
+  };
+
+  const handleApplyAssetCodes = async () => {
+    if (!assetCodePlan || assetCodePlan.to_change === 0) return;
+    const confirmed = window.confirm(
+      `Se actualizarán ${assetCodePlan.to_change} códigos internos al formato ACT-0001.\n\n` +
+        'Los QR de activos no se afectan (usan el ID interno).\n' +
+        'Se recomienda haber exportado un respaldo antes.\n\n¿Continuar?'
+    );
+    if (!confirmed) return;
+
+    setIsAssetCodeLoading(true);
+    setError(null);
+    try {
+      const res = await axios.post(
+        '/dev/migrate-asset-codes',
+        {},
+        { headers: { 'x-dev-password': password } }
+      );
+      setAssetCodePlan(res.data);
+      setSuccessMsg(res.data.message || 'Migración de códigos completada.');
+      downloadAssetCodeMap(res.data);
+      setTimeout(() => setSuccessMsg(null), 5000);
+    } catch {
+      setError('Error al aplicar la migración de códigos de activos.');
+    } finally {
+      setIsAssetCodeLoading(false);
     }
   };
 
@@ -388,7 +470,7 @@ export const DeveloperOptions = () => {
                   value={telegramChatId}
                   onChange={(e) => setTelegramChatId(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  placeholder="ej. -1001234567890"
+                  placeholder="ej. -1001234567890 (incluye el signo -)"
                 />
               </div>
             </div>
@@ -401,6 +483,21 @@ export const DeveloperOptions = () => {
             <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Mantenimiento</p>
             <h2 className="mt-1 text-xl font-black text-slate-900 dark:text-white">Herramientas locales</h2>
             <div className="mt-5 space-y-3">
+              <button
+                onClick={handlePreviewAssetCodes}
+                disabled={isAssetCodeLoading || isLoading}
+                className="flex w-full items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-left transition hover:bg-emerald-50 disabled:opacity-50 dark:border-emerald-900/50 dark:bg-emerald-950/20"
+              >
+                <Tags className="shrink-0 text-emerald-600" size={20} />
+                <span>
+                  <span className="block text-sm font-black text-slate-800 dark:text-white">
+                    {isAssetCodeLoading ? 'Analizando códigos...' : 'Migrar códigos de activos → ACT-0001'}
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    Convierte EQ-XXXXX y otros formatos al estándar ACT-0001. Primero muestra vista previa.
+                  </span>
+                </span>
+              </button>
               <button
                 onClick={() => {
                   if ('serviceWorker' in navigator) {
@@ -487,6 +584,79 @@ export const DeveloperOptions = () => {
               >
                 {isLoading ? 'Vaciando...' : 'Confirmar Borrado'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Asset Code Migration Preview Modal */}
+      {isAssetCodePreviewOpen && assetCodePlan && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[90vh]">
+            <div className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400 mb-4 shrink-0">
+              <Tags size={24} />
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Migración de códigos de activos</h3>
+            </div>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 shrink-0">
+              Total: <strong>{assetCodePlan.total}</strong> · A migrar: <strong>{assetCodePlan.to_change}</strong> ·
+              Ya conformes: <strong>{assetCodePlan.already_compliant}</strong>
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 shrink-0">
+              Los códigos QR no cambian (usan el ID interno del activo). Tras aplicar se descarga el mapa de equivalencias.
+            </p>
+            <div className="overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl mb-5 flex-1 min-h-0">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0">
+                  <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                    <th className="px-3 py-2">Código actual</th>
+                    <th className="px-3 py-2">Nuevo</th>
+                    <th className="px-3 py-2">Equipo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assetCodePlan.mappings
+                    .filter((m) => m.changed)
+                    .map((row) => (
+                      <tr key={row.id} className="border-t border-slate-100 dark:border-slate-800">
+                        <td className="px-3 py-2 font-mono text-slate-600 dark:text-slate-400">{row.old_code}</td>
+                        <td className="px-3 py-2 font-mono font-bold text-emerald-700 dark:text-emerald-400">{row.new_code}</td>
+                        <td className="px-3 py-2 text-slate-800 dark:text-slate-200">{row.name}</td>
+                      </tr>
+                    ))}
+                  {assetCodePlan.to_change === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-3 py-6 text-center text-slate-500">
+                        Todos los activos ya usan el formato ACT-XXXX.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex flex-col-reverse sm:flex-row gap-3 shrink-0">
+              <button
+                onClick={() => setIsAssetCodePreviewOpen(false)}
+                className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-lg transition-colors"
+              >
+                Cerrar
+              </button>
+              {assetCodePlan.to_change > 0 && (
+                <>
+                  <button
+                    onClick={() => downloadAssetCodeMap(assetCodePlan)}
+                    className="flex-1 bg-slate-700 hover:bg-slate-800 text-white font-bold py-3 rounded-lg transition-colors"
+                  >
+                    Descargar mapa
+                  </button>
+                  <button
+                    onClick={handleApplyAssetCodes}
+                    disabled={isAssetCodeLoading}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {isAssetCodeLoading ? 'Migrando...' : 'Aplicar migración'}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

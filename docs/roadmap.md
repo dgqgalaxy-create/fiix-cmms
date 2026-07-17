@@ -1,11 +1,32 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
-*(Última actualización: 16 de Julio de 2026)*
+*(Última actualización: 17 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.12.9 (Actualización: 16 de Julio de 2026)
+## 🚀 Versión Actual: v1.22.0 (Actualización: 17 de Julio de 2026)
 
-### Novedades en v1.12.9 (Desplazamiento suave del manual)
+### Novedades en v1.22.0 (Dashboard de técnicos)
+- **KPIs → Dashboard de técnicos:** carga del día, OTs pausadas, tiempo en espera y productividad semanal (cierres + horas de labor), con gráfica top 8.
+- **Reloj de pausa:** al pasar una OT a En espera se guarda `paused_at` para medir el tiempo detenido.
+
+### Novedades Anteriores (v1.14.2 - Formulario SLA en Configuración)
+- **Pestaña SLA y tiempos:** formulario por prioridad (Urgente / Normal / Bajo) para editar horas de recordatorio, máximo y escalamiento sin tocar código.
+
+### Novedades Anteriores (v1.14.1 - SLA anti-saturación)
+- **Baseline silencioso:** al arrancar, el rezago de OT vencidas se registra sin enviar Telegram.
+- **Digest:** si un ciclo genera más de 5 avisos nuevos, se manda un solo resumen al grupo.
+
+### Novedades Anteriores (v1.14.0 - SLA y escalamiento)
+- **Relojes SLA:** respuesta (PENDIENTE), detenida (EN_ESPERA) y resolución (hasta FINALIZADO), con umbrales por prioridad URGENTE/NORMAL/BAJO.
+- **Automatización:** cron cada 15 minutos envía recordatorios y escalamientos (Telegram + in-app a GESTIONADOR/ADMINISTRADOR) sin duplicar el mismo evento.
+- **Configuración:** toggle y tabla de umbrales en Configuración → Notificaciones; badges de cumplimiento en listado y detalle de OT.
+
+### Novedades Anteriores (v1.13.0 - Migración de códigos de activos)
+- **EQ → ACT:** Herramienta en Opciones de Desarrollador para convertir códigos históricos (`EQ-XXXXX` u otros) al formato estándar `ACT-0001`, con vista previa y mapa JSON de equivalencias.
+- **Importación CSV:** Los activos creados al importar órdenes ya reciben `ACT-XXXX` (deja de generarse `EQ-` aleatorio).
+- **QR intactos:** La migración no afecta códigos QR impresos; siguen apuntando al UUID del activo.
+
+### Novedades Anteriores (v1.12.9 - Desplazamiento suave del manual)
 - **Degradado progresivo:** La intensidad aumenta gradualmente durante los primeros píxeles de desplazamiento, sin activación repentina.
 - **Altura completa:** El área desplazable se adapta al espacio real y llega hasta el borde inferior disponible.
 
@@ -159,11 +180,12 @@ Este documento contiene la lista de módulos y características pendientes de de
 - [x] Convertir la actual "Lista de compras .txt" en Órdenes de Compra digitales reales guardadas en la base de datos.
 - [x] Flujo de estados: "Borrador" -> "Solicitado" -> "Recibido".
 - [x] Alimentación automática del inventario al marcar un PO como "Recibido".
+- [x] **Stock crítico accionable (v1.18.0):** Desde la tarjeta de Stock Crítico en Inventario, generar borradores de OC con ítems bajo mínimo en un clic (agrupados por proveedor).
 
 ## [ ] Mejoras Transversales Futuras (Backlog)
 - [x] **Migración de Órdenes e Inventario:** Importación exitosa de los archivos CSV históricos.
 - [ ] **Checklists avanzados y LOTO:** Pasos obligatorios dentro de la Orden de Trabajo y firmas de bloqueo de energías peligrosas.
-- [x] **Notificaciones y Escalamiento:** Avisar por Email/Push/WhatsApp a técnicos y escalar SLAs vencidos a gerentes.
+- [x] **Notificaciones y Escalamiento:** Recordatorios y escalamiento SLA por prioridad (respuesta, detenida, resolución) vía Telegram + in-app a gestores/admins (v1.14.0).
 - [ ] **Control de Medidores (CBM):** Registro histórico de horómetros y detonación automática de PMs por uso real.
 - [x] **Soporte PWA (Offline):** Que la app funcione sin conexión a internet y sincronice datos en segundo plano.
 - [x] **Gestión con Códigos QR:** Escaneo físico en máquinas para abrir historiales y escaneo en estantes para el control rápido de refacciones.

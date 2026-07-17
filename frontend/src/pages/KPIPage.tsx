@@ -20,6 +20,7 @@ import type {
   TechnicianPerformance,
 } from '../api/kpis';
 import { useAuth } from '../context/AuthContext';
+import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import {
   Target,
   TrendingUp,
@@ -35,6 +36,9 @@ import {
   Wrench,
   Activity,
   Package,
+  PauseCircle,
+  Timer,
+  CalendarCheck,
 } from 'lucide-react';
 import {
   LineChart,
@@ -48,6 +52,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { formatWorkOrderFolio } from '../utils/folio';
 
 type MetricStatus = 'good' | 'warn' | 'bad' | 'neutral';
 
@@ -120,6 +125,11 @@ const statusStyles: Record<MetricStatus, { card: string; value: string; chip: st
 
 const panelClass = 'rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 p-5 shadow-sm';
 
+const formatHours = (hours: number): string => {
+  if (!Number.isFinite(hours) || hours <= 0) return '0 h';
+  return `${hours.toLocaleString('es-MX', { maximumFractionDigits: 1 })} h`;
+};
+
 const progressPct = (metric: KPIMetric, moreIsBetter: boolean) => {
   if (!metric.goal.targetValue) return 0;
   if (moreIsBetter) return Math.min(100, (metric.value / metric.goal.targetValue) * 100);
@@ -147,10 +157,12 @@ export const KPIPage = () => {
   const [isFetchingOrders, setIsFetchingOrders] = useState(false);
   const [goalsForm, setGoalsForm] = useState<Record<string, number>>({});
 
-  const fetchData = async () => {
+  const fetchData = async (background = false) => {
     try {
-      setIsLoading(true);
-      setLoadError(false);
+      if (!background) {
+        setIsLoading(true);
+        setLoadError(false);
+      }
       const [kpiData, chartData, costData, topFailingData, techData] = await Promise.all([
         getKPIs(period, reworkDays),
         getChartData(period).catch(() => []),
@@ -175,16 +187,20 @@ export const KPIPage = () => {
       setGoalsForm(formState);
     } catch (error) {
       console.error('Error fetching KPI data:', error);
-      setLoadError(true);
-      setData(null);
+      if (!background) {
+        setLoadError(true);
+        setData(null);
+      }
     } finally {
-      setIsLoading(false);
+      if (!background) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
   }, [period, reworkDays]);
+
+  useSocketRefresh(['refresh_work_orders', 'refresh_inventory'], () => { void fetchData(true); });
 
   const applyReworkDays = (value: number) => {
     const clamped = Math.min(90, Math.max(1, Math.round(value) || DEFAULT_REWORK_DAYS));
@@ -238,6 +254,25 @@ export const KPIPage = () => {
     const end = new Date(data.period.end).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
     return `${start} — ${end}`;
   };
+
+  const techDashSummary = {
+    cargaHoy: techPerformance.reduce((s, r) => s + (r.CargaHoy ?? 0), 0),
+    pausadas: techPerformance.reduce((s, r) => s + (r.Pausadas ?? 0), 0),
+    tiempoEspera: techPerformance.reduce((s, r) => s + (r.TiempoEsperaHoras ?? 0), 0),
+    finalizadasSemana: techPerformance.reduce((s, r) => s + (r.FinalizadasSemana ?? 0), 0),
+    horasLaborSemana: techPerformance.reduce((s, r) => s + (r.HorasLaborSemana ?? 0), 0),
+  };
+
+  const techWeeklyChart = [...techPerformance]
+    .filter((r) => (r.FinalizadasSemana ?? 0) > 0 || (r.HorasLaborSemana ?? 0) > 0)
+    .sort((a, b) => (b.FinalizadasSemana ?? 0) - (a.FinalizadasSemana ?? 0))
+    .slice(0, 8)
+    .map((r) => ({
+      name: r.name.split(' ')[0] || r.name,
+      fullName: r.name,
+      finalizadas: r.FinalizadasSemana ?? 0,
+      horas: r.HorasLaborSemana ?? 0,
+    }));
 
   const renderKpiCard = (
     title: string,
@@ -672,45 +707,154 @@ export const KPIPage = () => {
             </div>
           </section>
 
-          <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <div className={panelClass}>
-              <div className="flex items-center gap-2 mb-4">
-                <Users className="text-sky-600 dark:text-sky-400" size={20} />
+          <section className={`${panelClass} space-y-5`}>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Users className="text-sky-600 dark:text-sky-400" size={22} />
                 <div>
-                  <h3 className="font-bold text-slate-800 dark:text-slate-100">Carga por técnico</h3>
-                  <p className="text-xs text-slate-400">Asignaciones abiertas y del periodo</p>
+                  <h3 className="font-bold text-slate-800 dark:text-slate-100">Dashboard de técnicos</h3>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
+                    Carga del día, pausadas, tiempo en espera y productividad de la semana (lun–dom). La tabla de periodo sigue el filtro superior.
+                  </p>
                 </div>
               </div>
-              {techPerformance.length > 0 ? (
-                <div className="overflow-x-auto max-h-80">
-                  <table className="w-full text-sm">
-                    <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      <tr>
-                        <th className="text-left px-3 py-2 font-bold">Técnico</th>
-                        <th className="text-right px-3 py-2 font-bold">Fin.</th>
-                        <th className="text-right px-3 py-2 font-bold">Proc.</th>
-                        <th className="text-right px-3 py-2 font-bold">Pend.</th>
-                        <th className="text-right px-3 py-2 font-bold">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {techPerformance.map((row) => (
-                        <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                          <td className="px-3 py-2.5 font-medium text-slate-700 dark:text-slate-300">{row.name}</td>
-                          <td className="px-3 py-2.5 text-right text-emerald-700 dark:text-emerald-400 font-semibold">{row.Finalizadas}</td>
-                          <td className="px-3 py-2.5 text-right text-sky-700 dark:text-sky-400 font-semibold">{row.EnProceso}</td>
-                          <td className="px-3 py-2.5 text-right text-amber-700 dark:text-amber-400 font-semibold">{row.Pendientes}</td>
-                          <td className="px-3 py-2.5 text-right font-bold text-slate-800 dark:text-slate-100">{row.Total}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="h-40 flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm">Sin carga asignada en el periodo</div>
-              )}
             </div>
 
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="rounded-xl border border-sky-100 dark:border-sky-900/40 bg-sky-50/80 dark:bg-sky-950/30 p-3.5">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300">
+                  <Activity size={14} /> Carga del día
+                </div>
+                <p className="mt-1 text-2xl font-black text-sky-800 dark:text-sky-200">{techDashSummary.cargaHoy}</p>
+                <p className="text-[11px] text-sky-600/80 dark:text-sky-400/80">OT abiertas asignadas</p>
+              </div>
+              <div className="rounded-xl border border-amber-100 dark:border-amber-900/40 bg-amber-50/80 dark:bg-amber-950/30 p-3.5">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                  <PauseCircle size={14} /> OTs pausadas
+                </div>
+                <p className="mt-1 text-2xl font-black text-amber-800 dark:text-amber-200">{techDashSummary.pausadas}</p>
+                <p className="text-[11px] text-amber-600/80 dark:text-amber-400/80">En espera ahora</p>
+              </div>
+              <div className="rounded-xl border border-orange-100 dark:border-orange-900/40 bg-orange-50/80 dark:bg-orange-950/30 p-3.5">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300">
+                  <Timer size={14} /> Tiempo en espera
+                </div>
+                <p className="mt-1 text-2xl font-black text-orange-800 dark:text-orange-200">
+                  {formatHours(techDashSummary.tiempoEspera)}
+                </p>
+                <p className="text-[11px] text-orange-600/80 dark:text-orange-400/80">Suma relojes detenidos</p>
+              </div>
+              <div className="rounded-xl border border-emerald-100 dark:border-emerald-900/40 bg-emerald-50/80 dark:bg-emerald-950/30 p-3.5">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                  <CalendarCheck size={14} /> Productividad semanal
+                </div>
+                <p className="mt-1 text-2xl font-black text-emerald-800 dark:text-emerald-200">
+                  {techDashSummary.finalizadasSemana}
+                  <span className="ml-1.5 text-sm font-bold text-emerald-600/90 dark:text-emerald-400">
+                    · {formatHours(techDashSummary.horasLaborSemana)}
+                  </span>
+                </p>
+                <p className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80">Cerradas · horas de labor</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                  Detalle por técnico
+                </h4>
+                {techPerformance.length > 0 ? (
+                  <div className="overflow-x-auto max-h-80 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-bold">Técnico</th>
+                          <th className="text-right px-2 py-2 font-bold" title="Carga del día">Hoy</th>
+                          <th className="text-right px-2 py-2 font-bold" title="En espera">Paus.</th>
+                          <th className="text-right px-2 py-2 font-bold" title="Tiempo en espera">Esp.</th>
+                          <th className="text-right px-2 py-2 font-bold" title="Finalizadas esta semana">Sem.</th>
+                          <th className="text-right px-2 py-2 font-bold" title="Horas de labor esta semana">Lab.</th>
+                          <th className="text-right px-2 py-2 font-bold" title="Finalizadas en el periodo">Fin.</th>
+                          <th className="text-right px-2 py-2 font-bold" title="En proceso">Proc.</th>
+                          <th className="text-right px-2 py-2 font-bold" title="Pendientes">Pend.</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {techPerformance.map((row) => (
+                          <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                            <td className="px-3 py-2.5 font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                              {row.name}
+                            </td>
+                            <td className="px-2 py-2.5 text-right font-semibold text-sky-700 dark:text-sky-400">
+                              {row.CargaHoy ?? 0}
+                            </td>
+                            <td className="px-2 py-2.5 text-right font-semibold text-amber-700 dark:text-amber-400">
+                              {row.Pausadas ?? 0}
+                            </td>
+                            <td className="px-2 py-2.5 text-right text-orange-700 dark:text-orange-400 tabular-nums">
+                              {formatHours(row.TiempoEsperaHoras ?? 0)}
+                            </td>
+                            <td className="px-2 py-2.5 text-right font-semibold text-emerald-700 dark:text-emerald-400">
+                              {row.FinalizadasSemana ?? 0}
+                            </td>
+                            <td className="px-2 py-2.5 text-right text-slate-600 dark:text-slate-300 tabular-nums">
+                              {formatHours(row.HorasLaborSemana ?? 0)}
+                            </td>
+                            <td className="px-2 py-2.5 text-right text-slate-600 dark:text-slate-400">{row.Finalizadas}</td>
+                            <td className="px-2 py-2.5 text-right text-sky-600 dark:text-sky-400">{row.EnProceso}</td>
+                            <td className="px-2 py-2.5 text-right text-amber-600 dark:text-amber-400">{row.Pendientes}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="h-40 flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                    Sin carga asignada
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                  Productividad semanal (top 8)
+                </h4>
+                {techWeeklyChart.length > 0 ? (
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={techWeeklyChart} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border, #e2e8f0)" />
+                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                        <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
+                        <Tooltip
+                          formatter={(val: number, key: string) =>
+                            key === 'horas' ? [formatHours(Number(val)), 'Horas labor'] : [val, 'Finalizadas']
+                          }
+                          labelFormatter={(_: string, payload) => payload?.[0]?.payload?.fullName || _}
+                          contentStyle={{
+                            borderRadius: 12,
+                            border: '1px solid var(--color-border)',
+                            background: 'var(--color-surface)',
+                            color: 'var(--color-fg)',
+                            boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)',
+                          }}
+                        />
+                        <Legend />
+                        <Bar dataKey="finalizadas" name="Finalizadas" fill="#059669" radius={[4, 4, 0, 0]} barSize={16} />
+                        <Bar dataKey="horas" name="Horas labor" fill="#0284c7" radius={[4, 4, 0, 0]} barSize={16} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-72 flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                    Sin cierres esta semana
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-1 gap-4">
             <div className={panelClass}>
               <div className="flex flex-col gap-4 mb-4">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -850,7 +994,7 @@ export const KPIPage = () => {
                     {failureOrders.map((order) => (
                       <tr key={order.id}>
                         <td className="px-3 py-2 font-semibold text-slate-700 dark:text-slate-300">
-                          WO-{(order.folio || 0).toString().padStart(4, '0')}
+                          {formatWorkOrderFolio(order.folio)}
                         </td>
                         <td className="px-3 py-2 text-slate-600 dark:text-slate-400">{order.title}</td>
                         <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{order.status}</td>

@@ -29,7 +29,8 @@ import {
 } from 'recharts';
 import { getWorkOrders, getWorkOrdersSummary } from '../api/workOrders';
 import type { WorkOrder } from '../api/workOrders';
-import { socket } from '../api/socket';
+import { formatWorkOrderFolio } from '../utils/folio';
+import { useSocketRefresh } from '../hooks/useSocketRefresh';
 
 export const HomePage = () => {
   const navigate = useNavigate();
@@ -57,12 +58,9 @@ export const HomePage = () => {
 
   useEffect(() => {
     fetchDashboard();
-    const handleRefresh = () => fetchDashboard(true);
-    socket.on('refresh_work_orders', handleRefresh);
-    return () => {
-      socket.off('refresh_work_orders', handleRefresh);
-    };
   }, []);
+
+  useSocketRefresh('refresh_work_orders', () => fetchDashboard(true));
 
   useEffect(() => {
     const fetchSummary = async () => {
@@ -420,7 +418,7 @@ export const HomePage = () => {
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
                     <span className="text-emerald-700 dark:text-emerald-400 mr-2">
-                      WO-{(wo.folio || 0).toString().padStart(4, '0')}
+                      {formatWorkOrderFolio(wo.folio)}
                     </span>
                     {wo.title}
                   </p>

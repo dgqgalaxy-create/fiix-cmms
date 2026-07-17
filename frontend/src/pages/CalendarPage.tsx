@@ -11,6 +11,7 @@ import { Calendar, LayoutList, CheckCircle2, ArrowRight, X } from 'lucide-react'
 import { updateWorkOrder, joinWorkOrder, deleteWorkOrder } from '../api/workOrders';
 import type { WorkOrder } from '../api/workOrders';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
+import { useSocketRefresh } from '../hooks/useSocketRefresh';
 
 const withDragAndDrop = (withDragAndDropRaw as any).default || withDragAndDropRaw;
 const DnDCalendar = withDragAndDrop(BigCalendar);
@@ -105,6 +106,8 @@ export const CalendarPage = () => {
   useEffect(() => {
     fetchOrders();
   }, [token]);
+
+  useSocketRefresh('refresh_work_orders', () => { void fetchOrders(); });
 
   const handleEventClick = (event: CustomEvent) => {
     setSelectedOrder(event.order);

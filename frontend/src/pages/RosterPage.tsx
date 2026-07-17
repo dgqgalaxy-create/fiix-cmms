@@ -14,6 +14,7 @@ import { getRoster, assignPattern, addException, removeException } from '../api/
 import type { TechnicianPattern, TechnicianException, RosterResponse } from '../api/roster';
 import { startOfMonth, endOfMonth, differenceInDays, addDays } from 'date-fns';
 import { Trash2, UserPlus, Calendar as CalendarIcon, Clock, AlertCircle, X, Printer } from 'lucide-react';
+import { useSocketRefresh } from '../hooks/useSocketRefresh';
 
 const locales = { 'es': es };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
@@ -55,8 +56,8 @@ export const RosterPage = () => {
 
   const [draggedException, setDraggedException] = useState<{ type: string, user_id: string } | null>(null);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (background = false) => {
+    if (!background) setLoading(true);
     try {
       const start = format(startOfMonth(currentDate), 'yyyy-MM-dd');
       const end = format(endOfMonth(currentDate), 'yyyy-MM-dd');
@@ -65,13 +66,15 @@ export const RosterPage = () => {
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
   }, [currentDate]);
+
+  useSocketRefresh('refresh_roster', () => { void fetchData(true); });
 
   const handleAssignPattern = async (e: React.FormEvent) => {
     e.preventDefault();

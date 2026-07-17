@@ -4,6 +4,7 @@ import { getPurchaseOrders, type PurchaseOrder } from '../api/purchaseOrders';
 import { CreatePOModal } from '../components/CreatePOModal';
 import { PODetailModal } from '../components/PODetailModal';
 import { useAuth } from '../context/AuthContext';
+import { useSocketRefresh } from '../hooks/useSocketRefresh';
 
 export const PurchaseOrdersPage = () => {
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
@@ -19,22 +20,24 @@ export const PurchaseOrdersPage = () => {
 
   const { hasPermission } = useAuth();
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (background = false) => {
     try {
-      setIsLoading(true);
+      if (!background) setIsLoading(true);
       const data = await getPurchaseOrders();
       setOrders(data);
       setFilteredOrders(data);
     } catch (error) {
       console.error('Error fetching purchase orders:', error);
     } finally {
-      setIsLoading(false);
+      if (!background) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  useSocketRefresh('refresh_purchase_orders', () => fetchOrders(true));
 
   useEffect(() => {
     const term = searchTerm.toLowerCase();

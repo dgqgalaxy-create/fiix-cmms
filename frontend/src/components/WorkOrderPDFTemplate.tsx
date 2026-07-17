@@ -1,6 +1,7 @@
 import { forwardRef } from 'react';
 import type { WorkOrder } from '../api/workOrders';
 import { BACKEND_URL } from '../api/axios';
+import { formatWorkOrderFolio } from '../utils/folio';
 
 interface Props {
   workOrder: WorkOrder;
@@ -25,7 +26,7 @@ export const WorkOrderPDFTemplate = forwardRef<HTMLDivElement, Props>(({ workOrd
       <div className="border-b-4 border-emerald-800 pb-4 mb-6 flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-extrabold uppercase tracking-wide text-slate-900">Reporte de Mantenimiento</h1>
-          <p className="text-slate-600 mt-1 font-medium text-lg">Folio: WO-{(workOrder.folio || 0).toString().padStart(4, '0')}</p>
+          <p className="text-slate-600 mt-1 font-medium text-lg">Folio: {formatWorkOrderFolio(workOrder.folio)}</p>
         </div>
         <div className="text-right text-sm text-slate-500 font-medium">
           <p>Generado el: {new Date().toLocaleDateString()}</p>

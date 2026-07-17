@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import prisma from '../config/prisma';
 import { Role } from '@prisma/client';
+import { emitRefresh } from '../utils/socket';
 
 export const getUsers = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -51,6 +52,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       data: { name, email, password_hash, role }
     });
     
+    emitRefresh('refresh_users');
     res.status(201).json({ id: user.id, name: user.name, email: user.email, role: user.role });
   } catch(error) {
     console.error('Error creating user:', error);
@@ -76,6 +78,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
       data: updateData
     });
     
+    emitRefresh('refresh_users');
     res.json({ id: user.id, name: user.name, email: user.email, role: user.role });
   } catch(error: any) {
     console.error('Error updating user:', error);
@@ -91,6 +94,7 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
   try {
     const id = req.params.id as string;
     await prisma.user.delete({ where: { id } });
+    emitRefresh('refresh_users');
     res.json({ message: 'Usuario eliminado' });
   } catch(error: any) {
     console.error('Error deleting user:', error);

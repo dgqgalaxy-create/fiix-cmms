@@ -1,6 +1,33 @@
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import prisma from '../config/prisma';
+import { emitRefresh } from '../utils/socket';
+
+const emitChecklists = () => emitRefresh('refresh_checklists');
+
+export const MIN_CHECKLIST_COLUMNS = 1;
+export const MAX_CHECKLIST_COLUMNS = 12;
+const DEFAULT_CHECKLIST_COLUMNS = 5;
+
+export function normalizeChecklistColumnCount(value: unknown): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return DEFAULT_CHECKLIST_COLUMNS;
+  return Math.min(MAX_CHECKLIST_COLUMNS, Math.max(MIN_CHECKLIST_COLUMNS, Math.round(n)));
+}
+
+function asLineStatuses(value: unknown): Record<string, string | null> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const out: Record<string, string | null> = {};
+  for (const [key, status] of Object.entries(value as Record<string, unknown>)) {
+    out[String(key)] = status == null ? null : String(status);
+  }
+  return out;
+}
+
+async function getConfiguredColumnCount(): Promise<number> {
+  const settings = await prisma.systemSettings.findFirst();
+  return normalizeChecklistColumnCount(settings?.checklist_column_count ?? DEFAULT_CHECKLIST_COLUMNS);
+}
 
 export const getTodayChecklist = async (req: AuthRequest, res: Response) => {
   try {
@@ -52,16 +79,20 @@ export const createTodayChecklist = async (req: AuthRequest, res: Response) => {
       orderBy: { order: 'asc' }
     });
 
+    const columnCount = await getConfiguredColumnCount();
+
     const checklist = await prisma.dailyChecklist.create({
       data: {
         date: today,
         technician_id: userId,
         status: 'DRAFT',
+        column_count: columnCount,
         rows: {
           create: activities.map(act => ({
             activity_name: act.name,
             order: act.order,
-            field_type: act.field_type
+            field_type: act.field_type,
+            line_statuses: {},
           }))
         }
       },
@@ -72,6 +103,7 @@ export const createTodayChecklist = async (req: AuthRequest, res: Response) => {
       }
     });
 
+    emitChecklists();
     res.json(checklist);
   } catch (error) {
     console.error('Error creating today checklist', error);
@@ -82,13 +114,59 @@ export const createTodayChecklist = async (req: AuthRequest, res: Response) => {
 export const updateChecklistRow = async (req: AuthRequest, res: Response) => {
   try {
     const rowId = req.params.rowId as string;
-    const { L1_status, L2_status, L3_status, L4_status, L5_status, observations } = req.body;
+    const { observations, line, status, line_statuses } = req.body;
+
+    const existing = await prisma.dailyChecklistRow.findUnique({
+      where: { id: rowId },
+      include: { checklist: { select: { column_count: true, status: true } } },
+    });
+
+    if (!existing) {
+      res.status(404).json({ error: 'Fila no encontrada' });
+      return;
+    }
+
+    if (existing.checklist.status !== 'DRAFT') {
+      res.status(400).json({ error: 'El checklist ya no es editable' });
+      return;
+    }
+
+    const data: { observations?: string | null; line_statuses?: Record<string, string | null> } = {};
+    if (observations !== undefined) data.observations = observations;
+
+    let nextStatuses = asLineStatuses(existing.line_statuses);
+
+    if (line_statuses !== undefined) {
+      nextStatuses = asLineStatuses(line_statuses);
+    }
+
+    // Legacy L1_status..L5_status payloads
+    for (let i = 1; i <= 5; i++) {
+      const key = `L${i}_status`;
+      if (req.body[key] !== undefined) {
+        nextStatuses[String(i)] = req.body[key] == null ? null : String(req.body[key]);
+      }
+    }
+
+    if (line !== undefined) {
+      const lineNum = Number(line);
+      if (!Number.isFinite(lineNum) || lineNum < 1 || lineNum > existing.checklist.column_count) {
+        res.status(400).json({ error: `Línea inválida. Usa 1–${existing.checklist.column_count}.` });
+        return;
+      }
+      nextStatuses[String(lineNum)] = status == null || status === '' ? null : String(status);
+    }
+
+    if (line !== undefined || line_statuses !== undefined || [1, 2, 3, 4, 5].some((i) => req.body[`L${i}_status`] !== undefined)) {
+      data.line_statuses = nextStatuses;
+    }
 
     const row = await prisma.dailyChecklistRow.update({
       where: { id: rowId },
-      data: { L1_status, L2_status, L3_status, L4_status, L5_status, observations }
+      data
     });
 
+    emitChecklists();
     res.json(row);
   } catch (error) {
     console.error('Error updating checklist row', error);
@@ -113,6 +191,7 @@ export const submitChecklist = async (req: AuthRequest, res: Response) => {
       }
     });
 
+    emitChecklists();
     res.json(checklist);
   } catch (error) {
     console.error('Error submitting checklist', error);
@@ -137,6 +216,7 @@ export const reviewChecklist = async (req: AuthRequest, res: Response) => {
       }
     });
 
+    emitChecklists();
     res.json(checklist);
   } catch (error) {
     console.error('Error reviewing checklist', error);
@@ -190,6 +270,52 @@ export const getChecklistById = async (req: AuthRequest, res: Response) => {
 // CONFIGURACIÓN DE ACTIVIDADES DEL CHECKLIST
 // ==========================================
 
+export const getChecklistConfig = async (_req: Request, res: Response) => {
+  try {
+    const column_count = await getConfiguredColumnCount();
+    res.json({
+      column_count,
+      min: MIN_CHECKLIST_COLUMNS,
+      max: MAX_CHECKLIST_COLUMNS,
+    });
+  } catch (error) {
+    console.error('Error fetching checklist config', error);
+    res.status(500).json({ error: 'Error al obtener la configuración del checklist' });
+  }
+};
+
+export const updateChecklistConfig = async (req: Request, res: Response) => {
+  try {
+    if (req.body.column_count === undefined) {
+      res.status(400).json({ error: 'Indica column_count' });
+      return;
+    }
+
+    const column_count = normalizeChecklistColumnCount(req.body.column_count);
+    let settings = await prisma.systemSettings.findFirst();
+    if (!settings) {
+      settings = await prisma.systemSettings.create({
+        data: { checklist_column_count: column_count },
+      });
+    } else {
+      settings = await prisma.systemSettings.update({
+        where: { id: settings.id },
+        data: { checklist_column_count: column_count },
+      });
+    }
+
+    emitChecklists();
+    res.json({
+      column_count: settings.checklist_column_count,
+      min: MIN_CHECKLIST_COLUMNS,
+      max: MAX_CHECKLIST_COLUMNS,
+    });
+  } catch (error) {
+    console.error('Error updating checklist config', error);
+    res.status(500).json({ error: 'Error al guardar la configuración del checklist' });
+  }
+};
+
 export const getActivities = async (req: Request, res: Response) => {
   try {
     const activities = await prisma.checklistActivity.findMany({
@@ -203,7 +329,15 @@ export const getActivities = async (req: Request, res: Response) => {
 
 export const createActivity = async (req: Request, res: Response) => {
   try {
-    const { name, is_active } = req.body;
+    const { name, is_active, field_type } = req.body;
+    if (!name?.trim()) {
+      res.status(400).json({ error: 'El nombre es obligatorio' });
+      return;
+    }
+
+    const allowedTypes = ['CHECKBOX', 'NUMBER', 'TEXT'];
+    const resolvedType = allowedTypes.includes(field_type) ? field_type : 'CHECKBOX';
+
     // Find highest order
     const maxOrder = await prisma.checklistActivity.findFirst({
       orderBy: { order: 'desc' }
@@ -212,11 +346,13 @@ export const createActivity = async (req: Request, res: Response) => {
 
     const activity = await prisma.checklistActivity.create({
       data: {
-        name,
+        name: name.trim(),
         order: nextOrder,
+        field_type: resolvedType,
         is_active: is_active !== undefined ? is_active : true
       }
     });
+    emitChecklists();
     res.json(activity);
   } catch (error: any) {
     res.status(500).json({ error: 'Error al crear la actividad' });
@@ -226,12 +362,24 @@ export const createActivity = async (req: Request, res: Response) => {
 export const updateActivity = async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
-    const { name, is_active } = req.body;
+    const { name, is_active, field_type } = req.body;
+
+    const data: { name?: string; is_active?: boolean; field_type?: string } = {};
+    if (name !== undefined) data.name = name;
+    if (is_active !== undefined) data.is_active = is_active;
+    if (field_type !== undefined) {
+      if (!['CHECKBOX', 'NUMBER', 'TEXT'].includes(field_type)) {
+        res.status(400).json({ error: 'Tipo de campo inválido. Usa CHECKBOX, NUMBER o TEXT.' });
+        return;
+      }
+      data.field_type = field_type;
+    }
 
     const activity = await prisma.checklistActivity.update({
       where: { id },
-      data: { name, is_active }
+      data
     });
+    emitChecklists();
     res.json(activity);
   } catch (error: any) {
     res.status(500).json({ error: 'Error al actualizar la actividad' });
@@ -244,6 +392,7 @@ export const deleteActivity = async (req: Request, res: Response) => {
     await prisma.checklistActivity.delete({
       where: { id }
     });
+    emitChecklists();
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: 'Error al eliminar la actividad' });
@@ -268,6 +417,7 @@ export const reorderActivities = async (req: Request, res: Response) => {
       )
     );
 
+    emitChecklists();
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: 'Error al reordenar las actividades' });
@@ -322,6 +472,7 @@ export const restoreDefaultActivities = async (req: Request, res: Response) => {
       orderBy: { order: 'asc' }
     });
 
+    emitChecklists();
     res.json(newActivities);
   } catch (error: any) {
     res.status(500).json({ error: 'Error al restaurar las actividades' });

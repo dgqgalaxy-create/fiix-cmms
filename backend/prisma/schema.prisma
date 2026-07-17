@@ -203,6 +203,9 @@ model WorkOrder {
 
   failure_remedy_id   String?      @db.Uuid
   failure_remedy      FailureRemedy?  @relation(fields: [failure_remedy_id], references: [id])
+
+  sla_events          WorkOrderSlaEvent[]
+  inventory_transactions InventoryTransaction[]
 }
 
 model KPIGoal {
@@ -291,7 +294,11 @@ model InventoryTransaction {
   
   user_id     String   @db.Uuid
   user        User     @relation(fields: [user_id], references: [id])
-  
+
+  work_order_id String?    @db.Uuid
+  work_order    WorkOrder? @relation(fields: [work_order_id], references: [id], onDelete: SetNull)
+
+  unit_cost   Float?   // Costo unitario al momento del consumo (para ligar costo a la OT)
   amount      Float    // Positivo para entradas, negativo para salidas
   reason      String   // Texto libre
   created_at  DateTime @default(now())
@@ -412,7 +419,30 @@ model SystemSettings {
   telegram_bot_token String?
   telegram_chat_id   String?
   email_enabled      Boolean  @default(false)
+  sla_enabled        Boolean  @default(true)
+  sla_policy         Json?
+  checklist_column_count Int  @default(5)
   updated_at       DateTime @updatedAt
+}
+
+enum SlaEventType {
+  REMINDER_RESPONSE
+  ESCALATE_RESPONSE
+  REMINDER_HOLD
+  ESCALATE_HOLD
+  REMINDER_RESOLUTION
+  ESCALATE_RESOLUTION
+}
+
+model WorkOrderSlaEvent {
+  id            String       @id @default(uuid()) @db.Uuid
+  work_order_id String       @db.Uuid
+  work_order    WorkOrder    @relation(fields: [work_order_id], references: [id], onDelete: Cascade)
+  event_type    SlaEventType
+  created_at    DateTime     @default(now())
+
+  @@unique([work_order_id, event_type])
+  @@index([work_order_id])
 }
 
 model AppNotification {
@@ -449,6 +479,7 @@ model DailyChecklist {
   leader_id       String?  @db.Uuid
   leader          User?    @relation("ChecklistLeader", fields: [leader_id], references: [id])
   status          ChecklistStatus @default(DRAFT)
+  column_count    Int      @default(5)
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
 
@@ -462,11 +493,7 @@ model DailyChecklistRow {
   activity_name   String
   order           Int      @default(0)
   field_type      String   @default("CHECKBOX")
-  L1_status       String?
-  L2_status       String?
-  L3_status       String?
-  L4_status       String?
-  L5_status       String?
+  line_statuses   Json     @default("{}")
   observations    String?
 }
 

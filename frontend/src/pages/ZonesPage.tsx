@@ -3,6 +3,7 @@ import { getZones, createZone, deleteZone } from '../api/zones';
 import type { Zone } from '../api/zones';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Trash2, MapPin, Loader2 } from 'lucide-react';
+import { useSocketRefresh } from '../hooks/useSocketRefresh';
 
 export const ZonesPage = () => {
   const { hasPermission } = useAuth();
@@ -12,22 +13,24 @@ export const ZonesPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const fetchZones = async () => {
+  const fetchZones = async (background = false) => {
     try {
-      setIsLoading(true);
+      if (!background) setIsLoading(true);
       const data = await getZones();
       setZones(data);
     } catch (err) {
       console.error(err);
       setError('Error al cargar zonas');
     } finally {
-      setIsLoading(false);
+      if (!background) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchZones();
   }, []);
+
+  useSocketRefresh('refresh_zones', () => fetchZones(true));
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

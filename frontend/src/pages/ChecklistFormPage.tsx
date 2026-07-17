@@ -3,10 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ArrowLeft, Save, Check, X as XIcon, Minus, PenTool, CheckCircle, Printer } from 'lucide-react';
-import { getChecklistById, updateChecklistRow, submitChecklist, reviewChecklist } from '../api/checklists';
+import { getChecklistById, updateChecklistRow, submitChecklist, reviewChecklist, getRowLineStatus } from '../api/checklists';
 import type { DailyChecklist, ChecklistRow } from '../api/checklists';
 import { useAuth } from '../context/AuthContext';
 import { parseDateOnly } from '../utils/dateUtils';
+import { useSocketRefresh } from '../hooks/useSocketRefresh';
 
 export default function ChecklistFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -17,33 +18,50 @@ export default function ChecklistFormPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
+  const fetchChecklist = async (checklistId: string, background = false) => {
+    try {
+      if (!background) setIsLoading(true);
+      const data = await getChecklistById(checklistId);
+      setChecklist(data);
+    } catch (error) {
+      console.error('Error fetching checklist', error);
+      if (!background) {
+        alert('Error cargando el checklist.');
+        navigate('/checklists');
+      }
+    } finally {
+      if (!background) setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (id) {
       fetchChecklist(id);
     }
   }, [id]);
 
-  const fetchChecklist = async (checklistId: string) => {
-    try {
-      setIsLoading(true);
-      const data = await getChecklistById(checklistId);
-      setChecklist(data);
-    } catch (error) {
-      console.error('Error fetching checklist', error);
-      alert('Error cargando el checklist.');
-      navigate('/checklists');
-    } finally {
-      setIsLoading(false);
+  useSocketRefresh('refresh_checklists', () => {
+    if (id && checklist?.status === 'DRAFT') {
+      // No pisar mientras el usuario escribe; solo sync si está en revisión
+      return;
     }
-  };
+    if (id) void fetchChecklist(id, true);
+  });
 
-  const handleStatusChange = async (rowId: string, line: string, status: string | null) => {
+  const handleStatusChange = async (rowId: string, line: number, status: string | null) => {
     if (!checklist || checklist.status !== 'DRAFT') return; // Solo editable en DRAFT
-    
+    const key = String(line);
+
     // Update local state for immediate feedback
     const updatedRows = checklist.rows?.map(row => {
       if (row.id === rowId) {
-        return { ...row, [line]: status };
+        return {
+          ...row,
+          line_statuses: {
+            ...(row.line_statuses || {}),
+            [key]: status,
+          },
+        };
       }
       return row;
     });
@@ -51,7 +69,7 @@ export default function ChecklistFormPage() {
 
     // Save to server
     try {
-      await updateChecklistRow(rowId, { [line]: status });
+      await updateChecklistRow(rowId, { line, status });
     } catch (error) {
       console.error('Error updating row', error);
       // Opcional: Revertir si falla
@@ -109,10 +127,10 @@ export default function ChecklistFormPage() {
     }
   };
 
-  const renderStatusButton = (row: ChecklistRow, line: string) => {
-    const currentValue = (row as any)[line] || '';
+  const renderStatusButton = (row: ChecklistRow, line: number) => {
+    const currentValue = getRowLineStatus(row, line);
     const isEditable = checklist?.status === 'DRAFT';
-    const fieldType = (row as any).field_type || 'CHECKBOX';
+    const fieldType = row.field_type || 'CHECKBOX';
 
     if (fieldType === 'NUMBER' || fieldType === 'TEXT') {
       return (
@@ -144,7 +162,7 @@ export default function ChecklistFormPage() {
     return (
       <button
         disabled={!isEditable}
-        onClick={() => handleStatusChange(row.id, line, nextStatus(currentValue))}
+        onClick={() => handleStatusChange(row.id, line, nextStatus(currentValue || null))}
         className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-all ${getColors(currentValue)} ${!isEditable && 'opacity-80 cursor-not-allowed'}`}
       >
         {currentValue === 'OK' && <Check size={18} strokeWidth={3} />}
@@ -161,6 +179,8 @@ export default function ChecklistFormPage() {
   const isDraft = checklist.status === 'DRAFT';
   const isPendingReview = checklist.status === 'COMPLETED';
   const canReview = isPendingReview && hasPermission('APPROVE_CHECKLIST');
+  const columnCount = Math.max(1, checklist.column_count || 5);
+  const lineNumbers = Array.from({ length: columnCount }, (_, i) => i + 1);
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300 print:p-0 print:m-0 print:w-full print:max-w-none">
@@ -233,11 +253,11 @@ export default function ChecklistFormPage() {
               <tr className="bg-slate-900 text-white text-sm font-semibold print:bg-slate-200 print:text-black">
                 <th className="px-4 py-4 w-12 text-center print:py-2 print:px-2 border print:border-slate-800">#</th>
                 <th className="px-4 py-4 min-w-[300px] print:min-w-0 print:w-auto print:py-2 print:px-2 border print:border-slate-800">ACTIVIDAD</th>
-                <th className="px-2 py-4 text-center w-16 print:py-2 print:px-1 border print:border-slate-800">L1</th>
-                <th className="px-2 py-4 text-center w-16 print:py-2 print:px-1 border print:border-slate-800">L2</th>
-                <th className="px-2 py-4 text-center w-16 print:py-2 print:px-1 border print:border-slate-800">L3</th>
-                <th className="px-2 py-4 text-center w-16 print:py-2 print:px-1 border print:border-slate-800">L4</th>
-                <th className="px-2 py-4 text-center w-16 print:py-2 print:px-1 border print:border-slate-800">L5</th>
+                {lineNumbers.map((line) => (
+                  <th key={line} className="px-2 py-4 text-center w-16 print:py-2 print:px-1 border print:border-slate-800">
+                    L{line}
+                  </th>
+                ))}
                 <th className="px-4 py-4 min-w-[250px] print:min-w-0 print:w-auto print:py-2 print:px-2 border print:border-slate-800">OBSERVACIONES (Falla detectada)</th>
               </tr>
             </thead>
@@ -250,21 +270,11 @@ export default function ChecklistFormPage() {
                   <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300 leading-snug print:py-1 print:px-2 border print:border-slate-800">
                     {row.activity_name}
                   </td>
-                  <td className="px-2 py-3 text-center print:py-1 print:px-1 border print:border-slate-800">
-                    {renderStatusButton(row, 'L1_status')}
-                  </td>
-                  <td className="px-2 py-3 text-center print:py-1 print:px-1 border print:border-slate-800">
-                    {renderStatusButton(row, 'L2_status')}
-                  </td>
-                  <td className="px-2 py-3 text-center print:py-1 print:px-1 border print:border-slate-800">
-                    {renderStatusButton(row, 'L3_status')}
-                  </td>
-                  <td className="px-2 py-3 text-center print:py-1 print:px-1 border print:border-slate-800">
-                    {renderStatusButton(row, 'L4_status')}
-                  </td>
-                  <td className="px-2 py-3 text-center print:py-1 print:px-1 border print:border-slate-800">
-                    {renderStatusButton(row, 'L5_status')}
-                  </td>
+                  {lineNumbers.map((line) => (
+                    <td key={line} className="px-2 py-3 text-center print:py-1 print:px-1 border print:border-slate-800">
+                      {renderStatusButton(row, line)}
+                    </td>
+                  ))}
                   <td className="px-4 py-3 print:py-1 print:px-2 border print:border-slate-800">
                     <input
                       type="text"

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { getMyPermissions } from '../api/permissions';
 import { getMe } from '../api/users';
+import { setSocketAuth } from '../api/socket';
 
 interface User {
   userId: string;
@@ -59,9 +60,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const decoded = jwtDecode<User>(token);
         setUser(decoded);
         loadPermissions();
-        // Fetch full profile for preferences
+        setSocketAuth(token);
+        // Fetch full profile for preferences + name (needed for presence)
         getMe().then((fullUser) => {
-          setUser(prev => prev ? { ...prev, preferences: fullUser.preferences } : prev);
+          setUser(prev => prev ? {
+            ...prev,
+            name: fullUser.name || prev.name,
+            preferences: fullUser.preferences,
+          } : prev);
         }).catch(err => console.error("Error fetching me", err));
       } catch (error) {
         console.error('Invalid token', error);
@@ -70,6 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
       setUser(null);
       setPermissions({});
+      setSocketAuth(null);
     }
   }, [token]);
 
@@ -80,6 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (userData) {
       setUser(userData);
     }
+    setSocketAuth(newToken);
   };
 
   const logout = () => {
@@ -88,6 +96,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(null);
     setUser(null);
     setPermissions({});
+    setSocketAuth(null);
   };
 
   const hasPermission = (permission: string): boolean => {

@@ -1,9 +1,10 @@
 import prisma from '../config/prisma';
 import { getIO } from '../utils/socket';
 import { sendTelegramAlert } from './TelegramService';
+import { formatWorkOrderFolio } from '../utils/folio';
 
 export const triggerNewWorkOrderNotification = async (workOrder: any) => {
-  const title = `Nueva Solicitud: WO-${workOrder.folio.toString().padStart(4, '0')}`;
+  const title = `Nueva Solicitud: ${formatWorkOrderFolio(workOrder.folio)}`;
   const message = `${workOrder.title} (Prioridad: ${workOrder.priority})`;
   
   // 1. Send Telegram Alert

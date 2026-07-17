@@ -9,6 +9,7 @@ import { UsersTable } from '../components/UsersTable';
 import { UserModal } from '../components/UserModal';
 import { RequestersTable } from '../components/RequestersTable';
 import { RequesterModal } from '../components/RequesterModal';
+import { useSocketRefresh } from '../hooks/useSocketRefresh';
 
 export const UsersPage = () => {
   const { user: currentUser, hasPermission } = useAuth();
@@ -29,27 +30,27 @@ export const UsersPage = () => {
   const [isRequesterModalOpen, setIsRequesterModalOpen] = useState(false);
   const [selectedRequester, setSelectedRequester] = useState<Requester | null>(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (background = false) => {
     try {
-      setIsLoading(true);
+      if (!background) setIsLoading(true);
       const data = await getUsers();
       setUsers(data);
     } catch (error) {
       console.error('Error fetching users', error);
     } finally {
-      setIsLoading(false);
+      if (!background) setIsLoading(false);
     }
   };
 
-  const fetchRequesters = async () => {
+  const fetchRequesters = async (background = false) => {
     try {
-      setIsLoading(true);
+      if (!background) setIsLoading(true);
       const data = await getRequesters();
       setRequesters(data);
     } catch (error) {
       console.error('Error fetching requesters', error);
     } finally {
-      setIsLoading(false);
+      if (!background) setIsLoading(false);
     }
   };
 
@@ -62,6 +63,13 @@ export const UsersPage = () => {
       fetchRequesters();
     }
   }, [activeTab]);
+
+  useSocketRefresh('refresh_users', () => {
+    if (activeTab === 'users') void fetchUsers(true);
+  });
+  useSocketRefresh('refresh_requesters', () => {
+    if (activeTab === 'requesters') void fetchRequesters(true);
+  });
 
   const handleCreate = async (data: any) => {
     await createUser(data);

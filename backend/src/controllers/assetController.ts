@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { generateInventoryCode } from '../utils/codeGenerator';
+import { emitRefresh } from '../utils/socket';
 
 export const getAssetMetrics = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -18,7 +19,10 @@ export const getAssetMetrics = async (req: Request, res: Response): Promise<void
       include: {
         assigned_technicians: {
           select: { name: true }
-        }
+        },
+        failure_problem: { select: { id: true, name: true } },
+        failure_cause: { select: { id: true, name: true } },
+        failure_remedy: { select: { id: true, name: true } },
       }
     });
 
@@ -90,11 +94,117 @@ export const getAssetMetrics = async (req: Request, res: Response): Promise<void
        }
     });
 
+    // Fallas RCA más frecuentes
+    const rcaCounts = new Map<string, { problem: string; cause: string | null; count: number }>();
+    for (const wo of correctiveOrders) {
+      if (!wo.failure_problem) continue;
+      const key = `${wo.failure_problem.id}|${wo.failure_cause?.id || ''}`;
+      const existing = rcaCounts.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        rcaCounts.set(key, {
+          problem: wo.failure_problem.name,
+          cause: wo.failure_cause?.name || null,
+          count: 1,
+        });
+      }
+    }
+    const top_failures = Array.from(rcaCounts.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // PMs próximos (próximos 60 días o vencidos)
+    const horizon = new Date();
+    horizon.setDate(horizon.getDate() + 60);
+    const upcoming_pms = await prisma.maintenancePlan.findMany({
+      where: {
+        asset_id: id,
+        is_active: true,
+        next_due_date: { lte: horizon },
+      },
+      orderBy: { next_due_date: 'asc' },
+      take: 8,
+      select: {
+        id: true,
+        title: true,
+        next_due_date: true,
+        frequency_type: true,
+        frequency_value: true,
+      },
+    });
+
+    // Stock crítico de repuestos ligados a planes de este activo
+    const planItems = await prisma.planItem.findMany({
+      where: { maintenance_plan: { asset_id: id } },
+      include: {
+        item: {
+          select: {
+            id: true,
+            name: true,
+            internal_code: true,
+            stock: true,
+            minimum_inventory: true,
+            uom: true,
+          },
+        },
+      },
+    });
+    const criticalMap = new Map<string, typeof planItems[0]['item']>();
+    for (const pi of planItems) {
+      if (pi.item.stock <= pi.item.minimum_inventory) {
+        criticalMap.set(pi.item.id, pi.item);
+      }
+    }
+    const critical_stock = Array.from(criticalMap.values()).slice(0, 10);
+
+    // Costo acumulado de refacciones consumidas en OTs de este activo
+    const partTx = await prisma.inventoryTransaction.findMany({
+      where: {
+        amount: { lt: 0 },
+        work_order: { asset_id: id },
+      },
+      include: {
+        item: { select: { purchase_cost: true } },
+      },
+    });
+    const parts_cost_total = partTx.reduce((sum, tx) => {
+      const qty = Math.abs(tx.amount);
+      const unit = tx.unit_cost ?? tx.item.purchase_cost ?? 0;
+      return sum + qty * unit;
+    }, 0);
+
+    // Últimas OT (cualquier estado) para vista rápida
+    const recent_orders = await prisma.workOrder.findMany({
+      where: { asset_id: id },
+      orderBy: { created_at: 'desc' },
+      take: 8,
+      select: {
+        id: true,
+        folio: true,
+        title: true,
+        status: true,
+        maintenance_type: true,
+        priority: true,
+        created_at: true,
+        completed_at: true,
+      },
+    });
+
     res.json({
       mttr_hours: parseFloat(mttr_hours.toFixed(2)),
       mtbf_hours: parseFloat(mtbf_hours.toFixed(2)),
       monthly_stats,
-      history: workOrders.slice(-10).reverse() // Ultimas 10 ordenes finalizadas
+      history: workOrders.slice(-10).reverse(),
+      overview: {
+        recent_orders,
+        top_failures,
+        upcoming_pms,
+        critical_stock,
+        parts_cost_total: parseFloat(parts_cost_total.toFixed(2)),
+        asset_price: asset.price ?? 0,
+        total_cost: parseFloat(((asset.price ?? 0) + parts_cost_total).toFixed(2)),
+      },
     });
   } catch (error) {
     console.error('Error fetching asset metrics', error);
@@ -178,6 +288,7 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
     assetData.zone = { connect: { id: zone_id } };
 
     const newAsset = await prisma.asset.create({ data: assetData });
+    emitRefresh('refresh_assets');
     res.status(201).json(newAsset);
   } catch (error: any) {
     console.error('Create Asset Error:', error);
@@ -223,6 +334,7 @@ export const updateAsset = async (req: Request, res: Response): Promise<void> =>
       where: { id },
       data: assetData
     });
+    emitRefresh('refresh_assets');
     res.json(updatedAsset);
   } catch (error) {
     console.error('Update Asset Error:', error);
@@ -234,6 +346,7 @@ export const deleteAsset = async (req: Request, res: Response): Promise<void> =>
   try {
     const id = req.params.id as string;
     await prisma.asset.delete({ where: { id } });
+    emitRefresh('refresh_assets');
     res.json({ message: 'Activo eliminado correctamente' });
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar activo' });

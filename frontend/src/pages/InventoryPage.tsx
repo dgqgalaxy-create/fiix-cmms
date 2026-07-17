@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, ShoppingCart, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
+import { useState, useEffect, useMemo, type MouseEvent } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X } from 'lucide-react';
 import { 
   getItems, getTransactions, getCategories, getLocations, getVendors
 } from '../api/inventory';
 import { BACKEND_URL } from '../api/axios';
 import type { Item, InventoryTransaction, ItemCategory, ItemLocation, Vendor } from '../api/inventory';
+import { createDraftsFromLowStock } from '../api/purchaseOrders';
 import { useAuth } from '../context/AuthContext';
 import { ItemModal } from '../components/inventory/ItemModal';
 import { TransactionModal } from '../components/inventory/TransactionModal';
@@ -13,11 +14,14 @@ import { TransactionDetailModal } from '../components/inventory/TransactionDetai
 import { CatalogModal } from '../components/inventory/CatalogModal';
 import { QRDisplayModal } from '../components/common/QRDisplayModal';
 import { QRScannerModal } from '../components/common/QRScannerModal';
-import { socket } from '../api/socket';
+import { BulkQRPrintModal } from '../components/common/BulkQRPrintModal';
+import { useSocketRefresh } from '../hooks/useSocketRefresh';
 
 export const InventoryPage = () => {
+  const navigate = useNavigate();
   const { hasPermission } = useAuth();
   const canManage = hasPermission('MANAGE_INVENTORY');
+  const canManagePurchases = hasPermission('MANAGE_PURCHASES');
   const canUseScanner = hasPermission('USE_QR_SCANNER');
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -32,6 +36,7 @@ export const InventoryPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+  const [showNoVendorOnly, setShowNoVendorOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'code' | 'category' | 'stock'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -48,7 +53,14 @@ export const InventoryPage = () => {
   const [selectedItem, setSelectedItem] = useState<Item | undefined>(undefined);
   const [qrItem, setQrItem] = useState<Item | null>(null);
   const [qrLocation, setQrLocation] = useState<ItemLocation | null>(null);
+  const [itemSelectionMode, setItemSelectionMode] = useState(false);
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+  const [bulkItemPrintOpen, setBulkItemPrintOpen] = useState(false);
   const [locationSearchTerm, setLocationSearchTerm] = useState('');
+  const [locationSelectionMode, setLocationSelectionMode] = useState(false);
+  const [selectedLocationIds, setSelectedLocationIds] = useState<Set<string>>(new Set());
+  const [bulkLocationPrintOpen, setBulkLocationPrintOpen] = useState(false);
+  const [isCreatingDrafts, setIsCreatingDrafts] = useState(false);
 
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [preselectedTransactionItemId, setPreselectedTransactionItemId] = useState<string | undefined>(undefined);
@@ -84,21 +96,11 @@ export const InventoryPage = () => {
 
   useEffect(() => {
     fetchData();
-
-    const handleRefresh = () => {
-      fetchData(true);
-    };
-
-    socket.on('inventory_updated', handleRefresh);
-    socket.on('refresh_inventory', handleRefresh);
-
-    return () => {
-      socket.off('inventory_updated', handleRefresh);
-      socket.off('refresh_inventory', handleRefresh);
-    };
   }, [hasPermission]);
 
-  // Handle URL parameters (filters)
+  useSocketRefresh('refresh_inventory', () => fetchData(true));
+
+  // Handle URL parameters (filters / deep links)
   useEffect(() => {
     let shouldReplaceUrl = false;
 
@@ -110,10 +112,43 @@ export const InventoryPage = () => {
       shouldReplaceUrl = true;
     }
 
+    const tab = searchParams.get('tab');
+    if (tab === 'locations' || tab === 'items' || tab === 'transactions' || tab === 'categories' || tab === 'vendors') {
+      setActiveTab(tab);
+      searchParams.delete('tab');
+      shouldReplaceUrl = true;
+    }
+
+    const itemId = searchParams.get('item');
+    if (itemId && items.length > 0) {
+      const found = items.find((i) => i.id === itemId || i.internal_code === itemId);
+      if (found) {
+        setActiveTab('items');
+        setSelectedItem(found);
+        setIsItemModalOpen(true);
+        searchParams.delete('item');
+        shouldReplaceUrl = true;
+      }
+    }
+
+    const locationId = searchParams.get('location');
+    if (locationId && locations.length > 0) {
+      const found = locations.find((l) => l.id === locationId || l.internal_id === locationId);
+      if (found) {
+        setActiveTab('locations');
+        setCatalogType('location');
+        setSelectedCatalogItem(found);
+        setIsCatalogReadOnly(true);
+        setIsCatalogModalOpen(true);
+        searchParams.delete('location');
+        shouldReplaceUrl = true;
+      }
+    }
+
     if (shouldReplaceUrl) {
       setSearchParams(searchParams, { replace: true });
     }
-  }, [searchParams, items, setSearchParams]);
+  }, [searchParams, items, locations, setSearchParams]);
 
   const handleOpenCatalogModal = (type: 'category' | 'location' | 'vendor', item?: any, readOnly: boolean = false) => {
     setCatalogType(type);
@@ -148,8 +183,10 @@ export const InventoryPage = () => {
   const filteredItems = useMemo(() => {
     let list = [...items]; // CRITICAL FIX: Clone the array so we don't mutate the React state!
     
-    if (showLowStockOnly) {
-      list = list.filter(i => i.stock <= i.minimum_inventory);
+    if (showNoVendorOnly) {
+      list = list.filter((i) => i.is_active && i.stock <= i.minimum_inventory && !i.vendor_id);
+    } else if (showLowStockOnly) {
+      list = list.filter((i) => i.stock <= i.minimum_inventory);
     }
     
     if (searchTerm) {
@@ -184,7 +221,7 @@ export const InventoryPage = () => {
     });
 
     return list;
-  }, [items, searchTerm, showLowStockOnly, sortBy, sortDirection]);
+  }, [items, searchTerm, showLowStockOnly, showNoVendorOnly, sortBy, sortDirection]);
 
   const filteredLocations = useMemo(() => {
     if (!locationSearchTerm) return locations;
@@ -198,7 +235,25 @@ export const InventoryPage = () => {
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, showLowStockOnly, sortBy, sortDirection]);
+  }, [searchTerm, showLowStockOnly, showNoVendorOnly, sortBy, sortDirection]);
+
+  const filterCriticalStock = () => {
+    setShowNoVendorOnly(false);
+    setShowLowStockOnly(true);
+    setActiveTab('items');
+  };
+
+  const filterCriticalWithoutVendor = (event?: MouseEvent) => {
+    event?.stopPropagation();
+    setShowLowStockOnly(false);
+    setShowNoVendorOnly(true);
+    setActiveTab('items');
+  };
+
+  const clearStockFilters = () => {
+    setShowLowStockOnly(false);
+    setShowNoVendorOnly(false);
+  };
 
   const paginatedItems = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -207,43 +262,63 @@ export const InventoryPage = () => {
 
   const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
 
-  const handleGeneratePurchaseList = () => {
-    const lowStockItems = items.filter(i => i.stock <= i.minimum_inventory);
-    if (lowStockItems.length === 0) {
-      alert("No hay repuestos con stock crítico para generar la lista.");
+  const criticalItems = useMemo(
+    () => items.filter((i) => i.is_active && i.stock <= i.minimum_inventory),
+    [items]
+  );
+
+  const criticalWithoutVendor = useMemo(
+    () => criticalItems.filter((i) => !i.vendor_id),
+    [criticalItems]
+  );
+
+  const handleCreateDraftPurchaseOrders = async (event?: MouseEvent) => {
+    event?.stopPropagation();
+    if (criticalItems.length === 0) {
+      alert('No hay repuestos con stock crítico.');
       return;
     }
 
-    const groupedByVendor = lowStockItems.reduce((acc, item) => {
-      const vendorName = item.vendor?.name || 'Sin Proveedor Asignado';
-      if (!acc[vendorName]) acc[vendorName] = [];
-      acc[vendorName].push(item);
-      return acc;
-    }, {} as Record<string, Item[]>);
+    const withVendor = criticalItems.length - criticalWithoutVendor.length;
+    if (withVendor === 0) {
+      alert(
+        `Hay ${criticalItems.length} ítem(s) en stock crítico, pero ninguno tiene proveedor asignado.\n\n` +
+        `Ábrelos y asígnales un proveedor antes de generar el borrador:\n` +
+        criticalWithoutVendor.map((i) => `- ${i.internal_code} ${i.name}`).join('\n')
+      );
+      return;
+    }
 
-    let content = "LISTA DE COMPRAS - REABASTECIMIENTO DE INVENTARIO\n";
-    content += `Fecha: ${new Date().toLocaleDateString()}\n\n`;
+    let confirmMsg = `Se crearán borradores de Orden de Compra con ${withVendor} ítem(s) bajo mínimo (agrupados por proveedor).`;
+    if (criticalWithoutVendor.length > 0) {
+      confirmMsg += `\n\nSe omitirán ${criticalWithoutVendor.length} sin proveedor:\n${criticalWithoutVendor.map((i) => `- ${i.internal_code} ${i.name}`).join('\n')}`;
+    }
+    confirmMsg += '\n\n¿Continuar?';
+    if (!confirm(confirmMsg)) {
+      return;
+    }
 
-    Object.entries(groupedByVendor).forEach(([vendor, items]) => {
-      content += `=================================================\n`;
-      content += `PROVEEDOR: ${vendor}\n`;
-      content += `=================================================\n`;
-      items.forEach(item => {
-        const qtyToBuy = Math.max(item.minimum_inventory - item.stock, 0) || 1; // At least buy 1 or the difference
-        content += `- [ ] ${qtyToBuy}x ${item.name} (${item.internal_code})\n`;
-        content += `      Stock actual: ${item.stock} ${item.uom} | Min: ${item.minimum_inventory} ${item.uom}\n`;
-      });
-      content += `\n`;
-    });
-
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Lista_de_Compras_${new Date().toISOString().split('T')[0]}.txt`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    setIsCreatingDrafts(true);
+    try {
+      const result = await createDraftsFromLowStock();
+      const folioList = result.created.map((o) => `PO-${String(o.folio).padStart(4, '0')} (${o.vendor?.name || 'Proveedor'})`).join('\n');
+      let message = `Se crearon ${result.summary.drafts} borrador(es) con ${result.summary.items_included} ítem(s):\n${folioList}`;
+      if (result.skipped_no_vendor.length > 0) {
+        message += `\n\nOmitidos sin proveedor (${result.skipped_no_vendor.length}):\n${result.skipped_no_vendor.map((i) => `- ${i.internal_code} ${i.name}`).join('\n')}`;
+      }
+      message += '\n\n¿Ir a Órdenes de Compra para revisarlos?';
+      if (confirm(message)) {
+        navigate('/purchase-orders');
+      }
+    } catch (error: any) {
+      const skipped = error.response?.data?.skipped_no_vendor;
+      const base = error.response?.data?.error || 'No se pudieron generar los borradores.';
+      alert(skipped?.length
+        ? `${base}\n\nSin proveedor:\n${skipped.map((i: any) => `- ${i.internal_code} ${i.name}`).join('\n')}`
+        : base);
+    } finally {
+      setIsCreatingDrafts(false);
+    }
   };
 
   const handleScan = (scannedId: string) => {
@@ -265,6 +340,15 @@ export const InventoryPage = () => {
     }
   };
 
+  const toggleItemSelection = (id: string) => {
+    setSelectedItemIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -278,18 +362,70 @@ export const InventoryPage = () => {
       case 'items':
         return (
           <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setItemSelectionMode((value) => !value);
+                  setSelectedItemIds(new Set());
+                }}
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-xl border transition-colors ${
+                  itemSelectionMode
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-white text-slate-600 border-slate-200'
+                }`}
+              >
+                <Printer size={16} />
+                {itemSelectionMode ? 'Cancelar selección' : 'QR masivo'}
+              </button>
+              {itemSelectionMode && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedItemIds(new Set(filteredItems.map((item) => item.id)))}
+                    className="text-sm text-emerald-700 underline"
+                  >
+                    Seleccionar filtrados ({filteredItems.length})
+                  </button>
+                  <button
+                    type="button"
+                    disabled={selectedItemIds.size === 0}
+                    onClick={() => setBulkItemPrintOpen(true)}
+                    className="ml-auto flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-emerald-600 text-white rounded-lg disabled:opacity-50"
+                  >
+                    <Printer size={14} /> Imprimir ({selectedItemIds.size})
+                  </button>
+                </>
+              )}
+            </div>
+
             {/* Mobile View (Cards) */}
             <div className="block sm:hidden space-y-4">
               {paginatedItems.map((item) => (
                 <div 
                   key={item.id} 
-                  onClick={() => handleOpenItemModal(item)}
-                  className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm active:bg-slate-50 transition-colors cursor-pointer"
+                  onClick={() => itemSelectionMode ? toggleItemSelection(item.id) : handleOpenItemModal(item)}
+                  className={`bg-white p-4 rounded-2xl border shadow-sm active:bg-slate-50 transition-colors cursor-pointer ${
+                    itemSelectionMode && selectedItemIds.has(item.id)
+                      ? 'border-emerald-400 ring-2 ring-emerald-200'
+                      : 'border-slate-200'
+                  }`}
                 >
                   <div className="flex justify-between items-start mb-3 gap-2">
-                    <span className="font-mono text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                      {item.internal_code}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {itemSelectionMode && (
+                        <input
+                          type="checkbox"
+                          checked={selectedItemIds.has(item.id)}
+                          onChange={() => toggleItemSelection(item.id)}
+                          onClick={(event) => event.stopPropagation()}
+                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                      )}
+                      <span className="font-mono text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                        {item.internal_code}
+                      </span>
+                    </div>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${item.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                       {item.is_active ? 'Activo' : 'Inactivo'}
                     </span>
@@ -308,6 +444,11 @@ export const InventoryPage = () => {
                     <div>
                       <h3 className="font-bold text-slate-900 text-sm leading-snug">{item.name}</h3>
                       <p className="text-slate-500 text-xs line-clamp-1">{item.description}</p>
+                      {!item.vendor_id && item.stock <= item.minimum_inventory && (
+                        <span className="inline-flex mt-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                          Sin proveedor
+                        </span>
+                      )}
                     </div>
                   </div>
                   
@@ -387,10 +528,25 @@ export const InventoryPage = () => {
                     {paginatedItems.map((item) => (
                       <tr 
                         key={item.id} 
-                        className="hover:bg-slate-50/50 transition-colors cursor-pointer"
-                        onClick={() => handleOpenItemModal(item)}
+                        className={`hover:bg-slate-50/50 transition-colors cursor-pointer ${
+                          itemSelectionMode && selectedItemIds.has(item.id) ? 'bg-emerald-50/70' : ''
+                        }`}
+                        onClick={() => itemSelectionMode ? toggleItemSelection(item.id) : handleOpenItemModal(item)}
                       >
-                        <td className="px-6 py-4 font-mono text-slate-500 font-medium">{item.internal_code}</td>
+                        <td className="px-6 py-4 font-mono text-slate-500 font-medium">
+                          <div className="flex items-center gap-3">
+                            {itemSelectionMode && (
+                              <input
+                                type="checkbox"
+                                checked={selectedItemIds.has(item.id)}
+                                onChange={() => toggleItemSelection(item.id)}
+                                onClick={(event) => event.stopPropagation()}
+                                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                              />
+                            )}
+                            {item.internal_code}
+                          </div>
+                        </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="flex-shrink-0">
@@ -403,10 +559,15 @@ export const InventoryPage = () => {
                               )}
                             </div>
                             <div>
-                              <div className="font-semibold text-slate-900 flex items-center gap-2">
+                              <div className="font-semibold text-slate-900 flex items-center gap-2 flex-wrap">
                                 {item.name}
                                 {!item.is_active && (
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700">Inactivo</span>
+                                )}
+                                {!item.vendor_id && item.stock <= item.minimum_inventory && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                    Sin proveedor
+                                  </span>
                                 )}
                               </div>
                               <div className="text-xs text-slate-500 truncate max-w-[200px]">{item.description}</div>
@@ -670,14 +831,82 @@ export const InventoryPage = () => {
 
       case 'locations':
         return (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setLocationSelectionMode((v) => !v);
+                  setSelectedLocationIds(new Set());
+                }}
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-xl border transition-colors ${
+                  locationSelectionMode
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-white text-slate-600 border-slate-200'
+                }`}
+              >
+                <Printer size={16} />
+                {locationSelectionMode ? 'Cancelar selección' : 'QR masivo'}
+              </button>
+              {locationSelectionMode && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedLocationIds(new Set(filteredLocations.map((l) => l.id)))}
+                    className="text-sm text-emerald-700 underline"
+                  >
+                    Seleccionar visibles ({filteredLocations.length})
+                  </button>
+                  <button
+                    type="button"
+                    disabled={selectedLocationIds.size === 0}
+                    onClick={() => setBulkLocationPrintOpen(true)}
+                    className="ml-auto flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-emerald-600 text-white rounded-lg disabled:opacity-50"
+                  >
+                    <Printer size={14} /> Imprimir ({selectedLocationIds.size})
+                  </button>
+                </>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {filteredLocations.map((loc) => (
               <div 
                 key={loc.id} 
-                className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between hover:border-emerald-300 transition-colors cursor-pointer"
-                onClick={() => handleOpenCatalogModal('location', loc, true)}
+                className={`bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between transition-colors cursor-pointer ${
+                  locationSelectionMode && selectedLocationIds.has(loc.id)
+                    ? 'border-emerald-400 ring-2 ring-emerald-200'
+                    : 'border-slate-200 hover:border-emerald-300'
+                }`}
+                onClick={() => {
+                  if (locationSelectionMode) {
+                    setSelectedLocationIds((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(loc.id)) next.delete(loc.id);
+                      else next.add(loc.id);
+                      return next;
+                    });
+                  } else {
+                    handleOpenCatalogModal('location', loc, true);
+                  }
+                }}
               >
                 <div className="flex items-center gap-3 min-w-0">
+                  {locationSelectionMode && (
+                    <input
+                      type="checkbox"
+                      checked={selectedLocationIds.has(loc.id)}
+                      onChange={() => {
+                        setSelectedLocationIds((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(loc.id)) next.delete(loc.id);
+                          else next.add(loc.id);
+                          return next;
+                        });
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                  )}
                   <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                     <MapPin size={20} />
                   </div>
@@ -687,23 +916,21 @@ export const InventoryPage = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setQrLocation(loc); }} 
+                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                    title="Ver / Imprimir QR"
+                  >
+                    <QrCode size={16} />
+                  </button>
                   {canManage && (
-                    <>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); setQrLocation(loc); }} 
-                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                        title="Ver / Imprimir QR"
-                      >
-                        <QrCode size={16} />
-                      </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleOpenCatalogModal('location', loc, false); }} 
-                        className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                        title="Editar"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                    </>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleOpenCatalogModal('location', loc, false); }} 
+                      className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                      title="Editar"
+                    >
+                      <Edit2 size={16} />
+                    </button>
                   )}
                 </div>
               </div>
@@ -713,6 +940,7 @@ export const InventoryPage = () => {
                 No se encontraron ubicaciones.
               </div>
             )}
+            </div>
           </div>
         );
 
@@ -781,10 +1009,10 @@ export const InventoryPage = () => {
           <p className="text-slate-500 dark:text-slate-300 mt-2">Gestiona repuestos, movimientos y catálogos.</p>
         </div>
 
-        {/* Stock Crítico Alert */}
-        {!isLoading && items.filter(i => i.is_active && i.stock <= i.minimum_inventory).length > 0 && (
+        {/* Stock Crítico Alert — solo en Repuestos */}
+        {!isLoading && activeTab === 'items' && criticalItems.length > 0 && (
           <div 
-            onClick={() => { setShowLowStockOnly(true); setActiveTab('items'); }}
+            onClick={filterCriticalStock}
             className="cursor-pointer transition-all bg-white dark:bg-slate-800 px-4 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 shadow-sm hover:shadow-md flex items-center gap-3 group"
           >
             <div className="p-2 bg-rose-50 dark:bg-rose-900/30 rounded-lg shrink-0">
@@ -798,9 +1026,37 @@ export const InventoryPage = () => {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
                 </span>
               </span>
-              <span className="text-[11px] text-rose-500/70 font-medium leading-tight">Artículos al mínimo o inferior</span>
+              <span className="text-[11px] text-rose-500/70 font-medium leading-tight">
+                Clic para filtrar · Artículos al mínimo o inferior
+                {criticalWithoutVendor.length > 0 && (
+                  <>
+                    {' · '}
+                    <button
+                      type="button"
+                      onClick={filterCriticalWithoutVendor}
+                      className="text-amber-700 dark:text-amber-400 font-semibold underline decoration-amber-400/60 underline-offset-2 hover:text-amber-900"
+                      title="Ver solo críticos sin proveedor"
+                    >
+                      {criticalWithoutVendor.length} sin proveedor
+                    </button>
+                  </>
+                )}
+              </span>
             </div>
-            <div className="text-xl font-black text-rose-600 leading-none">{items.filter(i => i.is_active && i.stock <= i.minimum_inventory).length}</div>
+            <div className="text-xl font-black text-rose-600 leading-none">{criticalItems.length}</div>
+            {canManagePurchases && (
+              <button
+                type="button"
+                disabled={isCreatingDrafts}
+                onClick={handleCreateDraftPurchaseOrders}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white shadow-sm"
+                title="Crear borradores de Orden de Compra con estos ítems"
+              >
+                {isCreatingDrafts ? <Loader2 size={14} className="animate-spin" /> : <ShoppingCart size={14} />}
+                <span className="hidden sm:inline">Generar borrador OC</span>
+                <span className="sm:hidden">OC</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -856,55 +1112,81 @@ export const InventoryPage = () => {
 
         <div className="flex-1 min-w-0">
           {activeTab === 'items' && (
-            <div className="mb-6 flex flex-col md:flex-row gap-4">
-              <div className="flex-1 bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex items-center">
-                <div className="pl-3 pr-2 text-slate-400">
-                  <Search size={20} />
+            <div className="mb-6 space-y-3">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1 bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex items-center">
+                  <div className="pl-3 pr-2 text-slate-400">
+                    <Search size={20} />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Buscar en repuestos..."
+                    className="w-full bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 px-2 py-1.5 outline-none"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  {canUseScanner && (
+                    <button
+                      onClick={() => setIsScannerOpen(true)}
+                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                      title="Escanear QR para buscar"
+                    >
+                      <QrCode size={20} />
+                    </button>
+                  )}
                 </div>
-                <input
-                  type="text"
-                  placeholder="Buscar en repuestos..."
-                  className="w-full bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 px-2 py-1.5 outline-none"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                {canUseScanner && (
-                  <button
-                    onClick={() => setIsScannerOpen(true)}
-                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
-                    title="Escanear QR para buscar"
-                  >
-                    <QrCode size={20} />
-                  </button>
-                )}
               </div>
-
-              <div className="flex flex-wrap gap-3">
-
-
+              {(showLowStockOnly || showNoVendorOnly) && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {showLowStockOnly && !showNoVendorOnly && (
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium">
+                      <AlertCircle size={14} />
+                      Mostrando solo stock crítico ({criticalItems.length})
+                      <button
+                        type="button"
+                        onClick={clearStockFilters}
+                        className="p-0.5 rounded-full hover:bg-rose-100"
+                        title="Quitar filtro"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+                  {criticalWithoutVendor.length > 0 && !showNoVendorOnly && (
+                    <button
+                      type="button"
+                      onClick={filterCriticalWithoutVendor}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium hover:bg-amber-100 hover:border-amber-300 transition-colors"
+                      title="Filtrar solo críticos sin proveedor"
+                    >
+                      {criticalWithoutVendor.length} sin proveedor — clic para asignarles proveedor
+                    </button>
+                  )}
+                  {showNoVendorOnly && (
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-300 text-amber-900 text-sm font-medium shadow-sm">
+                      <AlertCircle size={14} className="text-amber-600" />
+                      Críticos sin proveedor ({criticalWithoutVendor.length}) — edita cada uno y asígnalo
+                      <button
+                        type="button"
+                        onClick={clearStockFilters}
+                        className="p-0.5 rounded-full hover:bg-amber-100"
+                        title="Quitar filtro"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {!showLowStockOnly && !showNoVendorOnly && criticalWithoutVendor.length > 0 && (
                 <button
-                  onClick={() => setShowLowStockOnly(!showLowStockOnly)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border font-medium transition-all ${
-                    showLowStockOnly 
-                      ? 'bg-rose-50 border-rose-200 text-rose-700 shadow-sm' 
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
+                  type="button"
+                  onClick={filterCriticalWithoutVendor}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium hover:bg-amber-100 transition-colors"
                 >
-                  <AlertCircle size={18} className={showLowStockOnly ? 'text-rose-500' : 'text-slate-400'} />
-                  <span className="whitespace-nowrap">Stock Crítico</span>
+                  {criticalWithoutVendor.length} críticos sin proveedor — clic para verlos
                 </button>
-
-                {hasPermission('MANAGE_PURCHASES') && (
-                  <button
-                    onClick={handleGeneratePurchaseList}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition-colors shadow-sm"
-                    title="Generar Lista de Compras"
-                  >
-                    <ShoppingCart size={18} className="text-slate-500" />
-                    <span className="hidden md:inline whitespace-nowrap">Generar Pedido</span>
-                  </button>
-                )}
-              </div>
+              )}
             </div>
           )}
 
@@ -1006,6 +1288,34 @@ export const InventoryPage = () => {
         title={qrLocation?.name || ''}
         subtitle={qrLocation?.internal_id || ''}
         value={qrLocation ? `FIIX-LOCATION:${qrLocation.id}` : ''}
+      />
+
+      <BulkQRPrintModal
+        isOpen={bulkItemPrintOpen}
+        onClose={() => setBulkItemPrintOpen(false)}
+        sheetTitle="Etiquetas QR de Repuestos"
+        items={items
+          .filter((item) => selectedItemIds.has(item.id))
+          .map((item) => ({
+            id: item.id,
+            title: item.name,
+            subtitle: item.internal_code,
+            value: `FIIX-ITEM:${item.id}`,
+          }))}
+      />
+
+      <BulkQRPrintModal
+        isOpen={bulkLocationPrintOpen}
+        onClose={() => setBulkLocationPrintOpen(false)}
+        sheetTitle="Etiquetas QR de Ubicaciones"
+        items={locations
+          .filter((l) => selectedLocationIds.has(l.id))
+          .map((l) => ({
+            id: l.id,
+            title: l.name,
+            subtitle: l.internal_id,
+            value: `FIIX-LOCATION:${l.id}`,
+          }))}
       />
 
       <QRScannerModal

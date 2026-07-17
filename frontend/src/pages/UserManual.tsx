@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Search, Wrench, Users, Shield, Package, LayoutDashboard, ArrowLeft, Terminal, AlertTriangle, CheckCircle2, Info, FileText, QrCode, Clock, Filter, Printer, Home, Activity, Bell, Smartphone, ClipboardCheck, Database } from 'lucide-react';
+import { BookOpen, Search, Wrench, Users, Shield, Package, LayoutDashboard, ArrowLeft, Terminal, AlertTriangle, CheckCircle2, Info, FileText, QrCode, Clock, Filter, Printer, Home, Activity, Bell, Smartphone, ClipboardCheck, Database, Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const SECTIONS = [
@@ -277,7 +277,7 @@ export const UserManual = () => {
                     </div>
                     <div className="border border-slate-200 dark:border-slate-700 p-4 rounded-2xl">
                       <span className="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full text-xs font-bold mb-3 inline-block">FINALIZADO</span>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">El trabajo terminó y la máquina opera con normalidad. Requiere firma del técnico.</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">El trabajo terminó. Antes de guardar puedes registrar <strong>repuestos a descontar</strong>; el stock baja al cerrar y el costo queda ligado a la OT.</p>
                     </div>
                   </div>
                 </div>
@@ -303,7 +303,7 @@ export const UserManual = () => {
                     Filtros y Búsquedas Avanzadas
                   </h3>
                   <p className="text-slate-600 dark:text-slate-400">
-                    No pierdas tiempo navegando entre páginas. Órdenes de Trabajo cuenta con herramientas para encontrar exactamente la orden que necesitas.
+                    No pierdas tiempo navegando entre páginas. Órdenes de Trabajo cuenta con herramientas para encontrar exactamente la orden que necesitas. Además, en cualquier pantalla puedes usar <strong>Ctrl/Cmd+K</strong> (o la lupa en celular) para buscar activos, repuestos, ubicaciones y folios <strong>FOL-####</strong> en un solo lugar.
                   </p>
                   <ul className="list-none space-y-3 mt-4">
                     <li className="flex items-start gap-3">
@@ -323,6 +323,32 @@ export const UserManual = () => {
                   </ul>
                 </div>
 
+                <div className="space-y-4 pt-4">
+                  <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 w-8 h-8 rounded-full flex items-center justify-center text-sm">4</span>
+                    SLA (Acuerdo de Nivel de Servicio) y Escalamiento
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-400">
+                    El sistema vigila tres relojes por prioridad (Urgente / Normal / Bajo): <strong>respuesta</strong> (mientras está Pendiente), <strong>detenida</strong> (En Espera) y <strong>resolución</strong> (hasta el cierre).
+                  </p>
+                  <ul className="list-none space-y-3 mt-4">
+                    <li className="flex items-start gap-3">
+                      <Clock className="text-amber-500 shrink-0 mt-1" size={18} />
+                      <div>
+                        <strong className="text-slate-800 dark:text-slate-200 block">Recordatorios y escalamiento</strong>
+                        <span className="text-sm text-slate-500">Cada 15 minutos se evalúan las OT abiertas. Al cruzar umbrales se avisa por Telegram y por la campana; el escalamiento llega a Gestionadores y Administradores. Cada aviso se envía una sola vez por orden. El rezago histórico no satura el grupo (arranque silencioso) y, si hay muchos avisos nuevos, se manda un solo resumen.</span>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Settings className="text-emerald-500 shrink-0 mt-1" size={18} />
+                      <div>
+                        <strong className="text-slate-800 dark:text-slate-200 block">Configuración</strong>
+                        <span className="text-sm text-slate-500">En Configuración → SLA (Acuerdo de Nivel de Servicio) puedes activar el seguimiento y editar con un formulario (por prioridad) las horas de recordatorio, máximo y escalamiento. En el listado verás badges: Dentro de SLA, En riesgo o Vencido.</span>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+
                 <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/30 p-5 rounded-2xl mt-8 flex gap-4 items-start">
                   <div className="p-2 bg-emerald-100 dark:bg-emerald-800 rounded-full shrink-0">
                     <CheckCircle2 className="text-emerald-600 dark:text-emerald-300" size={20} />
@@ -330,7 +356,7 @@ export const UserManual = () => {
                   <div>
                     <h3 className="font-bold text-emerald-900 dark:text-emerald-300 mb-1">WebSockets: Magia en Tiempo Real</h3>
                     <p className="text-emerald-800 dark:text-emerald-400/90 text-sm leading-relaxed">
-                      Si un operador escanea un código QR en la planta y levanta un reporte desde su celular, <strong>la orden aparecerá mágicamente en Órdenes de Trabajo sin que tengas que recargar la página</strong>. Esto es gracias a nuestra arquitectura de WebSockets bidireccionales.
+                      Si un operador escanea un código QR en la planta y levanta un reporte desde su celular, <strong>la orden aparecerá en Órdenes de Trabajo sin que tengas que recargar la página</strong>. Lo mismo aplica a inventario, activos, compras y el resto de módulos: los cambios de otros usuarios llegan casi al momento. Además, si dos personas abren la <strong>misma OT</strong>, la primera puede editarla y la segunda la ve en solo lectura con el aviso <strong>«En edición por…»</strong> hasta que se cierre el detalle.
                     </p>
                   </div>
                 </div>
@@ -362,10 +388,10 @@ export const UserManual = () => {
 
                   <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
                     <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
-                      <AlertTriangle className="text-rose-500" size={20} /> Alertas de Stock (Reorden)
+                      <AlertTriangle className="text-rose-500" size={20} /> Alertas de Stock Crítico (accionables)
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Al crear una refacción defines un "Stock Mínimo". Cuando los técnicos consumen piezas en sus órdenes de trabajo, el sistema resta ese inventario matemáticamente de forma automática. Si llega al mínimo, la pieza se marca en rojo intenso alertando al comprador que es momento de reabastecer.
+                      Al crear una refacción defines un <strong>Stock Mínimo</strong>. Cuando el stock llega a ese nivel (o baja), la tarjeta superior de <strong>Stock Crítico</strong> muestra la cantidad. Un clic en la tarjeta filtra la lista de repuestos; con permiso de compras, el botón <strong>Generar borrador OC</strong> crea Órdenes de Compra en estado Borrador (una por proveedor, con la cantidad faltante para volver al mínimo). Los ítems sin proveedor se omiten y se te avisan. Luego revisas y avanzas el flujo en <strong>Órdenes de Compra</strong>.
                     </p>
                   </div>
 
@@ -380,10 +406,10 @@ export const UserManual = () => {
 
                   <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
                     <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
-                      <QrCode className="text-indigo-500" size={20} /> Búsqueda y Código QR en Ubicaciones
+                      <QrCode className="text-indigo-500" size={20} /> Búsqueda e impresión QR masiva
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                      La pestaña <strong>Ubicaciones</strong> ahora tiene su propia barra de búsqueda (por nombre o código) y un botón de escaneo QR, igual que la pestaña de Repuestos. Además, cada tarjeta de ubicación tiene un botón <strong>"Ver / Imprimir QR"</strong> que genera un código único para esa ubicación física (estante, almacén, área). Al pegar ese QR en el anaquel y escanearlo con el botón de la cámara, la app abre automáticamente el detalle de la ubicación mostrando todos los repuestos que contiene.
+                      Las pestañas <strong>Repuestos</strong> y <strong>Ubicaciones</strong> incluyen <strong>QR masivo</strong>. Actívalo, selecciona registros individualmente o elige todos los resultados filtrados y pulsa Imprimir para generar una hoja de etiquetas. Cada registro conserva además su botón individual de QR; al escanear una ubicación, la app abre su detalle y los repuestos asociados.
                     </p>
                   </div>
                 </div>
@@ -416,9 +442,9 @@ export const UserManual = () => {
                   <div className="bg-slate-900 dark:bg-slate-950 p-6 rounded-3xl shadow-xl text-center flex flex-col items-center justify-center relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl"></div>
                     <QrCode size={48} className="text-cyan-400 mb-4" />
-                    <h3 className="text-lg font-bold text-white mb-2">Escaneo Rápido (QR)</h3>
+                    <h3 className="text-lg font-bold text-white mb-2">Escaneo y QR masivo</h3>
                     <p className="text-sm text-slate-400">
-                      El CMMS genera un QR único para cada máquina. Imprímelo, pégalo en el chasis físico y permite que tus técnicos o solicitantes lo escaneen para abrir su expediente al instante sin teclear nada.
+                      Cada máquina tiene un QR único. Al escanearlo se abre el expediente con la pestaña <strong>De un vistazo</strong> (últimas OTs, RCA, PMs, stock crítico y costo). Con <strong>QR masivo</strong> puedes seleccionar varios activos o ubicaciones e imprimir una hoja de etiquetas de una vez.
                     </p>
                   </div>
                 </div>
@@ -429,6 +455,9 @@ export const UserManual = () => {
                   </h3>
                   <p className="text-amber-800 dark:text-amber-400/90 text-sm">
                     Desde esta versión, el Código Interno del activo (ACT-0001, ACT-0002...) se genera automáticamente al crear el equipo y el campo queda bloqueado permanentemente, incluso al editar el activo después. Esto evita duplicados y asegura que la numeración de la planta sea siempre consistente y trazable.
+                  </p>
+                  <p className="text-amber-800 dark:text-amber-400/90 text-sm mt-3">
+                    Si aún existen códigos antiguos (por ejemplo <code className="text-xs bg-amber-100 dark:bg-amber-950 px-1 rounded">EQ-28754</code>), un administrador puede migrarlos al formato ACT desde <em>Opciones de Desarrollador → Herramientas locales</em>. La vista previa muestra el mapa antiguo→nuevo y, al aplicar, descarga el JSON de equivalencias. Los QR impresos no se invalidan.
                   </p>
                 </div>
               </div>
@@ -554,7 +583,16 @@ export const UserManual = () => {
                       <CheckCircle2 className="text-emerald-500" size={20} /> Evaluaciones Rápidas
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                      La interfaz es un formulario masivo donde puedes marcar rápidamente si sistemas como Lubricación, Neumática, y Eléctrica están <strong className="text-green-600">OK</strong>, <strong className="text-red-500">NOK (Falla)</strong> o N/A. Si marcas algo como NOK, tienes un campo de texto obligatorio para describir el problema detectado.
+                      La interfaz es un formulario masivo donde puedes marcar rápidamente si sistemas como Lubricación, Neumática, y Eléctrica están <strong className="text-green-600">OK</strong>, <strong className="text-red-500">NOK (Falla)</strong> o N/A. Si marcas algo como NOK, tienes un campo de texto obligatorio para describir el problema detectado. Algunas tareas piden un <strong>número</strong> (temperaturas) o un <strong>texto</strong> (lecturas de agua) en lugar del check.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
+                      <Settings className="text-indigo-500" size={20} /> Catálogo: Check, Número, Texto y columnas
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                      En <strong>Configuración → Catálogo de Checklist</strong>, cada pregunta tiene un selector para el tipo de respuesta: <strong>Check</strong> (OK/Falla/N/A), <strong>Número</strong> o <strong>Texto</strong>. Además puedes definir el <strong>número de columnas</strong> (máquinas L1…Ln, hasta 12). Si agregas una línea, sube ese número y el próximo checklist diario ya la incluirá.
                     </p>
                   </div>
                 </div>
@@ -624,6 +662,20 @@ export const UserManual = () => {
                   <h2 className="text-3xl font-black text-slate-900 dark:text-white">Opciones de Desarrollador</h2>
                 </div>
                 
+                <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/30 p-6 rounded-2xl shadow-sm mb-6">
+                  <h3 className="text-xl font-bold text-emerald-800 dark:text-emerald-300 mb-3 flex items-center gap-2">
+                    <CheckCircle2 size={24} /> Migrar códigos de activos (EQ → ACT)
+                  </h3>
+                  <p className="text-emerald-700 dark:text-emerald-400/90 text-sm leading-relaxed mb-4">
+                    En <strong>Herramientas locales</strong> encontrarás la acción para convertir códigos históricos al estándar <strong>ACT-0001</strong>. Primero se muestra la vista previa; al confirmar se actualizan los códigos y se descarga el mapa de equivalencias en JSON.
+                  </p>
+                  <ul className="space-y-2 text-sm text-emerald-800/80 dark:text-emerald-300/80">
+                    <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-emerald-500" size={16} /> Conserva los códigos que ya están en formato ACT-XXXX.</li>
+                    <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-emerald-500" size={16} /> Reasigna el resto de forma incremental y estable.</li>
+                    <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-emerald-500" size={16} /> No afecta QR impresos (usan el ID interno del activo).</li>
+                  </ul>
+                </div>
+
                 <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 p-6 rounded-2xl shadow-sm">
                   <h3 className="text-xl font-bold text-red-800 dark:text-red-300 mb-3 flex items-center gap-2">
                     <AlertTriangle size={24} className="animate-pulse" /> El Botón Rojo Nuclear

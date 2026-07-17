@@ -105,7 +105,16 @@ export interface TechnicianPerformance {
   Finalizadas: number;
   EnProceso: number;
   Pendientes: number;
+  Pausadas: number;
   Total: number;
+  /** Órdenes abiertas asignadas (carga operativa del día). */
+  CargaHoy: number;
+  /** Horas acumuladas en EN_ESPERA (reloj actual). */
+  TiempoEsperaHoras: number;
+  /** Órdenes finalizadas en la semana calendario (lun–dom). */
+  FinalizadasSemana: number;
+  /** Horas de mano de obra (accumulated_time_ms) de OTs cerradas esta semana. */
+  HorasLaborSemana: number;
 }
 
 export const getTechnicianPerformance = async (period?: string): Promise<TechnicianPerformance[]> => {

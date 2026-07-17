@@ -7,6 +7,7 @@ import { getChecklistHistory, getTodayChecklist, createTodayChecklist } from '..
 import type { DailyChecklist } from '../api/checklists';
 import { useAuth } from '../context/AuthContext';
 import { parseDateOnly } from '../utils/dateUtils';
+import { useSocketRefresh } from '../hooks/useSocketRefresh';
 
 export default function DailyChecklistsPage() {
   const [history, setHistory] = useState<DailyChecklist[]>([]);
@@ -21,9 +22,9 @@ export default function DailyChecklistsPage() {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (background = false) => {
     try {
-      setIsLoading(true);
+      if (!background) setIsLoading(true);
       const [historyData, todayData] = await Promise.all([
         getChecklistHistory(),
         getTodayChecklist()
@@ -33,9 +34,11 @@ export default function DailyChecklistsPage() {
     } catch (error) {
       console.error('Error fetching checklists', error);
     } finally {
-      setIsLoading(false);
+      if (!background) setIsLoading(false);
     }
   };
+
+  useSocketRefresh('refresh_checklists', () => fetchData(true));
 
   const handleCreateToday = async () => {
     try {
