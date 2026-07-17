@@ -37,7 +37,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
   const renderStatusStepper = () => {
     const steps = ['BORRADOR', 'APROBADA', 'ENVIADA', 'RECIBIDA'];
     const currentIndex = steps.indexOf(order.status);
-    
+
     if (order.status === 'CANCELADA') {
       return (
         <div className="p-4 bg-red-50 text-red-700 rounded-2xl font-bold border border-red-200 text-center">
@@ -48,26 +48,26 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
 
     return (
       <div className="flex items-center justify-between mb-8 relative">
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-100 z-0 rounded-full"></div>
-        <div 
-          className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-indigo-500 z-0 transition-all duration-500 rounded-full"
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-100 dark:bg-slate-800 z-0 rounded-full"></div>
+        <div
+          className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-emerald-50 dark:bg-emerald-950/500 z-0 transition-all duration-500 rounded-full"
           style={{ width: `${(Math.max(0, currentIndex) / (steps.length - 1)) * 100}%` }}
         ></div>
-        
+
         {steps.map((step, idx) => {
           const isCompleted = idx <= currentIndex;
           const isCurrent = idx === currentIndex;
-          
+
           return (
             <div key={step} className="relative z-10 flex flex-col items-center gap-2">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-colors ${
-                isCompleted 
-                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200' 
-                  : 'bg-white border-slate-200 text-slate-400'
-              } ${isCurrent ? 'ring-4 ring-indigo-100' : ''}`}>
+                isCompleted
+                  ? 'bg-emerald-600 dark:bg-emerald-500 border-emerald-600 text-white shadow-md shadow-emerald-200 dark:shadow-emerald-900/30'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-400'
+              } ${isCurrent ? 'ring-4 ring-emerald-100 dark:ring-emerald-900/40' : ''}`}>
                 {isCompleted ? <CheckCircle2 size={16} /> : idx + 1}
               </div>
-              <span className={`text-xs font-bold ${isCompleted ? 'text-indigo-900' : 'text-slate-400'}`}>
+              <span className={`text-xs font-bold ${isCompleted ? 'text-emerald-900 dark:text-emerald-200' : 'text-slate-400'}`}>
                 {step}
               </span>
             </div>
@@ -79,21 +79,21 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="flex justify-between items-start p-6 border-b border-slate-100 bg-slate-50">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="flex justify-between items-start p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h2 className="text-2xl font-black text-slate-800">PO-{order.folio.toString().padStart(4, '0')}</h2>
-              <span className="px-3 py-1 bg-white rounded-full text-xs font-bold text-slate-600 border border-slate-200 shadow-sm">
+              <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100">PO-{order.folio.toString().padStart(4, '0')}</h2>
+              <span className="px-3 py-1 bg-white dark:bg-slate-900 rounded-full text-xs font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 shadow-sm">
                 {order.status}
               </span>
             </div>
-            <p className="text-slate-500 text-sm flex items-center gap-4">
+            <p className="text-slate-500 dark:text-slate-400 text-sm flex items-center gap-4">
               <span className="flex items-center gap-1"><Calendar size={14}/> Creada: {new Date(order.created_at).toLocaleDateString()}</span>
               {order.expected_date && <span className="flex items-center gap-1"><ArrowRight size={14}/> Esperada: {new Date(order.expected_date).toLocaleDateString()}</span>}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-full transition-colors shadow-sm">
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-white dark:bg-slate-900 rounded-full transition-colors shadow-sm">
             <X size={20} />
           </button>
         </div>
@@ -108,29 +108,29 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
           {renderStatusStepper()}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                 <Building2 size={16} /> Datos del Proveedor
               </h3>
-              <p className="font-bold text-slate-800 text-lg">{order.vendor?.name}</p>
+              <p className="font-bold text-slate-800 dark:text-slate-100 text-lg">{order.vendor?.name}</p>
             </div>
-            <div className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                 <User size={16} /> Creado Por
               </h3>
-              <p className="font-bold text-slate-800">{order.created_by?.name}</p>
-              <p className="text-sm text-slate-500">{order.created_by?.role}</p>
+              <p className="font-bold text-slate-800 dark:text-slate-100">{order.created_by?.name}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{order.created_by?.role}</p>
             </div>
           </div>
 
-          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            <Package size={20} className="text-indigo-600" />
+          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+            <Package size={20} className="text-emerald-600 dark:text-emerald-400" />
             Ítems Solicitados
           </h3>
-          
-          <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden">
+
+          <div className="bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-100/50 border-b border-slate-200 text-slate-500">
+              <thead className="bg-slate-100/50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
                 <tr>
                   <th className="px-4 py-3 font-medium">Internal Code</th>
                   <th className="px-4 py-3 font-medium">Ítem</th>
@@ -141,21 +141,21 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {order.items.map((oi) => (
-                  <tr key={oi.id} className="bg-white">
-                    <td className="px-4 py-3 font-medium text-slate-500">{oi.item?.internal_code}</td>
-                    <td className="px-4 py-3 font-bold text-slate-800">{oi.item?.name}</td>
+                  <tr key={oi.id} className="bg-white dark:bg-slate-900">
+                    <td className="px-4 py-3 font-medium text-slate-500 dark:text-slate-400">{oi.item?.internal_code}</td>
+                    <td className="px-4 py-3 font-bold text-slate-800 dark:text-slate-100">{oi.item?.name}</td>
                     <td className="px-4 py-3 text-right">{oi.quantity} {oi.item?.uom}</td>
                     <td className="px-4 py-3 text-right">${oi.unit_cost.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right font-medium text-slate-700">
+                    <td className="px-4 py-3 text-right font-medium text-slate-700 dark:text-slate-200">
                       ${(oi.quantity * oi.unit_cost).toFixed(2)}
                     </td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-slate-50 border-t border-slate-200">
+              <tfoot className="bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
                 <tr>
-                  <td colSpan={4} className="px-4 py-4 text-right font-bold text-slate-600">Total de la Orden:</td>
-                  <td className="px-4 py-4 text-right font-black text-indigo-700 text-lg">
+                  <td colSpan={4} className="px-4 py-4 text-right font-bold text-slate-600 dark:text-slate-400">Total de la Orden:</td>
+                  <td className="px-4 py-4 text-right font-black text-emerald-700 dark:text-emerald-400 text-lg">
                     ${total.toFixed(2)}
                   </td>
                 </tr>
@@ -164,17 +164,17 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
           </div>
         </div>
 
-        <div className="p-6 border-t border-slate-100 bg-white flex flex-wrap justify-end gap-3 print:hidden">
-          <button 
+        <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-wrap justify-end gap-3 print:hidden">
+          <button
             onClick={() => window.print()}
-            className="flex items-center gap-2 px-5 py-2.5 text-indigo-700 font-bold hover:bg-indigo-50 border border-indigo-200 rounded-xl transition-colors mr-auto"
+            className="flex items-center gap-2 px-5 py-2.5 text-emerald-700 dark:text-emerald-400 font-bold hover:bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-xl transition-colors mr-auto"
           >
             <Printer size={18} />
             Descargar PDF / Imprimir
           </button>
 
           {order.status !== 'RECIBIDA' && order.status !== 'CANCELADA' && (
-            <button 
+            <button
               onClick={() => handleUpdateStatus('CANCELADA')}
               disabled={isSubmitting}
               className="px-5 py-2.5 text-red-600 font-medium hover:bg-red-50 rounded-xl transition-colors"
@@ -183,25 +183,25 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
             </button>
           )}
 
-          <button 
+          <button
             onClick={onClose}
-            className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors"
+            className="px-5 py-2.5 text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-xl transition-colors"
           >
             Cerrar
           </button>
 
           {order.status === 'BORRADOR' && isManagerOrAdmin && (
-            <button 
+            <button
               onClick={() => handleUpdateStatus('APROBADA')}
               disabled={isSubmitting}
-              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white font-medium hover:bg-blue-700 rounded-xl transition-all shadow-sm disabled:opacity-70"
+              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-950 font-medium hover:bg-emerald-700 dark:hover:bg-emerald-400 rounded-xl transition-all shadow-sm disabled:opacity-70"
             >
               {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : 'Aprobar Orden'}
             </button>
           )}
 
           {order.status === 'APROBADA' && (
-            <button 
+            <button
               onClick={() => handleUpdateStatus('ENVIADA')}
               disabled={isSubmitting}
               className="flex items-center gap-2 px-5 py-2.5 bg-amber-600 text-white font-medium hover:bg-amber-700 rounded-xl transition-all shadow-sm disabled:opacity-70"
@@ -211,7 +211,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
           )}
 
           {order.status === 'ENVIADA' && isManagerOrAdmin && (
-            <button 
+            <button
               onClick={() => handleUpdateStatus('RECIBIDA')}
               disabled={isSubmitting}
               className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white font-bold hover:bg-emerald-700 rounded-xl transition-all shadow-md shadow-emerald-200 disabled:opacity-70"
@@ -223,51 +223,51 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
       </div>
 
       {/* --- PRINTABLE FORMAT (HIDDEN ON SCREEN) --- */}
-      <div className="hidden print:block fixed inset-0 z-[100000] bg-white p-8 w-full h-full text-black">
+      <div className="hidden print:block fixed inset-0 z-[100000] bg-white dark:bg-slate-900 p-8 w-full h-full text-black">
         <div className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-start">
           <div className="flex items-center gap-4">
             <img src="/lpet.png" alt="Logo" className="h-16 object-contain" />
             <div>
-              <h1 className="text-3xl font-black text-slate-900 tracking-tight">ORDEN DE COMPRA</h1>
-              <p className="text-slate-500 font-medium">Departamento de Mantenimiento</p>
+              <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">ORDEN DE COMPRA</h1>
+              <p className="text-slate-500 dark:text-slate-400 font-medium">Departamento de Mantenimiento</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-indigo-700 mb-1">PO-{order.folio.toString().padStart(4, '0')}</p>
-            <p className="text-sm text-slate-500">Fecha: {new Date(order.created_at).toLocaleDateString()}</p>
-            <p className="text-sm font-bold mt-2 px-3 py-1 bg-slate-100 rounded-lg inline-block">Estado: {order.status}</p>
+            <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 mb-1">PO-{order.folio.toString().padStart(4, '0')}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Fecha: {new Date(order.created_at).toLocaleDateString()}</p>
+            <p className="text-sm font-bold mt-2 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg inline-block">Estado: {order.status}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-12 mb-10">
           <div>
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-200 pb-1">Datos del Proveedor</h3>
-            <p className="font-bold text-lg text-slate-800 mb-1">{order.vendor?.name}</p>
-            <p className="text-sm text-slate-600">Contacto principal</p>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">Datos del Proveedor</h3>
+            <p className="font-bold text-lg text-slate-800 dark:text-slate-100 mb-1">{order.vendor?.name}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">Contacto principal</p>
           </div>
           <div>
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-200 pb-1">Detalles de Entrega</h3>
-            <p className="font-bold text-slate-800">Fecha Esperada: {order.expected_date ? new Date(order.expected_date).toLocaleDateString() : 'A convenir'}</p>
-            <p className="text-sm text-slate-600 mt-1">Solicitado por: {order.created_by?.name}</p>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">Detalles de Entrega</h3>
+            <p className="font-bold text-slate-800 dark:text-slate-100">Fecha Esperada: {order.expected_date ? new Date(order.expected_date).toLocaleDateString() : 'A convenir'}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Solicitado por: {order.created_by?.name}</p>
           </div>
         </div>
 
         <div className="mb-10">
           <table className="w-full text-left text-sm border-collapse">
-            <thead className="bg-slate-100 border-y border-slate-300">
+            <thead className="bg-slate-100 dark:bg-slate-800 border-y border-slate-300">
               <tr>
-                <th className="px-4 py-3 font-bold text-slate-700">Código</th>
-                <th className="px-4 py-3 font-bold text-slate-700">Descripción del Artículo</th>
-                <th className="px-4 py-3 font-bold text-slate-700 text-center">Cant.</th>
-                <th className="px-4 py-3 font-bold text-slate-700 text-right">P. Unitario</th>
-                <th className="px-4 py-3 font-bold text-slate-700 text-right">Subtotal</th>
+                <th className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200">Código</th>
+                <th className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200">Descripción del Artículo</th>
+                <th className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200 text-center">Cant.</th>
+                <th className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200 text-right">P. Unitario</th>
+                <th className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200 text-right">Subtotal</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 border-b border-slate-300">
               {order.items.map((oi) => (
                 <tr key={oi.id}>
-                  <td className="px-4 py-3 font-medium text-slate-500">{oi.item?.internal_code}</td>
-                  <td className="px-4 py-3 font-bold text-slate-800">{oi.item?.name}</td>
+                  <td className="px-4 py-3 font-medium text-slate-500 dark:text-slate-400">{oi.item?.internal_code}</td>
+                  <td className="px-4 py-3 font-bold text-slate-800 dark:text-slate-100">{oi.item?.name}</td>
                   <td className="px-4 py-3 text-center">{oi.quantity} {oi.item?.uom}</td>
                   <td className="px-4 py-3 text-right">${oi.unit_cost.toFixed(2)}</td>
                   <td className="px-4 py-3 text-right font-bold">${(oi.quantity * oi.unit_cost).toFixed(2)}</td>
@@ -276,9 +276,9 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
             </tbody>
           </table>
           <div className="flex justify-end mt-4">
-            <div className="w-1/3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-right">
-              <span className="text-sm font-bold text-slate-500 mr-4">Gran Total:</span>
-              <span className="text-xl font-black text-indigo-700">${total.toFixed(2)}</span>
+            <div className="w-1/3 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-right">
+              <span className="text-sm font-bold text-slate-500 dark:text-slate-400 mr-4">Gran Total:</span>
+              <span className="text-xl font-black text-emerald-700 dark:text-emerald-400">${total.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -286,12 +286,12 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
         <div className="mt-20 grid grid-cols-2 gap-20">
           <div className="text-center">
             <div className="border-b border-slate-400 mb-2"></div>
-            <p className="text-sm font-bold text-slate-600">Firma de Autorización</p>
+            <p className="text-sm font-bold text-slate-600 dark:text-slate-400">Firma de Autorización</p>
             <p className="text-xs text-slate-400 mt-1">{order.created_by?.name} - {order.created_by?.role}</p>
           </div>
           <div className="text-center">
             <div className="border-b border-slate-400 mb-2"></div>
-            <p className="text-sm font-bold text-slate-600">Firma del Proveedor / Recibido</p>
+            <p className="text-sm font-bold text-slate-600 dark:text-slate-400">Firma del Proveedor / Recibido</p>
           </div>
         </div>
       </div>

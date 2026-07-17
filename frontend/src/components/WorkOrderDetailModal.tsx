@@ -25,26 +25,26 @@ interface Props {
 
 export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onDelete, onJoin }: Props) => {
   const { user, hasPermission } = useAuth();
-  
+
   const [status, setStatus] = useState<string>('');
   const [holdReason, setHoldReason] = useState<string>('');
   const [resolutionNotes, setResolutionNotes] = useState<string>('');
   const [signatureCleanArea, setSignatureCleanArea] = useState<string>('');
   const [signatureDelivery, setSignatureDelivery] = useState<string>('');
-  
+
   const sigCleanAreaRef = useRef<SignatureFieldRef>(null);
   const sigDeliveryRef = useRef<SignatureFieldRef>(null);
-  
+
   const [beforeImage, setBeforeImage] = useState<File | null>(null);
   const [afterImage, setAfterImage] = useState<File | null>(null);
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [error, setError] = useState('');
-  
+
   const [sigCleanAreaEmpty, setSigCleanAreaEmpty] = useState(true);
   const [sigDeliveryEmpty, setSigDeliveryEmpty] = useState(true);
-  
+
   const [technicians, setTechnicians] = useState<User[]>([]);
   const [assignedTechniciansIds, setAssignedTechniciansIds] = useState<string[]>([]);
 
@@ -78,7 +78,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
       setAmountToAdd('');
       setSigCleanAreaEmpty(!workOrder.signature_clean_area);
       setSigDeliveryEmpty(!workOrder.signature_delivery);
-      
+
       setFailureProblemId((workOrder as any).failure_problem_id || '');
       setFailureCauseId((workOrder as any).failure_cause_id || '');
       setFailureRemedyId((workOrder as any).failure_remedy_id || '');
@@ -100,8 +100,8 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
   const isClosed = workOrder.status === 'FINALIZADO' || workOrder.status === 'ANULADO';
 
   const canDownloadPDF = workOrder.status === 'FINALIZADO' && (
-    user?.role === 'ADMINISTRADOR' || 
-    user?.role === 'GESTIONADOR' || 
+    user?.role === 'ADMINISTRADOR' ||
+    user?.role === 'GESTIONADOR' ||
     (user?.role === 'TECNICO' && workOrder.assigned_technicians?.some(t => t.id === (user as any).userId || t.id === (user as any).id))
   );
 
@@ -121,7 +121,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
 
   const getDuration = () => {
     let diffMs = 0;
-    
+
     if (workOrder.accumulated_time_ms) {
       diffMs += workOrder.accumulated_time_ms;
     }
@@ -146,7 +146,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
     if (!workOrder.started_at || !workOrder.completed_at || !workOrder.accumulated_time_ms) return null;
     const grossMs = new Date(workOrder.completed_at).getTime() - new Date(workOrder.started_at).getTime();
     const pausedMs = grossMs - workOrder.accumulated_time_ms;
-    
+
     if (pausedMs <= 60000) return null;
 
     const minutes = Math.floor(pausedMs / 60000);
@@ -190,7 +190,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!window.confirm("¿Estás seguro de que deseas guardar los cambios realizados en esta orden?")) {
       return;
     }
@@ -227,7 +227,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
           setError('Debes ingresar las firmas de liberación de área y entrega de trabajo para finalizar.');
           return;
         }
-        
+
         if (workOrder.maintenance_type === 'CORRECTIVO' && (!failureProblemId || !failureCauseId || !failureRemedyId)) {
           setError('Al finalizar un mantenimiento CORRECTIVO, es obligatorio llenar el Árbol de Fallas (RCA).');
           return;
@@ -241,7 +241,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
 
       setIsSubmitting(true);
       setError('');
-      
+
       const updateData: any = {
         status: finalStatus,
         resolution_notes: resolutionNotes
@@ -254,7 +254,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
       if (finalStatus === 'EN_ESPERA') {
         updateData.hold_reason = holdReason;
       }
-      
+
       if (finalStatus === 'FINALIZADO') {
         updateData.signature_clean_area = cleanAreaBase64;
         updateData.signature_delivery = deliveryBase64;
@@ -265,7 +265,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
         if (failureCauseId) updateData.failure_cause_id = failureCauseId;
         if (failureRemedyId) updateData.failure_remedy_id = failureRemedyId;
       }
-      
+
       if (beforeImage) updateData.before_image = beforeImage;
       if (afterImage) updateData.after_image = afterImage;
 
@@ -286,7 +286,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
       setError('Debes ingresar un motivo válido para anular la orden.');
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       await onUpdate(workOrder.id, { status: 'ANULADO', resolution_notes: reason.trim() });
@@ -316,19 +316,19 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}></div>
 
-        <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
+        <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-start bg-slate-50/50 dark:bg-slate-900/50">
           <div>
             <div className="flex items-center gap-3">
-              <span className="bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg text-sm font-bold border border-slate-300">
+              <span className="bg-slate-200 text-slate-700 dark:text-slate-200 px-2.5 py-1 rounded-lg text-sm font-bold border border-slate-300">
                 WO-{(workOrder.folio || 0).toString().padStart(4, '0')}
               </span>
-              <h2 className="text-xl font-bold text-slate-800">{workOrder.title}</h2>
+              <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">{workOrder.title}</h2>
             </div>
             <div className="flex gap-4 items-center mt-2">
-              <p className="text-sm text-slate-500">Orden Creada el {new Date(workOrder.created_at).toLocaleDateString()}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Orden Creada el {new Date(workOrder.created_at).toLocaleDateString()}</p>
               {workOrder.status === 'FINALIZADO' && getDuration() && (
-                <div className="flex items-center gap-1 text-sm text-blue-800 bg-blue-50 px-2 py-0.5 rounded-md font-medium border border-blue-100">
+                <div className="flex items-center gap-1 text-sm text-emerald-800 dark:text-emerald-300 bg-blue-50 px-2 py-0.5 rounded-md font-medium border border-blue-100">
                   <Clock size={14} />
                   <span>Ejecución: {getDuration()}</span>
                 </div>
@@ -340,7 +340,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
               )}
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -353,70 +353,70 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-between">
+            <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
               <div>
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Activo Asociado</span>
-                <div className="font-medium text-slate-800">{workOrder.asset?.name || 'Desconocido'}</div>
+                <div className="font-medium text-slate-800 dark:text-slate-100">{workOrder.asset?.name || 'Desconocido'}</div>
               </div>
-              <div className="mt-3 pt-3 border-t border-slate-200/60">
+              <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700/60">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Zona</span>
-                <div className="font-medium text-slate-800">{workOrder.zone?.name || 'Sin Zona'}</div>
+                <div className="font-medium text-slate-800 dark:text-slate-100">{workOrder.zone?.name || 'Sin Zona'}</div>
               </div>
             </div>
-            
+
             {workOrder.status === 'FINALIZADO' && workOrder.started_at && workOrder.completed_at ? (
               <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
-                <span className="text-xs font-semibold text-blue-800 uppercase tracking-wider block mb-2 flex items-center gap-1">
+                <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider block mb-2 flex items-center gap-1">
                   <Clock size={14} /> Registro de Tiempos
                 </span>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span className="text-slate-500 block text-xs">Inicio:</span>
-                    <span className="font-medium text-slate-800">{new Date(workOrder.started_at).toLocaleString()}</span>
+                    <span className="text-slate-500 dark:text-slate-400 block text-xs">Inicio:</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-100">{new Date(workOrder.started_at).toLocaleString()}</span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-xs">Fin:</span>
-                    <span className="font-medium text-slate-800">{new Date(workOrder.completed_at).toLocaleString()}</span>
+                    <span className="text-slate-500 dark:text-slate-400 block text-xs">Fin:</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-100">{new Date(workOrder.completed_at).toLocaleString()}</span>
                   </div>
                   <div className="col-span-2 mt-1">
-                    <span className="text-slate-500 block text-xs">Tiempo Neto Trabajado:</span>
-                    <span className="font-bold text-blue-800">{getDuration()}</span>
+                    <span className="text-slate-500 dark:text-slate-400 block text-xs">Tiempo Neto Trabajado:</span>
+                    <span className="font-bold text-emerald-800 dark:text-emerald-300">{getDuration()}</span>
                   </div>
                   {getPausedTime() && (
                     <div className="col-span-2">
-                      <span className="text-slate-500 block text-xs">Tiempo en Pausa (Espera):</span>
+                      <span className="text-slate-500 dark:text-slate-400 block text-xs">Tiempo en Pausa (Espera):</span>
                       <span className="font-medium text-amber-600">{getPausedTime()}</span>
                     </div>
                   )}
                 </div>
               </div>
             ) : (
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Estado Actual</span>
-                <div className="font-medium text-slate-800">{workOrder.status}</div>
+                <div className="font-medium text-slate-800 dark:text-slate-100">{workOrder.status}</div>
               </div>
             )}
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Prioridad</span>
               <div className={`text-sm font-bold ${
                 workOrder.priority === 'URGENTE' ? 'text-red-600' :
-                workOrder.priority === 'BAJO' ? 'text-slate-500' : 'text-blue-600'
+                workOrder.priority === 'BAJO' ? 'text-slate-500 dark:text-slate-400' : 'text-blue-600'
               }`}>{workOrder.priority}</div>
             </div>
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Tipo</span>
-              <div className="text-sm font-medium text-slate-700">{workOrder.maintenance_type}</div>
+              <div className="text-sm font-medium text-slate-700 dark:text-slate-200">{workOrder.maintenance_type}</div>
             </div>
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Solicitante</span>
-              <div className="text-sm font-medium text-slate-700 truncate" title={workOrder.requester_name}>{workOrder.requester_name || '-'}</div>
+              <div className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate" title={workOrder.requester_name}>{workOrder.requester_name || '-'}</div>
             </div>
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Grupo</span>
-              <div className="text-sm font-medium text-slate-700">{workOrder.production_group}</div>
+              <div className="text-sm font-medium text-slate-700 dark:text-slate-200">{workOrder.production_group}</div>
             </div>
           </div>
 
@@ -426,48 +426,48 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
             </div>
           )}
 
-          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-8">
+          <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 mb-8">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Descripción del Problema</span>
-            <div className="text-sm text-slate-700 whitespace-pre-wrap">
+            <div className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap">
               {workOrder.description || <span className="italic text-slate-400">Sin descripción...</span>}
             </div>
-            
+
             {workOrder.request_image_url && (
-              <div className="mt-4 border-t border-slate-100 pt-3">
+              <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-3">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">📸 Foto al reportar la falla</span>
-                <img src={`${BACKEND_URL}${workOrder.request_image_url}`} alt="Falla Reportada" className="w-full h-32 object-cover rounded-xl border border-slate-200" />
+                <img src={`${BACKEND_URL}${workOrder.request_image_url}`} alt="Falla Reportada" className="w-full h-32 object-cover rounded-xl border border-slate-200 dark:border-slate-700" />
               </div>
             )}
-            
+
             {workOrder.before_image_url && (
-              <div className="mt-4 border-t border-slate-100 pt-3">
+              <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-3">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">📸 Evidencia Técnica (Antes de reparar)</span>
-                <img src={`${BACKEND_URL}${workOrder.before_image_url}`} alt="Antes" className="w-full h-32 object-cover rounded-xl border border-slate-200" />
+                <img src={`${BACKEND_URL}${workOrder.before_image_url}`} alt="Antes" className="w-full h-32 object-cover rounded-xl border border-slate-200 dark:border-slate-700" />
               </div>
             )}
           </div>
-          
+
           {workOrder.after_image_url && (
             <div className="mb-8 bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
                <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider block mb-2">📸 Evidencia de Reparación (Después)</span>
                <img src={`${BACKEND_URL}${workOrder.after_image_url}`} alt="Después" className="w-full h-48 object-cover rounded-xl border border-emerald-200" />
-               
+
                {workOrder.signature_clean_area && workOrder.signature_delivery && (
                  <div className="mt-4 pt-4 border-t border-emerald-200/50 grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <div>
                      <span className="text-xs font-semibold text-emerald-700 block mb-1">Firma Liberación de Área:</span>
                      {typeof workOrder.signature_clean_area === 'string' && workOrder.signature_clean_area.startsWith('data:image') ? (
-                       <img src={workOrder.signature_clean_area} alt="Firma" className="h-16 object-contain bg-white rounded-lg border border-emerald-100 p-1 block" />
+                       <img src={workOrder.signature_clean_area} alt="Firma" className="h-16 object-contain bg-white dark:bg-slate-900 rounded-lg border border-emerald-100 p-1 block" />
                      ) : (
-                       <span className="text-sm font-medium text-emerald-900 bg-white px-3 py-1.5 rounded-lg border border-emerald-100 block">{workOrder.signature_clean_area}</span>
+                       <span className="text-sm font-medium text-emerald-900 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-emerald-100 block">{workOrder.signature_clean_area}</span>
                      )}
                    </div>
                    <div>
                      <span className="text-xs font-semibold text-emerald-700 block mb-1">Firma Entrega de Trabajo:</span>
                      {typeof workOrder.signature_delivery === 'string' && workOrder.signature_delivery.startsWith('data:image') ? (
-                       <img src={workOrder.signature_delivery} alt="Firma" className="h-16 object-contain bg-white rounded-lg border border-emerald-100 p-1 block" />
+                       <img src={workOrder.signature_delivery} alt="Firma" className="h-16 object-contain bg-white dark:bg-slate-900 rounded-lg border border-emerald-100 p-1 block" />
                      ) : (
-                       <span className="text-sm font-medium text-emerald-900 bg-white px-3 py-1.5 rounded-lg border border-emerald-100 block">{workOrder.signature_delivery}</span>
+                       <span className="text-sm font-medium text-emerald-900 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-emerald-100 block">{workOrder.signature_delivery}</span>
                      )}
                    </div>
                  </div>
@@ -476,55 +476,55 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
           )}
 
           <form id="update-wo-form" onSubmit={handleSubmit} className="space-y-5">
-            <div className="border-t border-slate-100 pt-6">
-              <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                 Actualización (Técnico / Admin)
                 {!isClosed && <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest font-black">Área Editable</span>}
               </h3>
-              
+
               <div className="grid grid-cols-1 gap-5">
-                <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 relative overflow-hidden">
+                <div className="bg-emerald-50 dark:bg-emerald-950/50 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-900/50 relative overflow-hidden">
                   {/* Decorative background element */}
-                  {!isClosed && <div className="absolute -right-4 -top-4 w-16 h-16 bg-indigo-500/10 rounded-full blur-xl pointer-events-none"></div>}
-                  
-                  <label className="flex items-center gap-2 text-sm font-bold text-indigo-900 mb-2">
+                  {!isClosed && <div className="absolute -right-4 -top-4 w-16 h-16 bg-emerald-50 dark:bg-emerald-950/500/10 rounded-full blur-xl pointer-events-none"></div>}
+
+                  <label className="flex items-center gap-2 text-sm font-bold text-emerald-900 dark:text-emerald-200 mb-2">
                     Estado de la Orden
                     {!isClosed && (
-                      <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider animate-pulse flex items-center gap-1 font-bold">
+                      <span className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider animate-pulse flex items-center gap-1 font-bold">
                         👉 Haz clic para cambiar
                       </span>
                     )}
                   </label>
-                  
+
                   <div className="relative">
-                    <select 
+                    <select
                       className={`w-full px-4 py-3.5 border rounded-xl outline-none transition-all appearance-none font-bold text-base shadow-sm ${
-                        isClosed 
-                          ? 'bg-white border-slate-200 text-slate-500 cursor-not-allowed' 
-                          : 'bg-white border-indigo-300 text-indigo-900 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500'
+                        isClosed
+                          ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+                          : 'bg-white dark:bg-slate-900 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 cursor-pointer hover:border-emerald-400 dark:border-emerald-600 hover:bg-emerald-50 dark:bg-emerald-950/30 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500'
                       }`}
                       value={status}
                       onChange={(e) => setStatus(e.target.value)}
                       disabled={isClosed}
                     >
                       <option value={workOrder.status}>{workOrder.status}</option>
-                      
+
                       {workOrder.status === 'PENDIENTE' && (
                         <option value="EN_PROCESO">EN_PROCESO (Aceptar Orden)</option>
                       )}
-                      
+
                       {workOrder.status === 'EN_PROCESO' && (
                         <>
                           <option value="EN_ESPERA">EN_ESPERA (Pausar)</option>
                           <option value="FINALIZADO">FINALIZADO (Completar)</option>
                         </>
                       )}
-                      
+
                       {workOrder.status === 'EN_ESPERA' && (
                         <option value="EN_PROCESO">EN_PROCESO (Reanudar)</option>
                       )}
                     </select>
-                    <div className={`absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none ${isClosed ? 'text-slate-400' : 'text-indigo-600'}`}>
+                    <div className={`absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none ${isClosed ? 'text-slate-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                       <ChevronDown size={20} />
                     </div>
                   </div>
@@ -532,16 +532,16 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
 
                 {user?.role !== 'TECNICO' ? (
                   <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Técnicos Asignados</label>
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Técnicos Asignados</label>
+                    <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2">
                       {technicians.length === 0 ? (
-                        <div className="text-sm text-slate-500 italic">No hay técnicos disponibles</div>
+                        <div className="text-sm text-slate-500 dark:text-slate-400 italic">No hay técnicos disponibles</div>
                       ) : (
                         technicians.filter(tech => tech.is_active !== false).map((tech) => (
-                          <label key={tech.id} className={`flex items-center gap-3 p-2 hover:bg-slate-100 rounded-lg transition-colors ${isClosed ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
+                          <label key={tech.id} className={`flex items-center gap-3 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-lg transition-colors ${isClosed ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
                             <input
                               type="checkbox"
-                              className="w-4 h-4 text-blue-800 rounded border-slate-300 focus:ring-blue-800"
+                              className="w-4 h-4 text-emerald-800 dark:text-emerald-300 rounded border-slate-300 focus:ring-emerald-600"
                               checked={assignedTechniciansIds.includes(tech.id)}
                               disabled={isClosed}
                               onChange={(e) => {
@@ -552,7 +552,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                                 }
                               }}
                             />
-                            <span className="text-sm font-medium text-slate-700">{tech.name}</span>
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{tech.name}</span>
                           </label>
                         ))
                       )}
@@ -560,21 +560,21 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                   </div>
                 ) : (
                   <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Técnicos Asignados</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Técnicos Asignados</label>
                     <div className="flex flex-wrap gap-2">
                       {workOrder.assigned_technicians && workOrder.assigned_technicians.length > 0 ? (
                         workOrder.assigned_technicians.map(t => (
-                          <span key={t.id} className="bg-slate-100 px-3 py-1 rounded-md text-sm font-medium text-slate-700">
+                          <span key={t.id} className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-md text-sm font-medium text-slate-700 dark:text-slate-200">
                             {t.name}
                           </span>
                         ))
                       ) : (
-                        <span className="text-sm text-slate-500 italic">Nadie asignado</span>
+                        <span className="text-sm text-slate-500 dark:text-slate-400 italic">Nadie asignado</span>
                       )}
                     </div>
                     {!isClosed && workOrder.assigned_technicians && workOrder.assigned_technicians.length > 0 && !workOrder.assigned_technicians.some(t => t.id === (user as any).userId || t.id === (user as any).id) && (workOrder.status === 'EN_PROCESO' || workOrder.status === 'PENDIENTE') && (
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={handleJoin}
                         disabled={isSubmitting}
                         className="mt-3 w-full px-4 py-2 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-200 rounded-xl font-medium transition-colors text-sm"
@@ -588,11 +588,11 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                 {status === 'EN_ESPERA' && (
                   <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                     <label className="block text-sm font-medium text-red-600 mb-1">Motivo de Espera *</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       required
                       placeholder="Ej: Faltan refacciones..."
-                      className={`w-full px-4 py-3 bg-red-50/50 border border-red-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-red-500 outline-none transition-all ${isClosed || workOrder.status === 'EN_ESPERA' ? 'opacity-70 cursor-not-allowed' : ''}`}
+                      className={`w-full px-4 py-3 bg-red-50/50 border border-red-200 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-red-500 outline-none transition-all ${isClosed || workOrder.status === 'EN_ESPERA' ? 'opacity-70 cursor-not-allowed' : ''}`}
                       value={holdReason}
                       onChange={(e) => setHoldReason(e.target.value)}
                       disabled={isClosed || workOrder.status === 'EN_ESPERA'}
@@ -605,18 +605,18 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                     <label className={`block text-sm font-medium mb-1 ${status === 'ANULADO' ? 'text-red-700' : 'text-emerald-700'}`}>
                       {status === 'ANULADO' ? 'Motivo de Anulación' : 'Notas de Resolución'} *
                     </label>
-                    <textarea 
+                    <textarea
                       required
                       rows={4}
                       placeholder={status === 'ANULADO' ? "Razón por la que se anuló..." : "Describe el trabajo realizado, piezas cambiadas, etc..."}
-                      className={`w-full px-4 py-3 border rounded-xl text-slate-900 focus:ring-2 outline-none transition-all resize-none ${
+                      className={`w-full px-4 py-3 border rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 outline-none transition-all resize-none ${
                         status === 'ANULADO' ? 'bg-red-50/50 border-red-200 focus:ring-red-500' : 'bg-emerald-50/50 border-emerald-200 focus:ring-emerald-500'
                       } ${isClosed ? 'opacity-70 cursor-not-allowed' : ''}`}
                       value={resolutionNotes}
                       onChange={(e) => setResolutionNotes(e.target.value)}
                       disabled={isClosed}
                     />
-                    
+
                     {!isClosed && status === 'FINALIZADO' && workOrder.maintenance_type === 'CORRECTIVO' && (
                       <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
                         <label className="block text-sm font-bold text-orange-800 mb-3 flex items-center gap-2">
@@ -625,8 +625,8 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                         <div className="space-y-3">
                           <div>
                             <span className="text-xs font-semibold text-orange-700 block mb-1">Problema Encontrado</span>
-                            <select 
-                              className="w-full px-3 py-2 border border-orange-200 rounded-lg text-sm bg-white"
+                            <select
+                              className="w-full px-3 py-2 border border-orange-200 rounded-lg text-sm bg-white dark:bg-slate-900"
                               value={failureProblemId}
                               onChange={(e) => {
                                 setFailureProblemId(e.target.value);
@@ -640,12 +640,12 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                               ))}
                             </select>
                           </div>
-                          
+
                           {failureProblemId && (
                             <div className="animate-in fade-in duration-200">
                               <span className="text-xs font-semibold text-orange-700 block mb-1">Causa Raíz</span>
-                              <select 
-                                className="w-full px-3 py-2 border border-orange-200 rounded-lg text-sm bg-white"
+                              <select
+                                className="w-full px-3 py-2 border border-orange-200 rounded-lg text-sm bg-white dark:bg-slate-900"
                                 value={failureCauseId}
                                 onChange={(e) => {
                                   setFailureCauseId(e.target.value);
@@ -659,12 +659,12 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                               </select>
                             </div>
                           )}
-                          
+
                           {failureCauseId && (
                             <div className="animate-in fade-in duration-200">
                               <span className="text-xs font-semibold text-orange-700 block mb-1">Remedio / Acción Tomada</span>
-                              <select 
-                                className="w-full px-3 py-2 border border-orange-200 rounded-lg text-sm bg-white"
+                              <select
+                                className="w-full px-3 py-2 border border-orange-200 rounded-lg text-sm bg-white dark:bg-slate-900"
                                 value={failureRemedyId}
                                 onChange={(e) => setFailureRemedyId(e.target.value)}
                               >
@@ -680,20 +680,20 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                         </div>
                       </div>
                     )}
-                    
+
                     {!isClosed && (
                       <div className="mt-4 space-y-6">
                         {/* SECCION DE REPUESTOS */}
                         <div className="p-4 bg-blue-50/50 border border-blue-200 rounded-xl">
-                          <label className="block text-sm font-medium text-blue-800 mb-3 flex items-center gap-2">
+                          <label className="block text-sm font-medium text-emerald-800 dark:text-emerald-300 mb-3 flex items-center gap-2">
                             <Package size={16} /> Repuestos Utilizados (Opcional)
                           </label>
-                          
+
                           <div className="flex flex-col sm:flex-row gap-2 mb-4">
                             <div className="flex-1 relative">
-                              <input 
+                              <input
                                 type="text"
-                                className="w-full px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="w-full px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white dark:bg-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none"
                                 placeholder="Teclea para buscar repuesto..."
                                 value={itemSearchText}
                                 onChange={(e) => {
@@ -705,13 +705,13 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                                 onBlur={() => setShowDropdown(false)}
                               />
                               {showDropdown && (
-                                <ul className="absolute z-50 w-full bg-white border border-blue-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto text-xs divide-y divide-slate-100">
+                                <ul className="absolute z-50 w-full bg-white dark:bg-slate-900 border border-blue-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto text-xs divide-y divide-slate-100">
                                   {inventoryItems
                                     .filter(i => i.is_active && `${i.internal_code} ${i.name}`.toLowerCase().includes(itemSearchText.toLowerCase()))
                                     .map(item => (
-                                      <li 
-                                        key={item.id} 
-                                        className="px-3 py-2.5 hover:bg-blue-50 cursor-pointer text-slate-700 transition-colors"
+                                      <li
+                                        key={item.id}
+                                        className="px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-slate-800 cursor-pointer text-slate-700 dark:text-slate-200 transition-colors"
                                         onMouseDown={(e) => e.preventDefault()}
                                         onClick={() => {
                                           setSelectedItemToAdd(item.id);
@@ -719,7 +719,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                                           setShowDropdown(false);
                                         }}
                                       >
-                                        <span className="font-semibold text-slate-900">{item.internal_code}</span> - {item.name} <span className="text-slate-400 font-medium ml-1">(Stock: {item.stock} {item.uom})</span>
+                                        <span className="font-semibold text-slate-900 dark:text-slate-100">{item.internal_code}</span> - {item.name} <span className="text-slate-400 font-medium ml-1">(Stock: {item.stock} {item.uom})</span>
                                       </li>
                                     ))
                                   }
@@ -729,16 +729,16 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                                 </ul>
                               )}
                             </div>
-                            <input 
-                              type="number" 
-                              step="0.01" 
+                            <input
+                              type="number"
+                              step="0.01"
                               min="0.01"
-                              placeholder="Cant." 
-                              className="w-full sm:w-24 px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white"
+                              placeholder="Cant."
+                              className="w-full sm:w-24 px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white dark:bg-slate-900"
                               value={amountToAdd}
                               onChange={(e) => setAmountToAdd(e.target.value)}
                             />
-                            <button 
+                            <button
                               type="button"
                               onClick={() => {
                                 if (!selectedItemToAdd || !amountToAdd) return;
@@ -749,33 +749,33 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                                   alert(`No hay suficiente stock. Stock actual: ${itemObj.stock}`);
                                   return;
                                 }
-                                setUsedItems([...usedItems, { 
-                                  item_id: itemObj.id, 
-                                  name: itemObj.name, 
-                                  amount: qty, 
+                                setUsedItems([...usedItems, {
+                                  item_id: itemObj.id,
+                                  name: itemObj.name,
+                                  amount: qty,
                                   uom: itemObj.uom,
-                                  max_stock: itemObj.stock 
+                                  max_stock: itemObj.stock
                                 }]);
                                 setSelectedItemToAdd('');
                                 setItemSearchText('');
                                 setAmountToAdd('');
                               }}
-                              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shrink-0"
+                              className="px-4 py-2 bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-950 rounded-lg text-sm font-medium hover:bg-emerald-700 dark:hover:bg-emerald-400 transition-colors shrink-0"
                             >
                               Agregar
                             </button>
                           </div>
 
                           {usedItems.length > 0 && (
-                            <div className="bg-white rounded-lg border border-blue-100 overflow-hidden">
+                            <div className="bg-white dark:bg-slate-900 rounded-lg border border-blue-100 overflow-hidden">
                               <ul className="divide-y divide-blue-50">
                                 {usedItems.map((item, idx) => (
                                   <li key={idx} className="px-4 py-2.5 flex justify-between items-center text-sm">
-                                    <span className="font-medium text-slate-700">{item.name}</span>
+                                    <span className="font-medium text-slate-700 dark:text-slate-200">{item.name}</span>
                                     <div className="flex items-center gap-3">
-                                      <span className="text-slate-500">{item.amount} {item.uom}</span>
-                                      <button 
-                                        type="button" 
+                                      <span className="text-slate-500 dark:text-slate-400">{item.amount} {item.uom}</span>
+                                      <button
+                                        type="button"
                                         onClick={() => setUsedItems(usedItems.filter((_, i) => i !== idx))}
                                         className="text-red-500 hover:text-red-700 p-1"
                                       >
@@ -796,8 +796,8 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                               <label className="flex-1 flex flex-col items-center justify-center py-3 border border-emerald-200 rounded-xl bg-emerald-50/50 hover:bg-emerald-100 cursor-pointer transition-colors text-emerald-700">
                                 <span className="text-xl mb-1">📷</span>
                                 <span className="text-xs font-semibold">Tomar Foto</span>
-                                <input 
-                                  type="file" 
+                                <input
+                                  type="file"
                                   accept="image/*"
                                   capture="environment"
                                   onChange={(e) => setAfterImage(e.target.files?.[0] || null)}
@@ -807,8 +807,8 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                               <label className="flex-1 flex flex-col items-center justify-center py-3 border border-emerald-200 rounded-xl bg-emerald-50/50 hover:bg-emerald-100 cursor-pointer transition-colors text-emerald-700">
                                 <span className="text-xl mb-1">🖼️</span>
                                 <span className="text-xs font-semibold">Subir Archivo</span>
-                                <input 
-                                  type="file" 
+                                <input
+                                  type="file"
                                   accept="image/*"
                                   onChange={(e) => setAfterImage(e.target.files?.[0] || null)}
                                   className="hidden"
@@ -822,17 +822,17 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                               </div>
                             )}
                           </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-emerald-200/50">
                           <div>
-                            <SignatureField 
+                            <SignatureField
                               ref={sigCleanAreaRef}
                               label="Firma: Liberación de Área Limpia *"
                               onChange={() => setSigCleanAreaEmpty(sigCleanAreaRef.current?.isEmpty() ?? true)}
                             />
                           </div>
                           <div>
-                            <SignatureField 
+                            <SignatureField
                               ref={sigDeliveryRef}
                               label="Firma: Entrega de Trabajo *"
                               onChange={() => setSigDeliveryEmpty(sigDeliveryRef.current?.isEmpty() ?? true)}
@@ -844,27 +844,27 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                     )}
                   </div>
                 )}
-                
+
                 {status === 'EN_PROCESO' && !workOrder.before_image_url && (
-                  <div className="pt-4 mt-2 border-t border-slate-100">
-                    <label className="block text-sm font-medium text-slate-700 mb-2">📸 Evidencia del Problema (Antes) *</label>
+                  <div className="pt-4 mt-2 border-t border-slate-100 dark:border-slate-800">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">📸 Evidencia del Problema (Antes) *</label>
                     <div className="flex gap-2">
-                      <label className="flex-1 flex flex-col items-center justify-center py-3 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors text-slate-600">
+                      <label className="flex-1 flex flex-col items-center justify-center py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors text-slate-600 dark:text-slate-400">
                         <span className="text-xl mb-1">📷</span>
                         <span className="text-xs font-semibold">Tomar Foto</span>
-                        <input 
-                          type="file" 
+                        <input
+                          type="file"
                           accept="image/*"
                           capture="environment"
                           onChange={(e) => setBeforeImage(e.target.files?.[0] || null)}
                           className="hidden"
                         />
                       </label>
-                      <label className="flex-1 flex flex-col items-center justify-center py-3 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors text-slate-600">
+                      <label className="flex-1 flex flex-col items-center justify-center py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors text-slate-600 dark:text-slate-400">
                         <span className="text-xl mb-1">🖼️</span>
                         <span className="text-xs font-semibold">Subir Archivo</span>
-                        <input 
-                          type="file" 
+                        <input
+                          type="file"
                           accept="image/*"
                           onChange={(e) => setBeforeImage(e.target.files?.[0] || null)}
                           className="hidden"
@@ -884,7 +884,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
           </form>
         </div>
 
-        <div className="px-4 py-4 sm:px-6 sm:py-5 border-t border-slate-100 flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center bg-slate-50/50 mt-auto">
+        <div className="px-4 py-4 sm:px-6 sm:py-5 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center bg-slate-50/50 dark:bg-slate-900/50 mt-auto">
           <div className="flex gap-2 justify-stretch sm:justify-start [&>button]:flex-1 [&>button]:sm:flex-initial">
             {hasPermission('DELETE_WORK_ORDERS') && onDelete && (
               <>
@@ -901,21 +901,21 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
           </div>
           <div className="flex flex-wrap sm:flex-nowrap gap-2 justify-stretch sm:justify-end [&>button]:flex-1 [&>button]:sm:flex-initial">
             {canDownloadPDF && (
-              <button 
-                type="button" 
-                onClick={handleDownloadPDF} 
-                disabled={isSubmitting} 
-                className="px-3 sm:px-5 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-colors shadow-sm"
+              <button
+                type="button"
+                onClick={handleDownloadPDF}
+                disabled={isSubmitting}
+                className="px-3 sm:px-5 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 dark:text-slate-100 rounded-xl transition-colors shadow-sm"
               >
                 {isSubmitting ? <Loader2 className="animate-spin" size={14} /> : <Download size={14} />}
                 PDF
               </button>
             )}
-            <button type="button" onClick={onClose} className="px-3 sm:px-5 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors">
+            <button type="button" onClick={onClose} className="px-3 sm:px-5 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">
               Cerrar
             </button>
             {!isClosed && canSave && (
-              <button type="submit" form="update-wo-form" disabled={isSubmitting} className="px-4 sm:px-6 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-70 rounded-xl shadow-sm shadow-emerald-700/20 transition-colors animate-in fade-in zoom-in-95 duration-200">
+              <button type="submit" form="update-wo-form" disabled={isSubmitting} className="px-4 sm:px-6 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-emerald-950 disabled:opacity-70 rounded-xl shadow-sm shadow-emerald-700/20 transition-colors animate-in fade-in zoom-in-95 duration-200">
                 {isSubmitting ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />}
                 Guardar
               </button>

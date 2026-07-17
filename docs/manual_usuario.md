@@ -85,10 +85,18 @@ Para los administradores, modificar lo que puede hacer cada usuario es ahora má
 
 Panel de indicadores de mantenimiento:
 - **Salud de planta:** Disponibilidad, MTTR (solo correctivas, en horas) y Backlog (órdenes abiertas ahora).
-- **Ejecución:** OT finalizadas del periodo, tiempo de respuesta, cumplimiento de meta MTTR y retrabajo (≤ 7 días).
+- **Ejecución:** OT finalizadas del periodo, tiempo de respuesta, cumplimiento de meta MTTR y retrabajo.
+- **Ventana de retrabajo:** puedes elegir 3, 7, 14 o 30 días, o escribir un valor personalizado (1–90). Cuenta como retrabajo una correctiva finalizada si el mismo equipo tuvo otra correctiva cerrada dentro de esa ventana.
+- **Gráfica MTTR/MTBF:** el eje horizontal son los meses/periodos; el vertical son **horas**. MTTR = tiempo medio de reparación (más bajo mejor); MTBF = tiempo medio entre fallas de flota (más alto mejor). La leyenda aparece arriba para no tapar el eje.
 - **Semáforo:** cada tarjeta muestra meta, barra de avance y estado En meta / Cerca / Fuera.
 - **Metas:** se configuran en horas, % u órdenes (ya no en milisegundos). Requiere permiso de gestionar KPIs.
 - **Nota:** el gráfico de costos representa **refacciones consumidas**, no el costo total de mantenimiento.
+
+## 8.1 Apariencia y consistencia visual
+
+- **Tema:** en Configuración → Apariencia puedes elegir Modo Claro, Oscuro o Sistema. Ambos temas usan la misma estructura de pantallas.
+- **Acciones principales:** los botones importantes usan verde emerald en todos los módulos.
+- **Diseño unificado:** títulos, tarjetas, tablas y ventanas emergentes siguen el mismo patrón industrial en Inicio, Órdenes, Inventario, Activos, KPIs, Compras y demás módulos.
 
 ## 9. Módulo de Activos: Código Interno Automático e Inmutable
 
@@ -98,6 +106,7 @@ Panel de indicadores de mantenimiento:
 
 ## 10. Importación masiva por CSV (Opciones de Desarrollador)
 
+- **Distribución de herramientas:** La pantalla separa las acciones por propósito: Importación y respaldos, integración con Telegram, mantenimiento local y Zona de peligro. Esto ayuda a distinguir las operaciones seguras de las destructivas.
 - **Selección conjunta:** Puedes seleccionar los 7 archivos CSV a la vez; no importa el orden en que los elijas. El sistema los reconoce por su nombre y los carga siempre en el orden correcto (Categorías → Ubicaciones → Proveedores → Items → Usuarios → Inventario → Órdenes de Trabajo) para respetar las dependencias entre tablas.
 - **Usuarios de inventario:** Si un movimiento de inventario referencia un correo que no está en el archivo de Usuarios, ese usuario se crea automáticamente como **inactivo** (rol Técnico) para no perder el historial de consumos. Luego puedes activarlo o completarlo desde el Directorio.
 - **Tiempos de reparación:** Los valores de tiempo con coma de miles (por ejemplo `2,140.22` minutos) se interpretan correctamente, de modo que el MTTR y demás métricas de tiempo no se distorsionan.

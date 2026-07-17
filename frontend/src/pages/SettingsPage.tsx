@@ -44,7 +44,7 @@ export const SettingsPage = () => {
     try {
       setIsSaving(true);
       const newValue = !settings[key];
-      
+
       const updatePayload = {
         ...settings,
         [key]: newValue
@@ -67,10 +67,10 @@ export const SettingsPage = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-8">
+    <div className="space-y-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-3">
-          <Settings className="text-blue-600 dark:text-blue-400" size={32} />
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-3">
+          <Settings className="text-emerald-600 dark:text-emerald-400" size={32} />
           Configuración del Sistema
         </h1>
         <p className="text-slate-500 dark:text-slate-300 mt-1">Administra las preferencias globales y la apariencia de LPET CMMS.</p>
@@ -84,7 +84,7 @@ export const SettingsPage = () => {
               onClick={() => setActiveTab('general')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
                 activeTab === 'general'
-                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                  ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
@@ -95,7 +95,7 @@ export const SettingsPage = () => {
               onClick={() => setActiveTab('appearance')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
                 activeTab === 'appearance'
-                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                  ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
@@ -106,7 +106,7 @@ export const SettingsPage = () => {
               onClick={() => setActiveTab('developer')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
                 activeTab === 'developer'
-                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                  ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
@@ -119,7 +119,7 @@ export const SettingsPage = () => {
                   onClick={() => setActiveTab('checklist_catalogue')}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
                     activeTab === 'checklist_catalogue'
-                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                       : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                   }`}
                 >
@@ -130,7 +130,7 @@ export const SettingsPage = () => {
                   onClick={() => setActiveTab('uom')}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
                     activeTab === 'uom'
-                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                       : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                   }`}
                 >
@@ -144,7 +144,7 @@ export const SettingsPage = () => {
               onClick={() => setActiveTab('permissions')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
                 activeTab === 'permissions'
-                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                  ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
@@ -163,7 +163,7 @@ export const SettingsPage = () => {
                 <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200">Notificaciones y Escalamiento</h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Activa o desactiva los canales por donde se envían las alertas de nuevas solicitudes.</p>
               </div>
-              
+
               <div className="p-6 space-y-6">
                 {/* Telegram Toggle */}
                 <div className="flex items-center justify-between">
@@ -206,46 +206,46 @@ export const SettingsPage = () => {
                 <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200">Personalización Visual</h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Elige el tema que mejor se adapte a tu entorno de trabajo.</p>
               </div>
-              
+
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Light Mode */}
-                  <button 
+                  <button
                     onClick={() => setTheme('light')}
                     className={`flex flex-col items-center p-4 rounded-xl border-2 transition-all ${
-                      theme === 'light' 
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                        : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-slate-600'
+                      theme === 'light'
+                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-slate-600'
                     }`}
                   >
-                    <Sun size={32} className={`mb-3 ${theme === 'light' ? 'text-blue-500' : 'text-slate-400'}`} />
-                    <span className={`font-semibold ${theme === 'light' ? 'text-blue-700 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'}`}>Modo Claro</span>
+                    <Sun size={32} className={`mb-3 ${theme === 'light' ? 'text-emerald-500' : 'text-slate-400'}`} />
+                    <span className={`font-semibold ${theme === 'light' ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}`}>Modo Claro</span>
                   </button>
 
                   {/* Dark Mode */}
-                  <button 
+                  <button
                     onClick={() => setTheme('dark')}
                     className={`flex flex-col items-center p-4 rounded-xl border-2 transition-all ${
-                      theme === 'dark' 
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                        : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-slate-600'
+                      theme === 'dark'
+                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-slate-600'
                     }`}
                   >
-                    <Moon size={32} className={`mb-3 ${theme === 'dark' ? 'text-blue-500' : 'text-slate-400'}`} />
-                    <span className={`font-semibold ${theme === 'dark' ? 'text-blue-700 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'}`}>Modo Oscuro</span>
+                    <Moon size={32} className={`mb-3 ${theme === 'dark' ? 'text-emerald-500' : 'text-slate-400'}`} />
+                    <span className={`font-semibold ${theme === 'dark' ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}`}>Modo Oscuro</span>
                   </button>
 
                   {/* System Mode */}
-                  <button 
+                  <button
                     onClick={() => setTheme('system')}
                     className={`flex flex-col items-center p-4 rounded-xl border-2 transition-all ${
-                      theme === 'system' 
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                        : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-slate-600'
+                      theme === 'system'
+                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-slate-600'
                     }`}
                   >
-                    <Monitor size={32} className={`mb-3 ${theme === 'system' ? 'text-blue-500' : 'text-slate-400'}`} />
-                    <span className={`font-semibold ${theme === 'system' ? 'text-blue-700 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'}`}>Sistema</span>
+                    <Monitor size={32} className={`mb-3 ${theme === 'system' ? 'text-emerald-500' : 'text-slate-400'}`} />
+                    <span className={`font-semibold ${theme === 'system' ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}`}>Sistema</span>
                   </button>
                 </div>
               </div>

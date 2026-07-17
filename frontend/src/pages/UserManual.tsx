@@ -32,8 +32,8 @@ export const UserManual = () => {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-            <BookOpen className="text-blue-600 dark:text-blue-400" size={32} />
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+            <BookOpen className="text-emerald-600 dark:text-emerald-400" size={32} />
             Manual de Usuario Interactivo
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Guía completa, detallada y paso a paso para dominar LPET CMMS.</p>
@@ -54,7 +54,7 @@ export const UserManual = () => {
                 onClick={() => setActiveSection(sec.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all text-left ${
                   activeSection === sec.id
-                    ? 'bg-blue-600 text-white shadow-md transform scale-[1.02]'
+                    ? 'bg-emerald-600 text-white shadow-md transform scale-[1.02]'
                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 hover:scale-[1.01]'
                 }`}
               >

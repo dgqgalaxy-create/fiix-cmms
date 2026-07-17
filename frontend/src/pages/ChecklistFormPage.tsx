@@ -122,7 +122,7 @@ export default function ChecklistFormPage() {
           value={currentValue}
           onChange={(e) => handleStatusChange(row.id, line, e.target.value)}
           placeholder="-"
-          className="w-16 h-10 px-2 text-center rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white disabled:bg-slate-50 disabled:text-slate-500"
+          className="w-16 h-10 px-2 text-center rounded-lg border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:text-slate-500"
         />
       );
     }
@@ -130,8 +130,8 @@ export default function ChecklistFormPage() {
     const getColors = (val: string) => {
       if (val === 'OK') return 'bg-emerald-100 text-emerald-700 border-emerald-300';
       if (val === 'FAIL') return 'bg-rose-100 text-rose-700 border-rose-300';
-      if (val === 'NA') return 'bg-slate-100 text-slate-700 border-slate-300';
-      return 'bg-white text-slate-300 border-slate-200 hover:border-slate-300';
+      if (val === 'NA') return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600';
+      return 'bg-white dark:bg-slate-900 text-slate-300 dark:text-slate-600 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600';
     };
 
     const nextStatus = (current: string | null) => {
@@ -155,7 +155,7 @@ export default function ChecklistFormPage() {
   };
 
   if (isLoading || !checklist) {
-    return <div className="p-8 text-center text-slate-500">Cargando formato...</div>;
+    return <div className="p-8 text-center text-slate-500 dark:text-slate-400">Cargando formato...</div>;
   }
 
   const isDraft = checklist.status === 'DRAFT';
@@ -163,19 +163,19 @@ export default function ChecklistFormPage() {
   const canReview = isPendingReview && hasPermission('APPROVE_CHECKLIST');
 
   return (
-    <div className="p-4 md:p-8 max-w-[1400px] mx-auto animate-in fade-in zoom-in-95 duration-300 print:p-0 print:m-0 print:w-full print:max-w-none">
+    <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300 print:p-0 print:m-0 print:w-full print:max-w-none">
       {/* Encabezado */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 print:flex-row print:mb-4">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/checklists')}
-            className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors print:hidden"
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 transition-colors print:hidden"
           >
             <ArrowLeft size={24} />
           </button>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 print:text-xl">Check List Diario de Mantenimiento</h1>
-            <p className="text-slate-500 font-medium mt-1 print:text-sm">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 print:text-xl">Check List Diario de Mantenimiento</h1>
+            <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 print:text-sm">
               {format(parseDateOnly(checklist.date), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }).toUpperCase()}
             </p>
           </div>
@@ -184,7 +184,7 @@ export default function ChecklistFormPage() {
         <div className="flex gap-3 print:hidden">
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-all font-medium shadow-sm"
+            className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-medium shadow-sm"
           >
             <Printer size={20} />
             <span className="hidden md:inline">Imprimir / PDF</span>
@@ -194,7 +194,7 @@ export default function ChecklistFormPage() {
             <button
               onClick={handleSubmit}
               disabled={isSaving}
-              className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition-all font-medium shadow-sm"
+              className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl hover:bg-emerald-700 transition-all font-medium shadow-sm"
             >
               <Save size={20} />
               {isSaving ? 'Guardando...' : 'Firmar y Enviar'}
@@ -215,7 +215,7 @@ export default function ChecklistFormPage() {
       </div>
 
       {/* Instrucciones */}
-      <div className="bg-blue-50 text-blue-800 p-4 rounded-xl mb-6 flex gap-3 text-sm print:hidden">
+      <div className="bg-sky-50 dark:bg-sky-950/30 text-sky-800 dark:text-sky-300 p-4 rounded-xl mb-6 flex gap-3 text-sm print:hidden border border-sky-100 dark:border-sky-900/50">
         <CheckCircle className="shrink-0 mt-0.5" size={18} />
         <div>
           <strong>Instrucciones:</strong> Toca los recuadros para alternar entre los estados: 
@@ -226,7 +226,7 @@ export default function ChecklistFormPage() {
       </div>
 
       {/* Matriz de Actividades */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print:border-none print:shadow-none">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden print:border-none print:shadow-none">
         <div className="overflow-x-auto print:overflow-visible">
           <table className="w-full text-left border-collapse print:text-[11px]">
             <thead>
@@ -241,13 +241,13 @@ export default function ChecklistFormPage() {
                 <th className="px-4 py-4 min-w-[250px] print:min-w-0 print:w-auto print:py-2 print:px-2 border print:border-slate-800">OBSERVACIONES (Falla detectada)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 print:divide-slate-800">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 print:divide-slate-800">
               {checklist.rows?.map((row, index) => (
-                <tr key={row.id} className="hover:bg-slate-50 transition-colors group print:break-inside-avoid">
-                  <td className="px-4 py-3 text-center text-slate-400 font-medium print:py-1 print:px-2 border print:border-slate-800 print:text-black">
+                <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group print:break-inside-avoid">
+                  <td className="px-4 py-3 text-center text-slate-400 dark:text-slate-500 font-medium print:py-1 print:px-2 border print:border-slate-800 print:text-black">
                     {index + 1}
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-700 leading-snug print:py-1 print:px-2 border print:border-slate-800">
+                  <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300 leading-snug print:py-1 print:px-2 border print:border-slate-800">
                     {row.activity_name}
                   </td>
                   <td className="px-2 py-3 text-center print:py-1 print:px-1 border print:border-slate-800">
@@ -268,7 +268,7 @@ export default function ChecklistFormPage() {
                   <td className="px-4 py-3 print:py-1 print:px-2 border print:border-slate-800">
                     <input
                       type="text"
-                      className="w-full text-sm p-2 border-0 bg-transparent hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-indigo-500 rounded-lg transition-colors placeholder:text-slate-300 print:p-0 print:bg-transparent print:text-black"
+                      className="w-full text-sm p-2 border-0 bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-emerald-500 rounded-lg transition-colors placeholder:text-slate-300 dark:placeholder:text-slate-600 text-slate-900 dark:text-slate-100 print:p-0 print:bg-transparent print:text-black"
                       placeholder="Sin observaciones..."
                       value={row.observations || ''}
                       onChange={(e) => handleObservationChange(row.id, e.target.value)}
@@ -285,10 +285,10 @@ export default function ChecklistFormPage() {
 
       {/* Firmas */}
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 print:mt-12 print:break-inside-avoid">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-center print:border-none print:p-2">
-          <div className="text-sm font-semibold text-slate-500 mb-4 uppercase tracking-wider print:text-black">Nombre y Firma del Técnico</div>
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center print:border-none print:p-2">
+          <div className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-4 uppercase tracking-wider print:text-black">Nombre y Firma del Técnico</div>
           {checklist.technician ? (
-            <div className="text-xl font-bold text-slate-900 border-b-2 border-slate-800 pb-2 px-8 inline-block print:text-lg">
+            <div className="text-xl font-bold text-slate-900 dark:text-slate-100 border-b-2 border-slate-800 dark:border-slate-200 pb-2 px-8 inline-block print:text-lg">
               {checklist.technician.name}
             </div>
           ) : (
@@ -296,10 +296,10 @@ export default function ChecklistFormPage() {
           )}
         </div>
         
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-center print:border-none print:p-2">
-          <div className="text-sm font-semibold text-slate-500 mb-4 uppercase tracking-wider print:text-black">Nombre y Firma Líder Mantenimiento</div>
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center print:border-none print:p-2">
+          <div className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-4 uppercase tracking-wider print:text-black">Nombre y Firma Líder Mantenimiento</div>
           {checklist.leader ? (
-            <div className="text-xl font-bold text-slate-900 border-b-2 border-slate-800 pb-2 px-8 inline-block print:text-lg">
+            <div className="text-xl font-bold text-slate-900 dark:text-slate-100 border-b-2 border-slate-800 dark:border-slate-200 pb-2 px-8 inline-block print:text-lg">
               {checklist.leader.name}
             </div>
           ) : (

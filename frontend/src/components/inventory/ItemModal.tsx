@@ -167,10 +167,10 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[95vh] flex flex-col overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-4xl max-h-[95vh] flex flex-col overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
           <div className="flex items-center gap-4">
-            <h2 className="text-xl font-bold text-slate-900">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
               {readOnly ? 'Detalles del Repuesto' : item ? 'Editar Repuesto' : 'Nuevo Repuesto'}
             </h2>
             {item && onQuickTransaction && (
@@ -183,7 +183,7 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
               </button>
             )}
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -200,9 +200,9 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
             {/* Columna Izquierda: Imagen y Estado */}
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Imagen del Repuesto</label>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Imagen del Repuesto</label>
                 <div 
-                  className="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center hover:bg-slate-50 transition-colors cursor-pointer relative group overflow-hidden"
+                  className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-center hover:bg-slate-50 dark:hover:bg-slate-800 dark:bg-slate-950 transition-colors cursor-pointer relative group overflow-hidden"
                   onClick={() => document.getElementById('image-upload')?.click()}
                 >
                   {imagePreview ? (
@@ -218,8 +218,8 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
                     </div>
                   ) : (
                     <div className="py-12 flex flex-col items-center text-slate-400">
-                      <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-3">
-                        <Upload size={24} className="text-slate-500" />
+                      <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-3">
+                        <Upload size={24} className="text-slate-500 dark:text-slate-400" />
                       </div>
                       <span className="text-sm font-medium">Click para subir foto</span>
                       <span className="text-xs mt-1">PNG, JPG hasta 5MB</span>
@@ -234,7 +234,7 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
                   <button 
                     type="button"
                     onClick={() => setIsImageSearchModalOpen(true)}
-                    className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl font-medium transition-colors border border-blue-200"
+                    className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:hover:bg-slate-700 rounded-xl font-medium transition-colors border border-blue-200"
                   >
                     🪄 Buscar en la Web
                   </button>
@@ -242,7 +242,7 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
               </div>
 
               <div>
-                <label className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors">
+                <label className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 transition-colors">
                   <input
                     type="checkbox"
                     disabled={readOnly}
@@ -251,8 +251,8 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
                     className="w-5 h-5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 disabled:opacity-50"
                   />
                   <div>
-                    <span className="block text-sm font-semibold text-slate-900">Repuesto Activo</span>
-                    <span className="block text-xs text-slate-500">Desmarca para ocultarlo sin borrar el historial.</span>
+                    <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">Repuesto Activo</span>
+                    <span className="block text-xs text-slate-500 dark:text-slate-400">Desmarca para ocultarlo sin borrar el historial.</span>
                   </div>
                 </label>
               </div>
@@ -262,72 +262,72 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
             <div className="md:col-span-2 space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Código Interno</label>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Código Interno</label>
                   <input
                     type="text"
                     disabled
                     value={item ? formData.internal_code : 'Autogenerado al guardar'}
-                    className="w-full px-4 py-2.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-xl font-mono text-sm"
+                    className="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nombre del Repuesto *</label>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Nombre del Repuesto *</label>
                   <input
                     type="text"
                     required
                     disabled={readOnly}
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100"
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
                     placeholder="Ej. Balero SKF 6204"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Descripción</label>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Descripción</label>
                 <textarea
                   rows={2}
                   disabled={readOnly}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow resize-none disabled:opacity-50 disabled:bg-slate-100"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow resize-none disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
                   placeholder="Detalles técnicos, notas..."
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Categoría</label>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Categoría</label>
                   <select
                     disabled={readOnly}
                     value={formData.category_id}
                     onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100"
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
                   >
                     <option value="">-- Sin categoría --</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Ubicación</label>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Ubicación</label>
                   <select
                     disabled={readOnly}
                     value={formData.location_id}
                     onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100"
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
                   >
                     <option value="">-- Sin ubicación --</option>
                     {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Proveedor</label>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Proveedor</label>
                   <select
                     disabled={readOnly}
                     value={formData.vendor_id}
                     onChange={(e) => setFormData({ ...formData, vendor_id: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100"
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
                   >
                     <option value="">-- Sin proveedor --</option>
                     {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
@@ -335,9 +335,9 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Costo ($)</label>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Costo ($)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -345,11 +345,11 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
                     disabled={readOnly}
                     value={formData.purchase_cost}
                     onChange={(e) => setFormData({ ...formData, purchase_cost: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-slate-100"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Stock Actual</label>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Stock Actual</label>
                   <input
                     type="number"
                     step="0.01"
@@ -357,11 +357,11 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
                     disabled={!!item || readOnly} // Stock debe cambiar vía transacciones, no edición manual directa si es por CRUD
                     value={formData.stock}
                     onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-slate-100"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Stock Mínimo</label>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Stock Mínimo</label>
                   <input
                     type="number"
                     step="any"
@@ -370,17 +370,17 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
                     disabled={readOnly}
                     value={formData.minimum_inventory}
                     onChange={(e) => setFormData({ ...formData, minimum_inventory: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-slate-100"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Unidad</label>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Unidad</label>
                   <select
                     required
                     disabled={readOnly}
                     value={formData.uom}
                     onChange={(e) => setFormData({ ...formData, uom: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-slate-100"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
                   >
                     {uoms.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
                     {/* Fallback si la uom actual no está en la lista pero existe en BD */}
@@ -394,13 +394,13 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
           </div>
 
           {item && transactions && (
-            <div className="mt-8 pt-6 border-t border-slate-100">
+            <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-slate-800">Historial de Movimientos</h3>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Historial de Movimientos</h3>
                 <select
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value as any)}
-                  className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
+                  className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 font-medium text-slate-700 dark:text-slate-200"
                 >
                   <option value="all">Todo el historial</option>
                   <option value="this_week">Semana Actual</option>
@@ -410,10 +410,10 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
                 </select>
               </div>
               
-              <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">
+              <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
                 <div className="max-h-60 overflow-y-auto">
-                  <table className="w-full text-left text-sm text-slate-600">
-                    <thead className="bg-slate-100/50 text-slate-500 sticky top-0 border-b border-slate-200">
+                  <table className="w-full text-left text-sm text-slate-600 dark:text-slate-400">
+                    <thead className="bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 sticky top-0 border-b border-slate-200 dark:border-slate-700">
                       <tr>
                         <th className="px-4 py-3 font-semibold">Fecha</th>
                         <th className="px-4 py-3 font-semibold">Usuario</th>
@@ -423,7 +423,7 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {filteredTransactions.map(tx => (
-                        <tr key={tx.id} className="hover:bg-slate-100/50 transition-colors">
+                        <tr key={tx.id} className="hover:bg-slate-100 dark:hover:bg-slate-800/50 dark:bg-slate-800/50 transition-colors">
                           <td className="px-4 py-3 whitespace-nowrap">{new Date(tx.created_at).toLocaleString()}</td>
                           <td className="px-4 py-3">{tx.user?.name}</td>
                           <td className="px-4 py-3 text-right">
@@ -431,12 +431,12 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
                               {tx.amount > 0 ? '+' : ''}{tx.amount}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-slate-500 text-xs">{tx.reason}</td>
+                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{tx.reason}</td>
                         </tr>
                       ))}
                       {filteredTransactions.length === 0 && (
                         <tr>
-                          <td colSpan={4} className="px-4 py-6 text-center text-slate-500">
+                          <td colSpan={4} className="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
                             No hay movimientos en este periodo.
                           </td>
                         </tr>
@@ -448,11 +448,11 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
             </div>
           )}
 
-          <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end gap-3">
+          <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors"
+              className="px-5 py-2.5 text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-xl transition-colors"
             >
               {readOnly ? 'Cerrar' : 'Cancelar'}
             </button>

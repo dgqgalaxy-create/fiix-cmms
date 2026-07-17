@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
-import { ShieldAlert, Download, Upload, Trash2, KeyRound, AlertTriangle, CheckCircle2, ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import {
+  ShieldAlert,
+  Download,
+  Upload,
+  Trash2,
+  KeyRound,
+  AlertTriangle,
+  CheckCircle2,
+  Database,
+  FileSpreadsheet,
+  Bot,
+  HardDrive,
+  RefreshCw,
+  LockKeyhole,
+} from 'lucide-react';
 import axios, { BACKEND_URL } from '../api/axios';
 
 export const DeveloperOptions = () => {
@@ -15,8 +28,6 @@ export const DeveloperOptions = () => {
   const [telegramToken, setTelegramToken] = useState('');
   const [telegramChatId, setTelegramChatId] = useState('');
   const [isSavingTelegram, setIsSavingTelegram] = useState(false);
-  const navigate = useNavigate();
-
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -37,7 +48,7 @@ export const DeveloperOptions = () => {
         console.error('Error fetching settings', e);
       }
       setIsAuthenticated(true);
-    } catch (err: any) {
+    } catch {
       setError('Contraseña incorrecta o error de conexión.');
     } finally {
       setIsLoading(false);
@@ -55,7 +66,7 @@ export const DeveloperOptions = () => {
       });
       setSuccessMsg('Configuración de Telegram guardada con éxito.');
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
+    } catch {
       setError('Error al guardar la configuración de Telegram.');
     } finally {
       setIsSavingTelegram(false);
@@ -83,7 +94,7 @@ export const DeveloperOptions = () => {
       a.remove();
       setSuccessMsg('Base de datos exportada con éxito.');
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err) {
+    } catch {
       setError('Fallo al exportar la base de datos.');
     } finally {
       setIsLoading(false);
@@ -109,7 +120,7 @@ export const DeveloperOptions = () => {
       });
       setSuccessMsg('Base de datos importada con éxito.');
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
+    } catch {
       setError('Fallo al importar la base de datos.');
     } finally {
       setIsLoading(false);
@@ -140,8 +151,11 @@ export const DeveloperOptions = () => {
       const results = res.data.results;
       setSuccessMsg(`Archivos CSV procesados: ${results.categories} Categorías, ${results.locations} Ubicaciones, ${results.vendors} Proveedores, ${results.items} Repuestos, ${results.users} Usuarios, ${results.inventory} Movimientos, ${results.orders} Órdenes.`);
       setTimeout(() => setSuccessMsg(null), 8000);
-    } catch (err: any) {
-      setError(`Fallo al importar archivos CSV: ${err.response?.data?.message || err.message}`);
+    } catch (err: unknown) {
+      const detail = axios.isAxiosError(err)
+        ? err.response?.data?.message || err.message
+        : err instanceof Error ? err.message : 'Error desconocido';
+      setError(`Fallo al importar archivos CSV: ${detail}`);
     } finally {
       setIsLoading(false);
       setLoadingMessage(null);
@@ -166,7 +180,7 @@ export const DeveloperOptions = () => {
       setIsDeleteModalOpen(false);
       setDeleteConfirmText('');
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
+    } catch {
       setError('Fallo al vaciar la base de datos.');
     } finally {
       setIsLoading(false);
@@ -176,36 +190,44 @@ export const DeveloperOptions = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <form onSubmit={handleVerify} className="bg-slate-800 p-8 rounded-2xl shadow-xl max-w-md w-full border border-slate-700">
-          <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center">
-              <ShieldAlert size={32} />
+      <div className="flex items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-4 py-10 sm:py-14">
+        <form
+          onSubmit={handleVerify}
+          className="w-full max-w-md rounded-3xl border border-slate-700/80 bg-slate-800/90 p-7 shadow-2xl backdrop-blur sm:p-8"
+        >
+          <div className="mb-5 flex justify-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/15 text-red-400">
+              <ShieldAlert size={28} />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-white text-center mb-2">Opciones de Desarrollador</h1>
-          <p className="text-slate-400 text-center mb-8 text-sm">Esta área es restringida. Ingrese la contraseña maestra para continuar.</p>
-          
-          <div className="mb-6 relative">
-            <KeyRound className="absolute left-3 top-3 text-slate-500" size={20} />
-            <input 
-              type="password" 
+          <h1 className="text-center text-xl font-black tracking-tight text-white sm:text-2xl">
+            Acceso restringido
+          </h1>
+          <p className="mt-2 mb-6 text-center text-sm leading-5 text-slate-400">
+            Ingresa la contraseña maestra para abrir las opciones de desarrollador.
+          </p>
+
+          <div className="relative mb-4">
+            <KeyRound className="absolute left-3 top-3 text-slate-500" size={18} />
+            <input
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg pl-10 pr-4 py-2.5 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all"
-              placeholder="Contraseña..."
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-10 pr-4 text-white outline-none transition-all focus:border-red-500 focus:ring-1 focus:ring-red-500"
+              placeholder="Contraseña maestra..."
               required
+              autoFocus
             />
           </div>
 
-          {error && <p className="text-red-400 text-sm mb-4 text-center">{error}</p>}
+          {error && <p className="mb-4 text-center text-sm text-red-400">{error}</p>}
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={isLoading}
-            className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition-colors flex justify-center items-center gap-2 disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 py-3 font-bold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
           >
-            {isLoading ? 'Verificando...' : 'Acceder'}
+            {isLoading ? 'Verificando...' : 'Desbloquear'}
           </button>
         </form>
       </div>
@@ -213,226 +235,248 @@ export const DeveloperOptions = () => {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="max-w-4xl mx-auto space-y-8">
-
-        <div className="flex items-center gap-4 border-b border-slate-200 pb-6">
-          <div className="w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center">
-            <ShieldAlert size={24} />
+    <div className="animate-in fade-in duration-500 pb-10">
+      <div className="max-w-6xl mx-auto space-y-7">
+        <header className="relative overflow-hidden rounded-3xl bg-slate-950 px-6 py-7 text-white shadow-xl sm:px-8">
+          <div className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-indigo-500/15 blur-3xl" />
+          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/10">
+                <ShieldAlert size={27} />
+              </div>
+              <div>
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-amber-400/15 px-2.5 py-1 text-[11px] font-black uppercase tracking-widest text-amber-300">
+                    Área restringida
+                  </span>
+                  <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-300">
+                    <LockKeyhole size={13} /> Sesión verificada
+                  </span>
+                </div>
+                <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Opciones de Desarrollador</h1>
+                <p className="mt-1 max-w-2xl text-sm text-slate-400">
+                  Respaldo, migración, integraciones y herramientas de mantenimiento del sistema.
+                </p>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-slate-300">
+              <span className="mb-1 block font-bold text-white">Recomendación</span>
+              Exporta un respaldo antes de importar o eliminar información.
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Opciones de Desarrollador</h1>
-            <p className="text-slate-500">Gestión crítica del sistema y base de datos.</p>
-          </div>
-        </div>
+        </header>
 
         {error && (
-          <div className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-100 flex items-center gap-3">
-            <AlertTriangle size={20} /> {error}
+          <div role="alert" className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+            <AlertTriangle className="mt-0.5 shrink-0" size={19} /> {error}
           </div>
         )}
 
         {successMsg && (
-          <div className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900 flex items-center gap-3">
-            <CheckCircle2 size={20} /> {successMsg}
+          <div role="status" className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">
+            <CheckCircle2 className="mt-0.5 shrink-0" size={19} /> {successMsg}
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          
-          {/* Card: Exportar */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center text-center hover:shadow-md transition-shadow">
-            <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4">
-              <Download size={28} />
+        <section>
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">Datos</p>
+              <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">Importación y respaldos</h2>
             </div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Exportar Base de Datos</h3>
-            <p className="text-slate-500 text-sm mb-6 flex-grow">Descarga un archivo JSON con la información completa de la base de datos.</p>
-            <button 
-              onClick={handleExport}
-              disabled={isLoading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition-colors"
-            >
-              Descargar Respaldo
-            </button>
+            <Database className="text-slate-300 dark:text-slate-700" size={26} />
           </div>
 
-          {/* Card: Importar */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center text-center hover:shadow-md transition-shadow relative overflow-hidden">
-            <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mb-4">
-              <Upload size={28} />
-            </div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Importar Base de Datos</h3>
-            <div className="text-slate-500 text-sm mb-6 flex-grow text-left space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
-              <p className="font-semibold text-slate-700 mb-1">Instrucciones:</p>
-              <ol className="list-decimal pl-4 space-y-1 text-xs">
-                <li>Asegúrate de tener un archivo de respaldo válido con formato <strong>.json</strong> (generado previamente por el botón de Exportar).</li>
-                <li>Haz clic en "Subir Archivo" y selecciona tu respaldo.</li>
-                <li>Espera a que el proceso termine. <strong>Nota:</strong> esto sobreescribirá por completo todos los datos actuales del sistema.</li>
-              </ol>
-            </div>
-            <label className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg transition-colors cursor-pointer block text-center">
-              Subir Archivo
-              <input 
-                type="file" 
-                accept=".json" 
-                onChange={handleImport}
-                className="hidden" 
-                disabled={isLoading}
-              />
-            </label>
-          </div>
+          <div className="grid gap-5 lg:grid-cols-[1.35fr_1fr]">
+            <article className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-600 to-violet-700 p-6 text-white shadow-lg shadow-indigo-200/40 dark:border-indigo-800 dark:shadow-none sm:p-7">
+              <div className="absolute -bottom-20 -right-12 h-56 w-56 rounded-full bg-white/10" />
+              <div className="relative">
+                <div className="mb-5 flex items-center justify-between">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15">
+                    <FileSpreadsheet size={25} />
+                  </div>
+                  <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">Carga inicial recomendada</span>
+                </div>
+                <h3 className="text-2xl font-black">Importar los 7 archivos CSV</h3>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-indigo-100">
+                  Selecciónalos juntos. El sistema los reconoce y procesa automáticamente según sus dependencias.
+                </p>
+                <div className="mt-5 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                  {['Categorías', 'Ubicaciones', 'Proveedores', 'Repuestos', 'Usuarios', 'Inventario', 'Órdenes'].map((label, index) => (
+                    <div key={label} className="rounded-xl border border-white/10 bg-white/10 px-3 py-2.5">
+                      <span className="mr-1.5 font-black text-indigo-200">{index + 1}</span>{label}
+                    </div>
+                  ))}
+                </div>
+                <label className="mt-6 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-5 py-3.5 font-black text-indigo-700 shadow-sm transition hover:bg-indigo-50 sm:w-fit">
+                  <Upload size={18} /> Seleccionar los CSV
+                  <input
+                    type="file"
+                    accept=".csv"
+                    multiple
+                    onChange={handleImportCSV}
+                    className="hidden"
+                    disabled={isLoading}
+                  />
+                </label>
+              </div>
+            </article>
 
-          {/* Card: Importar CSV */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center text-center hover:shadow-md transition-shadow relative overflow-hidden">
-            <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mb-4">
-              <Upload size={28} />
-            </div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Importar de CSV</h3>
-            <div className="text-slate-500 text-sm mb-6 flex-grow text-left space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-100 w-full">
-              <p className="font-semibold text-slate-700 mb-1">Instrucciones:</p>
-              <ul className="list-disc pl-4 space-y-1 text-xs">
-                <li>Selecciona <strong>hasta 7 archivos a la vez</strong>.</li>
-                <li>Soporta: <strong>Categories, Location, Vendors, Items, Users, Inventory y Solicitudes Mantenimiento</strong>.</li>
-                <li>Se actualizarán los registros (upsert) sin borrar los datos existentes.</li>
-              </ul>
-            </div>
-            <label className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg transition-colors cursor-pointer block text-center">
-              Seleccionar CSVs
-              <input 
-                type="file" 
-                accept=".csv" 
-                multiple
-                onChange={handleImportCSV}
-                className="hidden" 
-                disabled={isLoading}
-              />
-            </label>
-          </div>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
+              <article className="flex flex-col rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
+                    <Download size={21} />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-slate-900 dark:text-white">Exportar respaldo</h3>
+                    <p className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">Descarga toda la base de datos en formato JSON.</p>
+                  </div>
+                </div>
+                <button onClick={handleExport} disabled={isLoading} className="mt-5 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
+                  Descargar JSON
+                </button>
+              </article>
 
-          {/* Card: Borrar */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-red-200 dark:border-red-900/50 flex flex-col items-center text-center hover:shadow-md transition-shadow">
-            <div className="w-14 h-14 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mb-4">
-              <Trash2 size={28} />
+              <article className="flex flex-col rounded-3xl border border-emerald-200 bg-white p-5 shadow-sm dark:border-emerald-900/60 dark:bg-slate-900">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+                    <HardDrive size={21} />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-slate-900 dark:text-white">Restaurar respaldo</h3>
+                    <p className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">Reemplaza los datos actuales con un JSON válido.</p>
+                  </div>
+                </div>
+                <label className="mt-5 block w-full cursor-pointer rounded-xl bg-emerald-600 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-emerald-700">
+                  Seleccionar JSON
+                  <input type="file" accept=".json" onChange={handleImport} className="hidden" disabled={isLoading} />
+                </label>
+              </article>
             </div>
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Vaciar Base de Datos</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 flex-grow">Elimina todos los registros de la base de datos manteniendo las tablas vacías.</p>
-            <button 
-              onClick={() => setIsDeleteModalOpen(true)}
-              disabled={isLoading}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors"
-            >
-              Borrar Todo
-            </button>
           </div>
+        </section>
 
-          {/* Card: Forzar Error Sincronización */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-amber-200 dark:border-amber-900/50 flex flex-col items-center text-center hover:shadow-md transition-shadow">
-            <div className="w-14 h-14 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mb-4">
-              <AlertTriangle size={28} />
-            </div>
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Forzar Error Sync</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 flex-grow">Simula una falla en la sincronización para probar PWA OfflineQueue.</p>
-            <button 
-              onClick={() => {
-                alert("Simulando error en red (deshabilitado en producción)");
-              }}
-              className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-lg transition-colors"
-            >
-              Simular Falla
-            </button>
-          </div>
-
-          {/* Card: Limpiar Cache PWA */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-md transition-shadow">
-            <div className="w-14 h-14 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full flex items-center justify-center mb-4">
-              <ShieldAlert size={28} />
-            </div>
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Limpiar Caché PWA</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 flex-grow">Limpia Service Workers y almacenamiento local para reiniciar PWA.</p>
-            <button 
-              onClick={() => {
-                if ('serviceWorker' in navigator) {
-                  navigator.serviceWorker.getRegistrations().then(registrations => {
-                    for (let reg of registrations) reg.unregister();
-                  });
-                }
-                localStorage.clear();
-                window.location.reload();
-              }}
-              className="w-full bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-bold py-2.5 rounded-lg transition-colors"
-            >
-              Limpiar y Recargar
-            </button>
-          </div>
-
-          {/* Card: Configuración de Telegram */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-blue-200 dark:border-blue-900/50 flex flex-col items-center hover:shadow-md transition-shadow lg:col-span-3">
-            <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-4">
-              <KeyRound size={28} />
-            </div>
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Configuración Dinámica de Telegram</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 text-center">Permite cambiar el Token y Chat ID sin modificar el archivo .env.</p>
-            
-            <div className="w-full max-w-md space-y-4">
+        <section className="grid gap-5 lg:grid-cols-[1.35fr_1fr]">
+          <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="mb-6 flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 dark:bg-sky-950/50 dark:text-sky-400">
+                <Bot size={24} />
+              </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Bot Token</label>
-                <input 
-                  type="text" 
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-600 dark:text-sky-400">Integraciones</p>
+                <h2 className="mt-1 text-xl font-black text-slate-900 dark:text-white">Notificaciones de Telegram</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Actualiza las credenciales sin modificar el archivo de entorno.</p>
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-sm font-bold text-slate-700 dark:text-slate-300">Bot Token</label>
+                <input
+                  type="password"
                   value={telegramToken}
                   onChange={(e) => setTelegramToken(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 focus:border-blue-500 outline-none transition-all"
-                  placeholder="ej. 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  placeholder="Token del bot"
+                  autoComplete="off"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Chat ID</label>
-                <input 
-                  type="text" 
+                <label className="mb-1.5 block text-sm font-bold text-slate-700 dark:text-slate-300">Chat ID</label>
+                <input
+                  type="text"
                   value={telegramChatId}
                   onChange={(e) => setTelegramChatId(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 focus:border-blue-500 outline-none transition-all"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   placeholder="ej. -1001234567890"
                 />
               </div>
-              <button 
-                onClick={handleSaveTelegram}
-                disabled={isSavingTelegram}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition-colors mt-2 disabled:opacity-50"
+            </div>
+            <button onClick={handleSaveTelegram} disabled={isSavingTelegram} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-5 py-3 text-sm font-black text-white transition hover:bg-sky-700 disabled:opacity-50 sm:w-fit">
+              <KeyRound size={17} /> {isSavingTelegram ? 'Guardando...' : 'Guardar configuración'}
+            </button>
+          </article>
+
+          <article className="rounded-3xl border border-slate-200 bg-slate-50 p-6 dark:border-slate-800 dark:bg-slate-900/60">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Mantenimiento</p>
+            <h2 className="mt-1 text-xl font-black text-slate-900 dark:text-white">Herramientas locales</h2>
+            <div className="mt-5 space-y-3">
+              <button
+                onClick={() => {
+                  if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistrations().then(registrations => {
+                      for (const registration of registrations) registration.unregister();
+                    });
+                  }
+                  localStorage.clear();
+                  window.location.reload();
+                }}
+                className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-slate-300 hover:shadow-sm dark:border-slate-700 dark:bg-slate-900"
               >
-                {isSavingTelegram ? 'Guardando...' : 'Guardar Telegram'}
+                <RefreshCw className="shrink-0 text-slate-500" size={20} />
+                <span>
+                  <span className="block text-sm font-black text-slate-800 dark:text-white">Limpiar caché PWA</span>
+                  <span className="text-xs text-slate-500">Reinicia Service Workers y almacenamiento local.</span>
+                </span>
+              </button>
+              <button
+                onClick={() => alert('Simulando error en red (deshabilitado en producción)')}
+                className="flex w-full items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50/60 p-4 text-left transition hover:bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20"
+              >
+                <AlertTriangle className="shrink-0 text-amber-600" size={20} />
+                <span>
+                  <span className="block text-sm font-black text-slate-800 dark:text-white">Simular falla de sincronización</span>
+                  <span className="text-xs text-slate-500">Prueba el comportamiento de la cola offline.</span>
+                </span>
               </button>
             </div>
+          </article>
+        </section>
+
+        <section className="rounded-3xl border border-red-200 bg-red-50/70 p-5 dark:border-red-900/50 dark:bg-red-950/20 sm:p-6">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400">
+                <Trash2 size={21} />
+              </div>
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-red-600 dark:text-red-400">Zona de peligro</p>
+                <h2 className="mt-1 text-lg font-black text-slate-900 dark:text-white">Vaciar base de datos</h2>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Elimina todos los registros y conserva únicamente la estructura de tablas.</p>
+              </div>
+            </div>
+            <button onClick={() => setIsDeleteModalOpen(true)} disabled={isLoading} className="shrink-0 rounded-xl bg-red-600 px-5 py-3 text-sm font-black text-white transition hover:bg-red-700 disabled:opacity-50">
+              Borrar todos los datos
+            </button>
           </div>
-
-        </div>
-
+        </section>
       </div>
 
       {/* Delete Modal */}
       {isDeleteModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <div className="flex items-center gap-3 text-red-600 mb-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-3 text-red-600 dark:text-red-400 mb-4">
               <AlertTriangle size={24} />
-              <h3 className="text-xl font-bold">¡Peligro de pérdida de datos!</h3>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">¡Peligro de pérdida de datos!</h3>
             </div>
-            <p className="text-slate-600 mb-6">
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
               Estás a punto de <strong>ELIMINAR TODOS LOS DATOS</strong> de la base de datos de manera irreversible. Las tablas quedarán vacías.
             </p>
-            <p className="text-slate-600 mb-3 text-sm">
+            <p className="text-slate-600 dark:text-slate-400 mb-3 text-sm">
               Para confirmar, escribe <strong>ELIMINAR</strong> en el siguiente campo:
             </p>
             <input 
               type="text" 
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg p-3 text-center font-bold tracking-widest text-slate-800 outline-none focus:border-red-500 mb-6"
+              className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-lg p-3 text-center font-bold tracking-widest text-slate-800 dark:text-slate-100 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 mb-6"
               placeholder="Escribe ELIMINAR"
             />
             <div className="flex gap-3">
               <button 
                 onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmText(''); }}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-lg transition-colors"
+                className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-lg transition-colors"
               >
                 Cancelar
               </button>
@@ -451,10 +495,10 @@ export const DeveloperOptions = () => {
       {/* Loading Modal */}
       {loadingMessage && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center">
-            <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Procesando...</h3>
-            <p className="text-slate-500 text-sm">{loadingMessage}</p>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center border border-slate-200 dark:border-slate-700">
+            <div className="w-16 h-16 border-4 border-emerald-200 dark:border-emerald-900 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Procesando...</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">{loadingMessage}</p>
           </div>
         </div>
       )}

@@ -112,13 +112,13 @@ export const NotificationsBell = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-50">
-          <div className="p-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-            <h3 className="font-semibold text-slate-800">Notificaciones</h3>
+        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
+          <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950">
+            <h3 className="font-semibold text-slate-800 dark:text-slate-100">Notificaciones</h3>
             {unreadCount > 0 && (
               <button 
                 onClick={handleMarkAllAsRead}
-                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-medium"
               >
                 Marcar todas leídas
               </button>
@@ -126,7 +126,7 @@ export const NotificationsBell = () => {
           </div>
           <div className="max-h-96 overflow-y-auto">
             {notifications.length === 0 ? (
-              <div className="p-4 text-center text-sm text-slate-500">
+              <div className="p-4 text-center text-sm text-slate-500 dark:text-slate-400">
                 No tienes notificaciones
               </div>
             ) : (
@@ -134,13 +134,13 @@ export const NotificationsBell = () => {
                 <button
                   key={notif.id}
                   type="button"
-                  className={`w-full text-left p-3 border-b border-slate-50 hover:bg-slate-50 transition-colors ${!notif.is_read ? 'bg-blue-50/50' : ''}`}
+                  className={`w-full text-left p-3 border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${!notif.is_read ? 'bg-blue-50/50 dark:bg-emerald-950/30' : ''}`}
                   onClick={() => handleNotificationClick(notif)}
                 >
-                  <p className={`text-sm ${!notif.is_read ? 'font-semibold text-slate-900' : 'text-slate-700'}`}>
+                  <p className={`text-sm ${!notif.is_read ? 'font-semibold text-slate-900 dark:text-slate-100' : 'text-slate-700 dark:text-slate-200'}`}>
                     {notif.title}
                   </p>
-                  <p className="text-xs text-slate-500 mt-1 line-clamp-2">{notif.message}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{notif.message}</p>
                   <p className="text-[10px] text-slate-400 mt-1">
                     {new Date(notif.created_at).toLocaleString()}
                   </p>

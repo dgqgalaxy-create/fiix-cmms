@@ -45,7 +45,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-200">
+    <div className="flex min-h-screen bg-surface-muted text-fg transition-colors duration-200">
       {/* Backdrop overlay for mobile when sidebar is open */}
       {isSidebarOpen && (
         <div 

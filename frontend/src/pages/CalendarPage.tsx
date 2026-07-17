@@ -386,11 +386,11 @@ export const CalendarPage = () => {
                   >
                     <div className="flex flex-col gap-1 text-sm">
                       <label className="text-slate-500 dark:text-slate-400 font-medium">Inicio</label>
-                      <input type="datetime-local" name="start_date" required className="px-2 py-1.5 border border-slate-300 rounded-md dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500" />
+                      <input type="datetime-local" name="start_date" required className="px-2 py-1.5 border border-slate-300 rounded-md dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500" />
                     </div>
                     <div className="flex flex-col gap-1 text-sm">
                       <label className="text-slate-500 dark:text-slate-400 font-medium">Fin</label>
-                      <input type="datetime-local" name="end_date" required className="px-2 py-1.5 border border-slate-300 rounded-md dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500" />
+                      <input type="datetime-local" name="end_date" required className="px-2 py-1.5 border border-slate-300 rounded-md dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500" />
                     </div>
                     <button type="submit" disabled={isUpdating} className="w-full py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium disabled:opacity-50">
                       Agendar Manualmente

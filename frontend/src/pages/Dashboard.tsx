@@ -271,8 +271,8 @@ export const Dashboard = () => {
       {/* Encabezado exclusivo para impresión */}
       <div className="hidden print:flex justify-between items-end border-b-2 border-slate-800 pb-4 mb-6">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Reporte de Órdenes de Trabajo</h1>
-          <p className="text-slate-500 mt-1">LPET CMMS - Listado de Órdenes</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Reporte de Órdenes de Trabajo</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">LPET CMMS - Listado de Órdenes</p>
         </div>
         <div className="text-right">
           <p className="text-sm font-bold text-slate-700">Fecha de Generación:</p>
@@ -289,7 +289,7 @@ export const Dashboard = () => {
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <button 
             onClick={() => fetchWorkOrders()}
-            className="p-2.5 text-slate-500 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors shadow-sm"
+            className="p-2.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors shadow-sm"
             title="Actualizar"
           >
             <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />

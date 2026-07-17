@@ -765,7 +765,7 @@ export const InventoryPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Inventario</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Inventario</h1>
             {!isLoading && items.length > 0 && (
               <div className="flex gap-2 mt-1 sm:mt-0">
                 <span className="bg-blue-50 text-blue-700 text-xs sm:text-sm font-semibold px-2.5 py-1 rounded-full border border-blue-100 flex items-center gap-1.5 shadow-sm">
@@ -824,7 +824,7 @@ export const InventoryPage = () => {
           {(activeTab === 'categories' || activeTab === 'locations' || activeTab === 'vendors') && canManage && (
             <button 
               onClick={() => handleOpenCatalogModal(activeTab === 'categories' ? 'category' : activeTab === 'vendors' ? 'vendor' : 'location')}
-              className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors w-full md:w-auto shadow-sm shadow-indigo-600/20"
+              className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors w-full md:w-auto shadow-sm shadow-emerald-600/20"
             >
               <Plus size={18} /> Nueva {activeTab === 'vendors' ? 'Proveedor' : activeTab === 'categories' ? 'Categoría' : 'Ubicación'}
             </button>

@@ -94,12 +94,12 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}></div>
 
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <h2 className="text-xl font-bold text-slate-800">
+      <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">
             {isEditing ? 'Editar Usuario' : 'Nuevo Usuario'}
           </h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -113,31 +113,31 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
 
           <form id="user-form" onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Nombre Completo *</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Nombre Completo *</label>
               <input 
                 type="text" 
                 required
                 placeholder="Ej: Juan Pérez"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico *</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Correo Electrónico *</label>
               <input 
                 type="email" 
                 required
                 placeholder="Ej: juan@empresa.com"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
                 Contraseña {isEditing ? <span className="text-slate-400 font-normal">(Opcional: Dejar en blanco para no cambiarla)</span> : '*'}
               </label>
               <div className="relative">
@@ -145,7 +145,7 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
                   type={showPassword ? "text" : "password"} 
                   required={!isEditing}
                   placeholder={isEditing ? "Dejar vacío si no quieres cambiarla" : "Mínimo 6 caracteres"}
-                  className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                  className="w-full pl-4 pr-12 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -160,9 +160,9 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Rol en el Sistema *</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Rol en el Sistema *</label>
               <select 
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
                 disabled={user?.id === currentUser?.userId} // Don't allow changing your own role easily
@@ -174,12 +174,12 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
             </div>
 
             {isEditing && (
-              <div className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+              <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
                 <div className="flex items-center h-5">
                   <input
                     id="is_active"
                     type="checkbox"
-                    className="w-5 h-5 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                    className="w-5 h-5 text-blue-600 bg-white dark:bg-slate-900 border-slate-300 rounded focus:ring-emerald-500 focus:ring-2 cursor-pointer"
                     checked={isActive}
                     onChange={(e) => setIsActive(e.target.checked)}
                     disabled={user?.id === currentUser?.userId}
@@ -189,7 +189,7 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
                   <label htmlFor="is_active" className={`text-sm font-bold cursor-pointer ${isActive ? 'text-emerald-700' : 'text-red-600'}`}>
                     {isActive ? 'Usuario Activo' : 'Dado de Baja'}
                   </label>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     {isActive 
                       ? 'Puede acceder al sistema y ser asignado a órdenes.' 
                       : 'No podrá iniciar sesión ni ser asignado a nuevas órdenes, pero se conservará su historial.'}
@@ -200,7 +200,7 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
           </form>
         </div>
 
-        <div className="px-6 py-5 border-t border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <div className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
           <div className="flex gap-2">
              {isEditing && onDelete && user?.id !== currentUser?.id && (
                 <button type="button" onClick={handleDelete} disabled={isSubmitting} className="px-4 py-2.5 flex items-center gap-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors disabled:opacity-70">
@@ -209,10 +209,10 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
              )}
           </div>
           <div className="flex gap-3">
-            <button type="button" onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors">
+            <button type="button" onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">
               Cancelar
             </button>
-            <button type="submit" form="user-form" disabled={isSubmitting} className="px-6 py-2.5 flex items-center justify-center gap-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-70 rounded-xl shadow-sm shadow-emerald-700/20 transition-colors">
+            <button type="submit" form="user-form" disabled={isSubmitting} className="px-6 py-2.5 flex items-center justify-center gap-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-emerald-950 disabled:opacity-70 rounded-xl shadow-sm shadow-emerald-700/20 transition-colors">
               {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
               {isEditing ? 'Guardar Cambios' : 'Crear Usuario'}
             </button>

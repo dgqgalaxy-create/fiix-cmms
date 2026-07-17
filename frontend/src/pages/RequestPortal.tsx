@@ -138,16 +138,16 @@ export const RequestPortal = () => {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl text-center">
-          <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 size={40} className="text-emerald-500" />
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-200 dark:border-slate-800 text-center">
+          <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-950/50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2 size={40} className="text-emerald-500 dark:text-emerald-400" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">¡Solicitud Enviada!</h2>
-          <p className="text-slate-600 mb-8">El equipo de mantenimiento ha sido notificado y la orden se ha creado exitosamente.</p>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">¡Solicitud Enviada!</h2>
+          <p className="text-slate-600 dark:text-slate-400 mb-8">El equipo de mantenimiento ha sido notificado y la orden se ha creado exitosamente.</p>
           <button
             onClick={resetForm}
-            className="w-full bg-slate-900 text-white font-bold py-3 px-4 rounded-xl hover:bg-slate-800 transition-colors"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition-colors"
           >
             Crear otra solicitud
           </button>
@@ -157,7 +157,7 @@ export const RequestPortal = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
       <header className="bg-slate-900 text-white p-4 shadow-md sticky top-0 z-10">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -182,10 +182,10 @@ export const RequestPortal = () => {
       </header>
 
       <main className="flex-1 p-4 w-full max-w-lg mx-auto">
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
-            <h2 className="text-xl font-bold text-slate-800">Nueva Solicitud de Mantenimiento</h2>
-            <p className="text-sm text-slate-500 mt-1">Completa el formulario para reportar una falla.</p>
+        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Nueva Solicitud de Mantenimiento</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Completa el formulario para reportar una falla.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="p-6 space-y-5">
@@ -196,11 +196,11 @@ export const RequestPortal = () => {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Título <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Título <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 required
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
                 placeholder="Ej: Mantenimiento preventivo de bomba"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -208,10 +208,10 @@ export const RequestPortal = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción</label>
               <textarea
                 rows={3}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all resize-none"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all resize-none"
                 placeholder="Detalla el problema o tarea a realizar..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -220,14 +220,14 @@ export const RequestPortal = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Zona <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Zona <span className="text-red-500">*</span></label>
                 {isLoadingData ? (
                   <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 flex items-center gap-2">
                     <Loader2 className="animate-spin" size={16} /> Cargando zonas...
                   </div>
                 ) : (
                   <select
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
                     value={zoneId}
                     onChange={(e) => {
                       setZoneId(e.target.value);
@@ -244,9 +244,9 @@ export const RequestPortal = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Activo asociado <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Activo asociado <span className="text-red-500">*</span></label>
                 <select
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none disabled:opacity-50 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none disabled:opacity-50 disabled:bg-slate-100 disabled:cursor-not-allowed"
                   value={assetId}
                   onChange={(e) => setAssetId(e.target.value)}
                   required
@@ -264,9 +264,9 @@ export const RequestPortal = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Prioridad <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Prioridad <span className="text-red-500">*</span></label>
                 <select
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
                   required
@@ -278,9 +278,9 @@ export const RequestPortal = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Mantenimiento <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de Mantenimiento <span className="text-red-500">*</span></label>
                 <select
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
                   value={maintenanceType}
                   onChange={(e) => setMaintenanceType(e.target.value)}
                   required
@@ -294,7 +294,7 @@ export const RequestPortal = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del Solicitante <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre del Solicitante <span className="text-red-500">*</span></label>
                 {isLoadingData ? (
                   <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 flex items-center gap-2">
                     <Loader2 className="animate-spin" size={16} /> Cargando solicitantes...
@@ -302,7 +302,7 @@ export const RequestPortal = () => {
                 ) : (
                   <select
                     required
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
                     value={requesterName}
                     onChange={(e) => {
                       setRequesterName(e.target.value);
@@ -320,7 +320,7 @@ export const RequestPortal = () => {
                   <input
                     type="text"
                     required
-                    className="mt-2 w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all"
+                    className="mt-2 w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
                     placeholder="Escribe tu nombre completo"
                     value={customRequester}
                     onChange={(e) => setCustomRequester(e.target.value)}
@@ -329,9 +329,9 @@ export const RequestPortal = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Grupo de Producción <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Grupo de Producción <span className="text-red-500">*</span></label>
                 <select
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
                   value={productionGroup}
                   onChange={(e) => setProductionGroup(e.target.value)}
                   required
@@ -345,17 +345,17 @@ export const RequestPortal = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+            <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  className="w-5 h-5 text-red-600 rounded border-slate-300 focus:ring-red-600"
+                  className="w-5 h-5 text-red-600 rounded border-slate-300 dark:border-slate-600 focus:ring-red-600"
                   checked={machineStopped}
                   onChange={(e) => setMachineStopped(e.target.checked)}
                 />
                 <div>
-                  <span className="font-medium text-slate-800 block">Paro de máquina</span>
-                  <span className="text-xs text-slate-500">¿Esta falla detuvo la producción?</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-100 block">Paro de máquina</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">¿Esta falla detuvo la producción?</span>
                 </div>
               </label>
             </div>
@@ -365,7 +365,7 @@ export const RequestPortal = () => {
               disabled={loading || !isOnline || isLoadingData}
               className={`w-full flex items-center justify-center gap-2 font-bold py-3 px-4 rounded-xl transition-all ${
                 loading || !isOnline || isLoadingData
-                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                  ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
                   : 'bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.98] shadow-md shadow-emerald-700/20'
               }`}
             >

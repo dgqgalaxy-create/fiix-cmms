@@ -61,72 +61,72 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
           </span>
         );
       default:
-        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-slate-100 text-slate-700">{status}</span>;
+        return <span className="px-3 py-1 rounded-full text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">{status}</span>;
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl shadow-xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
+        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-start bg-slate-50/50 dark:bg-slate-900/50">
           <div className="flex gap-4">
             <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
               <Database size={24} />
             </div>
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <span className="text-sm font-mono font-medium text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                <span className="text-sm font-mono font-medium text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                   {asset.internal_code}
                 </span>
                 {getStatusBadge(asset.status)}
               </div>
-              <h2 className="text-xl font-bold text-slate-800">{asset.name}</h2>
+              <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">{asset.name}</h2>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-xl transition-colors"
+            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-white dark:bg-slate-900 rounded-xl transition-colors"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="px-6 pt-4 border-b border-slate-100 flex gap-6">
+        <div className="px-6 pt-4 border-b border-slate-100 dark:border-slate-800 flex gap-6">
           <button
             onClick={() => setActiveTab('info')}
-            className={`pb-4 text-sm font-medium transition-colors relative ${activeTab === 'info' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`pb-4 text-sm font-medium transition-colors relative ${activeTab === 'info' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200'}`}
           >
             Información General
-            {activeTab === 'info' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-t-full" />}
+            {activeTab === 'info' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 dark:bg-emerald-500 rounded-t-full" />}
           </button>
           <button
             onClick={() => setActiveTab('metrics')}
-            className={`pb-4 text-sm font-medium transition-colors relative ${activeTab === 'metrics' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`pb-4 text-sm font-medium transition-colors relative ${activeTab === 'metrics' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200'}`}
           >
             Monitoreo y KPIs
-            {activeTab === 'metrics' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-t-full" />}
+            {activeTab === 'metrics' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 dark:bg-emerald-500 rounded-t-full" />}
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`pb-4 text-sm font-medium transition-colors relative ${activeTab === 'history' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`pb-4 text-sm font-medium transition-colors relative ${activeTab === 'history' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200'}`}
           >
             Historial de Órdenes
-            {activeTab === 'history' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-t-full" />}
+            {activeTab === 'history' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 dark:bg-emerald-500 rounded-t-full" />}
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto flex-1 bg-slate-50/30">
+        <div className="p-6 overflow-y-auto flex-1 bg-slate-50 dark:bg-slate-950/30">
           
           {/* TAB: INFO */}
           {activeTab === 'info' && (
             <div className="space-y-6">
               {/* Image */}
               {asset.image_url && (
-                <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden bg-white border border-slate-200 flex-shrink-0 shadow-sm p-2">
+                <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex-shrink-0 shadow-sm p-2">
                   <img 
                     src={`${BACKEND_URL}${asset.image_url}`} 
                     alt={`Foto de ${asset.name}`} 
@@ -138,8 +138,8 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
               {/* Description */}
               {asset.description && (
                 <div>
-                  <h3 className="text-sm font-bold text-slate-800 mb-2">Descripción</h3>
-                  <p className="text-sm text-slate-600 bg-white border border-slate-100 p-4 rounded-xl leading-relaxed shadow-sm">
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-2">Descripción</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 rounded-xl leading-relaxed shadow-sm">
                     {asset.description}
                   </p>
                 </div>
@@ -147,52 +147,52 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
 
               {/* Details Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="bg-white shadow-sm p-4 rounded-2xl border border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-500 mb-1">
+                <div className="bg-white dark:bg-slate-900 shadow-sm p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
                     <Tag size={16} />
                     <span className="text-xs font-bold uppercase tracking-wider">Marca</span>
                   </div>
-                  <div className="text-sm font-medium text-slate-800">{asset.brand || 'No especificada'}</div>
+                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{asset.brand || 'No especificada'}</div>
                 </div>
                 
-                <div className="bg-white shadow-sm p-4 rounded-2xl border border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-500 mb-1">
+                <div className="bg-white dark:bg-slate-900 shadow-sm p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
                     <Settings size={16} />
                     <span className="text-xs font-bold uppercase tracking-wider">Modelo</span>
                   </div>
-                  <div className="text-sm font-medium text-slate-800">{asset.model || 'No especificado'}</div>
+                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{asset.model || 'No especificado'}</div>
                 </div>
 
-                <div className="bg-white shadow-sm p-4 rounded-2xl border border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-500 mb-1">
+                <div className="bg-white dark:bg-slate-900 shadow-sm p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
                     <MapPin size={16} />
                     <span className="text-xs font-bold uppercase tracking-wider">Zona asignada</span>
                   </div>
-                  <div className="text-sm font-medium text-slate-800">{asset.zone?.name || 'Sin Zona'}</div>
+                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{asset.zone?.name || 'Sin Zona'}</div>
                 </div>
 
-                <div className="bg-white shadow-sm p-4 rounded-2xl border border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-500 mb-1">
+                <div className="bg-white dark:bg-slate-900 shadow-sm p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
                     <Database size={16} />
                     <span className="text-xs font-bold uppercase tracking-wider">Número de Serie</span>
                   </div>
-                  <div className="text-sm font-medium text-slate-800">{asset.serial_number || 'No especificado'}</div>
+                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{asset.serial_number || 'No especificado'}</div>
                 </div>
 
-                <div className="bg-white shadow-sm p-4 rounded-2xl border border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-500 mb-1">
+                <div className="bg-white dark:bg-slate-900 shadow-sm p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
                     <Truck size={16} />
                     <span className="text-xs font-bold uppercase tracking-wider">Proveedor</span>
                   </div>
-                  <div className="text-sm font-medium text-slate-800">{asset.vendor?.name || 'No especificado'}</div>
+                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{asset.vendor?.name || 'No especificado'}</div>
                 </div>
 
-                <div className="bg-white shadow-sm p-4 rounded-2xl border border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-500 mb-1">
+                <div className="bg-white dark:bg-slate-900 shadow-sm p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
                     <DollarSign size={16} />
                     <span className="text-xs font-bold uppercase tracking-wider">Precio de Compra</span>
                   </div>
-                  <div className="text-sm font-medium text-slate-800">
+                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">
                     {asset.price !== undefined && asset.price !== null ? `$${asset.price.toFixed(2)}` : 'No especificado'}
                   </div>
                 </div>
@@ -206,8 +206,8 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                       <FileText size={20} />
                     </div>
                     <div>
-                      <h4 className="font-bold text-slate-800 text-sm">Manual o Documento Adjunto</h4>
-                      <p className="text-xs text-slate-500 mt-0.5">Archivo relacionado con este activo</p>
+                      <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Manual o Documento Adjunto</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Archivo relacionado con este activo</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -215,14 +215,14 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                       href={`${BACKEND_URL}${asset.document_url}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-sm font-medium transition-colors"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 dark:bg-slate-950 rounded-xl text-sm font-medium transition-colors"
                     >
                       <Eye size={16} /> Ver
                     </a>
                     <a 
                       href={`${BACKEND_URL}${asset.document_url}`}
                       download
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors shadow-sm"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:hover:bg-emerald-400 text-white rounded-xl text-sm font-medium transition-colors shadow-sm"
                     >
                       <Download size={16} /> Descargar
                     </a>
@@ -243,23 +243,23 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* MTTR */}
-                    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center items-center text-center">
+                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-center items-center text-center">
                       <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mb-3">
                         <Wrench size={24} />
                       </div>
-                      <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-1">MTTR (T. Prom. Reparación)</h3>
-                      <div className="text-3xl font-black text-slate-800">
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">MTTR (T. Prom. Reparación)</h3>
+                      <div className="text-3xl font-black text-slate-800 dark:text-slate-100">
                         {metrics.mttr_hours > 0 ? `${metrics.mttr_hours}h` : 'N/A'}
                       </div>
                       <p className="text-xs text-slate-400 mt-2">Promedio en órdenes correctivas</p>
                     </div>
                     {/* MTBF */}
-                    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center items-center text-center">
+                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-center items-center text-center">
                       <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3">
                         <Activity size={24} />
                       </div>
-                      <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-1">MTBF (T. Prom. Entre Fallas)</h3>
-                      <div className="text-3xl font-black text-slate-800">
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">MTBF (T. Prom. Entre Fallas)</h3>
+                      <div className="text-3xl font-black text-slate-800 dark:text-slate-100">
                         {metrics.mtbf_hours > 0 ? `${metrics.mtbf_hours}h` : 'N/A'}
                       </div>
                       <p className="text-xs text-slate-400 mt-2">Horas operativas entre fallas</p>
@@ -268,8 +268,8 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Fallas Graph */}
-                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                      <h3 className="text-sm font-bold text-slate-800 mb-4">Cantidad de Fallas (Últimos 6 Meses)</h3>
+                    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                      <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4">Cantidad de Fallas (Últimos 6 Meses)</h3>
                       <div className="h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={metrics.monthly_stats}>
@@ -284,8 +284,8 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                     </div>
 
                     {/* Downtime Graph */}
-                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                      <h3 className="text-sm font-bold text-slate-800 mb-4">Horas de Paro / Downtime</h3>
+                    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                      <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4">Horas de Paro / Downtime</h3>
                       <div className="h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={metrics.monthly_stats}>
@@ -301,7 +301,7 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                   </div>
                 </>
               ) : (
-                <div className="text-center text-slate-500 py-10">No hay datos de monitoreo disponibles.</div>
+                <div className="text-center text-slate-500 dark:text-slate-400 py-10">No hay datos de monitoreo disponibles.</div>
               )}
             </div>
           )}
@@ -314,7 +314,7 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                   <Activity className="animate-spin mr-2" /> Cargando historial...
                 </div>
               ) : metrics?.history?.length > 0 ? (
-                <div className="relative border-l-2 border-slate-200 ml-4 py-2 space-y-6">
+                <div className="relative border-l-2 border-slate-200 dark:border-slate-700 ml-4 py-2 space-y-6">
                   {metrics.history.map((wo: any) => {
                     let resolutionTime = 'N/A';
                     let diffMs = wo.accumulated_time_ms;
@@ -332,24 +332,24 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
 
                     return (
                       <div key={wo.id} className="relative pl-6">
-                        <div className="absolute w-4 h-4 bg-white border-2 border-indigo-500 rounded-full -left-[9px] top-1"></div>
-                        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                        <div className="absolute w-4 h-4 bg-white dark:bg-slate-900 border-2 border-emerald-500 rounded-full -left-[9px] top-1"></div>
+                        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800">
                           <div className="flex justify-between items-start mb-2">
                             <div>
-                              <h4 className="font-bold text-slate-800 inline-flex items-center gap-2">
+                              <h4 className="font-bold text-slate-800 dark:text-slate-100 inline-flex items-center gap-2">
                                 OT-{wo.folio}: {wo.title}
-                                <span className="text-xs font-normal text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">
+                                <span className="text-xs font-normal text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 px-2 py-0.5 rounded-full border border-slate-100 dark:border-slate-800">
                                   {techs}
                                 </span>
                               </h4>
                             </div>
-                            <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2 py-1 rounded-md whitespace-nowrap ml-2">
+                            <span className="text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-1 rounded-md whitespace-nowrap ml-2">
                               {format(new Date(wo.completed_at || wo.created_at), "dd MMM, yyyy", { locale: es })}
                             </span>
                           </div>
-                          <p className="text-sm text-slate-500 mb-2">{wo.resolution_notes || wo.description || "Sin detalles de resolución."}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">{wo.resolution_notes || wo.description || "Sin detalles de resolución."}</p>
                           <div className="flex gap-2 items-center mt-3 pt-3 border-t border-slate-50">
-                             <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-500">
+                             <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
                                {wo.maintenance_type}
                              </span>
                              {wo.machine_stopped && (
@@ -357,9 +357,9 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                                  PARO DE MÁQUINA
                                </span>
                              )}
-                             <div className="ml-auto text-xs font-medium text-slate-500 flex items-center gap-1.5">
-                               <Clock size={14} className="text-indigo-400" />
-                               Tiempo de resolución: <span className="text-slate-700 font-bold">{resolutionTime}</span>
+                             <div className="ml-auto text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                               <Clock size={14} className="text-emerald-400" />
+                               Tiempo de resolución: <span className="text-slate-700 dark:text-slate-200 font-bold">{resolutionTime}</span>
                              </div>
                           </div>
                         </div>
@@ -368,12 +368,12 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                   })}
                 </div>
               ) : (
-                <div className="text-center bg-white p-10 rounded-2xl border border-slate-100 shadow-sm">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-50 text-slate-400 mb-3">
+                <div className="text-center bg-white dark:bg-slate-900 p-10 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-950 text-slate-400 mb-3">
                     <Clock size={24} />
                   </div>
-                  <h3 className="text-lg font-medium text-slate-800">No hay historial</h3>
-                  <p className="text-slate-500">Este activo aún no tiene órdenes de trabajo completadas.</p>
+                  <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">No hay historial</h3>
+                  <p className="text-slate-500 dark:text-slate-400">Este activo aún no tiene órdenes de trabajo completadas.</p>
                 </div>
               )}
             </div>

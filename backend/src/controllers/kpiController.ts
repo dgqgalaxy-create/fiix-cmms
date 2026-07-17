@@ -3,7 +3,15 @@ import prisma from '../config/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
 
 const MS_PER_HOUR = 3_600_000;
-const REWORK_WINDOW_DAYS = 7;
+const DEFAULT_REWORK_WINDOW_DAYS = 7;
+const MIN_REWORK_WINDOW_DAYS = 1;
+const MAX_REWORK_WINDOW_DAYS = 90;
+
+const parseReworkWindowDays = (raw: unknown): number => {
+  const parsed = typeof raw === 'string' || typeof raw === 'number' ? Number(raw) : NaN;
+  if (!Number.isFinite(parsed)) return DEFAULT_REWORK_WINDOW_DAYS;
+  return Math.min(MAX_REWORK_WINDOW_DAYS, Math.max(MIN_REWORK_WINDOW_DAYS, Math.round(parsed)));
+};
 const PRODUCTIVE_HOURS_PER_YEAR = 8467.27;
 const HOURS_PER_YEAR = 365 * 24;
 
@@ -154,6 +162,7 @@ export const getAssetFailureOrders = async (req: AuthRequest, res: Response): Pr
 export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const period = req.query.period as string;
+    const reworkWindowDays = parseReworkWindowDays(req.query.reworkDays);
     const { start, effectiveEnd } = getDateRange(period);
 
     const dbGoals = await prisma.kPIGoal.findMany();
@@ -253,7 +262,8 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
       assetAvailability = clip(((totalTheoreticalMs - totalDowntimeMs) / totalTheoreticalMs) * 100, 0, 100);
     }
 
-    // Retrabajo: correctivas finalizadas en periodo con falla previa ≤ 7 días (mismo activo y, si existe, mismo problema)
+    // Retrabajo: correctivas finalizadas en periodo con falla previa dentro de la ventana configurada
+    // (mismo activo y, si existe, mismo problema).
     const correctiveFinalized = correctiveCompleted.filter((wo) => !!wo.asset_id);
     let recurrentCount = 0;
     const recurrentAssetsMap = new Map<string, { id: string; name: string; count: number }>();
@@ -261,7 +271,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
     if (correctiveFinalized.length > 0) {
       const assetIds = [...new Set(correctiveFinalized.map((wo) => wo.asset_id!))];
       const lookbackStart = new Date(start);
-      lookbackStart.setDate(lookbackStart.getDate() - REWORK_WINDOW_DAYS);
+      lookbackStart.setDate(lookbackStart.getDate() - reworkWindowDays);
 
       const previousPool = await prisma.workOrder.findMany({
         where: {
@@ -282,7 +292,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
 
       for (const order of correctiveFinalized) {
         const windowStart = new Date(order.created_at);
-        windowStart.setDate(windowStart.getDate() - REWORK_WINDOW_DAYS);
+        windowStart.setDate(windowStart.getDate() - reworkWindowDays);
 
         const previousFailure = previousPool.find((prev) => {
           if (prev.id === order.id || prev.asset_id !== order.asset_id || !prev.completed_at) return false;
@@ -321,6 +331,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
 
     res.json({
       totalOrders: totalOrdersRelevant,
+      reworkWindowDays,
       period: {
         start: start.toISOString(),
         end: effectiveEnd.toISOString(),

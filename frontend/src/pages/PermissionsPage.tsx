@@ -108,7 +108,7 @@ export const PermissionsPage = () => {
       <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-            <Shield className="text-indigo-600 dark:text-indigo-400" size={28} />
+            <Shield className="text-emerald-600 dark:text-emerald-400" size={28} />
             Privilegios por Rol
           </h1>
           <p className="text-slate-500 dark:text-slate-300 mt-1">Configura qué acciones puede realizar cada tipo de usuario en el sistema.</p>
@@ -133,7 +133,7 @@ export const PermissionsPage = () => {
             <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 flex justify-between items-center gap-3">
               <div className="min-w-0 flex items-center gap-3">
                 <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 truncate" title={rp.role}>{rp.role}</h3>
-                {savingRole === rp.role && <Loader2 size={16} className="animate-spin text-indigo-600" />}
+                {savingRole === rp.role && <Loader2 size={16} className="animate-spin text-emerald-600 dark:text-emerald-400" />}
               </div>
             </div>
             <div className="p-2 flex-1">
@@ -156,7 +156,7 @@ export const PermissionsPage = () => {
                         disabled={isLocked}
                         onChange={() => handleToggle(rp.role, perm.key, isEnabled)}
                       />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                      <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
                     </label>
                   </div>
                 );

@@ -74,7 +74,7 @@ export const UomCatalogue = () => {
         <button
           onClick={() => setIsCreating(true)}
           disabled={isSaving}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2"
+          className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2"
         >
           <Plus size={18} />
           Añadir Unidad
@@ -87,7 +87,7 @@ export const UomCatalogue = () => {
             <input
               type="text"
               autoFocus
-              className="flex-1 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-900 dark:text-slate-100 uppercase"
+              className="flex-1 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-900 dark:text-slate-100 uppercase"
               placeholder="Ej. CAJAS, LITROS..."
               value={newName}
               onChange={(e) => setNewName(e.target.value.toUpperCase())}
@@ -96,7 +96,7 @@ export const UomCatalogue = () => {
             <button
               onClick={handleCreate}
               disabled={!newName.trim() || isSaving}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50"
+              className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 disabled:opacity-50"
             >
               Guardar
             </button>
@@ -113,7 +113,7 @@ export const UomCatalogue = () => {
           {uoms.map((uom) => (
             <div 
               key={uom.id}
-              className="group flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-indigo-200 dark:hover:border-indigo-800/50 transition-colors"
+              className="group flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-emerald-200 dark:hover:border-emerald-800/50 transition-colors"
             >
               <div className="flex items-center gap-4">
                 <span className="font-semibold text-slate-700 dark:text-slate-200">

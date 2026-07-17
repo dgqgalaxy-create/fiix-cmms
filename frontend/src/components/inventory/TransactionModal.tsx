@@ -86,13 +86,13 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <ArrowRightLeft size={20} className="text-blue-600" />
             Registrar Movimiento
           </h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -105,12 +105,12 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
           )}
 
           <div className="space-y-5">
-            <div className="flex bg-slate-100 p-1 rounded-xl">
+            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
               {hasPermission('REGISTER_INVENTORY_ENTRIES') && (
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, type: 'IN' })}
-                  className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${formData.type === 'IN' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${formData.type === 'IN' ? 'bg-white dark:bg-slate-900 shadow-sm text-emerald-600' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200'}`}
                 >
                   Entrada (+ Stock)
                 </button>
@@ -118,14 +118,14 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, type: 'OUT' })}
-                className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${formData.type === 'OUT' ? 'bg-white shadow-sm text-rose-600' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${formData.type === 'OUT' ? 'bg-white dark:bg-slate-900 shadow-sm text-rose-600' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200'}`}
               >
                 Salida (- Stock)
               </button>
             </div>
 
             <div className="relative">
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Repuesto *</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Repuesto *</label>
               
               <div className="relative">
                 <input
@@ -139,26 +139,26 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
                   }}
                   onFocus={() => setIsDropdownOpen(true)}
                   onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow"
                 />
                 
                 {isDropdownOpen && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
+                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
                     {filteredItems.length === 0 ? (
-                      <div className="px-4 py-3 text-sm text-slate-500 text-center">No se encontraron repuestos</div>
+                      <div className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400 text-center">No se encontraron repuestos</div>
                     ) : (
                       filteredItems.slice(0, 100).map(i => (
                         <div
                           key={i.id}
-                          className="px-4 py-2.5 hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-0"
+                          className="px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-slate-800 cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0"
                           onClick={() => {
                             setFormData({ ...formData, item_id: i.id });
                             setSearchQuery(`${i.internal_code} - ${i.name}`);
                             setIsDropdownOpen(false);
                           }}
                         >
-                          <div className="text-sm font-semibold text-slate-800">{i.name}</div>
-                          <div className="text-xs text-slate-500 font-mono mt-0.5">{i.internal_code}</div>
+                          <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">{i.name}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">{i.internal_code}</div>
                         </div>
                       ))
                     )}
@@ -166,14 +166,14 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
                 )}
               </div>
               {selectedItem && (
-                <p className="mt-1.5 text-xs text-slate-500 flex items-center gap-1">
+                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                   Stock actual: <strong className={selectedItem.stock <= selectedItem.minimum_inventory ? 'text-rose-600' : 'text-emerald-600'}>{selectedItem.stock}</strong> {selectedItem.uom}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Cantidad *</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Cantidad *</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <span className={`font-bold ${formData.type === 'IN' ? 'text-emerald-500' : 'text-rose-500'}`}>
@@ -187,30 +187,30 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
                     min="0"
                     value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow font-mono text-lg"
+                  className="w-full pl-8 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow font-mono text-lg"
                   placeholder="0"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Motivo / Razón *</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Motivo / Razón *</label>
               <textarea
                 required
                 rows={3}
                 value={formData.reason}
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow resize-none"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow resize-none"
                 placeholder={formData.type === 'IN' ? "Ej. Ingreso por orden de compra OC-4512" : "Ej. Ajuste de inventario / Merma"}
               />
             </div>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end gap-3">
+          <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors"
+              className="px-5 py-2.5 text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-xl transition-colors"
             >
               Cancelar
             </button>

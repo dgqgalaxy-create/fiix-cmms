@@ -135,12 +135,12 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
       ></div>
 
       {/* Modal */}
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <h2 className="text-xl font-bold text-slate-800">Nueva Orden de Trabajo</h2>
+      <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Nueva Orden de Trabajo</h2>
           <button 
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors"
           >
             <X size={20} />
           </button>
@@ -155,11 +155,11 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
 
           <form id="create-wo-form" onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Título</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Título</label>
               <input
                 type="text"
                 required
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
                 placeholder="Ej: Mantenimiento preventivo de bomba"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -167,10 +167,10 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Descripción</label>
               <textarea
                 rows={3}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all resize-none"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all resize-none"
                 placeholder="Detalla el problema o tarea a realizar..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -179,15 +179,15 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Zona</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Zona</label>
                 <div className="relative">
                   {isLoading ? (
-                    <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 flex items-center gap-2">
+                    <div className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400 flex items-center gap-2">
                       <Loader2 className="animate-spin" size={16} /> Cargando zonas...
                     </div>
                   ) : (
                     <select
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
                       value={zoneId}
                       onChange={(e) => {
                         setZoneId(e.target.value);
@@ -207,15 +207,15 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Activo asociado</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Activo asociado</label>
                 <div className="relative">
                   {isLoading ? (
-                    <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 flex items-center gap-2">
+                    <div className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400 flex items-center gap-2">
                       <Loader2 className="animate-spin" size={16} /> Cargando activos...
                     </div>
                   ) : (
                     <select
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none disabled:opacity-50 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed"
                       value={assetId}
                       onChange={(e) => setAssetId(e.target.value)}
                       required
@@ -235,9 +235,9 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Prioridad</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Prioridad</label>
                 <select
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
                   required
@@ -249,9 +249,9 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Mantenimiento</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Tipo de Mantenimiento</label>
                 <select
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
                   value={maintenanceType}
                   onChange={(e) => setMaintenanceType(e.target.value)}
                   required
@@ -266,18 +266,18 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <label className="block text-sm font-medium text-slate-700">Nombre del Solicitante</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Nombre del Solicitante</label>
                   <button
                     type="button"
                     onClick={() => setIsAddRequesterOpen(true)}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                    className="text-xs font-semibold text-blue-600 hover:text-emerald-800 dark:text-emerald-300 transition-colors"
                   >
                     + Nuevo
                   </button>
                 </div>
                 <select
                   required
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
                   value={requesterName}
                   onChange={(e) => setRequesterName(e.target.value)}
                 >
@@ -289,9 +289,9 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Grupo de Producción</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Grupo de Producción</label>
                 <select
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all appearance-none"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
                   value={productionGroup}
                   onChange={(e) => setProductionGroup(e.target.value)}
                   required
@@ -305,7 +305,7 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+            <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -314,25 +314,25 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
                   onChange={(e) => setMachineStopped(e.target.checked)}
                 />
                 <div>
-                  <span className="font-medium text-slate-800 block">Paro de máquina</span>
-                  <span className="text-xs text-slate-500">¿Esta falla detuvo la producción?</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-100 block">Paro de máquina</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">¿Esta falla detuvo la producción?</span>
                 </div>
               </label>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Asignar a (Técnicos)</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Asignar a (Técnicos)</label>
               {isLoading ? (
-                <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 flex items-center gap-2">
+                <div className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400 flex items-center gap-2">
                   <Loader2 className="animate-spin" size={16} /> Cargando técnicos...
                 </div>
               ) : (
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2">
+                <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2">
                   {technicians.length === 0 ? (
-                    <div className="text-sm text-slate-500 italic">No hay técnicos disponibles</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400 italic">No hay técnicos disponibles</div>
                   ) : (
                     technicians.filter(tech => tech.is_active !== false).map((tech) => (
-                      <label key={tech.id} className="flex items-center gap-3 p-2 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors">
+                      <label key={tech.id} className="flex items-center gap-3 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-lg cursor-pointer transition-colors">
                         <input
                           type="checkbox"
                           className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-600"
@@ -345,7 +345,7 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
                             }
                           }}
                         />
-                        <span className="text-sm font-medium text-slate-700">{tech.name}</span>
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{tech.name}</span>
                       </label>
                     ))
                   )}
@@ -354,9 +354,9 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">📸 Foto de la Falla (Opcional)</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">📸 Foto de la Falla (Opcional)</label>
               <div className="flex gap-2">
-                <label className="flex-1 flex flex-col items-center justify-center py-3 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors text-slate-600">
+                <label className="flex-1 flex flex-col items-center justify-center py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors text-slate-600 dark:text-slate-400">
                   <span className="text-xl mb-1">📷</span>
                   <span className="text-xs font-semibold">Tomar Foto</span>
                   <input 
@@ -368,7 +368,7 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
                   />
                 </label>
                 
-                <label className="flex-1 flex flex-col items-center justify-center py-3 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors text-slate-600">
+                <label className="flex-1 flex flex-col items-center justify-center py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors text-slate-600 dark:text-slate-400">
                   <span className="text-xl mb-1">🖼️</span>
                   <span className="text-xs font-semibold">Subir Archivo</span>
                   <input 
@@ -389,11 +389,11 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
           </form>
         </div>
 
-        <div className="px-6 py-5 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50">
+        <div className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 bg-slate-50/50 dark:bg-slate-900/50">
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-colors shadow-sm"
+            className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 dark:text-slate-100 rounded-xl transition-colors shadow-sm"
           >
             Cancelar
           </button>
@@ -401,7 +401,7 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
             type="submit"
             form="create-wo-form"
             disabled={isSubmitting || isLoading}
-            className="px-6 py-2.5 flex items-center justify-center gap-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-70 disabled:cursor-not-allowed rounded-xl transition-colors shadow-sm shadow-emerald-700/20"
+            className="px-6 py-2.5 flex items-center justify-center gap-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-emerald-950 disabled:opacity-70 disabled:cursor-not-allowed rounded-xl transition-colors shadow-sm shadow-emerald-700/20"
           >
             {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : null}
             Crear Orden

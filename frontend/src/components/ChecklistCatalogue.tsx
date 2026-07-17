@@ -144,7 +144,7 @@ export const ChecklistCatalogue = () => {
           <button
             onClick={() => setIsCreating(true)}
             disabled={isSaving}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2"
+            className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2"
           >
             <Plus size={18} />
             Añadir Pregunta
@@ -158,7 +158,7 @@ export const ChecklistCatalogue = () => {
             <input
               type="text"
               autoFocus
-              className="flex-1 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-900 dark:text-slate-100"
+              className="flex-1 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-900 dark:text-slate-100"
               placeholder="Escribe la nueva actividad o revisión..."
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
@@ -192,7 +192,7 @@ export const ChecklistCatalogue = () => {
             activities.map((act, index) => (
               <div 
                 key={act.id} 
-                className="flex items-center gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors group"
+                className="flex items-center gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors group"
               >
                 {/* Reorder Buttons */}
                 <div className="flex flex-col gap-1 text-slate-400">
@@ -223,7 +223,7 @@ export const ChecklistCatalogue = () => {
                     <input
                       type="text"
                       autoFocus
-                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-900 dark:text-slate-100"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       onKeyDown={(e) => {

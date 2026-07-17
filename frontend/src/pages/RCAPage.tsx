@@ -93,7 +93,7 @@ export const RCAPage = () => {
     try {
       const endpoint = type === 'problem' ? '/rca/problems' : type === 'cause' ? '/rca/causes' : '/rca/remedies';
       await api.put(`${endpoint}/${item.id}`, { name: item.name, is_active: !item.is_active });
-      
+
       if (type === 'problem') fetchProblems();
       if (type === 'cause' && selectedProblem) fetchCauses(selectedProblem);
       if (type === 'remedy' && selectedCause) fetchRemedies(selectedCause);
@@ -103,9 +103,9 @@ export const RCAPage = () => {
   };
 
   const ListPanel = ({ title, items, selectedId, onSelect, onAdd, type, icon: Icon }: any) => (
-    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col h-[600px]">
-      <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-        <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+    <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col h-[600px]">
+      <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+        <h3 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
           <Icon size={18} className="text-slate-500" />
           {title}
         </h3>
@@ -121,19 +121,19 @@ export const RCAPage = () => {
       </div>
       <div className="flex-1 overflow-y-auto space-y-2 pr-2">
         {items.length === 0 ? (
-          <p className="text-sm text-slate-400 text-center py-8">No hay elementos</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-8">No hay elementos</p>
         ) : (
           items.map((item: RCAItem) => (
-            <div 
+            <div
               key={item.id}
               onClick={() => onSelect && onSelect(item.id)}
               className={`flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${
-                selectedId === item.id 
-                  ? 'border-blue-500 bg-blue-50/50' 
-                  : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                selectedId === item.id
+                  ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30 dark:border-emerald-600'
+                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50'
               } ${!item.is_active ? 'opacity-50' : ''}`}
             >
-              <span className={`text-sm font-medium ${!item.is_active ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+              <span className={`text-sm font-medium ${!item.is_active ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-300'}`}>
                 {item.name}
               </span>
               {canManage && (
@@ -156,11 +156,11 @@ export const RCAPage = () => {
   );
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-            <GitBranch className="text-blue-600" />
+            <GitBranch className="text-emerald-600 dark:text-emerald-400" />
             Árbol de Fallas (RCA)
           </h1>
           <p className="text-slate-500 dark:text-slate-300 mt-1">
@@ -172,22 +172,22 @@ export const RCAPage = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <ListPanel 
-          title="Problemas" 
-          items={problems} 
-          selectedId={selectedProblem} 
-          onSelect={setSelectedProblem} 
+        <ListPanel
+          title="Problemas"
+          items={problems}
+          selectedId={selectedProblem}
+          onSelect={setSelectedProblem}
           onAdd={() => handleAdd('problem')}
           type="problem"
           icon={AlertTriangle}
         />
-        
+
         <div className={`transition-opacity duration-300 ${selectedProblem ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
-          <ListPanel 
-            title="Causas" 
-            items={causes} 
-            selectedId={selectedCause} 
-            onSelect={setSelectedCause} 
+          <ListPanel
+            title="Causas"
+            items={causes}
+            selectedId={selectedCause}
+            onSelect={setSelectedCause}
             onAdd={() => handleAdd('cause')}
             type="cause"
             icon={GitBranch}
@@ -195,10 +195,10 @@ export const RCAPage = () => {
         </div>
 
         <div className={`transition-opacity duration-300 ${selectedCause ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
-          <ListPanel 
-            title="Remedios" 
-            items={remedies} 
-            selectedId={null} 
+          <ListPanel
+            title="Remedios"
+            items={remedies}
+            selectedId={null}
             onAdd={() => handleAdd('remedy')}
             type="remedy"
             icon={Hammer}

@@ -250,18 +250,18 @@ export const HomePage = () => {
           El periodo seleccionado se aplica a todas las tarjetas y a la distribución de mantenimiento dentro de este marco.
         </p>
 
-      <div className="flex flex-wrap gap-4 items-center mb-4 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+      <div className="flex flex-wrap gap-4 items-center mb-4 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
         <div className="flex items-center gap-2">
           <CalendarClock size={18} className="text-slate-500" />
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Filtro para resumen superior:</span>
         </div>
         <label className="flex items-center gap-2 text-xs text-slate-500 font-medium">
           Desde:
-          <input type="date" value={summaryStartDate} onChange={e => setSummaryStartDate(e.target.value)} className="text-sm px-2 py-1.5 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-emerald-500" />
+          <input type="date" value={summaryStartDate} onChange={e => setSummaryStartDate(e.target.value)} className="text-sm px-2 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
         </label>
         <label className="flex items-center gap-2 text-xs text-slate-500 font-medium">
           Hasta:
-          <input type="date" value={summaryEndDate} onChange={e => setSummaryEndDate(e.target.value)} className="text-sm px-2 py-1.5 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-emerald-500" />
+          <input type="date" value={summaryEndDate} onChange={e => setSummaryEndDate(e.target.value)} className="text-sm px-2 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
         </label>
         {summaryStartDate || summaryEndDate ? (
           <button onClick={() => { setSummaryStartDate(''); setSummaryEndDate(''); }} className="text-xs text-rose-500 hover:text-rose-700 font-medium px-2 py-1 bg-rose-50 rounded-lg">
@@ -319,7 +319,7 @@ export const HomePage = () => {
                       `${value} orden${Number(value) === 1 ? '' : 'es'}`,
                       item.payload.name,
                     ]}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 20px rgb(15 23 42 / 0.12)' }}
+                    contentStyle={{ borderRadius: '12px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-fg)', boxShadow: '0 8px 20px rgb(15 23 42 / 0.12)' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -361,7 +361,7 @@ export const HomePage = () => {
       </section>
 
       {/* Resumen semanal de finalizadas (Lunes → Domingo) */}
-      <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mb-8">
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div>
             <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -392,11 +392,11 @@ export const HomePage = () => {
         <div className="h-48 w-full mb-5">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={weeklyBarData} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-              <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis allowDecimals={false} stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
+              <XAxis dataKey="name" tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }} tickLine={false} axisLine={false} />
+              <YAxis allowDecimals={false} tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }} tickLine={false} axisLine={false} />
               <Tooltip
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                contentStyle={{ borderRadius: '12px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-fg)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 formatter={(value: any) => [value, 'Finalizadas']}
               />
               <Bar dataKey="Finalizadas" fill="#10b981" radius={[6, 6, 0, 0]} barSize={36} />

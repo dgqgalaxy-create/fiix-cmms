@@ -126,10 +126,10 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose}></div>
 
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <h2 className="text-xl font-bold text-slate-800">{initialData ? 'Editar Activo' : 'Registrar Nuevo Activo'}</h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+      <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">{initialData ? 'Editar Activo' : 'Registrar Nuevo Activo'}</h2>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -144,18 +144,18 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
           <form id="create-asset-form" onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Código Interno</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Código Interno</label>
                 <input
                   type="text"
                   disabled
-                  className="w-full px-4 py-2.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-xl font-mono text-sm cursor-not-allowed"
+                  className="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-sm cursor-not-allowed"
                   value={initialData ? internalCode : 'Se genera automáticamente al guardar (ACT-0001...)'}
                 />
                 <p className="text-xs text-slate-400 mt-1">Este código es permanente y no se puede modificar una vez asignado.</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Estado *</label>
-                <select className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" value={status} onChange={(e) => setStatus(e.target.value as any)}>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Estado *</label>
+                <select className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" value={status} onChange={(e) => setStatus(e.target.value as any)}>
                   <option value="OPERATIVO">Operativo</option>
                   <option value="EN_MANTENIMIENTO">En Mantenimiento</option>
                   <option value="FUERA_DE_SERVICIO">Fuera de Servicio</option>
@@ -165,15 +165,15 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del Equipo *</label>
-                <input type="text" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="Bomba centrífuga..." value={name} onChange={(e) => setName(e.target.value)} />
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Nombre del Equipo *</label>
+                <input type="text" required className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="Bomba centrífuga..." value={name} onChange={(e) => setName(e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Zona *</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Zona *</label>
                 {isLoadingZones ? (
-                  <div className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-500">Cargando...</div>
+                  <div className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400">Cargando...</div>
                 ) : (
-                  <select required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" value={zoneId} onChange={(e) => setZoneId(e.target.value)}>
+                  <select required className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" value={zoneId} onChange={(e) => setZoneId(e.target.value)}>
                     <option value="" disabled>Selecciona una zona</option>
                     {zones.map(z => (
                       <option key={z.id} value={z.id}>{z.name}</option>
@@ -185,22 +185,22 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Marca *</label>
-                <input type="text" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="Goulds" value={brand} onChange={(e) => setBrand(e.target.value)} />
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Marca *</label>
+                <input type="text" required className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="Goulds" value={brand} onChange={(e) => setBrand(e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Modelo *</label>
-                <input type="text" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="3196" value={model} onChange={(e) => setModel(e.target.value)} />
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Modelo *</label>
+                <input type="text" required className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="3196" value={model} onChange={(e) => setModel(e.target.value)} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Proveedor (Opcional)</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Proveedor (Opcional)</label>
                 {isLoadingVendors ? (
-                  <div className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-500">Cargando...</div>
+                  <div className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400">Cargando...</div>
                 ) : (
-                  <select className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" value={vendorId} onChange={(e) => setVendorId(e.target.value)}>
+                  <select className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" value={vendorId} onChange={(e) => setVendorId(e.target.value)}>
                     <option value="">Sin proveedor registrado</option>
                     {vendors.map(v => (
                       <option key={v.id} value={v.id}>{v.name}</option>
@@ -209,42 +209,42 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Precio de Compra (Opcional)</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Precio de Compra (Opcional)</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-2.5 text-slate-500">$</span>
-                  <input type="number" step="0.01" min="0" className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="0.00" value={price} onChange={(e) => setPrice(e.target.value)} />
+                  <span className="absolute left-4 top-2.5 text-slate-500 dark:text-slate-400">$</span>
+                  <input type="number" step="0.01" min="0" className="w-full pl-8 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="0.00" value={price} onChange={(e) => setPrice(e.target.value)} />
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Número de Serie (Opcional)</label>
-                <input type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="SN-12345" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Número de Serie (Opcional)</label>
+                <input type="text" className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="SN-12345" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Foto del Equipo (Opcional)</label>
-                <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 text-sm file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 transition-all cursor-pointer" />
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Foto del Equipo (Opcional)</label>
+                <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 text-sm file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 transition-all cursor-pointer" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Ficha Técnica/Manual (Opcional)</label>
-                <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setDocumentFile(e.target.files?.[0] || null)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 text-sm file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all cursor-pointer" />
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Ficha Técnica/Manual (Opcional)</label>
+                <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setDocumentFile(e.target.files?.[0] || null)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 text-sm file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all cursor-pointer" />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Descripción (Opcional)</label>
-              <textarea rows={2} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none transition-all resize-none" placeholder="Detalles adicionales..." value={description} onChange={(e) => setDescription(e.target.value)} />
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Descripción (Opcional)</label>
+              <textarea rows={2} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all resize-none" placeholder="Detalles adicionales..." value={description} onChange={(e) => setDescription(e.target.value)} />
             </div>
           </form>
         </div>
 
-        <div className="px-6 py-5 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50">
-          <button type="button" onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors">Cancelar</button>
-          <button type="submit" form="create-asset-form" disabled={isSubmitting} className="px-6 py-2.5 flex items-center justify-center gap-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-70 rounded-xl shadow-sm shadow-emerald-500/20 transition-colors">
+        <div className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 bg-slate-50/50 dark:bg-slate-900/50">
+          <button type="button" onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">Cancelar</button>
+          <button type="submit" form="create-asset-form" disabled={isSubmitting} className="px-6 py-2.5 flex items-center justify-center gap-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-emerald-950 disabled:opacity-70 rounded-xl shadow-sm shadow-emerald-500/20 transition-colors">
             {isSubmitting && <Loader2 className="animate-spin" size={16} />}
             Guardar Activo
           </button>

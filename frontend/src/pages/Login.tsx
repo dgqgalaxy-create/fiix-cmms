@@ -31,37 +31,37 @@ export const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-900 p-4">
-      <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-xl border border-slate-100 relative z-10">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-4">
+      <div className="max-w-md w-full bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 relative z-10">
         <div className="text-center mb-8">
           <img 
             src="/lpet.png" 
             alt="LPET Logo" 
             className="mx-auto h-20 md:h-24 object-contain mb-4"
           />
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2">
-            CMMS <span className="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mt-1">v{APP_VERSION}</span>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2">
+            CMMS <span className="text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full mt-1">v{APP_VERSION}</span>
           </h1>
-          <p className="text-slate-500 mt-2">Inicia sesión para gestionar el mantenimiento</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-2">Inicia sesión para gestionar el mantenimiento</p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm text-center font-medium">
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 text-red-600 dark:text-red-400 rounded-2xl text-sm text-center font-medium">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1 ml-1">Usuario</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 ml-1">Usuario</label>
             <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-600 dark:group-focus-within:text-emerald-400 transition-colors">
                 <Mail size={18} />
               </div>
               <input
                 type="text"
                 required
-                className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all outline-none"
+                className="block w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent transition-all outline-none"
                 placeholder="usuario"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -70,15 +70,15 @@ export const Login = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1 ml-1">Contraseña</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 ml-1">Contraseña</label>
             <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-600 dark:group-focus-within:text-emerald-400 transition-colors">
                 <Lock size={18} />
               </div>
               <input
                 type={showPassword ? "text" : "password"}
                 required
-                className="block w-full pl-11 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all outline-none"
+                className="block w-full pl-11 pr-12 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent transition-all outline-none"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -86,7 +86,7 @@ export const Login = () => {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-blue-600 transition-colors"
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -96,7 +96,7 @@ export const Login = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full flex items-center justify-center py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-medium shadow-lg shadow-emerald-700/20 transform transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed mt-2"
+            className="w-full flex items-center justify-center py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-medium shadow-lg shadow-emerald-700/20 transform transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed mt-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
           >
             {isLoading ? (
               <Loader2 className="animate-spin" size={20} />
@@ -106,8 +106,8 @@ export const Login = () => {
           </button>
         </form>
         
-        <div className="mt-8 text-center text-sm text-slate-500">
-          Usa <span className="font-medium text-slate-700">admin</span> y <span className="font-medium text-slate-700">password123</span> para probar.
+        <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
+          Usa <span className="font-medium text-slate-700 dark:text-slate-300">admin@fiix.com</span> y <span className="font-medium text-slate-700 dark:text-slate-300">password123</span> para probar.
         </div>
       </div>
     </div>

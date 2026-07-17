@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.11.10";
+export const APP_VERSION = "1.12.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,13 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Estandarización visual de toda la app (sistema industrial ejecutivo): emerald como acción primaria, headers/cards/modales/tablas coherentes.",
+    "Mejora: Modo día y noche completados en páginas, tablas, modales, login, portal y gráficas; tokens CSS compartidos.",
+    "Corrección: La etiqueta horizontal de MTTR/MTBF ya no se encima con la leyenda ni con la gráfica.",
+    "Mejora: La ventana de retrabajo en KPIs ya no es fija a 7 días: puedes elegir 3, 7, 14, 30 o un valor personalizado.",
+    "Mejora: La gráfica MTTR/MTBF ahora explica el eje horizontal (meses), el vertical (horas) y qué mide cada línea.",
+    "Mejora: El acceso con contraseña a Opciones de Desarrollador queda centrado dentro del panel de configuración.",
+    "Mejora: Opciones de Desarrollador estrena una distribución más clara y responsive, separando importación y respaldos, Telegram, mantenimiento y zona de peligro.",
     "Corrección: La importación de CSV interpreta bien los tiempos de reparación con coma de miles (ej. \"2,140.22\" min), evitando MTTR distorsionado.",
     "Mejora: Al importar los 7 CSV a la vez, el sistema los procesa siempre en el orden correcto y crea automáticamente los usuarios de inventario faltantes para no perder movimientos.",
     "Corrección: Recálculo de KPIs (MTTR solo correctivas, backlog real, disponibilidad por paros, periodos por completed_at/started_at, metas en horas).",
@@ -46,7 +53,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
         
         {/* Header */}
         <div className="bg-slate-900 p-6 flex flex-col items-center justify-center relative shrink-0">
@@ -68,21 +75,21 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
         {/* Body */}
         <div className="p-6 space-y-6 overflow-y-auto">
           
-          <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+          <div className="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800">
             <Info className="text-blue-500 shrink-0 mt-0.5" size={20} />
             <div>
-              <p className="text-sm font-bold text-slate-800">Última Actualización</p>
-              <p className="text-sm text-slate-600 mt-1">{updateDate}</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Última Actualización</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{updateDate}</p>
             </div>
           </div>
 
           <div>
-            <h3 className="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wider flex items-center gap-2">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3 uppercase tracking-wider flex items-center gap-2">
               <span className="text-amber-500 text-lg">✨</span> Novedades (v{version})
             </h3>
             <ul className="space-y-2">
               {changelog.map((change, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm text-slate-600">
+                <li key={idx} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0" />
                   {change}
                 </li>
@@ -91,13 +98,13 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
           </div>
 
           <div>
-            <h3 className="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wider flex items-center gap-2">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3 uppercase tracking-wider flex items-center gap-2">
               <Server size={16} className="text-slate-400" />
               Módulos Instalados
             </h3>
             <div className="grid grid-cols-1 gap-2">
               {modules.map((mod, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-sm text-slate-600">
+                <div key={idx} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                   <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
                   {mod}
                 </div>
@@ -108,11 +115,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
         </div>
 
         {/* Footer */}
-        <div className="bg-slate-50 p-4 border-t border-slate-100 flex flex-col items-center gap-3">
+        <div className="bg-slate-50 dark:bg-slate-950 p-4 border-t border-slate-100 dark:border-slate-800 flex flex-col items-center gap-3">
           <Link 
             to="/manual" 
             onClick={onClose}
-            className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-50 text-blue-700 font-bold rounded-xl hover:bg-blue-100 transition-colors border border-blue-200"
+            className="flex items-center justify-center gap-2 w-full py-2.5 bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200 font-bold rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors border border-slate-200 dark:border-slate-700"
           >
             <BookOpen size={18} />
             Abrir Manual de Usuario

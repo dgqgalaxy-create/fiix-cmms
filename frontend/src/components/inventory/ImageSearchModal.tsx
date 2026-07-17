@@ -83,31 +83,31 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({ isOpen, onCl
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl animate-in zoom-in-95 duration-200 dark:border-slate-700 dark:bg-slate-900">
         
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-slate-100">
+        <div className="flex items-center justify-between border-b border-slate-100 p-6 dark:border-slate-800">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Buscar Imagen en Web</h2>
-            <p className="text-sm text-slate-500 mt-1">Busca e importa imágenes directamente de internet</p>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Buscar Imagen en Web</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Busca e importa imágenes directamente de internet</p>
           </div>
           <button 
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+            className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
           >
             <X size={24} />
           </button>
         </div>
 
         {/* Search Bar */}
-        <div className="p-6 border-b border-slate-100 bg-slate-50">
+        <div className="border-b border-slate-100 bg-slate-50 p-6 dark:border-slate-800 dark:bg-slate-950">
           <form 
             onSubmit={(e) => { e.preventDefault(); handleSearch(query); }}
             className="flex gap-3"
           >
             <div className="relative flex-1">
-              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400">
+              <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
                 <Search size={20} />
               </div>
               <input
@@ -115,13 +115,13 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({ isOpen, onCl
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Ej. Balero SKF 6205, Motor Siemens..."
-                className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 shadow-sm transition-all outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               />
             </div>
             <button 
               type="submit"
               disabled={isSearching || !query.trim()}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-3 rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2"
+              className="flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 font-medium text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:bg-emerald-400"
             >
               {isSearching ? <Loader2 size={20} className="animate-spin" /> : <Search size={20} />}
               Buscar
@@ -130,42 +130,39 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({ isOpen, onCl
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
+        <div className="flex-1 overflow-y-auto bg-slate-50/50 p-6 dark:bg-slate-950/50">
           {error && (
-            <div className="mb-6 bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-xl flex items-center gap-3">
-              <AlertCircle size={20} className="text-rose-500 flex-shrink-0" />
+            <div className="mb-6 flex items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300">
+              <AlertCircle size={20} className="flex-shrink-0 text-rose-500" />
               <p className="text-sm">{error}</p>
             </div>
           )}
 
           {isSearching ? (
-            <div className="h-64 flex flex-col items-center justify-center text-slate-400">
-              <Loader2 size={40} className="animate-spin mb-4 text-blue-500" />
+            <div className="flex h-64 flex-col items-center justify-center text-slate-400">
+              <Loader2 size={40} className="mb-4 animate-spin text-emerald-500" />
               <p>Buscando en Google Imágenes...</p>
             </div>
           ) : results.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
               {results.map((img, index) => (
                 <div 
                   key={index}
                   onClick={() => !isDownloading && handleSelectImage(img.url)}
-                  className={`group relative aspect-square rounded-xl overflow-hidden bg-slate-100 border-2 border-transparent hover:border-blue-500 cursor-pointer transition-all shadow-sm ${isDownloading ? 'opacity-50 pointer-events-none' : ''}`}
+                  className={`group relative aspect-square cursor-pointer overflow-hidden rounded-xl border-2 border-transparent bg-slate-100 shadow-sm transition-all hover:border-emerald-500 dark:bg-slate-800 ${isDownloading ? 'pointer-events-none opacity-50' : ''}`}
                 >
-                  {/* We use the raw URL to display it. Note: some hotlinking might be blocked by the origin, 
-                      but usually browsers bypass it if it's an img tag without referer strictness, 
-                      or we could proxy the preview too, but usually direct img src works for preview. */}
                   <img 
                     src={img.url} 
                     alt={img.title}
-                    className="w-full h-full object-cover"
+                    className="h-full w-full object-cover"
                     loading="lazy"
                     referrerPolicy="no-referrer"
                   />
                   
                   {/* Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
-                    <p className="text-white text-xs font-medium line-clamp-2 mb-2">{img.title}</p>
-                    <div className="bg-blue-600 text-white text-xs font-bold py-1.5 px-3 rounded-lg flex items-center justify-center gap-2">
+                  <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent p-3 opacity-0 transition-opacity group-hover:opacity-100">
+                    <p className="mb-2 line-clamp-2 text-xs font-medium text-white">{img.title}</p>
+                    <div className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white">
                       <Download size={14} /> Usar Imagen
                     </div>
                   </div>
@@ -173,12 +170,12 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({ isOpen, onCl
               ))}
             </div>
           ) : query && !isSearching && !error ? (
-            <div className="h-64 flex flex-col items-center justify-center text-slate-400">
+            <div className="flex h-64 flex-col items-center justify-center text-slate-400">
               <Search size={40} className="mb-4 opacity-20" />
               <p>No hay resultados. Intenta buscar.</p>
             </div>
           ) : (
-            <div className="h-64 flex items-center justify-center text-slate-400">
+            <div className="flex h-64 items-center justify-center text-slate-400">
               <p>Escribe el nombre del repuesto para buscar fotos.</p>
             </div>
           )}

@@ -49,7 +49,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
             <div className="flex gap-4">
               <button
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors"
+                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-colors"
                 onClick={() => window.location.href = '/'}
               >
                 Volver al Inicio

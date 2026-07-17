@@ -1,30 +1,100 @@
 @import "tailwindcss";
 @variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafc;
+  --color-surface-elevated: #ffffff;
+  --color-fg: #0f172a;
+  --color-fg-muted: #64748b;
+  --color-border: #e2e8f0;
+  --color-primary: #059669;
+  --color-primary-fg: #ffffff;
+  --color-primary-soft: #ecfdf5;
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-danger: #e11d48;
+  --color-info: #0284c8;
+}
+
+.dark {
+  --color-surface: #1e293b;
+  --color-surface-muted: #0f172a;
+  --color-surface-elevated: #334155;
+  --color-fg: #f1f5f9;
+  --color-fg-muted: #94a3b8;
+  --color-border: #334155;
+  --color-primary: #10b981;
+  --color-primary-fg: #042f2e;
+  --color-primary-soft: #064e3b;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #fb7185;
+  --color-info: #38bdf8;
+}
+
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  color: var(--color-fg);
 }
 
 body {
   margin: 0;
-  background-color: #f8fafc; /* slate-50 */
-}
-
-.dark body {
-  background-color: #0f172a; /* slate-900 */
-  color: #f1f5f9; /* slate-100 */
+  background-color: var(--color-surface-muted);
+  color: var(--color-fg);
 }
 
 #root {
   width: 100%;
   min-height: 100vh;
+}
+
+/* Shared industrial UI helpers */
+.ui-card {
+  @apply rounded-2xl border bg-white shadow-sm dark:bg-slate-900;
+  border-color: var(--color-border);
+}
+
+.ui-page-title {
+  @apply text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100;
+}
+
+.ui-page-subtitle {
+  @apply text-sm text-slate-500 dark:text-slate-400;
+}
+
+.ui-btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-emerald-950;
+}
+
+.ui-btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800;
+}
+
+.ui-btn-danger {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-rose-700 disabled:opacity-50;
+}
+
+.ui-input {
+  @apply w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100;
+}
+
+.ui-table-head {
+  @apply bg-slate-50/90 text-xs font-bold uppercase tracking-wider text-slate-500 shadow-[inset_0_-1px_0_0] shadow-[#739239]/40 dark:bg-slate-900/80 dark:text-slate-400;
+}
+
+.ui-modal-overlay {
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-sm;
+}
+
+.ui-modal-panel {
+  @apply w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900;
 }
 
 @media print {
@@ -47,8 +117,6 @@ body {
     font-size: 24px !important;
     font-weight: bold;
   }
-  
-  /* Make events smaller to fit up to 8 per day on paper */
   .rbc-event {
     padding: 0px 2px !important;
     font-size: 9px !important;
@@ -61,13 +129,42 @@ body {
   }
 }
 
-/* Calendar Today Highlight */
+/* Calendar Today Highlight (theme aware) */
 .rbc-today {
-  background-color: #eff6ff !important; /* bg-blue-50 */
+  background-color: var(--color-primary-soft) !important;
 }
 .rbc-month-view .rbc-today .rbc-date-cell {
   font-weight: bold;
-  color: #1d4ed8; /* text-blue-700 */
+  color: var(--color-primary);
+}
+
+.dark .rbc-calendar,
+.dark .rbc-month-view,
+.dark .rbc-time-view,
+.dark .rbc-agenda-view {
+  background-color: var(--color-surface);
+  color: var(--color-fg);
+}
+.dark .rbc-off-range-bg {
+  background: #0f172a;
+}
+.dark .rbc-header,
+.dark .rbc-time-header,
+.dark .rbc-timeslot-group,
+.dark .rbc-day-bg,
+.dark .rbc-month-row,
+.dark .rbc-time-content > * + * > * {
+  border-color: var(--color-border) !important;
+}
+.dark .rbc-toolbar button {
+  color: var(--color-fg);
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+.dark .rbc-toolbar button.rbc-active {
+  background: var(--color-primary);
+  color: var(--color-primary-fg);
+  border-color: var(--color-primary);
 }
 
 .rbc-calendar {

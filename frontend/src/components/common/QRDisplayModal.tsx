@@ -55,12 +55,12 @@ export const QRDisplayModal: React.FC<Props> = ({ isOpen, onClose, title, subtit
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
       
-      <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm relative flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
-          <h2 className="text-xl font-bold text-slate-800 tracking-tight">Código QR</h2>
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-sm relative flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Código QR</h2>
           <button 
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-xl transition-colors"
           >
             <X size={20} />
           </button>
@@ -68,13 +68,13 @@ export const QRDisplayModal: React.FC<Props> = ({ isOpen, onClose, title, subtit
 
         <div className="p-8 flex flex-col items-center">
           <div className="text-center mb-6">
-            <h3 className="font-bold text-slate-800 text-lg">{title}</h3>
-            <p className="text-sm text-slate-500">{subtitle}</p>
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">{title}</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
           </div>
 
           <div 
             ref={printRef}
-            className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm"
+            className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm"
           >
             <QRCodeSVG value={value} size={200} level="H" includeMargin={true} />
           </div>
@@ -85,7 +85,7 @@ export const QRDisplayModal: React.FC<Props> = ({ isOpen, onClose, title, subtit
 
           <button
             onClick={handlePrint}
-            className="mt-8 w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors"
+            className="mt-8 w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 dark:hover:bg-emerald-400 text-white font-medium rounded-xl transition-colors"
           >
             <Printer size={18} />
             Imprimir Código

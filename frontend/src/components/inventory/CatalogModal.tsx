@@ -118,10 +118,10 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <h2 className="text-xl font-bold text-slate-900">{getTitle()}</h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{getTitle()}</h2>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -135,24 +135,24 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">ID / Código Interno</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">ID / Código Interno</label>
               <input
                 type="text"
                 disabled
                 value={item ? formData.internal_id : 'Autogenerado al guardar'}
-                className="w-full px-4 py-2.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-xl font-mono text-sm"
+                className="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-sm"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nombre *</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Nombre *</label>
               <input
                 type="text"
                 required
                 disabled={readOnly}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
                 placeholder="Nombre descriptivo"
               />
             </div>
@@ -161,34 +161,34 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Teléfono</label>
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Teléfono</label>
                     <input
                       type="text"
                       disabled={readOnly}
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100"
+                      className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email</label>
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Email</label>
                     <input
                       type="email"
                       disabled={readOnly}
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100"
+                      className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Sitio Web</label>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Sitio Web</label>
                   <input
                     type="url"
                     disabled={readOnly}
                     value={formData.website_url}
                     onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100"
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
                     placeholder="https://"
                   />
                 </div>
@@ -196,22 +196,22 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
             )}
 
             <div className="pt-2">
-              <label className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors">
+              <label className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 transition-colors">
                 <input
                   type="checkbox"
                   disabled={readOnly}
                   checked={formData.is_active}
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 disabled:opacity-50"
+                  className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-emerald-500 disabled:opacity-50"
                 />
                 <div>
-                  <span className="block text-sm font-semibold text-slate-900">Registro Activo</span>
+                  <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">Registro Activo</span>
                 </div>
               </label>
             </div>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-slate-100 flex justify-between gap-3">
+          <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-between gap-3">
             <div>
               {item && !readOnly && (
                 <button
@@ -229,7 +229,7 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors"
+                className="px-5 py-2.5 text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-xl transition-colors"
               >
                 {readOnly ? 'Cerrar' : 'Cancelar'}
               </button>
@@ -237,7 +237,7 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm shadow-blue-600/20 disabled:opacity-70"
+                  className="px-5 py-2.5 bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-950 font-medium rounded-xl hover:bg-emerald-700 dark:hover:bg-emerald-400 transition-colors flex items-center gap-2 shadow-sm shadow-emerald-600/20 dark:shadow-emerald-900/30 disabled:opacity-70"
                 >
                   <Save size={18} />
                   {isSubmitting ? 'Guardando...' : 'Guardar'}
@@ -247,8 +247,8 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
           </div>
         </form>
         {readOnly && item && allItems && (
-          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3">Repuestos Asociados</h3>
+          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Repuestos Asociados</h3>
             <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
               {(() => {
                 let filtered = [];
@@ -256,23 +256,23 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
                 else if (type === 'location') filtered = allItems.filter(i => i.location?.id === item.id);
                 else if (type === 'vendor') filtered = allItems.filter(i => i.vendor?.id === item.id);
                 
-                if (filtered.length === 0) return <p className="text-sm text-slate-500">No hay repuestos registrados.</p>;
+                if (filtered.length === 0) return <p className="text-sm text-slate-500 dark:text-slate-400">No hay repuestos registrados.</p>;
                 
                 return filtered.map(i => (
                   <div
                     key={i.id}
                     onClick={() => onSelectItem?.(i)}
-                    className={`flex justify-between items-center p-3 bg-white rounded-lg border border-slate-200 shadow-sm transition-shadow ${onSelectItem ? 'cursor-pointer hover:shadow hover:border-emerald-300' : ''}`}
+                    className={`flex justify-between items-center p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm transition-shadow ${onSelectItem ? 'cursor-pointer hover:shadow hover:border-emerald-300' : ''}`}
                   >
                     <div>
-                      <p className="text-sm font-bold text-slate-800">{i.name}</p>
-                      <p className="text-xs text-slate-500 font-mono mt-0.5">{i.internal_code}</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{i.name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">{i.internal_code}</p>
                     </div>
                     <div className="text-right">
-                      <span className={`text-sm font-black ${i.stock <= i.minimum_inventory ? 'text-rose-600' : 'text-slate-700'}`}>
+                      <span className={`text-sm font-black ${i.stock <= i.minimum_inventory ? 'text-rose-600' : 'text-slate-700 dark:text-slate-200'}`}>
                         {i.stock}
                       </span>
-                      <span className="text-xs text-slate-500 ml-1">{i.uom}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 ml-1">{i.uom}</span>
                     </div>
                   </div>
                 ));

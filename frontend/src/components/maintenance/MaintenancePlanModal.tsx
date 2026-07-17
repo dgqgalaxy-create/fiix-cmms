@@ -133,12 +133,12 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl my-8">
-        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 sticky top-0 z-10 rounded-t-2xl">
-          <h2 className="text-xl font-bold text-slate-900">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-2xl my-8">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 sticky top-0 z-10 rounded-t-2xl">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
             {plan ? 'Editar Plan Preventivo' : 'Nuevo Plan Preventivo'}
           </h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -153,27 +153,27 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Columna Izquierda: Detalles Básicos */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-slate-800 border-b pb-2">Información Básica</h3>
+              <h3 className="font-semibold text-slate-800 dark:text-slate-100 border-b pb-2">Información Básica</h3>
               
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Título del Plan *</label>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Título del Plan *</label>
                 <input
                   type="text"
                   required
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
                   placeholder="Ej. Mantenimiento Preventivo Semestral"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Equipo / Activo *</label>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Equipo / Activo *</label>
                 <select
                   required
                   value={formData.asset_id}
                   onChange={(e) => setFormData({ ...formData, asset_id: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
                 >
                   <option value="">-- Selecciona un equipo --</option>
                   {assets.filter(a => a.status !== 'FUERA_DE_SERVICIO').map(a => (
@@ -183,12 +183,12 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Descripción / Instrucciones</label>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Descripción / Instrucciones</label>
                 <textarea
                   rows={4}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
                   placeholder="Instrucciones para el técnico..."
                 />
               </div>
@@ -201,24 +201,24 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
                     checked={formData.is_active}
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                   />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-slate-900 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                 </label>
-                <span className="text-sm font-medium text-slate-700">Plan Activo</span>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Plan Activo</span>
               </div>
             </div>
 
             {/* Columna Derecha: Programación y Repuestos */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-slate-800 border-b pb-2">Programación</h3>
+              <h3 className="font-semibold text-slate-800 dark:text-slate-100 border-b pb-2">Programación</h3>
               
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Frecuencia *</label>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Frecuencia *</label>
                   <select
                     required
                     value={formData.frequency_type}
                     onChange={(e) => setFormData({ ...formData, frequency_type: e.target.value as any })}
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none"
+                    className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none"
                   >
                     <option value="DIAS">Días</option>
                     <option value="SEMANAS">Semanas</option>
@@ -227,37 +227,37 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
                   </select>
                 </div>
                 <div className="flex-1">
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Valor *</label>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Valor *</label>
                   <input
                     type="number"
                     required
                     min="1"
                     value={formData.frequency_value}
                     onChange={(e) => setFormData({ ...formData, frequency_value: Number(e.target.value) })}
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none"
+                    className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Días de Anticipación *</label>
-                <p className="text-xs text-slate-500 mb-2">Generar la orden N días antes del vencimiento.</p>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Días de Anticipación *</label>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Generar la orden N días antes del vencimiento.</p>
                 <input
                   type="number"
                   required
                   min="0"
                   value={formData.days_in_advance}
                   onChange={(e) => setFormData({ ...formData, days_in_advance: Number(e.target.value) })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none"
                 />
               </div>
 
               <div className="mt-6">
-                <h3 className="font-semibold text-slate-800 border-b pb-2 mb-4">Repuestos Requeridos (Opcional)</h3>
+                <h3 className="font-semibold text-slate-800 dark:text-slate-100 border-b pb-2 mb-4">Repuestos Requeridos (Opcional)</h3>
                 
                 <div className="flex gap-2 items-end mb-4 relative">
                   <div className="flex-1 relative">
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Repuesto</label>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Repuesto</label>
                     <input
                       type="text"
                       placeholder="Buscar repuesto..."
@@ -269,14 +269,14 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
                       }}
                       onFocus={() => setIsDropdownOpen(true)}
                       onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                      className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none"
                     />
                     {isDropdownOpen && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-40 overflow-y-auto">
+                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-40 overflow-y-auto">
                         {filteredItems.slice(0, 50).map(i => (
                           <div
                             key={i.id}
-                            className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-0 text-sm"
+                            className="px-3 py-2 hover:bg-blue-50 dark:hover:bg-slate-800 cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 text-sm"
                             onClick={() => {
                               setNewItemId(i.id);
                               setSearchQuery(`${i.internal_code} - ${i.name}`);
@@ -284,21 +284,21 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
                             }}
                           >
                             <div className="font-semibold">{i.name}</div>
-                            <div className="text-xs text-slate-500 font-mono">{i.internal_code}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">{i.internal_code}</div>
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
                   <div className="w-20">
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Cant.</label>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Cant.</label>
                     <input
                       type="number"
                       min="0.1"
                       step="0.1"
                       value={newItemQty}
                       onChange={(e) => setNewItemQty(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                      className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none"
                     />
                   </div>
                   <button
@@ -310,18 +310,18 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
                   </button>
                 </div>
 
-                <div className="bg-slate-50 rounded-xl border border-slate-200 p-2 max-h-40 overflow-y-auto">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-2 max-h-40 overflow-y-auto">
                   {!formData.required_items || formData.required_items.length === 0 ? (
-                    <p className="text-xs text-slate-500 text-center py-2">Ningún repuesto agregado.</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-2">Ningún repuesto agregado.</p>
                   ) : (
                     <div className="space-y-2">
                       {formData.required_items.map((req, idx) => {
                         const itemData = req.item || items.find(i => i.id === req.item_id);
                         return (
-                          <div key={idx} className="flex justify-between items-center bg-white p-2 rounded-lg shadow-sm border border-slate-100">
+                          <div key={idx} className="flex justify-between items-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm border border-slate-100 dark:border-slate-800">
                             <div>
                               <p className="text-sm font-semibold">{itemData?.name || 'Desconocido'}</p>
-                              <p className="text-xs text-slate-500 font-mono">{itemData?.internal_code} • Cantidad: {req.quantity_required}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">{itemData?.internal_code} • Cantidad: {req.quantity_required}</p>
                             </div>
                             <button
                               type="button"
@@ -341,7 +341,7 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
             </div>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-slate-100 flex justify-between gap-3">
+          <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-between gap-3">
             <div>
               {plan && (
                 <button
@@ -359,14 +359,14 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors"
+                className="px-5 py-2.5 text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-xl transition-colors"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm disabled:opacity-70"
+                className="px-5 py-2.5 bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-950 font-medium rounded-xl hover:bg-emerald-700 dark:hover:bg-emerald-400 transition-colors flex items-center gap-2 shadow-sm disabled:opacity-70"
               >
                 <Save size={18} />
                 {isSubmitting ? 'Guardando...' : 'Guardar Plan'}

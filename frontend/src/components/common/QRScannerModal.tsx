@@ -86,17 +86,17 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose, onScan }) => 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
       
-      <div className="bg-white rounded-3xl shadow-xl w-full max-w-md relative flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-md relative flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+            <div className="p-2 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
               <Camera size={20} />
             </div>
-            <h2 className="text-xl font-bold text-slate-800 tracking-tight">Escáner QR</h2>
+            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Escáner QR</h2>
           </div>
           <button 
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-xl transition-colors"
           >
             <X size={20} />
           </button>
@@ -123,7 +123,7 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose, onScan }) => 
           </div>
           
           <div className="mt-4 flex flex-col gap-3">
-            <p className="text-center text-slate-500 text-sm">
+            <p className="text-center text-slate-500 dark:text-slate-400 text-sm">
               Apunta la cámara al código QR de una máquina, repuesto o ubicación.
             </p>
           </div>

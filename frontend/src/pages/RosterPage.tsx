@@ -396,7 +396,7 @@ export const RosterPage = () => {
                   required
                   value={selectedUser}
                   onChange={e => setSelectedUser(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                 >
                   <option value="" disabled>Seleccionar técnico</option>
                   {data?.technicians.map(t => (
@@ -411,7 +411,7 @@ export const RosterPage = () => {
                   required
                   value={selectedPattern}
                   onChange={e => setSelectedPattern(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                 >
                   <option value="MIXTO">Mixto (L-V Día, Sáb Medio)</option>
                   <option value="4X4_ROTATORIO">4x4 Rotatorio (2D, 2N, 4 Descanso)</option>
@@ -426,7 +426,7 @@ export const RosterPage = () => {
                   required
                   value={patternStartDate}
                   onChange={e => setPatternStartDate(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                 />
                 <p className="text-xs text-slate-500 mt-1">Este será el día donde empieza a correr su ciclo.</p>
               </div>

@@ -13,6 +13,7 @@ export interface KPIMetric {
 
 export interface KPIResponse {
   totalOrders: number;
+  reworkWindowDays?: number;
   period?: {
     start: string;
     end: string;
@@ -28,8 +29,11 @@ export interface KPIResponse {
   };
 }
 
-export const getKPIs = async (period?: string): Promise<KPIResponse> => {
-  const query = period ? `?period=${period}` : '';
+export const getKPIs = async (period?: string, reworkDays?: number): Promise<KPIResponse> => {
+  const params = new URLSearchParams();
+  if (period) params.set('period', period);
+  if (reworkDays !== undefined) params.set('reworkDays', String(reworkDays));
+  const query = params.toString() ? `?${params.toString()}` : '';
   const response = await api.get(`/kpis${query}`);
   return response.data;
 };

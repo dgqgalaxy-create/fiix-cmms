@@ -3,9 +3,25 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 16 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.11.10 (Actualización: 16 de Julio de 2026)
+## 🚀 Versión Actual: v1.12.0 (Actualización: 16 de Julio de 2026)
 
-### Novedades en v1.11.10 (Importación CSV robusta)
+### Novedades en v1.12.0 (Estandarización visual + temas)
+- **Design system industrial:** Tokens CSS + primitivos UI (`Button`, `Card`, `Modal`, `PageHeader`, `DataTable`, `Badge`) y helpers compartidos.
+- **Consistencia global:** Emerald como CTA primaria; títulos, cards, tablas y modales unificados en todos los módulos.
+- **Modo día/noche:** Cobertura completa en shell, páginas, modales, login, portal, calendario y gráficas.
+- **MTTR/MTBF:** Leyenda arriba y etiqueta del eje X fuera del plot para eliminar el solape.
+
+### Novedades Anteriores (v1.11.12 - KPIs y acceso desarrollador)
+- **Retrabajo configurable:** La ventana de búsqueda de fallas previas acepta 3/7/14/30 días o un valor personalizado (1–90).
+- **Gráfica MTTR/MTBF aclarada:** Etiquetas de ejes (meses vs horas) y leyenda de qué significa cada métrica.
+- **Login de desarrollador centrado:** El formulario de contraseña deja de empujarse hacia abajo por `min-h-screen`.
+
+### Novedades Anteriores (v1.11.11 - Opciones de Desarrollador)
+- **Nueva jerarquía visual:** Importación y respaldos, Telegram, mantenimiento local y acciones destructivas ahora están separados por función y nivel de riesgo.
+- **Importación CSV destacada:** La carga de los 7 archivos muestra visualmente el orden automático de procesamiento.
+- **Diseño responsive:** Mejor aprovechamiento del espacio en escritorio, tablet y celular.
+
+### Novedades Anteriores (v1.11.10 - Importación CSV robusta)
 - **Orden garantizado:** Al seleccionar los 7 CSV a la vez, el sistema los detecta por nombre y los procesa siempre en el orden correcto (Categorías → Ubicaciones → Proveedores → Items → Usuarios → Inventario → Órdenes).
 - **Sin transacciones perdidas:** Los usuarios de movimientos de inventario que no vienen en `Users.csv` se crean automáticamente (inactivos), evitando descartar ~729 movimientos.
 - **MTTR fiel:** Los tiempos de reparación con coma de miles (ej. `2,140.22`) se parsean correctamente, eliminando la distorsión del MTTR.

@@ -86,7 +86,7 @@ export const AssetsPage = () => {
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <button 
             onClick={fetchAssets}
-            className="p-2.5 text-slate-500 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors shadow-sm"
+            className="p-2.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors shadow-sm"
             title="Actualizar"
           >
             <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
@@ -105,27 +105,27 @@ export const AssetsPage = () => {
       </div>
 
       {isLoading && assets.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-slate-100 shadow-sm">
-          <RefreshCw size={32} className="animate-spin text-emerald-600 mb-4" />
-          <p className="text-slate-500 font-medium">Cargando inventario...</p>
+        <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+          <RefreshCw size={32} className="animate-spin text-emerald-600 dark:text-emerald-400 mb-4" />
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Cargando inventario...</p>
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex-1 bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex items-center mb-6">
+          <div className="flex-1 bg-white dark:bg-slate-900 p-2 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center mb-6">
             <div className="pl-3 pr-2 text-slate-400">
               <Search size={20} />
             </div>
             <input
               type="text"
               placeholder="Buscar activos por nombre o código..."
-              className="w-full bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 px-2 py-1.5 outline-none"
+              className="w-full bg-transparent border-none focus:ring-0 text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 px-2 py-1.5 outline-none"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             {canUseScanner && (
               <button
                 onClick={() => setIsScannerOpen(true)}
-                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                className="p-1.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-xl transition-colors"
                 title="Escanear QR para buscar"
               >
                 <QrCode size={20} />
