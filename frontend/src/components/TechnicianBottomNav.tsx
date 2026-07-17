@@ -2,6 +2,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { Home, Package, QrCode, Wrench } from 'lucide-react';
 import { QRScannerModal } from './common/QRScannerModal';
+import { parseFiixQr } from '../utils/fiixQr';
 
 const tabClass = (active: boolean) =>
   `flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-bold tracking-wide transition-colors ${
@@ -22,17 +23,29 @@ export const TechnicianBottomNav = () => {
   const onHome = location.pathname.startsWith('/home');
 
   const handleScan = (code: string) => {
-    if (code.startsWith('FIIX-ASSET:')) {
-      navigate(`/assets?asset=${code.replace('FIIX-ASSET:', '').trim()}`);
+    const parsed = parseFiixQr(code);
+    if (!parsed.id) {
+      alert('No se leyó ningún código QR.');
       return;
     }
-    if (code.startsWith('FIIX-ITEM:')) {
-      navigate(`/inventory?item=${code.replace('FIIX-ITEM:', '').trim()}`);
+
+    const q = encodeURIComponent(parsed.id);
+
+    if (parsed.kind === 'asset') {
+      navigate(`/assets?asset=${q}`);
       return;
     }
-    if (code.startsWith('FIIX-LOCATION:')) {
-      navigate(`/inventory?tab=locations&location=${code.replace('FIIX-LOCATION:', '').trim()}`);
+    if (parsed.kind === 'item') {
+      navigate(`/inventory?tab=items&item=${q}`);
+      return;
     }
+    if (parsed.kind === 'location') {
+      navigate(`/inventory?tab=locations&location=${q}`);
+      return;
+    }
+
+    // Sin prefijo: probar ubicación/repuesto por código interno (ej. E2-0).
+    navigate(`/inventory?scan=${q}`);
   };
 
   return (

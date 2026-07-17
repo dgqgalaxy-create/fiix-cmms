@@ -16,6 +16,7 @@ import { QRDisplayModal } from '../components/common/QRDisplayModal';
 import { QRScannerModal } from '../components/common/QRScannerModal';
 import { BulkQRPrintModal } from '../components/common/BulkQRPrintModal';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import { parseFiixQr } from '../utils/fiixQr';
 
 export const InventoryPage = () => {
   const navigate = useNavigate();
@@ -100,55 +101,117 @@ export const InventoryPage = () => {
 
   useSocketRefresh('refresh_inventory', () => fetchData(true));
 
-  // Handle URL parameters (filters / deep links)
+  // Handle URL parameters (filters / deep links). Espera a que carguen catálogos
+  // antes de descartar location/item/scan (evita perder el destino al escanear QR).
   useEffect(() => {
-    let shouldReplaceUrl = false;
+    const next = new URLSearchParams(searchParams);
+    let changed = false;
 
-    const filter = searchParams.get('filter');
+    const filter = next.get('filter');
     if (filter === 'low_stock') {
       setShowLowStockOnly(true);
       setActiveTab('items');
-      searchParams.delete('filter');
-      shouldReplaceUrl = true;
+      next.delete('filter');
+      changed = true;
     }
 
-    const tab = searchParams.get('tab');
+    const tab = next.get('tab');
     if (tab === 'locations' || tab === 'items' || tab === 'transactions' || tab === 'categories' || tab === 'vendors') {
       setActiveTab(tab);
-      searchParams.delete('tab');
-      shouldReplaceUrl = true;
+      next.delete('tab');
+      changed = true;
     }
 
-    const itemId = searchParams.get('item');
-    if (itemId && items.length > 0) {
-      const found = items.find((i) => i.id === itemId || i.internal_code === itemId);
-      if (found) {
-        setActiveTab('items');
-        setSelectedItem(found);
-        setIsItemModalOpen(true);
-        searchParams.delete('item');
-        shouldReplaceUrl = true;
+    const matchLocation = (code: string) =>
+      locations.find(
+        (l) =>
+          l.id === code ||
+          (l.internal_id || '').toLowerCase() === code.toLowerCase()
+      );
+
+    const matchItem = (code: string) =>
+      items.find(
+        (i) =>
+          i.id === code ||
+          (i.internal_code || '').toLowerCase() === code.toLowerCase()
+      );
+
+    const openLocationDetail = (loc: ItemLocation) => {
+      setActiveTab('locations');
+      setCatalogType('location');
+      setSelectedCatalogItem(loc);
+      setIsCatalogReadOnly(true);
+      setIsCatalogModalOpen(true);
+    };
+
+    const openItemDetail = (item: Item) => {
+      setActiveTab('items');
+      setSelectedItem(item);
+      setIsItemModalOpen(true);
+    };
+
+    const locationId = next.get('location');
+    if (locationId) {
+      if (isLoading) {
+        // Catálogo aún no listo: conservar ?location= hasta el siguiente fetch.
+      } else {
+        const found = matchLocation(locationId);
+        if (found) {
+          openLocationDetail(found);
+          next.delete('location');
+          changed = true;
+        } else {
+          alert(`No se encontró la ubicación «${locationId}».`);
+          next.delete('location');
+          changed = true;
+        }
       }
     }
 
-    const locationId = searchParams.get('location');
-    if (locationId && locations.length > 0) {
-      const found = locations.find((l) => l.id === locationId || l.internal_id === locationId);
-      if (found) {
-        setActiveTab('locations');
-        setCatalogType('location');
-        setSelectedCatalogItem(found);
-        setIsCatalogReadOnly(true);
-        setIsCatalogModalOpen(true);
-        searchParams.delete('location');
-        shouldReplaceUrl = true;
+    const itemId = next.get('item');
+    if (itemId) {
+      if (isLoading) {
+        // Esperar catálogo de repuestos.
+      } else {
+        const found = matchItem(itemId);
+        if (found) {
+          openItemDetail(found);
+          next.delete('item');
+          changed = true;
+        } else {
+          alert(`No se encontró el repuesto «${itemId}».`);
+          next.delete('item');
+          changed = true;
+        }
       }
     }
 
-    if (shouldReplaceUrl) {
-      setSearchParams(searchParams, { replace: true });
+    // Código sin prefijo FIIX-* (p. ej. E2-0): resolver ubicación o repuesto.
+    const scanCode = next.get('scan');
+    if (scanCode && !isLoading) {
+      const loc = matchLocation(scanCode);
+      if (loc) {
+        openLocationDetail(loc);
+        next.delete('scan');
+        changed = true;
+      } else {
+        const item = matchItem(scanCode);
+        if (item) {
+          openItemDetail(item);
+          next.delete('scan');
+          changed = true;
+        } else {
+          alert(`No se encontró ubicación ni repuesto con el código «${scanCode}».`);
+          next.delete('scan');
+          changed = true;
+        }
+      }
     }
-  }, [searchParams, items, locations, setSearchParams]);
+
+    if (changed) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, items, locations, isLoading, setSearchParams]);
 
   const handleOpenCatalogModal = (type: 'category' | 'location' | 'vendor', item?: any, readOnly: boolean = false) => {
     setCatalogType(type);
@@ -322,23 +385,59 @@ export const InventoryPage = () => {
   };
 
   const handleScan = (scanned: string) => {
-    const scannedId = scanned.replace(/^FIIX-(ASSET|ITEM|LOCATION):/, '').trim();
-    if (activeTab === 'locations' || scanned.startsWith('FIIX-LOCATION:')) {
-      const location = locations.find(l => l.id === scannedId || l.internal_id === scannedId);
+    const parsed = parseFiixQr(scanned);
+    const code = parsed.id;
+    if (!code) {
+      alert('No se leyó ningún código QR.');
+      return;
+    }
+
+    const matchLocation = () =>
+      locations.find(
+        (l) =>
+          l.id === code ||
+          (l.internal_id || '').toLowerCase() === code.toLowerCase()
+      );
+
+    const matchItem = () =>
+      items.find(
+        (i) =>
+          i.id === code ||
+          (i.internal_code || '').toLowerCase() === code.toLowerCase()
+      );
+
+    if (parsed.kind === 'location' || activeTab === 'locations') {
+      const location = matchLocation();
       if (location) {
         handleOpenCatalogModal('location', location, true);
       } else {
-        alert("No se encontró ninguna ubicación con el código escaneado.");
+        alert('No se encontró ninguna ubicación con el código escaneado.');
       }
       return;
     }
 
-    const item = items.find(i => i.id === scannedId || i.internal_code === scannedId);
-    if (item) {
-      setSearchTerm(item.internal_code || item.name);
-    } else {
-      alert("No se encontró ningún repuesto con el código escaneado.");
+    if (parsed.kind === 'item' || activeTab === 'items') {
+      const item = matchItem();
+      if (item) {
+        handleOpenItemModal(item);
+      } else {
+        alert('No se encontró ningún repuesto con el código escaneado.');
+      }
+      return;
     }
+
+    // Sin prefijo: ubicación primero, luego repuesto.
+    const location = matchLocation();
+    if (location) {
+      handleOpenCatalogModal('location', location, true);
+      return;
+    }
+    const item = matchItem();
+    if (item) {
+      handleOpenItemModal(item);
+      return;
+    }
+    alert('No se encontró ubicación ni repuesto con el código escaneado.');
   };
 
   const toggleItemSelection = (id: string) => {

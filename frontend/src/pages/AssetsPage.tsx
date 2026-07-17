@@ -49,15 +49,22 @@ export const AssetsPage = () => {
 
   useEffect(() => {
     const assetId = searchParams.get('asset');
-    if (!assetId || assets.length === 0) return;
-    const found = assets.find((a) => a.id === assetId || a.internal_code === assetId);
+    if (!assetId || isLoading) return;
+
+    const found = assets.find(
+      (a) =>
+        a.id === assetId ||
+        (a.internal_code || '').toLowerCase() === assetId.toLowerCase()
+    );
+    const next = new URLSearchParams(searchParams);
     if (found) {
       setDetailAsset(found);
-      const next = new URLSearchParams(searchParams);
-      next.delete('asset');
-      setSearchParams(next, { replace: true });
+    } else {
+      alert(`No se encontró el activo «${assetId}».`);
     }
-  }, [searchParams, assets, setSearchParams]);
+    next.delete('asset');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, assets, isLoading, setSearchParams]);
 
   const filteredAssets = assets.filter(a => 
     a.name.toLowerCase().includes(searchTerm.toLowerCase()) || 

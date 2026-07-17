@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.25.2";
+export const APP_VERSION = "1.25.3";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Al escanear el QR de una ubicación (p. ej. E2-0) ahora abre el detalle con sus repuestos; también acepta códigos sin prefijo FIIX-LOCATION y espera a que cargue el inventario antes de resolver el enlace.",
     "Corrección: Escáner QR en celular por IP (HTTP): ya no tumba la app al cerrar; si la cámara en vivo está bloqueada, puedes escanear eligiendo una foto de la galería. La cámara en vivo requiere HTTPS.",
     "Corrección: El escáner QR desde la barra de técnico ya no falla al abrir/cerrar la cámara (error «scanner is not running»).",
     "Nuevo: Capas móvil para técnicos: barra inferior (Mis OT, Escanear, Inventario, Inicio) y acciones rápidas Aceptar/Pausar/Finalizar/Reanudar en el detalle de la OT. Administradores y gestionadores conservan la interfaz completa.",

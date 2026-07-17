@@ -10,10 +10,7 @@ interface Props {
 
 const NOT_STARTED = 1;
 
-const isFiixCode = (data: string) =>
-  data.startsWith('FIIX-ASSET:') ||
-  data.startsWith('FIIX-ITEM:') ||
-  data.startsWith('FIIX-LOCATION:');
+const isFiixCode = (data: string) => data.trim().length > 0;
 
 /** Detiene y limpia sin lanzar errores (stop() de html5-qrcode puede tirar strings). */
 const safeStop = (scanner: Html5Qrcode | null): Promise<void> => {
@@ -90,7 +87,7 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose, onScan }) => 
   const deliverScan = async (raw: string) => {
     const data = raw.trim();
     if (!isFiixCode(data)) {
-      setError('Código QR no reconocido por FIIX CMMS.');
+      setError('No se leyó ningún código.');
       return;
     }
     if (handledRef.current) return;
