@@ -1,7 +1,15 @@
 # Manual de Usuario - LPET CMMS
-*(Versión 1.11.9 - 16 de Julio, 2026)*
+*(Versión 1.12.9 - 16 de Julio, 2026)*
 
-Bienvenido al manual de uso rápido del Sistema de Gestión de Mantenimiento Computarizado (CMMS). A continuación, te explicamos cómo utilizar las principales funciones agregadas recientemente.
+LPET CMMS centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
+
+Sus pilares son **Rapidez** (menos formatos y pasos), **Trazabilidad** (responsables, fechas, firmas, consumos y evidencias) y **Control** (permisos por rol y protección de acciones críticas). El flujo recomendado es:
+1. **Reportar** la solicitud con activo, zona, descripción y prioridad.
+2. **Asignar** técnicos y comenzar el seguimiento.
+3. **Ejecutar** el trabajo, registrando tiempos, pausas, consumos y solución.
+4. **Comprobar** el cierre mediante evidencia; la información alimenta historial y KPIs.
+
+En celular, el temario del manual aparece como una barra horizontal deslizable. Toca un tema para mostrarlo debajo con una transición de entrada de derecha a izquierda. El encabezado, el temario y el botón **Volver** permanecen fijos; únicamente se desplaza la información del tema hasta el borde inferior, con un degradado superior que aparece progresivamente.
 
 ## 1. Módulo Checklist: Campos Numéricos y de Texto
 Las actividades del Checklist ahora son más flexibles:
@@ -28,7 +36,7 @@ Se han mejorado las reglas del almacén para prevenir errores y mejorar la fluid
 Pantalla de resumen operativo (antes mezclada con el listado de órdenes):
 - **Pareto de problemas frecuentes** (correctivo) y distribución visual de mantenimiento. La gráfica de dona muestra el total en el centro y desglosa cada tipo con cantidad, porcentaje y barra comparativa.
 - **Filtro de fechas** para el resumen superior (o modo histórico si no hay rango). El selector, las tarjetas y la distribución de mantenimiento están dentro del marco **Resumen por periodo**, indicando claramente qué elementos afecta.
-- **Tarjetas de estado** (Totales, Pendientes, En Proceso, Pausadas, Finalizadas, Invalidadas). Al hacer clic en una tarjeta se abre **Órdenes de Trabajo** con ese filtro aplicado.
+- **Tarjetas de estado:** **Total recibidas** es únicamente informativa y muestra la cifra general con mayor énfasis. Pendientes, En Proceso, Pausadas, Finalizadas e Invalidadas sí abren **Órdenes de Trabajo** con el filtro correspondiente.
 - **Órdenes finalizadas esta semana:** Debajo del resumen, un bloque visible para todos los roles con el total de la semana actual (Lunes a Domingo), gráfica por día y listado de las OT cerradas. Al hacer clic en una fila se abre su detalle.
 
 ### Notificaciones (campana)
@@ -40,8 +48,10 @@ Gestión de solicitudes (listado), sin el resumen gráfico:
 - **Vistas:** Vista General, Mis Órdenes e Historial.
 - **Búsqueda y filtros** por estado, fecha, prioridad, equipo y ordenamiento.
 - **Actualización Automática:** Si alguien genera una orden desde el *Portal de Solicitantes*, ya no necesitas recargar la página; aparecerá instantáneamente.
-- **Aceptar una orden como Administrador o Gestionador:** Abre una orden `PENDIENTE`, cambia su estado a `EN_PROCESO` y sube la fotografía de evidencia “Antes”. Si no seleccionas ningún técnico, la orden se asignará automáticamente a tu usuario para que puedas atenderla.
-- **Asignación opcional al aceptar:** Los Administradores y Gestionadores conservan visible la sección **Técnicos Asignados**. Pueden seleccionar uno o varios técnicos antes de guardar; si dejan la lista vacía, se aplica la autoasignación descrita arriba.
+- **Aceptar una orden como Administrador o Gestionador:** Abre una orden **Pendiente**, elige **Aceptar orden** en el desplegable de estado y sube la fotografía de evidencia “Antes”. Si no seleccionas ningún técnico, la orden se asignará automáticamente a tu usuario para que puedas atenderla.
+- **Ciclo de estado (acciones claras):** Pendiente → **Aceptar orden** (pasa a En Proceso). En Proceso → **Pausar** o **Finalizar**. En Espera → **Reanudar**.
+- **Órdenes finalizadas:** No se pueden eliminar ni anular. En el detalle, el estado aparece como etiqueta informativa y los técnicos se muestran como lista de quienes intervinieron (sin checkboxes).
+- **Asignación opcional al aceptar:** Los Administradores y Gestionadores conservan visible la sección **Técnicos Asignados** mientras la orden está abierta. Pueden seleccionar uno o varios técnicos antes de guardar; si dejan la lista vacía, se aplica la autoasignación descrita arriba.
 - **Vista para Técnicos:** Los técnicos pueden atender las órdenes que tengan asignadas, pero no pueden modificar la asignación de personal.
 - **Notificaciones Telegram:** Tanto las órdenes creadas desde **+ Nueva Orden** como las del **Portal de Solicitudes** (`/request`) disparan alerta a Telegram cuando la opción está activada en Configuración.
 - **Opciones de Ordenamiento:**
@@ -81,6 +91,12 @@ Para los administradores, modificar lo que puede hacer cada usuario es ahora má
 - **Editar Árbol de Fallas:** solo Administrador y Gestionador pueden agregar o activar/desactivar elementos.
 - **Ver Configuración:** disponible para Administrador y Gestionador.
 
+### Árbol de Fallas (RCA)
+- Su jerarquía es **Problema → Causa → Solución**.
+- En celular, selecciona primero el Problema; la pantalla avanzará automáticamente a Causa y luego a Solución.
+- La franja superior muestra el paso actual y la ruta elegida. Puedes tocar un paso anterior o usar **Volver al paso anterior** para corregir la selección.
+- “Solución” es el nuevo nombre visible del catálogo que internamente conserva compatibilidad con los registros históricos de remedios.
+
 ## 8. Módulo KPIs y Metas
 
 Panel de indicadores de mantenimiento:
@@ -110,6 +126,24 @@ Panel de indicadores de mantenimiento:
 - **Selección conjunta:** Puedes seleccionar los 7 archivos CSV a la vez; no importa el orden en que los elijas. El sistema los reconoce por su nombre y los carga siempre en el orden correcto (Categorías → Ubicaciones → Proveedores → Items → Usuarios → Inventario → Órdenes de Trabajo) para respetar las dependencias entre tablas.
 - **Usuarios de inventario:** Si un movimiento de inventario referencia un correo que no está en el archivo de Usuarios, ese usuario se crea automáticamente como **inactivo** (rol Técnico) para no perder el historial de consumos. Luego puedes activarlo o completarlo desde el Directorio.
 - **Tiempos de reparación:** Los valores de tiempo con coma de miles (por ejemplo `2,140.22` minutos) se interpretan correctamente, de modo que el MTTR y demás métricas de tiempo no se distorsionan.
+
+## 11. Vincular Telegram (Bot Token y Chat ID)
+
+Las alertas de nuevas solicitudes usan un **Bot Token** y un **Chat ID** de grupo. Se configuran en *Configuración → Opciones de Desarrollador* (tienen prioridad sobre el `.env`).
+
+### Si es la primera vez
+1. En Telegram habla con **@BotFather** → `/newbot` → copia el **Bot Token**.
+2. Crea un grupo (ej. “MTTO Alertas”), agrega a tu equipo y **añade el bot** al grupo.
+3. Obtén el **Chat ID** (número negativo):
+   - Agrega temporalmente **@RawDataBot** o **@userinfobot** al grupo y copia `chat.id`, o
+   - Envía un mensaje al grupo y abre `https://api.telegram.org/bot<TU_TOKEN>/getUpdates` buscando `"chat":{"id": ...}`.
+4. Pega Token y Chat ID en CMMS → Guardar → activa “Alertas por Telegram” en Notificaciones.
+5. Prueba creando una orden o solicitud.
+
+### Si ya lo tenían y olvidaron las claves
+- **Token:** @BotFather → `/mybots` → tu bot → *API Token* → *Show token* (o *Revoke* si se filtró, y actualiza CMMS).
+- **Chat ID:** no recrees el grupo; con el bot dentro, usa de nuevo el bot de info o `getUpdates`. El ID del grupo no cambia.
+- Si el bot salió del grupo, vuelve a agregarlo y consulta el Chat ID otra vez.
 
 ---
 *Para soporte técnico adicional, revisa la sección de ayuda dentro del sistema.*

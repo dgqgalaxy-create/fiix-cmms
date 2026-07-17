@@ -3,9 +3,43 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 16 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.12.0 (Actualización: 16 de Julio de 2026)
+## 🚀 Versión Actual: v1.12.9 (Actualización: 16 de Julio de 2026)
 
-### Novedades en v1.12.0 (Estandarización visual + temas)
+### Novedades en v1.12.9 (Desplazamiento suave del manual)
+- **Degradado progresivo:** La intensidad aumenta gradualmente durante los primeros píxeles de desplazamiento, sin activación repentina.
+- **Altura completa:** El área desplazable se adapta al espacio real y llega hasta el borde inferior disponible.
+
+### Novedades Anteriores (v1.12.8 - Degradado del manual)
+- **Ocultamiento suave:** El contenido se desvanece bajo un degradado al pasar detrás del encabezado y temario fijos.
+
+### Novedades Anteriores (v1.12.7 - Encabezado fijo del manual)
+- **Desplazamiento independiente:** El título y el temario permanecen estáticos; solo se desplaza el contenido del tema activo.
+
+### Novedades Anteriores (v1.12.6 - Navegación del manual)
+- **Botón Volver fijo:** Se integra debajo del temario y permanece accesible durante el desplazamiento, tanto en escritorio como en celular.
+
+### Novedades Anteriores (v1.12.5 - Estado de órdenes cerradas)
+- **Estado estático:** En órdenes finalizadas y anuladas, el estado se muestra como etiqueta informativa y no como un desplegable bloqueado.
+
+### Novedades Anteriores (v1.12.4 - Órdenes finalizadas + estados claros)
+- **Finalizadas protegidas:** No se pueden eliminar ni anular; el backend también lo rechaza.
+- **Técnicos en cierre:** En detalle de órdenes finalizadas se listan quienes intervinieron, sin checkboxes.
+- **Estados legibles:** Etiquetas Pendiente / En Proceso / En Espera / Finalizado y acciones Aceptar orden, Pausar, Finalizar, Reanudar.
+
+### Novedades Anteriores (v1.12.3 - Inicio + navegación del manual)
+- **Total recibidas:** Tarjeta informativa sin navegación y cifra ligeramente más grande para destacar el total general.
+- **Temario móvil:** Barra horizontal deslizable para elegir temas y transición de entrada de derecha a izquierda.
+
+### Novedades Anteriores (v1.12.2 - Manual + RCA móvil)
+- **Introducción renovada:** El manual presenta propósito, pilares, ciclo operativo y responsabilidades por tipo de usuario.
+- **RCA móvil guiado:** Navegación paso a paso Problema → Causa → Solución, ruta seleccionada y regreso al paso anterior.
+- **Terminología:** “Remedios” se reemplaza visualmente por “Soluciones” sin alterar la compatibilidad interna de datos/API.
+
+### Novedades Anteriores (v1.12.1 - Versión móvil + Telegram)
+- **Versión en celular:** Acceso a novedades/manual desde la barra superior móvil (`vX.Y.Z`) y botón más visible en el menú.
+- **Manual Telegram ampliado:** Guía para crear bot/grupo y obtener Token + Chat ID, y para recuperar claves olvidadas con BotFather / getUpdates.
+
+### Novedades Anteriores (v1.12.0 - Estandarización visual + temas)
 - **Design system industrial:** Tokens CSS + primitivos UI (`Button`, `Card`, `Modal`, `PageHeader`, `DataTable`, `Badge`) y helpers compartidos.
 - **Consistencia global:** Emerald como CTA primaria; títulos, cards, tablas y modales unificados en todos los módulos.
 - **Modo día/noche:** Cobertura completa en shell, páginas, modales, login, portal, calendario y gráficas.

@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.12.0";
+export const APP_VERSION = "1.12.9";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,21 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: El degradado del Manual ahora aparece progresivamente según el desplazamiento y el contenido llega hasta el borde inferior disponible.",
+    "Mejora: El contenido del Manual se desvanece bajo un degradado al desplazarse detrás del encabezado y temario fijos.",
+    "Mejora: En el Manual, el encabezado y el temario permanecen fijos; únicamente se desplaza la información del tema seleccionado.",
+    "Mejora: El botón Volver del Manual queda integrado al temario fijo y permanece accesible al desplazarse.",
+    "Mejora: En órdenes finalizadas y anuladas, el estado se presenta como una etiqueta informativa en lugar de un desplegable bloqueado.",
+    "Mejora: En órdenes finalizadas ya no se puede Eliminar ni Anular (también bloqueado en el servidor).",
+    "Mejora: En detalle de una orden finalizada, los técnicos aparecen como lista de quienes intervinieron (sin checkboxes).",
+    "Mejora: El estado se muestra con nombres claros (Pendiente, En Proceso, En Espera) y el desplegable ofrece acciones: Aceptar orden, Pausar, Finalizar, Reanudar.",
+    "Mejora: “Total recibidas” en Inicio ahora es una tarjeta únicamente informativa y su cifra tiene una jerarquía visual ligeramente mayor.",
+    "Mejora: En celular, el temario del Manual se presenta como una barra deslizable y cada tema entra con una transición de derecha a izquierda.",
+    "Mejora: La introducción del Manual de Usuario ahora explica objetivos, flujo operativo, trazabilidad y responsabilidades por rol.",
+    "Mejora: El Árbol de Fallas en celular usa un flujo guiado Problema → Causa → Solución, con ruta visible, navegación por pasos y regreso rápido.",
+    "Terminología: La etiqueta visible “Remedios” cambia a “Soluciones” en RCA, permisos y detalle de órdenes.",
+    "Mejora: En celular, la versión (novedades y manual) aparece en la barra superior; también se reforzó el botón en el menú lateral.",
+    "Mejora: El manual de Telegram explica paso a paso cómo obtener Bot Token y Chat ID (configuración nueva) y cómo recuperarlas si se olvidaron.",
     "Mejora: Estandarización visual de toda la app (sistema industrial ejecutivo): emerald como acción primaria, headers/cards/modales/tablas coherentes.",
     "Mejora: Modo día y noche completados en páginas, tablas, modales, login, portal y gráficas; tokens CSS compartidos.",
     "Corrección: La etiqueta horizontal de MTTR/MTBF ya no se encima con la leyenda ni con la gráfica.",

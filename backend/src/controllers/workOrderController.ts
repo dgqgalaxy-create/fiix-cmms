@@ -269,6 +269,17 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
+    if (currentWorkOrder.status === 'FINALIZADO') {
+      if (status === 'ANULADO') {
+        res.status(400).json({ error: 'No se puede anular una orden finalizada.' });
+        return;
+      }
+      if (status && status !== 'FINALIZADO') {
+        res.status(400).json({ error: 'No se puede cambiar el estado de una orden finalizada.' });
+        return;
+      }
+    }
+
     // Regla estricta: Los técnicos no pueden editar datos de origen.
     if (userRole === 'TECNICO') {
       if (currentWorkOrder.status === 'FINALIZADO') {
@@ -404,6 +415,11 @@ export const deleteWorkOrder = async (req: AuthRequest, res: Response): Promise<
     const currentWorkOrder = await prisma.workOrder.findUnique({ where: { id } });
     if (!currentWorkOrder) {
       res.status(404).json({ error: 'Orden no encontrada' });
+      return;
+    }
+
+    if (currentWorkOrder.status === 'FINALIZADO') {
+      res.status(400).json({ error: 'No se puede eliminar una orden finalizada.' });
       return;
     }
 

@@ -180,7 +180,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   return (
     <>
-      <aside className={`print:hidden w-64 bg-slate-900 dark:bg-slate-950 text-slate-300 flex flex-col h-screen fixed top-0 left-0 z-40 transition-transform duration-300 ease-in-out md:translate-x-0 border-r border-transparent dark:border-slate-800 ${
+      <aside className={`print:hidden w-64 bg-slate-900 dark:bg-slate-950 text-slate-300 flex flex-col h-screen max-h-dvh fixed top-0 left-0 z-40 transition-transform duration-300 ease-in-out md:translate-x-0 border-r border-transparent dark:border-slate-800 overflow-y-auto ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="p-6 flex flex-col items-center justify-center border-b border-slate-800 relative">
@@ -261,15 +261,15 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
             </button>
           </div>
           
-          <div className="text-center">
-            <button 
-              onClick={() => setIsVersionModalOpen(true)}
-              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
-            >
-              <Info size={14} />
-              v{APP_VERSION} - Info del Sistema
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsVersionModalOpen(true)}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2.5 text-xs font-bold text-emerald-300 hover:bg-slate-800 hover:text-emerald-200 transition-colors"
+            title="Versión, novedades y manual"
+          >
+            <Info size={14} />
+            v{APP_VERSION} · Info y Manual
+          </button>
         </div>
       </aside>
 

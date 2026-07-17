@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Search, Menu, Wrench, Users, Shield, Package, LayoutDashboard, ArrowLeft, Terminal, AlertTriangle, CheckCircle2, Info, FileText, QrCode, Clock, Filter, Printer, Home } from 'lucide-react';
+import { BookOpen, Search, Wrench, Users, Shield, Package, LayoutDashboard, ArrowLeft, Terminal, AlertTriangle, CheckCircle2, Info, FileText, QrCode, Clock, Filter, Printer, Home, Activity, Bell, Smartphone, ClipboardCheck, Database } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const SECTIONS = [
@@ -17,6 +17,8 @@ const SECTIONS = [
 
 export const UserManual = () => {
   const [activeSection, setActiveSection] = useState('intro');
+  const [scrollFade, setScrollFade] = useState(0);
+  const contentRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -25,12 +27,15 @@ export const UserManual = () => {
     sections.push({ id: 'dev', title: 'Opciones de Desarrollador', icon: <Terminal size={18} /> });
   }
 
+  const handleSectionChange = (sectionId: string) => {
+    setActiveSection(sectionId);
+    setScrollFade(0);
+    contentRef.current?.scrollTo({ top: 0 });
+  };
+
   return (
-    <div className="h-full flex flex-col space-y-4">
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate(-1)} className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-lg transition-colors">
-          <ArrowLeft size={20} />
-        </button>
+    <div className="flex h-dvh min-h-0 flex-col gap-4 overflow-hidden">
+      <div className="flex shrink-0 items-center">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
             <BookOpen className="text-emerald-600 dark:text-emerald-400" size={32} />
@@ -40,10 +45,40 @@ export const UserManual = () => {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-6 mt-4">
-        
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden md:flex-row md:gap-6">
+        <div className="shrink-0 md:hidden ui-card overflow-hidden p-4">
+          <p className="mb-3 text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            Temario de ayuda
+          </p>
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+            {sections.map((section) => (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => handleSectionChange(section.id)}
+                className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold transition-colors ${
+                  activeSection === section.id
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                }`}
+              >
+                {section.icon}
+                {section.title}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="mt-3 flex w-full items-center justify-center gap-2 border-t border-slate-200 pt-3 text-sm font-bold text-slate-600 transition-colors hover:text-emerald-700 dark:border-slate-700 dark:text-slate-300 dark:hover:text-emerald-400"
+          >
+            <ArrowLeft size={18} />
+            Volver
+          </button>
+        </div>
+
         {/* Sidebar de navegación */}
-        <div className="w-full md:w-72 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col shrink-0 h-fit sticky top-24">
+        <div className="hidden h-full min-h-0 w-full shrink-0 flex-col rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 md:flex md:w-72">
           <div className="p-5 border-b border-slate-200 dark:border-slate-800">
             <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Temario de Ayuda</h3>
           </div>
@@ -51,7 +86,7 @@ export const UserManual = () => {
             {sections.map((sec) => (
               <button
                 key={sec.id}
-                onClick={() => setActiveSection(sec.id)}
+                onClick={() => handleSectionChange(sec.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all text-left ${
                   activeSection === sec.id
                     ? 'bg-emerald-600 text-white shadow-md transform scale-[1.02]'
@@ -63,58 +98,133 @@ export const UserManual = () => {
               </button>
             ))}
           </div>
+          <div className="border-t border-slate-200 p-4 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-emerald-50 hover:text-emerald-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-400"
+            >
+              <ArrowLeft size={18} />
+              Volver
+            </button>
+          </div>
         </div>
 
         {/* Contenido Principal */}
-        <div className="flex-1 text-slate-700 dark:text-slate-300">
-          <div className="max-w-4xl mx-auto space-y-10 pb-12">
+        <div className="relative min-h-0 flex-1">
+          <div
+            ref={contentRef}
+            onScroll={(event) => setScrollFade(Math.min(event.currentTarget.scrollTop / 64, 1))}
+            style={scrollFade > 0 ? {
+              maskImage: `linear-gradient(to bottom, rgba(0, 0, 0, ${1 - scrollFade}) 0, black 64px)`,
+              WebkitMaskImage: `linear-gradient(to bottom, rgba(0, 0, 0, ${1 - scrollFade}) 0, black 64px)`,
+            } : undefined}
+            className="h-full min-h-0 overflow-y-auto overscroll-contain pr-1 text-slate-700 dark:text-slate-300"
+          >
+            <div
+              key={activeSection}
+              className="max-w-4xl mx-auto space-y-10 pb-12 animate-in fade-in slide-in-from-right-8 duration-500 md:animate-none"
+            >
             
             {activeSection === 'intro' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center mb-8 shadow-lg shadow-blue-500/30">
-                  <BookOpen size={40} />
-                </div>
-                <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-6 tracking-tight">Bienvenido a LPET CMMS</h2>
-                
-                <div className="prose prose-slate dark:prose-invert max-w-none">
-                  <p className="text-lg leading-relaxed text-slate-600 dark:text-slate-400">
-                    El Sistema de Gestión de Mantenimiento Asistido por Computadora (CMMS) de LPET ha sido diseñado bajo tres pilares fundamentales: <strong>Rapidez, Trazabilidad y Seguridad</strong>.
-                  </p>
-                  <p className="text-lg leading-relaxed text-slate-600 dark:text-slate-400 mt-4">
-                    Nuestro objetivo es abandonar las hojas de cálculo y los formatos de papel para centralizar todas las operaciones de mantenimiento de tu planta en un entorno digital inteligente. Cada refacción, cada falla y cada técnico dejan una huella digital auditable en tiempo real.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
-                    <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center mb-4">
-                      <LayoutDashboard size={20} />
+              <div className="space-y-8 md:animate-in md:fade-in md:slide-in-from-bottom-4 md:duration-500">
+                <div className="relative overflow-hidden rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-600 via-emerald-700 to-slate-900 p-7 text-white shadow-lg dark:border-emerald-900 sm:p-9">
+                  <div className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
+                  <div className="relative">
+                    <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-white/10">
+                      <BookOpen size={28} />
                     </div>
-                    <h4 className="font-bold text-slate-900 dark:text-white mb-2">Diseño Intuitivo</h4>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Menos clics y navegación fluida. Todo está a uno o dos pasos de distancia.</p>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
-                    <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center mb-4">
-                      <Shield size={20} />
-                    </div>
-                    <h4 className="font-bold text-slate-900 dark:text-white mb-2">Datos Protegidos</h4>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Controles de permisos granulares para asegurar que cada usuario vea solo lo que le corresponde.</p>
+                    <p className="mb-2 text-xs font-black uppercase tracking-[0.2em] text-emerald-200">Guía operativa de mantenimiento</p>
+                    <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Bienvenido a LPET CMMS</h2>
+                    <p className="mt-4 max-w-2xl text-base leading-7 text-emerald-50/90">
+                      Una plataforma para registrar, ejecutar y comprobar el mantenimiento de planta:
+                      desde el primer reporte de una falla hasta su solución, consumo de refacciones,
+                      evidencia técnica y análisis de resultados.
+                    </p>
                   </div>
                 </div>
 
-                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 p-5 rounded-2xl mt-8">
-                  <h3 className="font-bold text-blue-900 dark:text-blue-300 mb-2 flex items-center gap-2">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {[
+                    { icon: <Activity size={21} />, title: 'Rapidez', text: 'Reporta, asigna y consulta órdenes sin depender de formatos separados.' },
+                    { icon: <Database size={21} />, title: 'Trazabilidad', text: 'Conserva responsables, fechas, tiempos, firmas, refacciones y evidencia.' },
+                    { icon: <Shield size={21} />, title: 'Control', text: 'Permisos por rol y acciones críticas protegidas para cuidar la información.' },
+                  ].map((pillar) => (
+                    <div key={pillar.title} className="ui-card p-5">
+                      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+                        {pillar.icon}
+                      </div>
+                      <h3 className="font-bold text-slate-900 dark:text-white">{pillar.title}</h3>
+                      <p className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">{pillar.text}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="ui-card overflow-hidden" >
+                  <div className="border-b border-slate-100 bg-slate-50 px-5 py-4 dark:border-slate-800 dark:bg-slate-950">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Cómo fluye el trabajo en el sistema</h3>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">El CMMS conecta cada etapa para evitar información aislada.</p>
+                  </div>
+                  <div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4">
+                    {[
+                      { n: '1', icon: <Bell size={18} />, title: 'Reportar', text: 'Se registra la solicitud, activo, zona y prioridad.' },
+                      { n: '2', icon: <Users size={18} />, title: 'Asignar', text: 'Se designan técnicos y se inicia el seguimiento.' },
+                      { n: '3', icon: <Wrench size={18} />, title: 'Ejecutar', text: 'Se documentan tiempos, pausas, refacciones y solución.' },
+                      { n: '4', icon: <ClipboardCheck size={18} />, title: 'Comprobar', text: 'Se cierra con evidencia y alimenta historial y KPIs.' },
+                    ].map((step) => (
+                      <div key={step.n} className="relative rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                        <span className="absolute right-3 top-3 text-2xl font-black text-slate-100 dark:text-slate-800">{step.n}</span>
+                        <div className="mb-3 text-emerald-600 dark:text-emerald-400">{step.icon}</div>
+                        <h4 className="font-bold text-slate-800 dark:text-slate-100">{step.title}</h4>
+                        <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{step.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="mb-4 text-lg font-bold text-slate-900 dark:text-white">Qué puedes hacer según tu función</h3>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5 dark:border-sky-900/50 dark:bg-sky-950/20">
+                      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-600 dark:bg-sky-900/50 dark:text-sky-300">
+                        <Smartphone size={20} />
+                      </div>
+                      <h4 className="font-bold text-slate-900 dark:text-white">Solicitante</h4>
+                      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Reporta una necesidad desde el Portal de Solicitudes y recibe seguimiento.</p>
+                    </div>
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-900/50 dark:bg-amber-950/20">
+                      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-300">
+                        <Wrench size={20} />
+                      </div>
+                      <h4 className="font-bold text-slate-900 dark:text-white">Técnico</h4>
+                      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Consulta sus órdenes, registra trabajo, pausas, consumos y cierre técnico.</p>
+                    </div>
+                    <div className="rounded-2xl border border-violet-200 bg-violet-50 p-5 dark:border-violet-900/50 dark:bg-violet-950/20">
+                      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600 dark:bg-violet-900/50 dark:text-violet-300">
+                        <LayoutDashboard size={20} />
+                      </div>
+                      <h4 className="font-bold text-slate-900 dark:text-white">Gestión / Administración</h4>
+                      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Prioriza, asigna, administra catálogos y analiza cumplimiento, costos y fallas.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 dark:border-blue-900/30 dark:bg-blue-900/10">
+                  <h3 className="mb-2 flex items-center gap-2 font-bold text-blue-900 dark:text-blue-300">
                     <Info size={18} /> ¿Cómo leer este manual?
                   </h3>
-                  <p className="text-blue-800 dark:text-blue-400/90 text-sm">
-                    Utiliza la barra lateral para explorar en detalle cada rincón del sistema. Las funciones destructivas o críticas estarán marcadas en rojo para tu seguridad.
-                  </p>
+                  <ul className="space-y-2 text-sm text-blue-800 dark:text-blue-400/90">
+                    <li>• Elige un tema en el temario. En celular, toca una opción de la barra superior; el contenido entrará desde la derecha.</li>
+                    <li>• Los pasos numerados indican el orden recomendado de uso.</li>
+                    <li>• Las alertas rojas identifican acciones destructivas o que requieren confirmación.</li>
+                    <li>• Los nombres de menús y botones aparecen en <strong>negritas</strong> para encontrarlos rápido.</li>
+                  </ul>
                 </div>
               </div>
             )}
 
             {activeSection === 'home' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+              <div className="space-y-8 md:animate-in md:fade-in md:slide-in-from-bottom-4 md:duration-500">
                 <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
                   <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl">
                     <Home size={28} />
@@ -139,7 +249,7 @@ export const UserManual = () => {
             )}
 
             {activeSection === 'dashboard' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+              <div className="space-y-8 md:animate-in md:fade-in md:slide-in-from-bottom-4 md:duration-500">
                 <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
                   <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
                     <LayoutDashboard size={28} />
@@ -178,7 +288,7 @@ export const UserManual = () => {
                     Aceptar y Autoasignarse una Orden
                   </h3>
                   <p className="text-slate-600 dark:text-slate-400">
-                    Un Administrador o Gestionador también puede atender solicitudes. Abre una orden <strong>PENDIENTE</strong>, cambia su estado a <strong>EN_PROCESO</strong> y sube la fotografía de evidencia “Antes”.
+                    Un Administrador o Gestionador también puede atender solicitudes. Abre una orden <strong>Pendiente</strong>, elige <strong>Aceptar orden</strong> en el estado y sube la fotografía de evidencia “Antes”.
                   </p>
                   <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 p-5 rounded-2xl">
                     <p className="text-sm text-blue-900 dark:text-blue-300 leading-relaxed">
@@ -228,7 +338,7 @@ export const UserManual = () => {
             )}
 
             {activeSection === 'inventory' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+              <div className="space-y-8 md:animate-in md:fade-in md:slide-in-from-bottom-4 md:duration-500">
                 <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
                   <div className="p-3 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl">
                     <Package size={28} />
@@ -281,7 +391,7 @@ export const UserManual = () => {
             )}
 
             {activeSection === 'assets' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+              <div className="space-y-8 md:animate-in md:fade-in md:slide-in-from-bottom-4 md:duration-500">
                 <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
                   <div className="p-3 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 rounded-xl">
                     <Wrench size={28} />
@@ -325,7 +435,7 @@ export const UserManual = () => {
             )}
 
             {activeSection === 'roles' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+              <div className="space-y-8 md:animate-in md:fade-in md:slide-in-from-bottom-4 md:duration-500">
                 <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
                   <div className="p-3 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl">
                     <Shield size={28} />
@@ -376,7 +486,7 @@ export const UserManual = () => {
             )}
 
             {activeSection === 'users' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+              <div className="space-y-8 md:animate-in md:fade-in md:slide-in-from-bottom-4 md:duration-500">
                 <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
                   <div className="p-3 bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-600 dark:text-fuchsia-400 rounded-xl">
                     <Users size={28} />
@@ -417,7 +527,7 @@ export const UserManual = () => {
             )}
 
             {activeSection === 'checklists' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+              <div className="space-y-8 md:animate-in md:fade-in md:slide-in-from-bottom-4 md:duration-500">
                 <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
                   <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl">
                     <FileText size={28} />
@@ -452,7 +562,7 @@ export const UserManual = () => {
             )}
 
             {activeSection === 'roster' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+              <div className="space-y-8 md:animate-in md:fade-in md:slide-in-from-bottom-4 md:duration-500">
                 <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
                   <div className="p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl">
                     <Clock size={28} />
@@ -506,7 +616,7 @@ export const UserManual = () => {
             )}
 
             {activeSection === 'dev' && user?.role === 'ADMINISTRADOR' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+              <div className="space-y-8 md:animate-in md:fade-in md:slide-in-from-bottom-4 md:duration-500">
                 <div className="flex items-center gap-4 mb-6 border-b border-red-200 dark:border-red-900/50 pb-6">
                   <div className="p-3 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl">
                     <Terminal size={28} />
@@ -547,12 +657,66 @@ export const UserManual = () => {
                     Esta opción permite conectar el sistema con un Bot de Telegram para recibir alertas en tiempo real sobre nuevas solicitudes de mantenimiento, sin requerir acceso al código fuente o al servidor (`.env`). Especialmente útil si se instala el sistema en diferentes plantas.
                   </p>
                   
-                  <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/20">
+                  <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/20 mb-4">
                     <h4 className="font-bold text-blue-900 dark:text-blue-200 text-sm uppercase tracking-wider mb-3">¿Qué son estas credenciales?</h4>
                     <ul className="space-y-3 text-sm text-blue-800/80 dark:text-blue-300/80">
-                      <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-blue-400" size={16} /> <strong>Bot Token:</strong> Es la llave maestra que te otorga <em>@BotFather</em> en Telegram para que el sistema asuma el control del bot.</li>
-                      <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-blue-400" size={16} /> <strong>Chat ID:</strong> Es el identificador numérico del grupo de chat al que deseas que lleguen las alertas (por ejemplo, el grupo de los técnicos).</li>
-                      <li className="flex gap-2 items-start"><Info className="shrink-0 mt-0.5 text-blue-400" size={16} /> <strong>Importante:</strong> Al guardar credenciales aquí, estas tendrán prioridad absoluta sobre el archivo `.env`. Si deseas regresar a la configuración por defecto del servidor, simplemente borra los campos y presiona Guardar.</li>
+                      <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-blue-400" size={16} /> <strong>Bot Token:</strong> Llave maestra del bot (formato largo, ej. <code className="text-xs bg-blue-100 dark:bg-blue-950 px-1 rounded">123456:ABC-DEF...</code>). La otorga <em>@BotFather</em>.</li>
+                      <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-blue-400" size={16} /> <strong>Chat ID:</strong> Identificador numérico del grupo donde deben llegar las alertas (suele ser negativo, ej. <code className="text-xs bg-blue-100 dark:bg-blue-950 px-1 rounded">-1001234567890</code>).</li>
+                      <li className="flex gap-2 items-start"><Info className="shrink-0 mt-0.5 text-blue-400" size={16} /> <strong>Prioridad:</strong> Lo que guardes aquí reemplaza el `.env`. Para volver al valor del servidor, borra ambos campos y pulsa Guardar.</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/20 mb-4">
+                    <h4 className="font-bold text-blue-900 dark:text-blue-200 text-sm uppercase tracking-wider mb-3">A) Configuración nueva (crear bot y grupo desde cero)</h4>
+                    <ol className="list-decimal pl-5 space-y-3 text-sm text-blue-800/80 dark:text-blue-300/80">
+                      <li>
+                        <strong>Crear el bot:</strong> En Telegram busca <em>@BotFather</em> → envía <code className="text-xs bg-blue-100 dark:bg-blue-950 px-1 rounded">/newbot</code> → elige nombre y username (debe terminar en <code className="text-xs">bot</code>).
+                        BotFather te devolverá el <strong>Bot Token</strong>. Cópialo y guárdalo.
+                      </li>
+                      <li>
+                        <strong>Crear el grupo:</strong> Crea un grupo de Telegram (ej. “MTTO Alertas”) e invita a los técnicos/administradores que deban ver avisos.
+                      </li>
+                      <li>
+                        <strong>Agregar el bot al grupo:</strong> Añade tu bot como miembro del grupo. Conviene darle permiso para enviar mensajes.
+                      </li>
+                      <li>
+                        <strong>Obtener el Chat ID del grupo:</strong>
+                        <ul className="list-disc pl-5 mt-2 space-y-1.5">
+                          <li>Opción recomendada: agrega temporalmente el bot <em>@RawDataBot</em> o <em>@userinfobot</em> al grupo; te mostrará un campo <code className="text-xs">chat.id</code> (número negativo). Cópialo y luego puedes quitar ese bot auxiliar.</li>
+                          <li>Otra opción: envía cualquier mensaje en el grupo y abre en el navegador:
+                            <code className="block text-xs bg-blue-100 dark:bg-blue-950 px-2 py-1.5 rounded mt-1 break-all">https://api.telegram.org/bot&lt;TU_TOKEN&gt;/getUpdates</code>
+                            Busca <code className="text-xs">"chat":{"{"}"id": ...{"}"}</code> del grupo.
+                          </li>
+                        </ul>
+                      </li>
+                      <li>
+                        <strong>Pegar en CMMS:</strong> Ve a <em>Configuración → Opciones de Desarrollador</em> (contraseña maestra) → sección Telegram → pega <strong>Bot Token</strong> y <strong>Chat ID</strong> → Guardar. Activa también “Alertas por Telegram” en Notificaciones si está apagado.
+                      </li>
+                      <li>
+                        <strong>Probar:</strong> Crea una solicitud de prueba desde el Portal o Nueva Orden; debe llegar un mensaje al grupo.
+                      </li>
+                    </ol>
+                  </div>
+
+                  <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/20">
+                    <h4 className="font-bold text-blue-900 dark:text-blue-200 text-sm uppercase tracking-wider mb-3">B) Ya lo tenían configurado pero olvidaron las claves</h4>
+                    <ul className="space-y-3 text-sm text-blue-800/80 dark:text-blue-300/80">
+                      <li className="flex gap-2 items-start">
+                        <CheckCircle2 className="shrink-0 mt-0.5 text-blue-400" size={16} />
+                        <span><strong>Bot Token olvidado:</strong> Abre chat con <em>@BotFather</em> → <code className="text-xs bg-blue-100 dark:bg-blue-950 px-1 rounded">/mybots</code> → selecciona tu bot → <em>API Token</em> → <em>Show token</em> (o <em>Revoke current token</em> si sospechas que se filtró; el token anterior dejará de servir y debes actualizarlo en CMMS).</span>
+                      </li>
+                      <li className="flex gap-2 items-start">
+                        <CheckCircle2 className="shrink-0 mt-0.5 text-blue-400" size={16} />
+                        <span><strong>Chat ID olvidado:</strong> No hace falta recrear el grupo. Con el bot aún dentro del grupo, usa de nuevo <em>@RawDataBot</em>/<em>@userinfobot</em> o el enlace <code className="text-xs">getUpdates</code> con tu token. El Chat ID del grupo no cambia mientras el grupo exista.</span>
+                      </li>
+                      <li className="flex gap-2 items-start">
+                        <CheckCircle2 className="shrink-0 mt-0.5 text-blue-400" size={16} />
+                        <span><strong>Revisar lo guardado en CMMS:</strong> En Opciones de Desarrollador, si alguien ya lo configuró, el Chat ID suele verse en claro; el Bot Token aparece oculto tipo contraseña. Puedes volver a pegar ambos valores y Guardar sin borrar el grupo.</span>
+                      </li>
+                      <li className="flex gap-2 items-start">
+                        <Info className="shrink-0 mt-0.5 text-blue-400" size={16} />
+                        <span><strong>Si el bot ya no está en el grupo:</strong> vuelve a agregarlo, envía un mensaje de prueba al grupo y vuelve a consultar <code className="text-xs">getUpdates</code> o el bot de info.</span>
+                      </li>
                     </ul>
                   </div>
                 </div>
@@ -560,14 +724,15 @@ export const UserManual = () => {
             )}
 
             {/* Default fallback for other sections */}
-            {activeSection !== 'intro' && activeSection !== 'dashboard' && activeSection !== 'roles' && activeSection !== 'users' && activeSection !== 'inventory' && activeSection !== 'assets' && activeSection !== 'checklists' && activeSection !== 'roster' && activeSection !== 'dev' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col items-center justify-center text-center py-24 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+            {activeSection !== 'intro' && activeSection !== 'home' && activeSection !== 'dashboard' && activeSection !== 'roles' && activeSection !== 'users' && activeSection !== 'inventory' && activeSection !== 'assets' && activeSection !== 'checklists' && activeSection !== 'roster' && activeSection !== 'dev' && (
+              <div className="flex flex-col items-center justify-center text-center py-24 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700 md:animate-in md:fade-in md:slide-in-from-bottom-4 md:duration-500">
                 <Wrench size={56} className="text-slate-300 dark:text-slate-600 mb-6" />
                 <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">Sección en Construcción</h2>
                 <p className="text-slate-500 dark:text-slate-400 max-w-sm">Nuestros ingenieros de documentación están redactando esta sección. Vuelve pronto para explorar los detalles.</p>
               </div>
             )}
 
+            </div>
           </div>
         </div>
       </div>

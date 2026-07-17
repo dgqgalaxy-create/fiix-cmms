@@ -276,7 +276,7 @@ export const HomePage = () => {
 
       <div className="flex flex-col xl:flex-row gap-4 mb-6 sm:mb-8">
         <div className="flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-6 gap-3 sm:gap-4">
-          <SummaryCard title="Totales Recibidas" value={totalRecibidas} icon={<LayoutDashboard />} color="slate" onClick={() => goToStatus()} detail={(summaryStartDate && summaryEndDate) ? `${summaryStartDate} — ${summaryEndDate}` : 'Histórico completo'} />
+          <SummaryCard title="Total recibidas" value={totalRecibidas} icon={<LayoutDashboard />} color="slate" emphasized detail={(summaryStartDate && summaryEndDate) ? `${summaryStartDate} — ${summaryEndDate}` : 'Histórico completo'} />
           <SummaryCard title="Pendientes" value={summary.PENDIENTE || 0} icon={<Clock />} color="amber" onClick={() => goToStatus('PENDIENTE')} detail={
             <div className="flex flex-wrap gap-1">
               {urgentCount > 0 && <span className="bg-rose-600 text-white px-1.5 py-0.5 rounded-sm">{urgentCount} URG</span>}
@@ -459,20 +459,30 @@ const cardColors: Record<string, string> = {
   gray: 'bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-200',
 };
 
-const SummaryCard = ({ title, value, icon, color, onClick, detail }: {
+const SummaryCard = ({ title, value, icon, color, onClick, detail, emphasized = false }: {
   title: string;
   value: number;
   icon: ReactNode;
   color: string;
-  onClick: () => void;
+  onClick?: () => void;
   detail?: ReactNode;
-}) => (
-  <button onClick={onClick} className={`text-left cursor-pointer transition-all hover:scale-[1.03] p-3.5 sm:p-4 rounded-2xl border flex flex-col relative overflow-hidden group shadow-sm min-h-[130px] ${cardColors[color]}`}>
+  emphasized?: boolean;
+}) => {
+  const className = `text-left p-3.5 sm:p-4 rounded-2xl border flex flex-col relative overflow-hidden group shadow-sm min-h-[130px] ${onClick ? 'cursor-pointer transition-all hover:scale-[1.03]' : 'cursor-default'} ${cardColors[color]}`;
+  const content = (
+    <>
     <div className="absolute -right-2 -top-2 opacity-20 group-hover:scale-110 transition-transform [&>svg]:w-20 [&>svg]:h-20">{icon}</div>
     <div className="relative z-10 h-full flex flex-col">
       <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider leading-tight h-8">{title}</span>
-      <div className={`text-2xl sm:text-4xl font-black ${color === 'slate' || color === 'amber' ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>{value}</div>
+      <div className={`${emphasized ? 'text-3xl sm:text-[2.75rem]' : 'text-2xl sm:text-4xl'} font-black ${color === 'slate' || color === 'amber' ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>{value}</div>
       {detail && <div className="mt-auto pt-2 text-[10px] font-semibold leading-tight line-clamp-2">{detail}</div>}
     </div>
-  </button>
-);
+    </>
+  );
+
+  return onClick ? (
+    <button type="button" onClick={onClick} className={className}>{content}</button>
+  ) : (
+    <div className={className}>{content}</div>
+  );
+};

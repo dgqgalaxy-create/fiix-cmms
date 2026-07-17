@@ -68,31 +68,31 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
       case 'PENDIENTE':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 shadow-sm">
-            <Clock size={14} /> PENDIENTE
+            <Clock size={14} /> Pendiente
           </span>
         );
       case 'EN_PROCESO':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-blue-100 text-emerald-800 dark:text-emerald-300 border border-blue-200 shadow-sm">
-            <Wrench size={14} /> EN PROCESO
+            <Wrench size={14} /> En Proceso
           </span>
         );
       case 'EN_ESPERA':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-red-100 text-red-800 border border-red-200 shadow-sm">
-            <AlertCircle size={14} /> EN ESPERA
+            <AlertCircle size={14} /> En Espera
           </span>
         );
       case 'FINALIZADO':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm">
-            <CheckCircle2 size={14} /> FINALIZADO
+            <CheckCircle2 size={14} /> Finalizado
           </span>
         );
       case 'ANULADO':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-slate-200 text-slate-600 dark:text-slate-400 border border-slate-300 shadow-sm line-through">
-            <AlertCircle size={14} /> ANULADO
+            <AlertCircle size={14} /> Anulado
           </span>
         );
       default:
