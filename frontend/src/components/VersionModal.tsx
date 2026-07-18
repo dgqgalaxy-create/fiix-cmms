@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.25.7";
+export const APP_VERSION = "1.25.8";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: install.sh pregunta al final por PM2 al reiniciar, firewall ufw, Telegram y Tailscale (todo opcional); el README documenta cada decisión.",
     "Docs: Manual, roadmap, contexto y README alineados con la app (install/update, RCA opcional, Inicio vs KPIs, sin datos obsoletos).",
     "Mejora: update.sh endurecido (falla si algo sale mal, comprueba .env/nvm/PM2, recrea el frontend con acceso en red y verifica que :3000 y :5173 respondan).",
     "Nuevo: Script install.sh para montar FIIX en un Ubuntu limpio (Node, PostgreSQL, .env, Prisma, PM2); update.sh sigue siendo solo para actualizaciones.",

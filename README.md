@@ -1,5 +1,5 @@
 # FIIX CMMS
-*(Última actualización: 18 de Julio de 2026 — v1.25.7)*
+*(Última actualización: 18 de Julio de 2026 — v1.25.8)*
 
 Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, activos, inventario, preventivos, checklist, KPIs, compras, RCA, roster y notificaciones (Telegram).
 
@@ -141,7 +141,7 @@ Cuando `cd ~/fiix-cmms` muestre `install.sh` y las carpetas `backend` / `fronten
 
 ## 2. Instalar la aplicación — `./install.sh`
 
-`install.sh` **no clona** el repo. Solo configura el servidor: paquetes del sistema, Node (nvm), PostgreSQL, `backend/.env`, Prisma y PM2.
+`install.sh` **no clona** el repo. Solo configura el servidor: paquetes del sistema, Node (nvm), PostgreSQL, `backend/.env`, Prisma, PM2 y **preguntas opcionales** al final.
 
 ```bash
 cd ~/fiix-cmms
@@ -149,19 +149,30 @@ chmod +x install.sh update.sh
 ./install.sh
 ```
 
-Durante la instalación te pedirá:
-- Contraseña de PostgreSQL (`postgres`)
-- `JWT_SECRET` (sesiones)
-- Contraseña del menú **Opciones de desarrollador**
-- Si quieres cargar datos iniciales (seed)
+### Preguntas que verás (para que sepas qué decidir)
+
+**Obligatorias / núcleo**
+| Pregunta | Qué decides |
+|---|---|
+| Contraseña PostgreSQL `postgres` | La que usará la BD en este servidor (guárdala). |
+| `JWT_SECRET` | Secreto de sesiones (puedes aceptar el valor generado). |
+| Contraseña menú desarrollador | Clave para *Opciones de desarrollador* en la app. |
+| Hostname opcional (ej. `lpet-cmms`) | Solo te recuerda el comando `hostnamectl` (no lo aplica solo). |
+| ¿Cargar seed? (`admin@fiix.com` / `password123`) | **S** = usuario demo inicial; **N** = BD vacía de usuarios (los creas tú). |
+
+**Opcionales al final (todas aceptan N = omitir)**
+| Pregunta | Si dices **S** | Si dices **N** |
+|---|---|---|
+| ¿Registrar PM2 al reiniciar? (sudo) | Ejecuta el comando `pm2 startup` con sudo para que FIIX vuelva tras un reboot. | Lo haces después a mano con `pm2 startup`. |
+| ¿Configurar/activar **ufw**? | Abre SSH (22), UI (5173) y API (3000) y activa el firewall. Pide **segunda confirmación** (riesgo de cortar acceso si SSH falla). | Sin firewall del script; útil si solo usarás Tailscale. |
+| ¿Telegram en `.env` ahora? | Pides Bot Token y Chat ID; los escribe en `backend/.env` y reinicia el backend. | Lo configuras luego en la app o en `.env`. |
+| ¿Instalar **Tailscale**? | Instala el cliente. Si pegas un *auth key*, hace `tailscale up` solo; si no, te indica `sudo tailscale up`. MagicDNS/HTTPS se activan en la consola web de Tailscale. | Lo instalas cuando quieras. |
 
 | Al terminar | Dirección |
 |---|---|
 | Interfaz (UI) | `http://IP_DEL_SERVIDOR:5173` |
 | API | `http://IP_DEL_SERVIDOR:3000` (el frontend llama a `http://<mismo-hostname>:3000`) |
 | Admin del seed (si lo aceptaste) | `admin@fiix.com` / `password123` → **cámbialo** |
-
-**Queda manual después del install:** firewall (`ufw`), Tailscale/HTTPS, Telegram (en la app o en `.env`), y el comando que imprime `pm2 startup` para arrancar al reiniciar el PC.
 
 Plantilla de variables: `backend/.env.example` (el `.env` real **no** se sube a GitHub).
 

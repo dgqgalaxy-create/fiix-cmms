@@ -1,5 +1,5 @@
 # Manual de Usuario - FIIX CMMS (LPET)
-*(Versión 1.25.7 - 18 de Julio, 2026)*
+*(Versión 1.25.8 - 18 de Julio, 2026)*
 
 FIIX CMMS (despliegue LPET) centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 
@@ -72,7 +72,7 @@ Gestión de solicitudes (listado), sin el resumen gráfico:
 - **Vista para Técnicos:** Los técnicos pueden atender las órdenes que tengan asignadas, pero no pueden modificar la asignación de personal.
 - **Capa móvil de técnico:** En celular, el rol Técnico ve una barra inferior con Mis OT, Escanear QR, Inventario e Inicio. Al abrir una orden aparecen botones grandes de Aceptar / Pausar / Finalizar / Reanudar; completa evidencias y guarda. Administradores y gestionadores siguen con la interfaz completa (también en celular).
 - **Escanear QR en celular:** si entras por `http://IP` (sin HTTPS), el navegador bloquea la cámara en vivo; usa **Elegir foto / galería**. Con HTTPS o localhost la cámara en vivo sí funciona. Al escanear una **ubicación** (p. ej. `E2-0`) o un repuesto, la app abre el detalle correspondiente en Inventario (con los repuestos de esa ubicación). En desarrollo, Vite admite el hostname local `lpet-cmms` y nombres Tailscale `*.ts.net`.
-- **Servidor Ubuntu:** primero SSH + `git clone` (README); luego `./install.sh`. Actualizaciones: `./update.sh` (no toca el `.env`; hace `git restore` antes del pull; si falla, se detiene).
+- **Servidor Ubuntu:** primero SSH + `git clone` (README); luego `./install.sh` (al final pregunta PM2 startup, ufw, Telegram y Tailscale). Actualizaciones: `./update.sh`.
 - **Notificaciones Telegram:** Tanto las órdenes creadas desde **+ Nueva Orden** como las del **Portal de Solicitudes** (`/request`) disparan alerta a Telegram cuando la opción está activada en Configuración.
 - **Opciones de Ordenamiento:**
   En los filtros superiores, puedes elegir cómo organizar tus OTs:
