@@ -100,7 +100,19 @@ export const createWorkOrder = async (data: any) => {
 };
 
 export const updateWorkOrder = async (id: string, data: any) => {
-  if (data.before_image || data.after_image) {
+  const hasImages = !!(data.before_image || data.after_image);
+
+  // Sin conexión no se pueden subir fotos: se guarda solo estado/notas (JSON) y
+  // se encola; el usuario deberá volver a adjuntar las imágenes cuando haya señal.
+  if (hasImages && !navigator.onLine) {
+    const jsonOnly = { ...data };
+    delete jsonOnly.before_image;
+    delete jsonOnly.after_image;
+    const response = await api.patch(`/work-orders/${id}`, jsonOnly);
+    return { ...response.data, offline_images_skipped: true };
+  }
+
+  if (hasImages) {
     const formData = new FormData();
     if (data.status) formData.append('status', data.status);
     if (data.hold_reason) formData.append('hold_reason', data.hold_reason);

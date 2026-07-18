@@ -184,8 +184,13 @@ export const Dashboard = () => {
   };
 
   const handleUpdateWorkOrder = async (id: string, data: any) => {
-    await updateWorkOrder(id, data);
-    await fetchWorkOrders();
+    const result = await updateWorkOrder(id, data);
+    try {
+      await fetchWorkOrders();
+    } catch {
+      // Sin conexión el listado no se puede refrescar; el cambio quedó encolado.
+    }
+    return result;
   };
 
   const handleJoinWorkOrder = async (id: string) => {

@@ -1,5 +1,5 @@
 # FIIX CMMS
-*(Última actualización: 18 de Julio de 2026 — v1.25.9)*
+*(Última actualización: 18 de Julio de 2026 — v1.26.0)*
 
 Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, activos, inventario, preventivos, checklist, KPIs, compras, RCA, roster y notificaciones (Telegram).
 
@@ -170,9 +170,10 @@ chmod +x install.sh update.sh
 
 | Al terminar | Dirección |
 |---|---|
-| Interfaz (UI) | `http://IP_DEL_SERVIDOR:5173` |
-| API | `http://IP_DEL_SERVIDOR:3000` (el frontend llama a `http://<mismo-hostname>:3000`) |
+| Interfaz (UI) + API (un solo proceso) | `http://IP_DEL_SERVIDOR:3000` |
 | Admin del seed (si lo aceptaste) | `admin@fiix.com` / `password123` → **cámbialo** |
+
+**Producción en un solo puerto:** `install.sh` compila el frontend (`frontend/dist`) y el backend Express lo sirve directamente en `:3000` junto con la API (`/api/*`) y `/uploads`. Ya no se necesita PM2 aparte para el frontend (`fiix-frontend` se elimina si existía). Para desarrollar con recarga en caliente sigue usando `cd frontend && npm run dev` en `:5173` (ver §4).
 
 Plantilla de variables: `backend/.env.example` (el `.env` real **no** se sube a GitHub).
 
@@ -193,7 +194,7 @@ cd ~/fiix-cmms
 ./update.sh
 ```
 
-`update.sh` intenta cargar nvm (`$NVM_DIR`, `~/.nvm`, `/home/usuario/.nvm`) o usa `node`/`npm`/`pm2` ya presentes en el PATH; valida `.env`/repo, ejecuta `git restore .` (descarta cambios locales en archivos del repo), luego `git pull --ff-only`, `npm install`, `prisma db push`, reinicia/recrea PM2 y comprueba que `:3000` y `:5173` respondan. **No modifica** `backend/.env` ni borra `backend/uploads/`. No edites código en el servidor: se pierde en el próximo update.
+`update.sh` intenta cargar nvm (`$NVM_DIR`, `~/.nvm`, `/home/usuario/.nvm`) o usa `node`/`npm`/`pm2` ya presentes en el PATH; valida `.env`/repo, ejecuta `git restore .` (descarta cambios locales en archivos del repo), luego `git pull --ff-only`, `npm install`, `prisma db push`, compila el frontend (`npm run build:app` → `frontend/dist`), reinicia PM2 (`fiix-backend`) y comprueba que `:3000` responda tanto `/api/health` como `/` (SPA). **No modifica** `backend/.env` ni borra `backend/uploads/`. No edites código en el servidor: se pierde en el próximo update.
 
 **GitHub Actions (self-hosted):** el runner debe ser el mismo usuario que tiene Node/nvm (p. ej. `~/.nvm`). El workflow hace `git pull` y después `./update.sh`. Si un deploy falló antes de este arreglo, en el servidor ejecuta una vez a mano: `cd ~/fiix-cmms && git pull --ff-only && ./update.sh`.
 
@@ -204,8 +205,9 @@ cd ~/fiix-cmms
 | Node, PostgreSQL, PM2 | Instala / configura | No |
 | Crear BD y `.env` | Sí (interactivo) | No (exige `.env` existente) |
 | Código + dependencias + Prisma | `npm` + Prisma sobre el código local | Sí (`pull` + `npm` + Prisma) |
+| Build frontend (`frontend/dist`) | Sí (`npm run build:app`) | Sí (`npm run build:app`) |
 | Seed admin | Opcional | No |
-| PM2 | Arranca servicios | Reinicia backend; recrea frontend con `--host 0.0.0.0` |
+| PM2 | Arranca solo `fiix-backend` (sirve UI + API en :3000) | Reinicia `fiix-backend`; retira `fiix-frontend` si existía de una instalación anterior |
 
 ---
 
@@ -230,13 +232,15 @@ Para programar en Windows/Mac/Linux de escritorio:
    # o: npx prisma migrate dev
    npx prisma db seed
    ```
-5. Dos terminales:
+5. Dos terminales (modo desarrollo, con recarga en caliente):
    ```bash
    cd backend && npm run dev    # http://localhost:3000
    cd frontend && npm run dev   # http://localhost:5173
    ```
 
 Vite permite hosts `lpet-cmms` y `*.ts.net` (`frontend/vite.config.ts`). En red local puedes usar `npm run dev -- --host`.
+
+**Nota (producción vs. desarrollo):** En el servidor (`install.sh` / `update.sh`) solo corre el backend en `:3000`, que sirve tanto la API como el frontend ya compilado (`frontend/dist`, generado con `npm run build:app`). En tu laptop, para desarrollar con recarga en caliente sigue usando los dos procesos de arriba (`:3000` API + `:5173` UI). Si quieres probar el build de producción en local: `cd frontend && npm run build:app && cd ../backend && npm run dev` y abre `http://localhost:3000`.
 
 **Extensiones útiles (VS Code / Cursor):** Prettier, Tailwind CSS IntelliSense, Prisma.
 

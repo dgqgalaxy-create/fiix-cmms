@@ -14,6 +14,8 @@ import {
   RefreshCw,
   LockKeyhole,
   Tags,
+  ShieldCheck,
+  Save,
 } from 'lucide-react';
 import axios, { BACKEND_URL } from '../api/axios';
 
@@ -50,6 +52,11 @@ export const DeveloperOptions = () => {
   const [assetCodePlan, setAssetCodePlan] = useState<AssetCodeMigrationPlan | null>(null);
   const [isAssetCodePreviewOpen, setIsAssetCodePreviewOpen] = useState(false);
   const [isAssetCodeLoading, setIsAssetCodeLoading] = useState(false);
+  const [currentPasswordInput, setCurrentPasswordInput] = useState('');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isBackingUp, setIsBackingUp] = useState(false);
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -92,6 +99,69 @@ export const DeveloperOptions = () => {
       setError('Error al guardar la configuración de Telegram.');
     } finally {
       setIsSavingTelegram(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!currentPasswordInput.trim()) {
+      setError('Ingresa la contraseña maestra actual.');
+      return;
+    }
+    if (newPasswordInput.length < 6) {
+      setError('La nueva contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (newPasswordInput !== confirmPasswordInput) {
+      setError('La nueva contraseña y su confirmación no coinciden.');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await axios.post(
+        '/dev/change-password',
+        { currentPassword: currentPasswordInput, newPassword: newPasswordInput },
+        { headers: { 'x-dev-password': currentPasswordInput } }
+      );
+      setSuccessMsg('Contraseña maestra actualizada con éxito. Se usará automáticamente en esta sesión.');
+      setPassword(newPasswordInput);
+      setCurrentPasswordInput('');
+      setNewPasswordInput('');
+      setConfirmPasswordInput('');
+      setTimeout(() => setSuccessMsg(null), 5000);
+    } catch (err: unknown) {
+      const detail = axios.isAxiosError(err)
+        ? err.response?.data?.message || err.message
+        : err instanceof Error ? err.message : 'Error desconocido';
+      setError(`No se pudo cambiar la contraseña: ${detail}`);
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleBackupNow = async () => {
+    setIsBackingUp(true);
+    setError(null);
+    try {
+      const res = await axios.post('/dev/backup', {}, {
+        headers: { 'x-dev-password': password }
+      });
+      if (res.data?.success) {
+        setSuccessMsg(res.data.message || 'Respaldo creado con éxito.');
+      } else {
+        setError(res.data?.message || 'No se pudo crear el respaldo.');
+      }
+      setTimeout(() => { setSuccessMsg(null); }, 8000);
+    } catch (err: unknown) {
+      const detail = axios.isAxiosError(err)
+        ? err.response?.data?.message || err.message
+        : err instanceof Error ? err.message : 'Error desconocido';
+      setError(`Fallo al crear el respaldo: ${detail}`);
+    } finally {
+      setIsBackingUp(false);
     }
   };
 
@@ -435,6 +505,27 @@ export const DeveloperOptions = () => {
                   <input type="file" accept=".json" onChange={handleImport} className="hidden" disabled={isLoading} />
                 </label>
               </article>
+
+              <article className="flex flex-col rounded-3xl border border-amber-200 bg-white p-5 shadow-sm dark:border-amber-900/60 dark:bg-slate-900">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
+                    <Save size={21} />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-slate-900 dark:text-white">Respaldo del servidor</h3>
+                    <p className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">
+                      Genera un dump de PostgreSQL y una copia de <code>uploads/</code> en el servidor (se conservan los últimos 14 días). También corre automáticamente cada madrugada.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleBackupNow}
+                  disabled={isBackingUp || isLoading}
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-amber-700 disabled:opacity-50"
+                >
+                  <Save size={16} /> {isBackingUp ? 'Respaldando...' : 'Crear respaldo ahora'}
+                </button>
+              </article>
             </div>
           </div>
         </section>
@@ -528,6 +619,65 @@ export const DeveloperOptions = () => {
               </button>
             </div>
           </article>
+        </section>
+
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="mb-6 flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
+              <ShieldCheck size={24} />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-400">Seguridad</p>
+              <h2 className="mt-1 text-xl font-black text-slate-900 dark:text-white">Cambiar contraseña maestra</h2>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                Actualiza la clave para entrar a Opciones de Desarrollador. Queda guardada (hash) en la base de datos y ya no depende únicamente de <code>backend/.env</code>.
+              </p>
+            </div>
+          </div>
+          <form onSubmit={handleChangePassword} className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label className="mb-1.5 block text-sm font-bold text-slate-700 dark:text-slate-300">Contraseña actual</label>
+              <input
+                type="password"
+                value={currentPasswordInput}
+                onChange={(e) => setCurrentPasswordInput(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                placeholder="Contraseña actual"
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-bold text-slate-700 dark:text-slate-300">Nueva contraseña</label>
+              <input
+                type="password"
+                value={newPasswordInput}
+                onChange={(e) => setNewPasswordInput(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                placeholder="Mínimo 6 caracteres"
+                autoComplete="new-password"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-bold text-slate-700 dark:text-slate-300">Confirmar nueva contraseña</label>
+              <input
+                type="password"
+                value={confirmPasswordInput}
+                onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                placeholder="Repite la nueva contraseña"
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="md:col-span-3">
+              <button
+                type="submit"
+                disabled={isChangingPassword}
+                className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-black text-white transition hover:bg-indigo-700 disabled:opacity-50 sm:w-fit"
+              >
+                <ShieldCheck size={17} /> {isChangingPassword ? 'Actualizando...' : 'Actualizar contraseña maestra'}
+              </button>
+            </div>
+          </form>
         </section>
 
         <section className="rounded-3xl border border-red-200 bg-red-50/70 p-5 dark:border-red-900/50 dark:bg-red-950/20 sm:p-6">

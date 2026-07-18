@@ -1,30 +1,137 @@
-import axios from 'axios';
+import axios, { type AxiosInstance } from 'axios';
+import { addOfflineRequest } from '../utils/offlineQueue';
 
-export const BACKEND_URL = `http://${window.location.hostname}:3000`;
+/**
+ * Dev (Vite :5173) → API en :3000 del mismo host.
+ * Producción / Tailscale HTTPS (mismo origen) → origin actual (Express sirve UI + API).
+ */
+export const resolveBackendUrl = (): string => {
+  if (typeof window === 'undefined') return 'http://localhost:3000';
+  const { protocol, hostname, port } = window.location;
+  const isViteDev = port === '5173' || import.meta.env.DEV;
+  if (isViteDev) {
+    return `${protocol}//${hostname}:3000`;
+  }
+  return `${protocol}//${hostname}${port ? `:${port}` : ''}`;
+};
 
-const api = axios.create({
+export const BACKEND_URL = resolveBackendUrl();
+
+const api: AxiosInstance = axios.create({
   baseURL: `${BACKEND_URL}/api`,
 });
 
-// Interceptor para inyectar el token en cada petición
-api.interceptors.request.use((config) => {
+const OFFLINE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+const queueIfOffline = async (config: {
+  url?: string;
+  method?: string;
+  headers?: unknown;
+  data?: unknown;
+  baseURL?: string;
+}) => {
+  const method = (config.method || 'GET').toUpperCase();
+  if (!OFFLINE_METHODS.has(method)) return false;
+
+  const path = config.url || '';
+  const absolute =
+    path.startsWith('http') ? path : `${config.baseURL || `${BACKEND_URL}/api`}${path.startsWith('/') ? '' : '/'}${path}`;
+
+  const headers: Record<string, string> = {};
+  const raw = config.headers as Record<string, string> | undefined;
+  if (raw) {
+    for (const [k, v] of Object.entries(raw)) {
+      if (typeof v === 'string') headers[k] = v;
+    }
+  }
+  const token = localStorage.getItem('token');
+  if (token && !headers.Authorization) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  let body = config.data;
+  if (typeof FormData !== 'undefined' && body instanceof FormData) {
+    // FormData no se serializa bien en IDB; guardar solo JSON si aplica
+    return false;
+  }
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch {
+      /* keep string */
+    }
+  }
+
+  await addOfflineRequest(absolute, method, headers, body);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('fiix-offline-sync-done'));
+  }
+  return true;
+};
+
+api.interceptors.request.use(async (config) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
     localStorage.setItem('lastActivity', Date.now().toString());
   }
+
+  if (!navigator.onLine) {
+    const queued = await queueIfOffline({
+      url: config.url,
+      method: config.method,
+      headers: config.headers,
+      data: config.data,
+      baseURL: config.baseURL,
+    });
+    if (queued) {
+      return Promise.reject({ isOfflineHandled: true, message: 'Guardado offline' });
+    }
+  }
   return config;
 });
 
-// Interceptor para manejar errores de autenticación
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    if (error?.isOfflineHandled) {
+      return {
+        data: { success: true, offline: true },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: error.config,
+      };
+    }
+
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('lastActivity');
       window.location.href = '/login';
+      return Promise.reject(error);
     }
+
+    if (!navigator.onLine || error.message === 'Network Error') {
+      if (error.config) {
+        const queued = await queueIfOffline({
+          url: error.config.url,
+          method: error.config.method,
+          headers: error.config.headers,
+          data: error.config.data,
+          baseURL: error.config.baseURL,
+        });
+        if (queued) {
+          return {
+            data: { success: true, offline: true },
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config: error.config,
+          };
+        }
+      }
+    }
+
     return Promise.reject(error);
   }
 );

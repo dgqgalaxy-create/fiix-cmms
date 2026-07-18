@@ -67,7 +67,7 @@ echo ">>> [0/8] Verificar repositorio local..."
 [ -f "${APP_DIR}/install.sh" ] || die "No se encontró install.sh. Ejecuta este script desde dentro del repo clonado."
 [ -d "${APP_DIR}/backend" ] && [ -d "${APP_DIR}/frontend" ] || die "Faltan carpetas backend/ o frontend/. ¿Clonaste el repo completo?"
 [ -f "${APP_DIR}/backend/package.json" ] || die "Falta backend/package.json."
-chmod +x "${APP_DIR}/update.sh" "${APP_DIR}/install.sh" 2>/dev/null || true
+chmod +x "${APP_DIR}/update.sh" "${APP_DIR}/install.sh" "${APP_DIR}/scripts/backup.sh" 2>/dev/null || true
 echo "  [OK] Código local listo (clone/SSH se hace ANTES, ver README)."
 
 # --- 1. Paquetes del sistema ---
@@ -146,19 +146,20 @@ fi
 
 cd "${APP_DIR}/frontend"
 npm install
+echo "Compilando frontend (frontend/dist)..."
+npm run build:app
 
-# --- 6. PM2 ---
-echo ">>> [6/8] Servicios PM2..."
+# --- 6. PM2 (un solo proceso: el backend sirve la API y el frontend ya compilado) ---
+echo ">>> [6/8] Servicio PM2 (fiix-backend)..."
 load_nvm
 cd "${APP_DIR}/backend"
 pm2 delete fiix-backend >/dev/null 2>&1 || true
+pm2 delete fiix-frontend >/dev/null 2>&1 || true
 pm2 start npm --name fiix-backend -- run dev
 
-cd "${APP_DIR}/frontend"
-pm2 delete fiix-frontend >/dev/null 2>&1 || true
-pm2 start npm --name fiix-frontend -- run dev -- --host 0.0.0.0 --port 5173
-
 pm2 save
+echo "  [OK] En producción, backend (puerto ${PORT:-3000}) sirve la API y la interfaz (frontend/dist)."
+echo "  Para desarrollar con recarga en caliente: cd frontend && npm run dev -- --host 0.0.0.0 --port 5173"
 
 # --- 7. Opcionales (preguntas) ---
 echo
@@ -188,7 +189,8 @@ fi
 
 # 7b. Firewall ufw
 echo
-echo "  Firewall (ufw): abre SSH + puertos 5173 (UI) y 3000 (API)."
+echo "  Firewall (ufw): abre SSH + puerto 3000 (UI + API en un solo proceso)."
+echo "  El puerto 5173 solo hace falta si vas a desarrollar con 'npm run dev' en el frontend."
 echo "  Si usas solo Tailscale y no quieres exponer la LAN, responde N."
 DO_UFW="$(ask "¿Configurar y activar ufw ahora? [s/N]" "N")"
 if [[ "${DO_UFW}" =~ ^[sS]$ ]]; then
@@ -197,11 +199,10 @@ if [[ "${DO_UFW}" =~ ^[sS]$ ]]; then
     if need_cmd ufw || sudo apt-get install -y ufw; then
       sudo ufw allow OpenSSH
       sudo ufw allow 22/tcp
-      sudo ufw allow 5173/tcp comment 'FIIX UI'
-      sudo ufw allow 3000/tcp comment 'FIIX API'
+      sudo ufw allow 3000/tcp comment 'FIIX UI + API'
       sudo ufw --force enable
       sudo ufw status || true
-      echo "  [OK] ufw activo (22, 5173, 3000)."
+      echo "  [OK] ufw activo (22, 3000)."
     else
       echo "  [AVISO] No se pudo instalar/usar ufw."
     fi
@@ -264,8 +265,7 @@ fi
 IP_LAN="$(hostname -I 2>/dev/null | awk '{print $1}')"
 echo
 echo "=== [8/8] Instalación completada ==="
-echo "UI:    http://${IP_LAN:-IP}:5173"
-echo "API:   http://${IP_LAN:-IP}:3000"
+echo "UI + API (un solo proceso): http://${IP_LAN:-IP}:3000"
 echo "Login seed (si lo corriste): admin@fiix.com / password123  → cámbialo"
 echo
 echo "Actualizaciones futuras (NO vuelve a pedir .env):"

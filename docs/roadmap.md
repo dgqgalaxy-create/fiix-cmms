@@ -3,11 +3,19 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 18 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.25.9 (Actualización: 18 de Julio de 2026)
+## 🚀 Versión Actual: v1.26.1 (Actualización: 18 de Julio de 2026)
 
-### Novedades en v1.25.9 (Deploy self-hosted resiliente a nvm)
+### Novedades en v1.26.1 (Deploy self-hosted resiliente a nvm)
 - **Corrección:** `update.sh` carga nvm desde varias rutas (`$NVM_DIR`, `$HOME/.nvm`, `/home/usuario/.nvm`) o continúa si `node`/`npm` ya están en el PATH; solo falla si faltan herramientas tras todos los intentos.
 - **Corrección:** El workflow de GitHub Actions hace `git pull` antes de `./update.sh` para evitar el chicken-egg cuando el script antiguo fallaba antes del pull.
+
+### Novedades Anteriores (v1.26.0 - Producción de un solo puerto, offline real, respaldos y contraseña maestra editable)
+- **Nuevo:** Servidor de producción de un solo proceso: el backend Express sirve la API y el frontend ya compilado (`frontend/dist`) en el mismo puerto `:3000`. `install.sh`/`update.sh` compilan el frontend y solo administran `fiix-backend` en PM2.
+- **Nuevo:** Offline real para técnicos: aceptar/pausar/finalizar/reanudar una orden de trabajo funciona sin conexión (se guarda localmente y se sincroniza al volver la señal); si hay fotos pendientes y no hay conexión, se guarda el estado/notas y se avisa que las imágenes deben subirse después.
+- **Nuevo:** Aviso de conexión con el número de peticiones pendientes de sincronizar, visible en toda la app.
+- **Nuevo:** Respaldo automático diario (2:15 AM) de base de datos + `uploads/` con retención de 14 días, más un botón de respaldo manual en Opciones de Desarrollador.
+- **Nuevo:** La contraseña maestra de Opciones de Desarrollador se puede cambiar desde la propia interfaz (se guarda como hash en la base de datos); ya no depende únicamente de editar `backend/.env`.
+- **Mejora:** `BACKEND_URL` se resuelve respetando HTTPS/mismo origen (soporta accesos detrás de proxy/Tailscale con certificado, no solo HTTP plano).
 
 ### Novedades Anteriores (v1.25.8 - install.sh: preguntas opcionales)
 - **Mejora:** al final del install puedes activar PM2 startup, ufw, Telegram en `.env` y Tailscale; el README explica qué implica cada respuesta.
@@ -244,7 +252,7 @@ Este documento contiene la lista de módulos y características pendientes de de
 - [ ] **Checklists avanzados y LOTO:** Pasos obligatorios dentro de la Orden de Trabajo y firmas de bloqueo de energías peligrosas.
 - [x] **Notificaciones y Escalamiento:** Recordatorios y escalamiento SLA por prioridad (respuesta, detenida, resolución) vía Telegram + in-app a gestores/admins (v1.14.0).
 - [ ] **Control de Medidores (CBM):** Registro histórico de horómetros y detonación automática de PMs por uso real.
-- [ ] **Soporte PWA (Offline) completo:** Hay base PWA + cola offline parcial; falta experiencia offline total y sync fiable en segundo plano.
+- [x] **Soporte PWA (Offline) para técnicos (v1.26.0):** Aceptar/pausar/finalizar/reanudar OT funciona sin conexión (cola en IndexedDB + sync automático al reconectar); las fotos requieren conexión y se avisa claramente si no la hay. Pendiente: sync fiable de fotos en segundo plano y offline en otros módulos (inventario, checklist).
 - [x] **Gestión con Códigos QR:** Escaneo físico en máquinas para abrir historiales y escaneo en estantes para el control rápido de refacciones (incluye galería si no hay HTTPS).
 - [x] **Árbol de Fallas (RCA):** Clasificación Problema → Causa → Solución para Pareto; al cerrar correctivas es **opcional**.
 - [x] **Calendario de Carga de Trabajo / Turnos (Roster):** Vista interactiva para gestionar y asignar turnos, días festivos y faltas del personal (Completado en v1.7.3).

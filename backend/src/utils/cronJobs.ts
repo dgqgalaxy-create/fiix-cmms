@@ -2,12 +2,24 @@ import cron from 'node-cron';
 import prisma from '../config/prisma';
 import { evaluateOpenWorkOrders, silentBackfillSlaEvents } from '../services/SlaService';
 import { emitRefresh } from './socket';
+import { runBackup } from './backupService';
 
 // This cron job will run every day at 00:01
 export const initCronJobs = () => {
   cron.schedule('1 0 * * *', async () => {
     console.log('Running daily preventative maintenance check...');
     await checkAndGenerateMaintenanceOrders();
+  });
+
+  // Respaldo automático diario (BD + uploads) a las 2:15 AM; conserva los últimos 14 días.
+  cron.schedule('15 2 * * *', async () => {
+    console.log('Running scheduled backup...');
+    try {
+      const result = await runBackup();
+      console.log(`Backup result: ${result.message}`);
+    } catch (error) {
+      console.error('Error running scheduled backup:', error);
+    }
   });
 
   // SLA reminders / escalations every 15 minutes (con digest si hay muchos)

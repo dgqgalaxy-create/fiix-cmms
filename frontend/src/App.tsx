@@ -45,25 +45,32 @@ function App() {
     }
 
     const handleOnline = async () => {
-      // App is back online, syncing requests...
       const requests = await getOfflineRequests();
       for (const req of requests) {
         try {
-          // If the request was multipart/form-data (like FormData), we can't easily rebuild it from IDB 
-          // unless we serialized it correctly. For now, assuming simple JSON POST requests.
+          // axios "crudo" (sin interceptor offline de `api`) para no re-encolar.
+          const headers: Record<string, string> = { ...(req.headers || {}) };
+          if (req.body && typeof req.body === 'object' && !(req.body instanceof FormData)) {
+            headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+          }
           await axios({
             url: req.url,
             method: req.method,
-            headers: req.headers,
+            headers,
             data: req.body,
           });
           await removeOfflineRequest(req.id);
-          // Synced offline request
         } catch (error) {
           console.error(`Failed to sync offline request ${req.id}`, error);
         }
       }
+      window.dispatchEvent(new Event('fiix-offline-sync-done'));
     };
+
+    // Si ya hay red al montar y hay cola pendiente, sincronizar.
+    if (navigator.onLine) {
+      handleOnline();
+    }
 
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);

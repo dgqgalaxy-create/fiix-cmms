@@ -415,6 +415,8 @@ model FailureRemedy {
 
 model SystemSettings {
   id               String   @id @default(uuid()) @db.Uuid
+  /// Contraseña maestra de Opciones de Desarrollador (bcrypt). Si es null, se usa DEV_MENU_PASSWORD del .env.
+  dev_menu_password_hash String?
   telegram_enabled   Boolean  @default(true)
   telegram_bot_token String?
   telegram_chat_id   String?

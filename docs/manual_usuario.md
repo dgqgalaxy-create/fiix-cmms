@@ -1,5 +1,5 @@
 # Manual de Usuario - FIIX CMMS (LPET)
-*(Versión 1.25.8 - 18 de Julio, 2026)*
+*(Versión 1.26.1 - 18 de Julio, 2026)*
 
 FIIX CMMS (despliegue LPET) centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 
@@ -71,8 +71,9 @@ Gestión de solicitudes (listado), sin el resumen gráfico:
 - **Asignación opcional al aceptar:** Los Administradores y Gestionadores conservan visible la sección **Técnicos Asignados** mientras la orden está abierta. Pueden seleccionar uno o varios técnicos antes de guardar; si dejan la lista vacía, se aplica la autoasignación descrita arriba.
 - **Vista para Técnicos:** Los técnicos pueden atender las órdenes que tengan asignadas, pero no pueden modificar la asignación de personal.
 - **Capa móvil de técnico:** En celular, el rol Técnico ve una barra inferior con Mis OT, Escanear QR, Inventario e Inicio. Al abrir una orden aparecen botones grandes de Aceptar / Pausar / Finalizar / Reanudar; completa evidencias y guarda. Administradores y gestionadores siguen con la interfaz completa (también en celular).
+- **Funciona sin conexión:** Aceptar, pausar, finalizar o reanudar una orden se guarda en el dispositivo aunque no haya señal (Wi-Fi/datos) y se sincroniza solo en cuanto vuelve la conexión; verás un aviso «Sin conexión · X cambio(s) en espera» mientras tanto. Si intentas finalizar subiendo fotos sin conexión, el sistema guarda el estado y las notas, pero pide volver a intentarlo con señal para adjuntar las imágenes.
 - **Escanear QR en celular:** si entras por `http://IP` (sin HTTPS), el navegador bloquea la cámara en vivo; usa **Elegir foto / galería**. Con HTTPS o localhost la cámara en vivo sí funciona. Al escanear una **ubicación** (p. ej. `E2-0`) o un repuesto, la app abre el detalle correspondiente en Inventario (con los repuestos de esa ubicación). En desarrollo, Vite admite el hostname local `lpet-cmms` y nombres Tailscale `*.ts.net`.
-- **Servidor Ubuntu:** primero SSH + `git clone` (README); luego `./install.sh` (al final pregunta PM2 startup, ufw, Telegram y Tailscale). Actualizaciones: `./update.sh`.
+- **Servidor Ubuntu:** primero SSH + `git clone` (README); luego `./install.sh` (al final pregunta PM2 startup, ufw, Telegram y Tailscale). En producción la UI y la API comparten el puerto **:3000**. Actualizaciones: `./update.sh`.
 - **Notificaciones Telegram:** Tanto las órdenes creadas desde **+ Nueva Orden** como las del **Portal de Solicitudes** (`/request`) disparan alerta a Telegram cuando la opción está activada en Configuración.
 - **Opciones de Ordenamiento:**
   En los filtros superiores, puedes elegir cómo organizar tus OTs:
@@ -160,8 +161,9 @@ Panel de indicadores de mantenimiento:
 
 ## 10. Importación masiva por CSV (Opciones de Desarrollador)
 
-- **Acceso:** la contraseña maestra de esta pantalla se define en `backend/.env` (`DEV_MENU_PASSWORD`). No se cambia desde la interfaz; tras editarla reinicia el backend.
-- **Distribución de herramientas:** La pantalla separa las acciones por propósito: Importación y respaldos, integración con Telegram, mantenimiento local y Zona de peligro. Esto ayuda a distinguir las operaciones seguras de las destructivas.
+- **Acceso:** la contraseña maestra de esta pantalla puede definirse en `backend/.env` (`DEV_MENU_PASSWORD`) **o cambiarse desde la propia interfaz** en la tarjeta **Cambiar contraseña maestra** (pide la contraseña actual, la nueva y su confirmación). Al guardarla queda protegida como hash en la base de datos y tiene prioridad sobre el `.env`; si la base de datos llegara a vaciarse, el `.env` sigue funcionando como respaldo de emergencia.
+- **Respaldo del servidor:** El botón **Crear respaldo ahora** genera en el servidor un dump comprimido de la base de datos y una copia de `uploads/` (fotos, firmas, evidencias). El mismo proceso corre automáticamente todos los días a las 2:15 AM y conserva los respaldos de los últimos 14 días.
+- **Distribución de herramientas:** La pantalla separa las acciones por propósito: Importación y respaldos, integración con Telegram, seguridad (contraseña maestra), mantenimiento local y Zona de peligro. Esto ayuda a distinguir las operaciones seguras de las destructivas.
 - **Selección conjunta:** Puedes seleccionar los 7 archivos CSV a la vez; no importa el orden en que los elijas. El sistema los reconoce por su nombre y los carga siempre en el orden correcto (Categorías → Ubicaciones → Proveedores → Items → Usuarios → Inventario → Órdenes de Trabajo) para respetar las dependencias entre tablas.
 - **Usuarios de inventario:** Si un movimiento de inventario referencia un correo que no está en el archivo de Usuarios, ese usuario se crea automáticamente como **inactivo** (rol Técnico) para no perder el historial de consumos. Luego puedes activarlo o completarlo desde el Directorio.
 - **Tiempos de reparación:** Los valores de tiempo con coma de miles (por ejemplo `2,140.22` minutos) se interpretan correctamente, de modo que el MTTR y demás métricas de tiempo no se distorsionan.

@@ -6,6 +6,7 @@ import { sendHeartbeat } from '../api/users';
 import { Menu, Wifi, WifiOff, Info, Search } from 'lucide-react';
 import { NotificationsBell } from './NotificationsBell';
 import { VersionModal, APP_VERSION } from './VersionModal';
+import { OfflineBanner } from './OfflineBanner';
 import { GlobalSearchModal, GlobalSearchTrigger } from './GlobalSearchModal';
 import { TechnicianBottomNav } from './TechnicianBottomNav';
 import { useAuth } from '../context/AuthContext';
@@ -112,17 +113,16 @@ export const Layout = ({ children }: { children: ReactNode }) => {
           isTechMobileShell ? 'pb-24' : ''
         }`}
       >
+        <div className="flex md:hidden justify-end mb-3 print:hidden">
+          <OfflineBanner />
+        </div>
+
         <div className="hidden md:flex justify-end items-center gap-4 mb-6 z-20 print:hidden">
           <GlobalSearchTrigger />
           <div className="bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 transition-colors duration-200">
             <NotificationsBell />
           </div>
-          {!isOnline && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded-full shadow-sm text-sm font-medium animate-pulse">
-              <WifiOff size={16} />
-              Offline (Guardando localmente)
-            </div>
-          )}
+          <OfflineBanner />
           {isOnline && isSyncing && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-full shadow-sm text-sm font-medium animate-pulse">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 dark:border-blue-400"></div>

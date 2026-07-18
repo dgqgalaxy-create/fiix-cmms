@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.25.9";
+export const APP_VERSION = "1.26.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -29,6 +29,12 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   ];
   const changelog = [
     "Corrección: Despliegue con GitHub Actions (self-hosted): `update.sh` ya no falla solo por nvm ausente en shells no interactivos; detecta Node/npm/pm2 del PATH o carga nvm desde varias rutas, y el workflow hace `git pull` antes de ejecutar el script.",
+    "Nuevo: Modo offline para técnicos: aceptar, pausar, finalizar y reanudar una OT ahora funciona sin conexión (se guarda en el dispositivo y se sincroniza solo al recuperar señal); si intentas subir fotos sin conexión, el sistema avisa y guarda el estado/notas sin las imágenes.",
+    "Nuevo: Aviso de conexión con el número de cambios pendientes de sincronizar, visible en toda la app mientras estés sin señal o sincronizando.",
+    "Nuevo: Respaldo automático diario (2:15 AM) de la base de datos y de las fotos/evidencias (uploads), con retención de 14 días; también puedes generarlo manualmente con el botón «Crear respaldo ahora» en Opciones de Desarrollador.",
+    "Nuevo: La contraseña maestra de Opciones de Desarrollador ahora se puede cambiar desde la propia app (queda protegida en la base de datos); ya no depende únicamente de editar el archivo `.env` del servidor.",
+    "Mejora: En producción, el backend sirve la interfaz ya compilada en el mismo puerto que la API (un solo proceso en :3000); `install.sh`/`update.sh` compilan el frontend y ya no levantan un proceso PM2 aparte para la UI.",
+    "Mejora: La URL del backend se resuelve automáticamente respetando HTTPS y el mismo origen del sitio (soporta accesos por Tailscale u otros proxies con certificado, además de HTTP normal).",
     "Mejora: install.sh pregunta al final por PM2 al reiniciar, firewall ufw, Telegram y Tailscale (todo opcional); el README documenta cada decisión.",
     "Docs: Manual, roadmap, contexto y README alineados con la app (install/update, RCA opcional, Inicio vs KPIs, sin datos obsoletos).",
     "Mejora: update.sh endurecido (falla si algo sale mal, comprueba .env/nvm/PM2, recrea el frontend con acceso en red y verifica que :3000 y :5173 respondan).",

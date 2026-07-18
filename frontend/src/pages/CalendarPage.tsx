@@ -139,8 +139,9 @@ export const CalendarPage = () => {
   };
 
   const handleUpdateWorkOrder = async (id: string, data: any) => {
-    await updateWorkOrder(id, data);
+    const result = await updateWorkOrder(id, data);
     await fetchOrders();
+    return result;
   };
 
   const handleJoinWorkOrder = async (id: string) => {

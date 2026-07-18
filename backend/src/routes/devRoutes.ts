@@ -1,6 +1,8 @@
 import express, { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import { parse } from 'csv-parse/sync';
 import { Role, AssetStatus, WorkOrderStatus, Priority, MaintenanceType, ProductionGroup } from '@prisma/client';
 import bcrypt from 'bcrypt';
@@ -10,6 +12,7 @@ import {
   executeAssetCodeMigration,
   planAssetCodeMigration,
 } from '../utils/migrateAssetCodes';
+import { runBackup } from '../utils/backupService';
 
 const router = express.Router();
 
@@ -26,7 +29,17 @@ const verifyDevPassword = async (req: Request, res: Response, next: express.Next
   }
 
   try {
-    // Master fallback to prevent lockout if DB is completely wiped
+    // 1) Contraseña maestra personalizada guardada en BD (cambiable desde la app)
+    const settings = await prisma.systemSettings.findFirst();
+    if (settings?.dev_menu_password_hash) {
+      const matchesCustomHash = await bcrypt.compare(password, settings.dev_menu_password_hash);
+      if (matchesCustomHash) {
+        next();
+        return;
+      }
+    }
+
+    // 2) Fallback a variable de entorno (o clave de emergencia) para prevenir bloqueo si la BD se vacía
     const envPassword = process.env.DEV_MENU_PASSWORD || 'DavidG.Q.1991';
     if (password === envPassword) {
       next();
@@ -112,6 +125,72 @@ router.post('/settings', verifyDevPassword, async (req: Request, res: Response):
   } catch (error) {
     console.error('Error updating dev settings:', error);
     res.status(500).json({ message: 'Error updating settings' });
+  }
+});
+
+// Cambia la contraseña maestra de Opciones de Desarrollador. Protegida por la
+// contraseña ACTUAL (header x-dev-password, validada por verifyDevPassword);
+// el body solo confirma cuál es esa contraseña actual para el registro/UX.
+router.post('/change-password', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { newPassword } = req.body as { currentPassword?: string; newPassword?: string };
+
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.trim().length < 6) {
+      res.status(400).json({ message: 'La nueva contraseña debe tener al menos 6 caracteres.' });
+      return;
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    let settings = await prisma.systemSettings.findFirst();
+
+    if (!settings) {
+      settings = await prisma.systemSettings.create({
+        data: {
+          telegram_enabled: true,
+          email_enabled: false,
+          dev_menu_password_hash: newHash,
+        },
+      });
+    } else {
+      settings = await prisma.systemSettings.update({
+        where: { id: settings.id },
+        data: { dev_menu_password_hash: newHash },
+      });
+    }
+
+    // Best-effort: refleja también en backend/.env para servidores que aún lean DEV_MENU_PASSWORD.
+    // La BD (hash) es la fuente de verdad; si esto falla no se interrumpe la operación.
+    try {
+      const envPath = path.join(__dirname, '../../.env');
+      if (fs.existsSync(envPath)) {
+        let content = fs.readFileSync(envPath, 'utf-8');
+        const escaped = newPassword.replace(/"/g, '\\"');
+        if (/^DEV_MENU_PASSWORD=.*$/m.test(content)) {
+          content = content.replace(/^DEV_MENU_PASSWORD=.*$/m, `DEV_MENU_PASSWORD="${escaped}"`);
+        } else {
+          content += `${content.endsWith('\n') ? '' : '\n'}DEV_MENU_PASSWORD="${escaped}"\n`;
+        }
+        fs.writeFileSync(envPath, content, 'utf-8');
+      }
+    } catch (envError) {
+      console.warn('[DEV] No se pudo actualizar backend/.env con la nueva contraseña (no crítico):', envError);
+    }
+
+    res.json({ success: true, message: 'Contraseña maestra actualizada con éxito.' });
+  } catch (error: any) {
+    console.error('Error changing dev password:', error);
+    res.status(500).json({ message: 'Error al cambiar la contraseña.', error: error.message });
+  }
+});
+
+// Respaldo manual (BD + uploads) disparado desde Opciones de Desarrollador.
+router.post('/backup', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const result = await runBackup();
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error running manual backup:', error);
+    res.status(500).json({ success: false, message: 'Error al generar el respaldo.', error: error.message });
   }
 });
 

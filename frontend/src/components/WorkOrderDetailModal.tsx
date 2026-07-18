@@ -33,7 +33,7 @@ interface Props {
   workOrder: WorkOrder | null;
   isOpen: boolean;
   onClose: () => void;
-  onUpdate: (id: string, data: any) => Promise<void>;
+  onUpdate: (id: string, data: any) => Promise<any>;
   onDelete?: (id: string) => Promise<void>;
   onJoin?: (id: string) => Promise<void>;
 }
@@ -331,7 +331,14 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
       if (beforeImage) updateData.before_image = beforeImage;
       if (afterImage) updateData.after_image = afterImage;
 
-      await onUpdate(workOrder.id, updateData);
+      const result = await onUpdate(workOrder.id, updateData);
+      if (result?.offline) {
+        alert(
+          result.offline_images_skipped
+            ? 'Sin conexión: se guardaron el estado y las notas, pero las fotos no se subieron. Cuando recuperes la señal, vuelve a guardar para adjuntarlas.'
+            : 'Sin conexión: el cambio se guardó en este dispositivo y se sincronizará automáticamente cuando recuperes la señal.'
+        );
+      }
       onClose();
     } catch (err: any) {
       console.error("Error in handleSubmit:", err);
