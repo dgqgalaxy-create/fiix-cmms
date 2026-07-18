@@ -11,6 +11,9 @@ export default defineConfig({
     // "lpet-cmms" = nombre local en red; ".ts.net" = cualquier máquina MagicDNS de Tailscale.
     allowedHosts: ['lpet-cmms', '.ts.net'],
   },
+  build: {
+    chunkSizeWarningLimit: 3000, // KB — evita confundir el warning de Vite con el fallo de Workbox
+  },
   plugins: [
     react(), 
     tailwindcss(),
@@ -37,6 +40,8 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // Bundle JS ~2.5 MB; default Workbox limit is 2 MiB and fails the build
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MiB
         // Cache API requests
         runtimeCaching: [
           {

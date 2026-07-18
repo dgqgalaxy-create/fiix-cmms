@@ -3,9 +3,12 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 18 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.26.3 (Actualización: 18 de Julio de 2026)
+## 🚀 Versión Actual: v1.26.4 (Actualización: 18 de Julio de 2026)
 
-### Novedades en v1.26.3 (cola offline estable)
+### Novedades en v1.26.4 (PWA build / deploy)
+- **Fix deploy:** Workbox rechazaba el precache del bundle JS (~2.5 MB > límite 2 MiB) y fallaba `npm run build:app` en Actions; `maximumFileSizeToCacheInBytes` subido a 5 MiB.
+
+### Novedades Anteriores (v1.26.3 - cola offline estable)
 - **Fix crítico offline:** ya no se encolan fallos de red estando online; se quitaron interceptores globales de axios que re-encolaban al sincronizar. Sync en segundo plano con auth actual, descarta 4xx y entradas tras 5 reintentos; GET nunca se encola. Botón «Descartar» en el aviso y en Opciones de Desarrollador.
 
 ### Novedades Anteriores (v1.26.2 - update.sh alineado con same-origin)
