@@ -3,9 +3,13 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 18 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.25.8 (Actualización: 18 de Julio de 2026)
+## 🚀 Versión Actual: v1.25.9 (Actualización: 18 de Julio de 2026)
 
-### Novedades en v1.25.8 (install.sh: preguntas opcionales)
+### Novedades en v1.25.9 (Deploy self-hosted resiliente a nvm)
+- **Corrección:** `update.sh` carga nvm desde varias rutas (`$NVM_DIR`, `$HOME/.nvm`, `/home/usuario/.nvm`) o continúa si `node`/`npm` ya están en el PATH; solo falla si faltan herramientas tras todos los intentos.
+- **Corrección:** El workflow de GitHub Actions hace `git pull` antes de `./update.sh` para evitar el chicken-egg cuando el script antiguo fallaba antes del pull.
+
+### Novedades Anteriores (v1.25.8 - install.sh: preguntas opcionales)
 - **Mejora:** al final del install puedes activar PM2 startup, ufw, Telegram en `.env` y Tailscale; el README explica qué implica cada respuesta.
 
 ### Novedades Anteriores (v1.25.7 - Documentación alineada)

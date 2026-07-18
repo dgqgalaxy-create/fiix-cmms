@@ -1,5 +1,5 @@
 # FIIX CMMS
-*(Última actualización: 18 de Julio de 2026 — v1.25.8)*
+*(Última actualización: 18 de Julio de 2026 — v1.25.9)*
 
 Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, activos, inventario, preventivos, checklist, KPIs, compras, RCA, roster y notificaciones (Telegram).
 
@@ -193,7 +193,9 @@ cd ~/fiix-cmms
 ./update.sh
 ```
 
-`update.sh` valida nvm/`.env`/repo, ejecuta `git restore .` (descarta cambios locales en archivos del repo), luego `git pull --ff-only`, `npm install`, `prisma db push`, reinicia/recrea PM2 y comprueba que `:3000` y `:5173` respondan. **No modifica** `backend/.env` ni borra `backend/uploads/`. No edites código en el servidor: se pierde en el próximo update.
+`update.sh` intenta cargar nvm (`$NVM_DIR`, `~/.nvm`, `/home/usuario/.nvm`) o usa `node`/`npm`/`pm2` ya presentes en el PATH; valida `.env`/repo, ejecuta `git restore .` (descarta cambios locales en archivos del repo), luego `git pull --ff-only`, `npm install`, `prisma db push`, reinicia/recrea PM2 y comprueba que `:3000` y `:5173` respondan. **No modifica** `backend/.env` ni borra `backend/uploads/`. No edites código en el servidor: se pierde en el próximo update.
+
+**GitHub Actions (self-hosted):** el runner debe ser el mismo usuario que tiene Node/nvm (p. ej. `~/.nvm`). El workflow hace `git pull` y después `./update.sh`. Si un deploy falló antes de este arreglo, en el servidor ejecuta una vez a mano: `cd ~/fiix-cmms && git pull --ff-only && ./update.sh`.
 
 | | `install.sh` (primera vez) | `update.sh` (después) |
 |---|---|---|

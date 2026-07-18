@@ -9,5 +9,12 @@ jobs:
   deploy:
     runs-on: self-hosted
     steps:
-      - name: Ejecutar script de actualización
-        run: bash ~/fiix-cmms/update.sh
+      - name: Pull and update
+        run: |
+          cd ~/fiix-cmms
+          # Pull primero para usar el update.sh endurecido (evita chicken-egg:
+          # el script antiguo fallaba en nvm antes del git pull).
+          export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          git pull --ff-only
+          bash ./update.sh

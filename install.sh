@@ -14,9 +14,22 @@ echo
 
 # --- helpers ---
 load_nvm() {
-  export NVM_DIR="${HOME}/.nvm"
-  # shellcheck disable=SC1091
-  [ -s "${NVM_DIR}/nvm.sh" ] && . "${NVM_DIR}/nvm.sh"
+  # Intentar varias ubicaciones (HOME del runner, NVM_DIR, usuario típico del servidor).
+  local candidates=()
+  if [ -n "${NVM_DIR:-}" ]; then
+    candidates+=("${NVM_DIR}/nvm.sh")
+  fi
+  candidates+=("${HOME}/.nvm/nvm.sh" "/home/usuario/.nvm/nvm.sh")
+  local cand
+  for cand in "${candidates[@]}"; do
+    if [ -s "$cand" ]; then
+      export NVM_DIR="$(cd "$(dirname "$cand")" && pwd)"
+      # shellcheck disable=SC1090
+      . "$cand"
+      return 0
+    fi
+  done
+  return 1
 }
 
 need_cmd() {

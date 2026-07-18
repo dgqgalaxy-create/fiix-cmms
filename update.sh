@@ -13,24 +13,80 @@ echo "=== Actualización FIIX CMMS ==="
 echo "Directorio: ${APP_DIR}"
 echo
 
-# --- Node (nvm) ---
-export NVM_DIR="${HOME}/.nvm"
-if [ -s "${NVM_DIR}/nvm.sh" ]; then
-  # shellcheck disable=SC1091
-  . "${NVM_DIR}/nvm.sh"
+# --- Node: cargar nvm si existe; si no, usar node/npm del PATH ---
+# En GitHub Actions (shell no interactivo) nvm a menudo no está en el PATH
+# aunque ~/.nvm exista. No fallar solo por eso.
+try_source_nvm() {
+  local candidate="$1"
+  if [ -s "$candidate" ]; then
+    # shellcheck disable=SC1090
+    . "$candidate"
+    return 0
+  fi
+  return 1
+}
+
+NVM_CANDIDATES=()
+if [ -n "${NVM_DIR:-}" ]; then
+  NVM_CANDIDATES+=("${NVM_DIR}/nvm.sh")
+fi
+NVM_CANDIDATES+=("${HOME}/.nvm/nvm.sh")
+NVM_CANDIDATES+=("/home/usuario/.nvm/nvm.sh")
+
+NVM_LOADED=0
+NVM_TRIED=()
+for cand in "${NVM_CANDIDATES[@]}"; do
+  NVM_TRIED+=("$cand")
+  if try_source_nvm "$cand"; then
+    export NVM_DIR="$(cd "$(dirname "$cand")" && pwd)"
+    NVM_LOADED=1
+    info "nvm cargado desde ${cand}"
+    break
+  fi
+done
+
+if [ "$NVM_LOADED" -eq 1 ]; then
+  # Activar una versión conocida; no abortar si el alias falta.
+  if command -v nvm >/dev/null 2>&1; then
+    nvm use default >/dev/null 2>&1 \
+      || nvm use 20 >/dev/null 2>&1 \
+      || nvm use --lts >/dev/null 2>&1 \
+      || nvm use node >/dev/null 2>&1 \
+      || true
+  fi
 else
-  die "No se encontró nvm en ${NVM_DIR}. Ejecuta install.sh o instala Node/nvm."
+  info "nvm no encontrado; se usará node/npm del PATH si existen."
 fi
 
 need_cmd() {
-  command -v "$1" >/dev/null 2>&1 || die "Falta el comando '$1' en el PATH."
+  command -v "$1" >/dev/null 2>&1 || return 1
 }
 
-need_cmd git
-need_cmd npm
-need_cmd npx
-need_cmd pm2
-need_cmd node
+MISSING_CMDS=()
+for cmd in git node npm npx pm2; do
+  if ! need_cmd "$cmd"; then
+    MISSING_CMDS+=("$cmd")
+  fi
+done
+
+if [ "${#MISSING_CMDS[@]}" -gt 0 ]; then
+  echo "  [ERROR] Faltan comandos tras intentar cargar Node: ${MISSING_CMDS[*]}" >&2
+  echo "  PATH=${PATH}" >&2
+  echo "  HOME=${HOME:-"(unset)"}" >&2
+  echo "  NVM_DIR=${NVM_DIR:-"(unset)"}" >&2
+  echo "  Archivos nvm intentados:" >&2
+  for cand in "${NVM_TRIED[@]}"; do
+    if [ -e "$cand" ]; then
+      echo "    - ${cand} (existe, no se pudo cargar o no fue el elegido)" >&2
+    else
+      echo "    - ${cand} (no existe)" >&2
+    fi
+  done
+  echo "  Ejecuta install.sh como el mismo usuario del runner, o instala Node 20+ y pm2 en el PATH." >&2
+  exit 1
+fi
+
+ok "Node $(node -v) · npm $(npm -v) · pm2 $(pm2 -v 2>/dev/null || echo '?')"
 
 [ -d "${APP_DIR}/.git" ] || die "No existe el repo en ${APP_DIR}. Corre primero ./install.sh"
 [ -f "${APP_DIR}/backend/.env" ] || die "Falta ${APP_DIR}/backend/.env — no se puede actualizar sin credenciales."
