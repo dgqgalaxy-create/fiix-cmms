@@ -1,7 +1,7 @@
-# Manual de Usuario - LPET CMMS
-*(Versión 1.23.0 - 17 de Julio, 2026)*
+# Manual de Usuario - FIIX CMMS (LPET)
+*(Versión 1.25.7 - 18 de Julio, 2026)*
 
-LPET CMMS centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
+FIIX CMMS (despliegue LPET) centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 
 Sus pilares son **Rapidez** (menos formatos y pasos), **Trazabilidad** (responsables, fechas, firmas, consumos y evidencias) y **Control** (permisos por rol y protección de acciones críticas). El flujo recomendado es:
 1. **Reportar** la solicitud con activo, zona, descripción y prioridad.
@@ -11,7 +11,7 @@ Sus pilares son **Rapidez** (menos formatos y pasos), **Trazabilidad** (responsa
 
 En celular, el temario del manual aparece como una barra horizontal deslizable. Toca un tema para mostrarlo debajo con una transición de entrada de derecha a izquierda. El encabezado, el temario y el botón **Volver** permanecen fijos; únicamente se desplaza la información del tema hasta el borde inferior, con un degradado superior que aparece progresivamente.
 
-## 0. Operación diaria (v1.15–1.21)
+## 0. Operación diaria
 - **Tiempo real:** Los listados y catálogos se actualizan casi al momento cuando otro usuario crea, edita o elimina datos (órdenes, inventario, activos, compras, checklist, turnos, RCA, zonas, usuarios, etc.). No hace falta pulsar F5.
 - **Edición concurrente de OT:** Si abres una orden de trabajo, eres el editor. Quien abra la misma orden después la verá en **solo lectura** con el mensaje «En edición por {nombre}». Al cerrar el detalle (o si se pierde la conexión ~40 s), otro puede tomarla. Si dos intentan aceptar la misma orden a la vez, el segundo recibe un aviso de conflicto y debe recargar.
 - **Folios FOL-####:** Cada orden recibe un folio automático e inmutable (`FOL-0001`, `FOL-0002`…). No se edita. En importación CSV se usa la columna `FOLIO` (acepta `FOL-####` o el número).
@@ -72,6 +72,7 @@ Gestión de solicitudes (listado), sin el resumen gráfico:
 - **Vista para Técnicos:** Los técnicos pueden atender las órdenes que tengan asignadas, pero no pueden modificar la asignación de personal.
 - **Capa móvil de técnico:** En celular, el rol Técnico ve una barra inferior con Mis OT, Escanear QR, Inventario e Inicio. Al abrir una orden aparecen botones grandes de Aceptar / Pausar / Finalizar / Reanudar; completa evidencias y guarda. Administradores y gestionadores siguen con la interfaz completa (también en celular).
 - **Escanear QR en celular:** si entras por `http://IP` (sin HTTPS), el navegador bloquea la cámara en vivo; usa **Elegir foto / galería**. Con HTTPS o localhost la cámara en vivo sí funciona. Al escanear una **ubicación** (p. ej. `E2-0`) o un repuesto, la app abre el detalle correspondiente en Inventario (con los repuestos de esa ubicación). En desarrollo, Vite admite el hostname local `lpet-cmms` y nombres Tailscale `*.ts.net`.
+- **Servidor Ubuntu:** primero SSH + `git clone` (README); luego `./install.sh`. Actualizaciones: `./update.sh` (no toca el `.env`; hace `git restore` antes del pull; si falla, se detiene).
 - **Notificaciones Telegram:** Tanto las órdenes creadas desde **+ Nueva Orden** como las del **Portal de Solicitudes** (`/request`) disparan alerta a Telegram cuando la opción está activada en Configuración.
 - **Opciones de Ordenamiento:**
   En los filtros superiores, puedes elegir cómo organizar tus OTs:
@@ -159,6 +160,7 @@ Panel de indicadores de mantenimiento:
 
 ## 10. Importación masiva por CSV (Opciones de Desarrollador)
 
+- **Acceso:** la contraseña maestra de esta pantalla se define en `backend/.env` (`DEV_MENU_PASSWORD`). No se cambia desde la interfaz; tras editarla reinicia el backend.
 - **Distribución de herramientas:** La pantalla separa las acciones por propósito: Importación y respaldos, integración con Telegram, mantenimiento local y Zona de peligro. Esto ayuda a distinguir las operaciones seguras de las destructivas.
 - **Selección conjunta:** Puedes seleccionar los 7 archivos CSV a la vez; no importa el orden en que los elijas. El sistema los reconoce por su nombre y los carga siempre en el orden correcto (Categorías → Ubicaciones → Proveedores → Items → Usuarios → Inventario → Órdenes de Trabajo) para respetar las dependencias entre tablas.
 - **Usuarios de inventario:** Si un movimiento de inventario referencia un correo que no está en el archivo de Usuarios, ese usuario se crea automáticamente como **inactivo** (rol Técnico) para no perder el historial de consumos. Luego puedes activarlo o completarlo desde el Directorio.

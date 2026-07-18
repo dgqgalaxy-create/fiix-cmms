@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.25.4";
+export const APP_VERSION = "1.25.7";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "17 de Julio, 2026";
+  const updateDate = "18 de Julio, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -28,6 +28,9 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Docs: Manual, roadmap, contexto y README alineados con la app (install/update, RCA opcional, Inicio vs KPIs, sin datos obsoletos).",
+    "Mejora: update.sh endurecido (falla si algo sale mal, comprueba .env/nvm/PM2, recrea el frontend con acceso en red y verifica que :3000 y :5173 respondan).",
+    "Nuevo: Script install.sh para montar FIIX en un Ubuntu limpio (Node, PostgreSQL, .env, Prisma, PM2); update.sh sigue siendo solo para actualizaciones.",
     "Mejora: Vite acepta acceso por Tailscale MagicDNS (*.ts.net) además del hostname local lpet-cmms.",
     "Corrección: Al escanear el QR de una ubicación (p. ej. E2-0) ahora abre el detalle con sus repuestos; también acepta códigos sin prefijo FIIX-LOCATION y espera a que cargue el inventario antes de resolver el enlace.",
     "Corrección: Escáner QR en celular por IP (HTTP): ya no tumba la app al cerrar; si la cámara en vivo está bloqueada, puedes escanear eligiendo una foto de la galería. La cámara en vivo requiere HTTPS.",

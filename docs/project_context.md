@@ -1,39 +1,36 @@
 # Contexto Global del Proyecto (CMMS)
 
 ## ¿Qué estamos construyendo?
-Un Sistema Computarizado de Gestión de Mantenimiento (CMMS / GMAO) de clase mundial diseñado específicamente para entornos industriales. Inspirado en plataformas robustas como Fiix o SAP PM, pero con una experiencia de usuario (UX/UI) moderna, extremadamente rápida e intuitiva.
+Un Sistema Computarizado de Gestión de Mantenimiento (CMMS / GMAO) self-hosted para entornos industriales. Inspirado en plataformas como Fiix o SAP PM, con UX moderna y operación en planta (escritorio + celular). Nombre del producto en repo: **FIIX CMMS** (despliegue LPET).
 
 ## Filosofía de Diseño
-- **Estética Premium:** Colores vibrantes (Indigo, Emerald, Rose), interfaces limpias, animaciones fluidas, y un diseño enfocado en la usabilidad tanto en escritorio como en dispositivos móviles.
-- **Rendimiento:** Interfaces optimizadas (ej. paginación), evitando recargas innecesarias (React, Vite).
-- **Automatización:** Minimizar clics (autocompletado de imágenes web, alertas de stock crítico automáticas).
+- **Estética industrial:** base slate/emerald, interfaces limpias y usables en escritorio y móvil (capa específica para técnicos en celular).
+- **Rendimiento:** React + Vite, paginación y actualización en tiempo casi real sin F5.
+- **Automatización:** menos clics (imágenes de refacciones, stock crítico → borrador OC, PMs por calendario, SLA).
 
 ## Módulos Desarrollados (Completados)
-1. **Autenticación y Usuarios:** Roles (Admin, Gestionador, Técnico) con matriz dinámica de permisos y autoguardado.
-2. **Dashboard de Inicio:** KPIs en tiempo real, calendario interactivo, tiempo promedio para reparar (MTTR).
-3. **Gestión de Activos:** Catálogo de máquinas, jerarquías y Zonas.
-4. **Órdenes de Trabajo (WO):**
-   - Core (creación, firma, evidencia fotográfica).
-   - *WebSockets:* Notificaciones y actualizaciones silenciosas en tiempo real del portal al técnico.
-5. **Directorio y Solicitantes:** Separación lógica entre personal interno y personal externo (solicitantes) para evitar mezclar registros.
-6. **Mantenimientos Preventivos:** Programación por calendario con CronJobs que disparan OTs automáticamente en base a fechas o frecuencias (Días, Semanas, Meses, Años).
-7. **Análisis de Causa Raíz (RCA):** Sistema de 5 Porqués para investigaciones de fallas recurrentes.
-8. **Inventario y Compras:**
-   - Control de refacciones (Categorías, Ubicaciones, Proveedores).
-   - Módulo de Reabastecimiento con alertas de stock crítico.
-   - Búsqueda inteligente de imágenes web (Puppeteer).
-9. **Portal de Reportes Públicos:** Formulario accesible sin contraseña donde los usuarios de la planta pueden escanear un código y levantar un reporte (ticket).
-10. **Checklist Diario:** Módulo para la revisión estructurada de las líneas de producción, con lógica estricta de un checklist por día. Incluye actividades con campos mixtos (Check, Texto y Número).
-11. **Horarios y Turnos (Roster):** Calendario interactivo de arrastrar y soltar para asignar patrones de turnos (4x4) y excepciones (Vacaciones, Faltas, Tiempo Extra). Incluye integración de Días Festivos Globales (México) y soporte de impresión PDF.
-12. **Manual de Usuario (v1.9.1):** Manual interactivo integrado en el sistema con UI premium, filtrado dinámico (Opciones de Desarrollador ocultas para no-administradores) y explicación profunda de mecánicas internas.
-13. **Inventario Refinado (v1.9.1):** Registro de cantidades fraccionadas (decimales), autoguardado silencioso para mejor flujo de trabajo y validaciones estrictas (movimientos negativos y stock mínimo).
+1. **Autenticación y Usuarios:** Roles ADMINISTRADOR, GESTIONADOR, TECNICO con matriz de permisos.
+2. **Inicio (`/home`):** Resumen operativo (Pareto, tarjetas de estado, cierres de la semana). *No* es el módulo de KPIs/MTTR ni el calendario de turnos.
+3. **KPIs (`/kpis`):** MTTR/MTBF, costos, dashboard de técnicos, metas.
+4. **Calendario / Roster:** Turnos, excepciones y festivos (módulo aparte de Inicio).
+5. **Gestión de Activos:** Catálogo, zonas, historial «de un vistazo», QR.
+6. **Órdenes de Trabajo:** Creación, estados, evidencias, consumo de refacciones al cerrar, presencia/bloqueo suave, Socket.IO.
+7. **Directorio y Solicitantes:** Personal interno vs solicitantes externos.
+8. **Mantenimientos Preventivos:** Frecuencias por Días / Semanas / Meses / Años + cron que genera OTs. *(Medidores/CBM: backlog.)*
+9. **Análisis de Causa Raíz (RCA):** Árbol **Problema → Causa → Solución** (opcional al cerrar correctivas).
+10. **Inventario y Compras:** Refacciones, ubicaciones, proveedores, stock crítico, OC digitales; búsqueda de imágenes vía API DuckDuckGo (no Puppeteer).
+11. **Portal `/request`:** Reporte público sin login; foto opcional.
+12. **Checklist Diario:** Un checklist por día; tareas Check / Número / Texto; columnas configurables.
+13. **Manual de Usuario:** Integrado en la app + `docs/manual_usuario.md` de referencia.
+14. **SLA y notificaciones:** Umbrales por prioridad; Telegram + in-app; campana.
+15. **Capa móvil técnico:** Barra Mis OT / Escanear / Inventario / Inicio.
+16. **Despliegue:** `install.sh` (Ubuntu limpio) y `update.sh` (actualizaciones con PM2).
 
-## Estrategia de Migración de Datos (Completada / En Progreso)
-Los datos base de refacciones, inventario e históricos han sido integrados con éxito:
-- `seed_inventory.ts` importó las refacciones.
-- `seed_orders.ts` importó y unificó exitosamente todo el historial de Órdenes de Mantenimiento de años anteriores.
-- **Pendiente / Actual:** La carpeta `docs/` se utilizará exclusivamente para albergar documentos de referencia (PDFs, manuales, requerimientos como formatos físicos) que dictarán las reglas de negocio, como el "Check list diario.pdf".
+## Datos y documentación
+- Seeds/importadores históricos: `backend/src/seed_*.ts`, herramientas en Opciones de desarrollador.
+- `docs/` guarda manual, roadmap, contexto y estrategia (markdown). Los PDF de planta, si existen, son referencia externa.
 
 ## Tecnologías
-- **Frontend:** React, TypeScript, TailwindCSS, Vite, Lucide React, Socket.io-client.
-- **Backend:** Node.js, Express, TypeScript, Prisma ORM, PostgreSQL, WebSockets, Node-cron, Puppeteer.
+- **Frontend:** React, TypeScript, Tailwind CSS v4, Vite, Lucide, Socket.IO client, PWA (parcial).
+- **Backend:** Node.js, Express, TypeScript, Prisma, PostgreSQL, Socket.IO, node-cron, Multer (`uploads/`).
+- **Ops:** nvm, PM2, scripts `install.sh` / `update.sh`; API `:3000`, UI `:5173`.

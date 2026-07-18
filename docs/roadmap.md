@@ -1,11 +1,20 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
-*(Última actualización: 17 de Julio de 2026)*
+*(Última actualización: 18 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.25.4 (Actualización: 17 de Julio de 2026)
+## 🚀 Versión Actual: v1.25.7 (Actualización: 18 de Julio de 2026)
 
-### Novedades en v1.25.4 (Hosts Tailscale en Vite)
+### Novedades en v1.25.7 (Documentación alineada)
+- **Docs:** manual, roadmap, contexto y README corregidos para coincidir con la app (install/update, RCA opcional, Inicio vs KPIs, sin Puppeteer/5 Porqués).
+
+### Novedades Anteriores (v1.25.6 - update.sh endurecido)
+- **Mejora:** `update.sh` con `set -e`, validaciones, reinicio/alta de PM2, recreación del frontend con `--host 0.0.0.0` y smoke test HTTP.
+
+### Novedades Anteriores (v1.25.5 - Script de instalación Ubuntu)
+- **Nuevo:** `install.sh` para el primer montaje en servidor limpio; `update.sh` solo actualiza código ya instalado. Plantilla `backend/.env.example`.
+
+### Novedades Anteriores (v1.25.4 - Hosts Tailscale en Vite)
 - **Mejora:** `allowedHosts` incluye `.ts.net` para entrar por MagicDNS de Tailscale, además de `lpet-cmms`.
 
 ### Novedades Anteriores (v1.25.3 - QR de ubicación abre el detalle)
@@ -59,7 +68,7 @@ Este documento contiene la lista de módulos y características pendientes de de
 ### Novedades Anteriores (v1.14.0 - SLA y escalamiento)
 - **Relojes SLA:** respuesta (PENDIENTE), detenida (EN_ESPERA) y resolución (hasta FINALIZADO), con umbrales por prioridad URGENTE/NORMAL/BAJO.
 - **Automatización:** cron cada 15 minutos envía recordatorios y escalamientos (Telegram + in-app a GESTIONADOR/ADMINISTRADOR) sin duplicar el mismo evento.
-- **Configuración:** toggle y tabla de umbrales en Configuración → Notificaciones; badges de cumplimiento en listado y detalle de OT.
+- **Configuración:** umbrales editables en **Configuración → SLA (Acuerdo de Nivel de Servicio)**; en Notificaciones solo toggles de avisos. Badges de cumplimiento en listado y detalle de OT.
 
 ### Novedades Anteriores (v1.13.0 - Migración de códigos de activos)
 - **EQ → ACT:** Herramienta en Opciones de Desarrollador para convertir códigos históricos (`EQ-XXXXX` u otros) al formato estándar `ACT-0001`, con vista previa y mapa JSON de equivalencias.
@@ -208,13 +217,14 @@ Este documento contiene la lista de módulos y características pendientes de de
 
 ## [x] Módulo 7: Mantenimiento Preventivo (PMs)
 - [x] Crear interfaz para definir "Rutinas de Mantenimiento" o plantillas.
-- [x] Implementar disparadores basados en tiempo (ej. cada 30 días) o medidores.
+- [x] Implementar disparadores basados en tiempo (Días, Semanas, Meses, Años).
 - [x] Tarea en el servidor (Cron Job) que revise diariamente qué mantenimientos deben generarse y los cree como Órdenes de Trabajo automáticamente.
+- [ ] Disparadores por medidores / horómetros (CBM) — ver backlog.
 
 ## [x] Módulo 8: Analíticas y Reportes Gráficos (Dashboard Avanzado)
 - [x] Gráficas de Tiempo Medio de Reparación (MTTR) y Tiempo Medio Entre Fallas (MTBF).
 - [x] Reportes de Costos de Mantenimiento desglosados por Máquina y por Fecha.
-- [x] Exportación de reportes gerenciales en PDF/Excel.
+- [x] Exportación / impresión de reportes (CSV en órdenes, PDF de OT, impresión desde KPIs). *(Excel nativo: no implementado.)*
 
 ## [x] Módulo 9: Sistema Integral de Órdenes de Compra (POs)
 - [x] Convertir la actual "Lista de compras .txt" en Órdenes de Compra digitales reales guardadas en la base de datos.
@@ -227,9 +237,9 @@ Este documento contiene la lista de módulos y características pendientes de de
 - [ ] **Checklists avanzados y LOTO:** Pasos obligatorios dentro de la Orden de Trabajo y firmas de bloqueo de energías peligrosas.
 - [x] **Notificaciones y Escalamiento:** Recordatorios y escalamiento SLA por prioridad (respuesta, detenida, resolución) vía Telegram + in-app a gestores/admins (v1.14.0).
 - [ ] **Control de Medidores (CBM):** Registro histórico de horómetros y detonación automática de PMs por uso real.
-- [x] **Soporte PWA (Offline):** Que la app funcione sin conexión a internet y sincronice datos en segundo plano.
-- [x] **Gestión con Códigos QR:** Escaneo físico en máquinas para abrir historiales y escaneo en estantes para el control rápido de refacciones.
-- [x] **Árbol de Fallas (RCA):** Clasificación obligatoria de Problema -> Causa -> Remedio para generar análisis Pareto de fallas comunes.
+- [ ] **Soporte PWA (Offline) completo:** Hay base PWA + cola offline parcial; falta experiencia offline total y sync fiable en segundo plano.
+- [x] **Gestión con Códigos QR:** Escaneo físico en máquinas para abrir historiales y escaneo en estantes para el control rápido de refacciones (incluye galería si no hay HTTPS).
+- [x] **Árbol de Fallas (RCA):** Clasificación Problema → Causa → Solución para Pareto; al cerrar correctivas es **opcional**.
 - [x] **Calendario de Carga de Trabajo / Turnos (Roster):** Vista interactiva para gestionar y asignar turnos, días festivos y faltas del personal (Completado en v1.7.3).
 - [ ] **Portal de Contratistas:** Acceso limitado para proveedores externos donde puedan reportar sus trabajos sin ver datos sensibles.
 - [ ] **Multiplanta / Multisítio:** Segregación de información para empresas con múltiples fábricas con un dashboard corporativo global.
