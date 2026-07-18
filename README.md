@@ -1,5 +1,5 @@
 # FIIX CMMS
-*(Última actualización: 18 de Julio de 2026 — v1.26.0)*
+*(Última actualización: 18 de Julio de 2026 — v1.26.2)*
 
 Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, activos, inventario, preventivos, checklist, KPIs, compras, RCA, roster y notificaciones (Telegram).
 
@@ -164,7 +164,7 @@ chmod +x install.sh update.sh
 | Pregunta | Si dices **S** | Si dices **N** |
 |---|---|---|
 | ¿Registrar PM2 al reiniciar? (sudo) | Ejecuta el comando `pm2 startup` con sudo para que FIIX vuelva tras un reboot. | Lo haces después a mano con `pm2 startup`. |
-| ¿Configurar/activar **ufw**? | Abre SSH (22), UI (5173) y API (3000) y activa el firewall. Pide **segunda confirmación** (riesgo de cortar acceso si SSH falla). | Sin firewall del script; útil si solo usarás Tailscale. |
+| ¿Configurar/activar **ufw**? | Abre SSH (22) y el puerto 3000 (UI + API) y activa el firewall. Pide **segunda confirmación** (riesgo de cortar acceso si SSH falla). | Sin firewall del script; útil si solo usarás Tailscale. |
 | ¿Telegram en `.env` ahora? | Pides Bot Token y Chat ID; los escribe en `backend/.env` y reinicia el backend. | Lo configuras luego en la app o en `.env`. |
 | ¿Instalar **Tailscale**? | Instala el cliente. Si pegas un *auth key*, hace `tailscale up` solo; si no, te indica `sudo tailscale up`. MagicDNS/HTTPS se activan en la consola web de Tailscale. | Lo instalas cuando quieras. |
 

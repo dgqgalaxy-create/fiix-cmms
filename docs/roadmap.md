@@ -3,9 +3,12 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 18 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.26.1 (Actualización: 18 de Julio de 2026)
+## 🚀 Versión Actual: v1.26.2 (Actualización: 18 de Julio de 2026)
 
-### Novedades en v1.26.1 (Deploy self-hosted resiliente a nvm)
+### Novedades en v1.26.2 (update.sh alineado con same-origin)
+- **Fix crítico deploy:** `update.sh` ahora ejecuta `npm run build:app`, reinicia solo `fiix-backend`, elimina `fiix-frontend` si existía, y smoke-testea `:3000` (API + SPA). Queda alineado con `install.sh` / v1.26.0+.
+
+### Novedades Anteriores (v1.26.1 - Deploy self-hosted resiliente a nvm)
 - **Corrección:** `update.sh` carga nvm desde varias rutas (`$NVM_DIR`, `$HOME/.nvm`, `/home/usuario/.nvm`) o continúa si `node`/`npm` ya están en el PATH; solo falla si faltan herramientas tras todos los intentos.
 - **Corrección:** El workflow de GitHub Actions hace `git pull` antes de `./update.sh` para evitar el chicken-egg cuando el script antiguo fallaba antes del pull.
 

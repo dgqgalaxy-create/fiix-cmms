@@ -124,13 +124,15 @@ npx prisma db push
 ok "Backend listo"
 
 # --- 3. Frontend ---
-echo ">>> [3/5] Frontend (npm)..."
+echo ">>> [3/5] Frontend (npm + build)..."
 cd "${APP_DIR}/frontend"
 npm install
-ok "Frontend listo"
+info "Compilando frontend (frontend/dist)..."
+npm run build:app
+ok "Frontend listo (dist)"
 
-# --- 4. PM2 ---
-echo ">>> [4/5] Servicios PM2..."
+# --- 4. PM2 (solo backend: sirve API + SPA en :3000) ---
+echo ">>> [4/5] Servicio PM2 (fiix-backend)..."
 
 cd "${APP_DIR}/backend"
 if pm2 describe fiix-backend >/dev/null 2>&1; then
@@ -141,14 +143,14 @@ else
   pm2 start npm --name fiix-backend -- run dev
 fi
 
-cd "${APP_DIR}/frontend"
-# Recrear frontend para garantizar --host 0.0.0.0 (acceso desde otros dispositivos)
-info "Recreando fiix-frontend con --host 0.0.0.0..."
-pm2 delete fiix-frontend >/dev/null 2>&1 || true
-pm2 start npm --name fiix-frontend -- run dev -- --host 0.0.0.0 --port 5173
+# Limpieza: instalaciones antiguas corrían Vite en :5173
+if pm2 describe fiix-frontend >/dev/null 2>&1; then
+  info "Eliminando proceso legado fiix-frontend (:5173)..."
+  pm2 delete fiix-frontend >/dev/null 2>&1 || true
+fi
 
 pm2 save
-ok "PM2 actualizado"
+ok "PM2 actualizado (solo fiix-backend; UI+API en :3000)"
 pm2 status || true
 
 # --- 5. Comprobación rápida ---
@@ -163,17 +165,17 @@ else
   }
 
   API_CODE="$(http_code 'http://127.0.0.1:3000/api/health')"
-  UI_CODE="$(http_code 'http://127.0.0.1:5173/')"
+  UI_CODE="$(http_code 'http://127.0.0.1:3000/')"
 
   if [ "$API_CODE" = "000" ]; then
     die "El backend no responde en :3000. Revisa: pm2 logs fiix-backend --lines 50"
   fi
   if [ "$UI_CODE" = "000" ]; then
-    die "El frontend no responde en :5173. Revisa: pm2 logs fiix-frontend --lines 50"
+    die "La interfaz (SPA) no responde en :3000/. Revisa: pm2 logs fiix-backend --lines 50"
   fi
 
-  ok "Backend /api/health → HTTP ${API_CODE}"
-  ok "Frontend / → HTTP ${UI_CODE}"
+  ok "API /api/health → HTTP ${API_CODE}"
+  ok "SPA / → HTTP ${UI_CODE}"
 fi
 
 echo

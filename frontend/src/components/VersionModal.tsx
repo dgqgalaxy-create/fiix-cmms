@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.26.1";
+export const APP_VERSION = "1.26.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: `update.sh` ya compila el frontend y reinicia solo `fiix-backend` (UI+API en :3000); elimina el proceso legado `fiix-frontend` en :5173 que rompía el modelo same-origin de producción.",
     "Corrección: Despliegue con GitHub Actions (self-hosted): `update.sh` ya no falla solo por nvm ausente en shells no interactivos; detecta Node/npm/pm2 del PATH o carga nvm desde varias rutas, y el workflow hace `git pull` antes de ejecutar el script.",
     "Nuevo: Modo offline para técnicos: aceptar, pausar, finalizar y reanudar una OT ahora funciona sin conexión (se guarda en el dispositivo y se sincroniza solo al recuperar señal); si intentas subir fotos sin conexión, el sistema avisa y guarda el estado/notas sin las imágenes.",
     "Nuevo: Aviso de conexión con el número de cambios pendientes de sincronizar, visible en toda la app mientras estés sin señal o sincronizando.",
