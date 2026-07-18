@@ -1,4 +1,4 @@
-import axios, { type AxiosInstance } from 'axios';
+import axios, { type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
 import { addOfflineRequest } from '../utils/offlineQueue';
 
 /**
@@ -21,7 +21,13 @@ const api: AxiosInstance = axios.create({
   baseURL: `${BACKEND_URL}/api`,
 });
 
+/** Cliente sin interceptores offline: para sync de cola y llamadas internas. */
+export const bareAxios: AxiosInstance = axios.create();
+
 const OFFLINE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+const isMutatingMethod = (method?: string) =>
+  OFFLINE_METHODS.has((method || 'GET').toUpperCase());
 
 const queueIfOffline = async (config: {
   url?: string;
@@ -31,14 +37,21 @@ const queueIfOffline = async (config: {
   baseURL?: string;
 }) => {
   const method = (config.method || 'GET').toUpperCase();
-  if (!OFFLINE_METHODS.has(method)) return false;
+  if (!isMutatingMethod(method)) return false;
 
   const path = config.url || '';
+  if (!path) return false;
+
   const absolute =
-    path.startsWith('http') ? path : `${config.baseURL || `${BACKEND_URL}/api`}${path.startsWith('/') ? '' : '/'}${path}`;
+    path.startsWith('http')
+      ? path
+      : `${config.baseURL || `${BACKEND_URL}/api`}${path.startsWith('/') ? '' : '/'}${path}`;
+
+  // No encolar URLs relativas rotas ni endpoints sin host.
+  if (!absolute.startsWith('http')) return false;
 
   const headers: Record<string, string> = {};
-  const raw = config.headers as Record<string, string> | undefined;
+  const raw = config.headers as Record<string, unknown> | undefined;
   if (raw) {
     for (const [k, v] of Object.entries(raw)) {
       if (typeof v === 'string') headers[k] = v;
@@ -51,7 +64,7 @@ const queueIfOffline = async (config: {
 
   let body = config.data;
   if (typeof FormData !== 'undefined' && body instanceof FormData) {
-    // FormData no se serializa bien en IDB; guardar solo JSON si aplica
+    // FormData no se serializa bien en IDB.
     return false;
   }
   if (typeof body === 'string') {
@@ -69,14 +82,15 @@ const queueIfOffline = async (config: {
   return true;
 };
 
-api.interceptors.request.use(async (config) => {
+api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
     localStorage.setItem('lastActivity', Date.now().toString());
   }
 
-  if (!navigator.onLine) {
+  // Solo encolar si el navegador reporta offline. GET nunca se encola.
+  if (!navigator.onLine && isMutatingMethod(config.method)) {
     const queued = await queueIfOffline({
       url: config.url,
       method: config.method,
@@ -85,7 +99,7 @@ api.interceptors.request.use(async (config) => {
       baseURL: config.baseURL,
     });
     if (queued) {
-      return Promise.reject({ isOfflineHandled: true, message: 'Guardado offline' });
+      return Promise.reject({ isOfflineHandled: true, message: 'Guardado offline', config });
     }
   }
   return config;
@@ -111,24 +125,29 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    if (!navigator.onLine || error.message === 'Network Error') {
-      if (error.config) {
-        const queued = await queueIfOffline({
-          url: error.config.url,
-          method: error.config.method,
-          headers: error.config.headers,
-          data: error.config.data,
-          baseURL: error.config.baseURL,
-        });
-        if (queued) {
-          return {
-            data: { success: true, offline: true },
-            status: 200,
-            statusText: 'OK',
-            headers: {},
-            config: error.config,
-          };
-        }
+    // Solo si seguimos offline y no hubo respuesta HTTP (caída a mitad de la petición).
+    // Nunca encolar por 4xx/5xx ni por "Network Error" estando online (evita falsos positivos).
+    if (
+      !navigator.onLine &&
+      !error.response &&
+      error.config &&
+      isMutatingMethod(error.config.method)
+    ) {
+      const queued = await queueIfOffline({
+        url: error.config.url,
+        method: error.config.method,
+        headers: error.config.headers,
+        data: error.config.data,
+        baseURL: error.config.baseURL,
+      });
+      if (queued) {
+        return {
+          data: { success: true, offline: true },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: error.config,
+        };
       }
     }
 

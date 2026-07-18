@@ -3,9 +3,12 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 18 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.26.2 (Actualización: 18 de Julio de 2026)
+## 🚀 Versión Actual: v1.26.3 (Actualización: 18 de Julio de 2026)
 
-### Novedades en v1.26.2 (update.sh alineado con same-origin)
+### Novedades en v1.26.3 (cola offline estable)
+- **Fix crítico offline:** ya no se encolan fallos de red estando online; se quitaron interceptores globales de axios que re-encolaban al sincronizar. Sync en segundo plano con auth actual, descarta 4xx y entradas tras 5 reintentos; GET nunca se encola. Botón «Descartar» en el aviso y en Opciones de Desarrollador.
+
+### Novedades Anteriores (v1.26.2 - update.sh alineado con same-origin)
 - **Fix crítico deploy:** `update.sh` ahora ejecuta `npm run build:app`, reinicia solo `fiix-backend`, elimina `fiix-frontend` si existía, y smoke-testea `:3000` (API + SPA). Queda alineado con `install.sh` / v1.26.0+.
 
 ### Novedades Anteriores (v1.26.1 - Deploy self-hosted resiliente a nvm)
@@ -255,7 +258,7 @@ Este documento contiene la lista de módulos y características pendientes de de
 - [ ] **Checklists avanzados y LOTO:** Pasos obligatorios dentro de la Orden de Trabajo y firmas de bloqueo de energías peligrosas.
 - [x] **Notificaciones y Escalamiento:** Recordatorios y escalamiento SLA por prioridad (respuesta, detenida, resolución) vía Telegram + in-app a gestores/admins (v1.14.0).
 - [ ] **Control de Medidores (CBM):** Registro histórico de horómetros y detonación automática de PMs por uso real.
-- [x] **Soporte PWA (Offline) para técnicos (v1.26.0):** Aceptar/pausar/finalizar/reanudar OT funciona sin conexión (cola en IndexedDB + sync automático al reconectar); las fotos requieren conexión y se avisa claramente si no la hay. Pendiente: sync fiable de fotos en segundo plano y offline en otros módulos (inventario, checklist).
+- [x] **Soporte PWA (Offline) para técnicos (v1.26.0 + fix v1.26.3):** Aceptar/pausar/finalizar/reanudar OT funciona sin conexión (cola en IndexedDB + sync automático al reconectar); v1.26.3 evita falsos positivos de encolado, reintentos infinitos y permite descartar la cola. Pendiente: sync fiable de fotos en segundo plano y offline en otros módulos (inventario, checklist).
 - [x] **Gestión con Códigos QR:** Escaneo físico en máquinas para abrir historiales y escaneo en estantes para el control rápido de refacciones (incluye galería si no hay HTTPS).
 - [x] **Árbol de Fallas (RCA):** Clasificación Problema → Causa → Solución para Pareto; al cerrar correctivas es **opcional**.
 - [x] **Calendario de Carga de Trabajo / Turnos (Roster):** Vista interactiva para gestionar y asignar turnos, días festivos y faltas del personal (Completado en v1.7.3).

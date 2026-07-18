@@ -608,13 +608,28 @@ export const DeveloperOptions = () => {
                 </span>
               </button>
               <button
-                onClick={() => alert('Simulando error en red (deshabilitado en producción)')}
-                className="flex w-full items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50/60 p-4 text-left transition hover:bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20"
+                onClick={async () => {
+                  try {
+                    const { clearOfflineQueue } = await import('../utils/offlineQueue');
+                    const count = await clearOfflineQueue();
+                    setSuccessMsg(
+                      count > 0
+                        ? `Cola offline vaciada: se descartaron ${count} cambio(s) pendiente(s).`
+                        : 'La cola offline ya estaba vacía.'
+                    );
+                  } catch (err) {
+                    console.error(err);
+                    setError('No se pudo vaciar la cola offline (IndexedDB).');
+                  }
+                }}
+                className="flex w-full items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50/60 p-4 text-left transition hover:bg-rose-50 dark:border-rose-900/50 dark:bg-rose-950/20"
               >
-                <AlertTriangle className="shrink-0 text-amber-600" size={20} />
+                <Trash2 className="shrink-0 text-rose-600" size={20} />
                 <span>
-                  <span className="block text-sm font-black text-slate-800 dark:text-white">Simular falla de sincronización</span>
-                  <span className="text-xs text-slate-500">Prueba el comportamiento de la cola offline.</span>
+                  <span className="block text-sm font-black text-slate-800 dark:text-white">Descartar cola offline</span>
+                  <span className="text-xs text-slate-500">
+                    Vacía IndexedDB (fiix-offline-db). Úsalo si el aviso «Sincronizando X cambios» se queda atascado.
+                  </span>
                 </span>
               </button>
             </div>

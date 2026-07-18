@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import axios from 'axios';
-import { getOfflineRequests, removeOfflineRequest } from './utils/offlineQueue';
+import { syncOfflineQueue } from './utils/offlineSync';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -44,30 +43,11 @@ function App() {
       }
     }
 
-    const handleOnline = async () => {
-      const requests = await getOfflineRequests();
-      for (const req of requests) {
-        try {
-          // axios "crudo" (sin interceptor offline de `api`) para no re-encolar.
-          const headers: Record<string, string> = { ...(req.headers || {}) };
-          if (req.body && typeof req.body === 'object' && !(req.body instanceof FormData)) {
-            headers['Content-Type'] = headers['Content-Type'] || 'application/json';
-          }
-          await axios({
-            url: req.url,
-            method: req.method,
-            headers,
-            data: req.body,
-          });
-          await removeOfflineRequest(req.id);
-        } catch (error) {
-          console.error(`Failed to sync offline request ${req.id}`, error);
-        }
-      }
-      window.dispatchEvent(new Event('fiix-offline-sync-done'));
+    // Sync en segundo plano: no bloquea el render ni las listas (GET nunca se encola).
+    const handleOnline = () => {
+      void syncOfflineQueue();
     };
 
-    // Si ya hay red al montar y hay cola pendiente, sincronizar.
     if (navigator.onLine) {
       handleOnline();
     }
