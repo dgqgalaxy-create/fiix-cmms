@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.26.4";
+export const APP_VERSION = "1.26.5";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Crear respaldo en Opciones de Desarrollador ya funciona en Windows (ya no depende de /bin/bash); usa pg_dump y tar de forma nativa y busca pg_dump en rutas típicas de PostgreSQL.",
     "Corrección: El deploy fallaba en GitHub Actions porque el bundle JS (~2.5 MB) superaba el límite PWA de Workbox (2 MB); se subió el límite de precache a 5 MB.",
     "Corrección: La cola offline ya no encola fallos de red estando online ni re-encola al sincronizar (se eliminaron interceptores globales conflictivos); el sync usa auth actual, descarta 4xx y entradas tras 5 reintentos, y no bloquea las listas. Puedes vaciar la cola con «Descartar» en el aviso o en Opciones de Desarrollador.",
     "Corrección: `update.sh` ya compila el frontend y reinicia solo `fiix-backend` (UI+API en :3000); elimina el proceso legado `fiix-frontend` en :5173 que rompía el modelo same-origin de producción.",

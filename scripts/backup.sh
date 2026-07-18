@@ -1,9 +1,10 @@
 #!/bin/bash
-# Respaldo manual de FIIX CMMS (Ubuntu): dump de PostgreSQL + carpeta backend/uploads.
+# Respaldo manual de FIIX CMMS (Ubuntu/Linux con bash): dump de PostgreSQL + carpeta backend/uploads.
 # El backend ya programa este mismo respaldo automáticamente todos los días a las 2:15 AM
-# (backend/src/utils/backupService.ts) y también lo puede disparar el botón
-# "Crear respaldo ahora" en Opciones de Desarrollador. Este script es útil para
-# correrlo a mano o desde un cron externo si se prefiere no depender del proceso Node.
+# (backend/src/utils/backupService.ts, multiplataforma: no usa /bin/bash) y también lo puede
+# disparar el botón "Crear respaldo ahora" en Opciones de Desarrollador.
+# En Windows local no uses este script; usa el botón de la app (requiere pg_dump + tar).
+# Este script es útil para correrlo a mano o desde un cron externo en el servidor Ubuntu.
 #
 # Uso:
 #   ./scripts/backup.sh
