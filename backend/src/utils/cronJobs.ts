@@ -3,6 +3,7 @@ import prisma from '../config/prisma';
 import { evaluateOpenWorkOrders, silentBackfillSlaEvents } from '../services/SlaService';
 import { emitRefresh } from './socket';
 import { runBackup } from './backupService';
+import { runDbSelfCheck } from './dbHealthCheck';
 
 // This cron job will run every day at 00:01
 export const initCronJobs = () => {
@@ -19,6 +20,15 @@ export const initCronJobs = () => {
       console.log(`Backup result: ${result.message}`);
     } catch (error) {
       console.error('Error running scheduled backup:', error);
+    }
+  });
+
+  // Autocomprobación de Postgres cada 5 min (Node vivo, BD caída → Telegram con debounce)
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      await runDbSelfCheck();
+    } catch (error) {
+      console.error('Error in DB self-check:', error);
     }
   });
 

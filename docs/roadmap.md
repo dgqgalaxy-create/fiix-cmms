@@ -3,9 +3,15 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 18 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.26.5 (Actualización: 18 de Julio de 2026)
+## 🚀 Versión Actual: v1.27.0 (Actualización: 18 de Julio de 2026)
 
-### Novedades en v1.26.5 (Respaldos multiplataforma)
+### Novedades en v1.27.0 (nginx puerto 80 + healthcheck Telegram)
+- **Nuevo:** Reverse proxy nginx opcional (`deploy/nginx-fiix.conf`): `http://lpet-cmms` (puerto 80) → Express/PM2 en `:3000`, con cabeceras WebSocket para Socket.IO. `install.sh` puede instalarlo; `update.sh` no lo toca.
+- **Nuevo:** Vigilancia de salud: `scripts/healthcheck.sh` (cron cada 5 min) comprueba API y Postgres y avisa por Telegram al caer (debounce + recordatorio cada 6 h). El backend también hace ping a la BD cada 5 min.
+- **Mejora:** `/api/health` incluye `db: "ok"|"error"`; el frontend trata puerto 80/443 como mismo origen detrás de nginx.
+- **Docs:** README (nginx manual + healthcheck), manual y roadmap alineados. Telegram debe estar configurado para que las alertas lleguen.
+
+### Novedades Anteriores (v1.26.5 - Respaldos multiplataforma)
 - **Fix Windows:** el respaldo desde Opciones de Desarrollador ya no usa `/bin/bash` (ENOENT en Windows); ejecuta `pg_dump` y `tar` de forma nativa, busca `pg_dump` en PATH y en rutas típicas de PostgreSQL, y guarda en `%USERPROFILE%\fiix-backups` por defecto.
 
 ### Novedades Anteriores (v1.26.4 - PWA build / deploy)

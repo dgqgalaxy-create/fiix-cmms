@@ -3,7 +3,8 @@ import { addOfflineRequest } from '../utils/offlineQueue';
 
 /**
  * Dev (Vite :5173) → API en :3000 del mismo host.
- * Producción / Tailscale HTTPS (mismo origen) → origin actual (Express sirve UI + API).
+ * Producción / nginx (:80) / Tailscale HTTPS (mismo origen) → origin actual.
+ * Puerto vacío, 80 o 443 = mismo origen (no añadir :3000).
  */
 export const resolveBackendUrl = (): string => {
   if (typeof window === 'undefined') return 'http://localhost:3000';
@@ -12,7 +13,9 @@ export const resolveBackendUrl = (): string => {
   if (isViteDev) {
     return `${protocol}//${hostname}:3000`;
   }
-  return `${protocol}//${hostname}${port ? `:${port}` : ''}`;
+  // nginx en :80, HTTPS en :443 o URL sin puerto explícito → same-origin
+  const isDefaultPort = !port || port === '80' || port === '443';
+  return `${protocol}//${hostname}${isDefaultPort ? '' : `:${port}`}`;
 };
 
 export const BACKEND_URL = resolveBackendUrl();

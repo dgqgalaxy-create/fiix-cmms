@@ -181,4 +181,5 @@ fi
 echo
 echo "=== Actualización completada con éxito (${AFTER_SHA}) ==="
 echo "  .env y uploads/ se conservaron."
+echo "  nginx (si lo configuraste) no se toca — Express sigue en :3000 detrás del proxy."
 echo "  Si algo falla en uso real: pm2 logs"

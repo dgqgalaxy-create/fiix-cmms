@@ -1,5 +1,5 @@
 # Manual de Usuario - FIIX CMMS (LPET)
-*(Versión 1.26.1 - 18 de Julio, 2026)*
+*(Versión 1.27.0 - 18 de Julio, 2026)*
 
 FIIX CMMS (despliegue LPET) centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 
@@ -73,8 +73,9 @@ Gestión de solicitudes (listado), sin el resumen gráfico:
 - **Capa móvil de técnico:** En celular, el rol Técnico ve una barra inferior con Mis OT, Escanear QR, Inventario e Inicio. Al abrir una orden aparecen botones grandes de Aceptar / Pausar / Finalizar / Reanudar; completa evidencias y guarda. Administradores y gestionadores siguen con la interfaz completa (también en celular).
 - **Funciona sin conexión:** Aceptar, pausar, finalizar o reanudar una orden se guarda en el dispositivo aunque no haya señal (Wi-Fi/datos) y se sincroniza solo en cuanto vuelve la conexión; verás un aviso con el número de cambios en espera. Si el aviso se queda atascado con muchos pendientes, usa **Descartar** en el propio aviso o **Configuración → Opciones de Desarrollador → Descartar cola offline** (también puedes borrar la base IndexedDB `fiix-offline-db` en DevTools → Application). Las listas (GET) siguen cargando aunque haya cola pendiente. Si intentas finalizar subiendo fotos sin conexión, el sistema guarda el estado y las notas, pero pide volver a intentarlo con señal para adjuntar las imágenes.
 - **Escanear QR en celular:** si entras por `http://IP` (sin HTTPS), el navegador bloquea la cámara en vivo; usa **Elegir foto / galería**. Con HTTPS o localhost la cámara en vivo sí funciona. Al escanear una **ubicación** (p. ej. `E2-0`) o un repuesto, la app abre el detalle correspondiente en Inventario (con los repuestos de esa ubicación). En desarrollo, Vite admite el hostname local `lpet-cmms` y nombres Tailscale `*.ts.net`.
-- **Servidor Ubuntu:** primero SSH + `git clone` (README); luego `./install.sh` (al final pregunta PM2 startup, ufw, Telegram y Tailscale). En producción la UI y la API comparten el puerto **:3000**. Actualizaciones: `./update.sh`.
-- **Notificaciones Telegram:** Tanto las órdenes creadas desde **+ Nueva Orden** como las del **Portal de Solicitudes** (`/request`) disparan alerta a Telegram cuando la opción está activada en Configuración.
+- **Servidor Ubuntu:** primero SSH + `git clone` (README); luego `./install.sh` (al final pregunta PM2 startup, ufw, Telegram, **nginx + healthcheck** y Tailscale). En producción la UI y la API comparten el puerto **:3000**; con nginx opcional entras por el **puerto 80** (`http://lpet-cmms`) sin escribir `:3000`. Actualizaciones: `./update.sh` (no modifica nginx).
+- **Alertas si el servidor cae:** Con Telegram configurado, un cron externo y una comprobación interna avisan al grupo si la API (PM2) o Postgres no responden (sin spamear: solo al caer y un recordatorio cada varias horas). Detalle en el README.
+- **Notificaciones Telegram:** Tanto las órdenes creadas desde **+ Nueva Orden** como las del **Portal de Solicitudes** (`/request`) disparan alerta a Telegram cuando la opción está activada en Configuración. Las alertas de caída del servidor usan el mismo bot/grupo.
 - **Opciones de Ordenamiento:**
   En los filtros superiores, puedes elegir cómo organizar tus OTs:
   - `Más recientes primero`: Las órdenes se acomodarán colocando los folios más nuevos en la parte superior.
@@ -180,6 +181,7 @@ Las alertas de nuevas solicitudes usan un **Bot Token** y un **Chat ID** de grup
    - Envía un mensaje al grupo y abre `https://api.telegram.org/bot<TU_TOKEN>/getUpdates` buscando `"chat":{"id": ...}`.
 4. Pega Token y Chat ID en CMMS → Guardar → activa “Alertas por Telegram” en Notificaciones.
 5. Prueba creando una orden o solicitud.
+6. (Opcional, servidor Ubuntu) Con el healthcheck instalado, esas mismas credenciales sirven para avisos *«FIIX: servidor caído…»* / *«Postgres no responde»*. Conviene dejar también `TELEGRAM_*` en `backend/.env` para que el script externo pueda avisar aunque la API esté apagada.
 
 ### Si ya lo tenían y olvidaron las claves
 - **Token:** @BotFather → `/mybots` → tu bot → *API Token* → *Show token* (o *Revoke* si se filtró, y actualiza CMMS).

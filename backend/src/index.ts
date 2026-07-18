@@ -42,9 +42,17 @@ import requesterRoutes from './routes/requesterRoutes';
 import rosterRoutes from './routes/rosterRoutes';
 import searchRoutes from './routes/searchRoutes';
 import { initCronJobs } from './utils/cronJobs';
+import { pingDatabase } from './utils/dbHealthCheck';
 
-app.get('/api/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok', message: 'CMMS API is running' });
+app.get('/api/health', async (_req: Request, res: Response) => {
+  const dbOk = await pingDatabase();
+  const db = dbOk ? 'ok' : 'error';
+  const status = dbOk ? 'ok' : 'degraded';
+  res.status(dbOk ? 200 : 503).json({
+    status,
+    db,
+    message: dbOk ? 'CMMS API is running' : 'CMMS API is up but database is unreachable',
+  });
 });
 
 // Import and use routes here

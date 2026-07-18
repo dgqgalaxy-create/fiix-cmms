@@ -164,18 +164,45 @@ chmod +x install.sh update.sh
 | Pregunta | Si dices **S** | Si dices **N** |
 |---|---|---|
 | ¿Registrar PM2 al reiniciar? (sudo) | Ejecuta el comando `pm2 startup` con sudo para que FIIX vuelva tras un reboot. | Lo haces después a mano con `pm2 startup`. |
-| ¿Configurar/activar **ufw**? | Abre SSH (22) y el puerto 3000 (UI + API) y activa el firewall. Pide **segunda confirmación** (riesgo de cortar acceso si SSH falla). | Sin firewall del script; útil si solo usarás Tailscale. |
+| ¿Configurar/activar **ufw**? | Abre SSH (22), el puerto **80** (nginx) y el **3000** (UI + API) y activa el firewall. Pide **segunda confirmación** (riesgo de cortar acceso si SSH falla). | Sin firewall del script; útil si solo usarás Tailscale. |
 | ¿Telegram en `.env` ahora? | Pides Bot Token y Chat ID; los escribe en `backend/.env` y reinicia el backend. | Lo configuras luego en la app o en `.env`. |
+| ¿Instalar **healthcheck cron + nginx**? | Instala/configura nginx (`deploy/nginx-fiix.conf` → `:80` → Express `:3000`, WebSocket/Socket.IO) y un cron cada 5 min (`scripts/healthcheck.sh`) que avisa por Telegram si la API o Postgres caen. | Puedes activarlo después a mano (sección siguiente). |
 | ¿Instalar **Tailscale**? | Instala el cliente. Si pegas un *auth key*, hace `tailscale up` solo; si no, te indica `sudo tailscale up`. MagicDNS/HTTPS se activan en la consola web de Tailscale. | Lo instalas cuando quieras. |
 
 | Al terminar | Dirección |
 |---|---|
-| Interfaz (UI) + API (un solo proceso) | `http://IP_DEL_SERVIDOR:3000` |
+| Interfaz (UI) + API (Express/PM2) | `http://IP_DEL_SERVIDOR:3000` |
+| Con nginx (si lo activaste) | `http://IP/` o `http://lpet-cmms/` (sin `:3000`) |
 | Admin del seed (si lo aceptaste) | `admin@fiix.com` / `password123` → **cámbialo** |
 
-**Producción en un solo puerto:** `install.sh` compila el frontend (`frontend/dist`) y el backend Express lo sirve directamente en `:3000` junto con la API (`/api/*`) y `/uploads`. Ya no se necesita PM2 aparte para el frontend (`fiix-frontend` se elimina si existía). Para desarrollar con recarga en caliente sigue usando `cd frontend && npm run dev` en `:5173` (ver §4).
+**Producción en un solo puerto:** `install.sh` compila el frontend (`frontend/dist`) y el backend Express lo sirve directamente en `:3000` junto con la API (`/api/*`) y `/uploads`. Ya no se necesita PM2 aparte para el frontend (`fiix-frontend` se elimina si existía). Opcionalmente **nginx** escucha en el **puerto 80** y reenvía a `:3000` (acceso sin escribir el puerto). Para desarrollar con recarga en caliente sigue usando `cd frontend && npm run dev` en `:5173` (ver §4).
 
 Plantilla de variables: `backend/.env.example` (el `.env` real **no** se sube a GitHub).
+
+### Acceso sin `:3000` — nginx en Ubuntu (manual)
+
+Express/PM2 **sigue en 3000**; nginx es solo la fachada pública.
+
+```bash
+sudo apt-get install -y nginx
+sudo cp ~/fiix-cmms/deploy/nginx-fiix.conf /etc/nginx/sites-available/fiix
+sudo ln -sf /etc/nginx/sites-available/fiix /etc/nginx/sites-enabled/fiix
+sudo rm -f /etc/nginx/sites-enabled/default   # evita conflicto en :80
+sudo nginx -t && sudo systemctl reload nginx
+# Si ufw ya estaba activo con 3000/5173:
+sudo ufw allow 80/tcp
+```
+
+Ajusta `server_name` en el conf si tu hostname no es `lpet-cmms`. `update.sh` **no modifica** nginx.
+
+**Windows / desarrollo local:** sigue usando `http://localhost:3000` (build de producción) o Vite en `:5173`; nginx es para el servidor Ubuntu.
+
+### Vigilancia (healthcheck) y Telegram
+
+- **Externo (cron):** `scripts/healthcheck.sh` hace `curl` a `http://127.0.0.1:3000/api/health` y comprueba Postgres. Si falla, envía a Telegram *«FIIX: servidor caído / API no responde»* o *«Postgres no responde»*. Solo avisa al pasar de sano→caído (y un recordatorio cada 6 h mientras siga caído). Estado en `/tmp/fiix-health-state`.
+- **Interno (backend):** cada 5 min el propio Node hace `SELECT 1` vía Prisma; si la BD cae pero PM2 sigue vivo, también avisa por Telegram (mismo debounce).
+- **Requisito:** Telegram debe estar configurado (Opciones de Desarrollador o `TELEGRAM_*` en `backend/.env`). Sin eso, el healthcheck corre pero no puede notificar.
+- `/api/health` responde `{ status, db: "ok"|"error", message }` (503 si la BD no responde).
 
 ---
 
@@ -194,7 +221,7 @@ cd ~/fiix-cmms
 ./update.sh
 ```
 
-`update.sh` intenta cargar nvm (`$NVM_DIR`, `~/.nvm`, `/home/usuario/.nvm`) o usa `node`/`npm`/`pm2` ya presentes en el PATH; valida `.env`/repo, ejecuta `git restore .` (descarta cambios locales en archivos del repo), luego `git pull --ff-only`, `npm install`, `prisma db push`, compila el frontend (`npm run build:app` → `frontend/dist`), reinicia PM2 (`fiix-backend`) y comprueba que `:3000` responda tanto `/api/health` como `/` (SPA). **No modifica** `backend/.env` ni borra `backend/uploads/`. No edites código en el servidor: se pierde en el próximo update.
+`update.sh` intenta cargar nvm (`$NVM_DIR`, `~/.nvm`, `/home/usuario/.nvm`) o usa `node`/`npm`/`pm2` ya presentes en el PATH; valida `.env`/repo, ejecuta `git restore .` (descarta cambios locales en archivos del repo), luego `git pull --ff-only`, `npm install`, `prisma db push`, compila el frontend (`npm run build:app` → `frontend/dist`), reinicia PM2 (`fiix-backend`) y comprueba que `:3000` responda tanto `/api/health` como `/` (SPA). **No modifica** `backend/.env`, `backend/uploads/` ni la configuración de **nginx**. No edites código en el servidor: se pierde en el próximo update.
 
 **GitHub Actions (self-hosted):** el runner debe ser el mismo usuario que tiene Node/nvm (p. ej. `~/.nvm`). El workflow hace `git pull` y después `./update.sh`. Si un deploy falló antes de este arreglo, en el servidor ejecuta una vez a mano: `cd ~/fiix-cmms && git pull --ff-only && ./update.sh`.
 
@@ -240,7 +267,7 @@ Para programar en Windows/Mac/Linux de escritorio:
 
 Vite permite hosts `lpet-cmms` y `*.ts.net` (`frontend/vite.config.ts`). En red local puedes usar `npm run dev -- --host`.
 
-**Nota (producción vs. desarrollo):** En el servidor (`install.sh` / `update.sh`) solo corre el backend en `:3000`, que sirve tanto la API como el frontend ya compilado (`frontend/dist`, generado con `npm run build:app`). En tu laptop, para desarrollar con recarga en caliente sigue usando los dos procesos de arriba (`:3000` API + `:5173` UI). Si quieres probar el build de producción en local: `cd frontend && npm run build:app && cd ../backend && npm run dev` y abre `http://localhost:3000`.
+**Nota (producción vs. desarrollo):** En el servidor (`install.sh` / `update.sh`) solo corre el backend en `:3000`, que sirve tanto la API como el frontend ya compilado (`frontend/dist`, generado con `npm run build:app`). Con nginx opcional entras por el puerto **80** (`http://lpet-cmms`) sin escribir `:3000`. En tu laptop, para desarrollar con recarga en caliente sigue usando los dos procesos de arriba (`:3000` API + `:5173` UI). Si quieres probar el build de producción en local: `cd frontend && npm run build:app && cd ../backend && npm run dev` y abre `http://localhost:3000`.
 
 **Extensiones útiles (VS Code / Cursor):** Prettier, Tailwind CSS IntelliSense, Prisma.
 

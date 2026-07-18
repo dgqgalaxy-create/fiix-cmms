@@ -67,7 +67,7 @@ echo ">>> [0/8] Verificar repositorio local..."
 [ -f "${APP_DIR}/install.sh" ] || die "No se encontró install.sh. Ejecuta este script desde dentro del repo clonado."
 [ -d "${APP_DIR}/backend" ] && [ -d "${APP_DIR}/frontend" ] || die "Faltan carpetas backend/ o frontend/. ¿Clonaste el repo completo?"
 [ -f "${APP_DIR}/backend/package.json" ] || die "Falta backend/package.json."
-chmod +x "${APP_DIR}/update.sh" "${APP_DIR}/install.sh" "${APP_DIR}/scripts/backup.sh" 2>/dev/null || true
+chmod +x "${APP_DIR}/update.sh" "${APP_DIR}/install.sh" "${APP_DIR}/scripts/backup.sh" "${APP_DIR}/scripts/healthcheck.sh" 2>/dev/null || true
 echo "  [OK] Código local listo (clone/SSH se hace ANTES, ver README)."
 
 # --- 1. Paquetes del sistema ---
@@ -200,9 +200,10 @@ if [[ "${DO_UFW}" =~ ^[sS]$ ]]; then
       sudo ufw allow OpenSSH
       sudo ufw allow 22/tcp
       sudo ufw allow 3000/tcp comment 'FIIX UI + API'
+      sudo ufw allow 80/tcp comment 'FIIX nginx (opcional)'
       sudo ufw --force enable
       sudo ufw status || true
-      echo "  [OK] ufw activo (22, 3000)."
+      echo "  [OK] ufw activo (22, 80, 3000)."
     else
       echo "  [AVISO] No se pudo instalar/usar ufw."
     fi
@@ -243,7 +244,60 @@ else
   echo "  Omitido. Puedes configurarlo después en la app o en backend/.env."
 fi
 
-# 7d. Tailscale
+# 7d. nginx (puerto 80) + healthcheck cron
+echo
+echo "  Acceso sin :3000 (nginx → Express) y vigilancia Telegram si PM2/Postgres caen."
+echo "  Requiere Telegram configurado (pregunta anterior o Opciones de Desarrollador) para las alertas."
+DO_NGINX_HEALTH="$(ask "¿Instalar healthcheck cron + nginx? [s/N]" "N")"
+if [[ "${DO_NGINX_HEALTH}" =~ ^[sS]$ ]]; then
+  # --- nginx ---
+  echo "  --> nginx..."
+  if ! need_cmd nginx; then
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nginx || echo "  [AVISO] No se pudo instalar nginx."
+  fi
+  if need_cmd nginx; then
+    NGINX_SRC="${APP_DIR}/deploy/nginx-fiix.conf"
+    if [ -f "$NGINX_SRC" ]; then
+      sudo cp "$NGINX_SRC" /etc/nginx/sites-available/fiix
+      sudo ln -sf /etc/nginx/sites-available/fiix /etc/nginx/sites-enabled/fiix
+      # Evitar conflicto con el default que también escucha :80
+      if [ -L /etc/nginx/sites-enabled/default ] || [ -f /etc/nginx/sites-enabled/default ]; then
+        sudo rm -f /etc/nginx/sites-enabled/default
+      fi
+      if sudo nginx -t; then
+        sudo systemctl enable --now nginx
+        sudo systemctl reload nginx
+        echo "  [OK] nginx activo: http://lpet-cmms (o IP) → :3000"
+      else
+        echo "  [AVISO] nginx -t falló; revisa /etc/nginx/sites-available/fiix"
+      fi
+    else
+      echo "  [AVISO] No está ${NGINX_SRC}; omite nginx."
+    fi
+    # Abrir 80 si ufw ya está activo (p. ej. abrieron 3000/5173 antes)
+    if need_cmd ufw && sudo ufw status 2>/dev/null | grep -qi 'Status: active'; then
+      sudo ufw allow 80/tcp comment 'FIIX nginx' || true
+      echo "  [OK] ufw: permitido 80/tcp"
+    fi
+  fi
+
+  # --- healthcheck cron ---
+  echo "  --> healthcheck cron (cada 5 min)..."
+  chmod +x "${APP_DIR}/scripts/healthcheck.sh" 2>/dev/null || true
+  CRON_LINE="*/5 * * * * ${APP_DIR}/scripts/healthcheck.sh >> /tmp/fiix-healthcheck.log 2>&1"
+  EXISTING_CRON="$(crontab -l 2>/dev/null || true)"
+  FILTERED="$(echo "${EXISTING_CRON}" | grep -v 'scripts/healthcheck.sh' || true)"
+  {
+    echo "${FILTERED}"
+    echo "${CRON_LINE}"
+  } | grep -v '^$' | crontab - || echo "  [AVISO] No se pudo escribir crontab."
+  echo "  [OK] Cron: ${CRON_LINE}"
+  echo "  Prueba manual: ${APP_DIR}/scripts/healthcheck.sh"
+else
+  echo "  Omitido. Manual: README § nginx / healthcheck."
+fi
+
+# 7e. Tailscale
 echo
 echo "  Tailscale: VPN + MagicDNS/HTTPS (cámara QR en vivo en celular)."
 DO_TS="$(ask "¿Instalar Tailscale en este servidor ahora? [s/N]" "N")"
@@ -265,9 +319,10 @@ fi
 IP_LAN="$(hostname -I 2>/dev/null | awk '{print $1}')"
 echo
 echo "=== [8/8] Instalación completada ==="
-echo "UI + API (un solo proceso): http://${IP_LAN:-IP}:3000"
+echo "UI + API (Express/PM2): http://${IP_LAN:-IP}:3000"
+echo "Con nginx (si lo activaste): http://${IP_LAN:-IP}/  o  http://lpet-cmms/"
 echo "Login seed (si lo corriste): admin@fiix.com / password123  → cámbialo"
 echo
-echo "Actualizaciones futuras (NO vuelve a pedir .env):"
+echo "Actualizaciones futuras (NO vuelve a pedir .env; no toca nginx):"
 echo "  cd ${APP_DIR} && ./update.sh"
 echo "=== Listo ==="
