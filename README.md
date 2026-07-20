@@ -296,9 +296,22 @@ Las evidencias y fotos viven en **`backend/uploads/`** (disco del servidor), no 
 | Qué | Dónde |
 |---|---|
 | Postgres + JWT + clave menú dev | `backend/.env` (solo en el servidor/PC) |
-| Login de la aplicación | Usuarios en la BD (seed: `admin@fiix.com` / `password123`) |
+| Login de la aplicación | Usuarios en la BD (seed: `admin@fiix.com` / `password123` — al entrar te pedirá cambiarla) |
 | Telegram | Opciones de desarrollador en la app, o variables en `.env` |
 | GitHub | Cuenta/token de Git — **no** es la contraseña de Postgres |
+
+### Respaldos y restauración (verificar una vez)
+Los respaldos diarios (y el botón **Crear respaldo ahora**) guardan `fiix_*.sql.gz` y `uploads_*.tar.gz` en `~/fiix-backups` (o `BACKUP_DIR`).
+
+Para comprobar que un respaldo sirve:
+
+1. Crea uno desde **Configuración → Opciones de Desarrollador → Crear respaldo ahora** (o `./scripts/backup.sh` en Ubuntu).
+2. Restaúralo con **Restaurar respaldo** (escribe `RESTAURAR`) o:
+   ```bash
+   chmod +x scripts/restore.sh
+   ./scripts/restore.sh fiix_YYYYMMDD_HHMM.sql.gz
+   ```
+3. Recarga la app. Requiere `psql` (cliente PostgreSQL) y `tar`.
 
 ### Manual de usuario
 Detalle de pantallas y módulos: [`docs/manual_usuario.md`](docs/manual_usuario.md). Roadmap/versiones: [`docs/roadmap.md`](docs/roadmap.md).

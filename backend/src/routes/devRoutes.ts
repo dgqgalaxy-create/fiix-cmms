@@ -12,7 +12,7 @@ import {
   executeAssetCodeMigration,
   planAssetCodeMigration,
 } from '../utils/migrateAssetCodes';
-import { runBackup } from '../utils/backupService';
+import { runBackup, listBackups, runRestore } from '../utils/backupService';
 
 const router = express.Router();
 
@@ -194,6 +194,44 @@ router.post('/backup', verifyDevPassword, async (req: Request, res: Response): P
   }
 });
 
+// Lista respaldos recientes en BACKUP_DIR (fiix_*.sql.gz).
+router.get('/backups', verifyDevPassword, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const backups = listBackups();
+    res.json({ backups, backupDir: process.env.BACKUP_DIR || undefined });
+  } catch (error: any) {
+    console.error('Error listing backups:', error);
+    res.status(500).json({ message: 'Error al listar respaldos.', error: error.message });
+  }
+});
+
+// Restaura un fiix_*.sql.gz (+ uploads opcional). Destructivo: requiere confirmación en el cliente.
+router.post('/restore', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { file, restoreUploads = true, confirm } = req.body || {};
+    if (!file || typeof file !== 'string') {
+      res.status(400).json({ success: false, message: 'Indica el archivo a restaurar (file: fiix_….sql.gz).' });
+      return;
+    }
+    if (confirm !== 'RESTAURAR' && confirm !== true) {
+      res.status(400).json({
+        success: false,
+        message: 'Confirmación requerida. Envía confirm: "RESTAURAR" (esto borra los datos actuales).',
+      });
+      return;
+    }
+    const result = await runRestore(file, Boolean(restoreUploads));
+    if (!result.success) {
+      res.status(500).json(result);
+      return;
+    }
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error restoring backup:', error);
+    res.status(500).json({ success: false, message: 'Error al restaurar el respaldo.', error: error.message });
+  }
+});
+
 router.post('/delete', verifyDevPassword, async (req: Request, res: Response) => {
   try {
     const tablenames = await prisma.$queryRaw<Array<{ tablename: string }>>`SELECT tablename FROM pg_tables WHERE schemaname='public'`;
@@ -216,7 +254,8 @@ router.post('/delete', verifyDevPassword, async (req: Request, res: Response) =>
         email: 'admin',
         password_hash: defaultPassword,
         role: 'ADMINISTRADOR',
-        is_active: true
+        is_active: true,
+        must_change_password: true,
       }
     });
 
@@ -557,7 +596,8 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
               email: email,
               password_hash: defaultHash,
               role: role,
-              is_active: isActive
+              is_active: isActive,
+              must_change_password: true,
             }
           });
           results.users++;
@@ -591,6 +631,7 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
               password_hash: invDefaultHash,
               role: Role.TECNICO,
               is_active: false,
+              must_change_password: true,
             }
           });
           userMap[email] = created.id;

@@ -10,12 +10,56 @@ export const MAX_OFFLINE_SYNC_RETRIES = 5;
 
 type QueuedItem = OfflineQueuedRequest & { id: number };
 
-let syncInFlight: Promise<{ synced: number; failed: number; discarded: number }> | null = null;
+export type SyncFailureReason = {
+  id: number;
+  method: string;
+  url: string;
+  reason: string;
+  status?: number;
+};
 
-function notifySyncDone() {
+export type SyncResult = {
+  synced: number;
+  failed: number;
+  discarded: number;
+  failures: SyncFailureReason[];
+};
+
+let syncInFlight: Promise<SyncResult> | null = null;
+
+function notifySyncDone(detail?: SyncResult) {
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event('fiix-offline-sync-done'));
+    window.dispatchEvent(new CustomEvent('fiix-offline-sync-done', { detail }));
   }
+}
+
+function reasonFromError(error: unknown): { reason: string; status?: number } {
+  const ax = error as {
+    response?: { status?: number; data?: { error?: string; message?: string } };
+    message?: string;
+    code?: string;
+  };
+  const status = ax?.response?.status;
+  if (status === 401 || status === 403) {
+    return { reason: 'sesión expirada o sin permiso (401/403)', status };
+  }
+  if (status === 409) {
+    return { reason: 'conflicto: otro usuario ya cambió el registro (409)', status };
+  }
+  if (status === 404) {
+    return { reason: 'recurso no encontrado (404)', status };
+  }
+  if (status && status >= 400 && status < 500) {
+    const msg = ax.response?.data?.error || ax.response?.data?.message;
+    return { reason: msg ? `HTTP ${status}: ${msg}` : `petición rechazada (HTTP ${status})`, status };
+  }
+  if (status && status >= 500) {
+    return { reason: `error del servidor (HTTP ${status})`, status };
+  }
+  if (!navigator.onLine || ax?.code === 'ERR_NETWORK') {
+    return { reason: 'sin red / timeout' };
+  }
+  return { reason: ax?.message || 'error de red' };
 }
 
 /**
@@ -25,20 +69,17 @@ function notifySyncDone() {
  * - 4xx → elimina (petición inválida / ya no aplicable).
  * - Red / 5xx → incrementa retries; tras MAX descarta.
  */
-export async function syncOfflineQueue(): Promise<{
-  synced: number;
-  failed: number;
-  discarded: number;
-}> {
+export async function syncOfflineQueue(): Promise<SyncResult> {
   if (syncInFlight) return syncInFlight;
 
   syncInFlight = (async () => {
     let synced = 0;
     let failed = 0;
     let discarded = 0;
+    const failures: SyncFailureReason[] = [];
 
     if (!navigator.onLine) {
-      return { synced, failed, discarded };
+      return { synced, failed, discarded, failures };
     }
 
     const requests = await getOfflineRequests();
@@ -48,13 +89,13 @@ export async function syncOfflineQueue(): Promise<{
         await removeOfflineRequest(req.id);
         synced += 1;
       } catch (error: unknown) {
-        const ax = error as { response?: { status?: number } };
-        const status = ax?.response?.status;
+        const { reason, status } = reasonFromError(error);
 
         // 4xx: no tiene sentido reintentar (URL mala, 401/403/404/409, validación).
         if (status && status >= 400 && status < 500) {
           await removeOfflineRequest(req.id);
           discarded += 1;
+          failures.push({ id: req.id, method: req.method, url: req.url, reason, status });
           console.warn(`[OfflineSync] Descartado ${req.id} por HTTP ${status}: ${req.method} ${req.url}`);
           continue;
         }
@@ -63,19 +104,34 @@ export async function syncOfflineQueue(): Promise<{
         if (nextRetries >= MAX_OFFLINE_SYNC_RETRIES) {
           await removeOfflineRequest(req.id);
           discarded += 1;
+          failures.push({
+            id: req.id,
+            method: req.method,
+            url: req.url,
+            reason: `${reason} (descartado tras ${nextRetries} intentos)`,
+            status,
+          });
           console.warn(
             `[OfflineSync] Descartado ${req.id} tras ${nextRetries} intentos: ${req.method} ${req.url}`
           );
         } else {
           await setOfflineRequestRetries(req.id, nextRetries);
           failed += 1;
+          failures.push({
+            id: req.id,
+            method: req.method,
+            url: req.url,
+            reason: `${reason} (reintento ${nextRetries}/${MAX_OFFLINE_SYNC_RETRIES})`,
+            status,
+          });
           console.error(`[OfflineSync] Falló ${req.id} (intento ${nextRetries})`, error);
         }
       }
     }
 
-    notifySyncDone();
-    return { synced, failed, discarded };
+    const result = { synced, failed, discarded, failures };
+    notifySyncDone(result);
+    return result;
   })().finally(() => {
     syncInFlight = null;
   });

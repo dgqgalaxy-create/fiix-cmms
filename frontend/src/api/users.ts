@@ -9,6 +9,7 @@ export interface User {
   created_at: string;
   last_active?: string;
   preferences?: any;
+  must_change_password?: boolean;
 }
 
 export const sendHeartbeat = async (): Promise<void> => {

@@ -4,22 +4,27 @@ import { jwtDecode } from 'jwt-decode';
 import { getMyPermissions } from '../api/permissions';
 import { getMe } from '../api/users';
 import { setSocketAuth } from '../api/socket';
+import { MustChangePasswordModal } from '../components/MustChangePasswordModal';
 
 interface User {
   userId: string;
   role: string;
   name?: string;
   preferences?: any;
+  must_change_password?: boolean;
+  id?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  mustChangePassword: boolean;
   login: (token: string, userData?: any) => void;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
   updateUserPreferences: (prefs: any) => void;
+  clearMustChangePassword: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,7 +39,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
       
       if (now - parseInt(lastActivity, 10) > ONE_WEEK_MS) {
-        // Expired due to inactivity
         localStorage.removeItem('token');
         localStorage.removeItem('lastActivity');
         return null;
@@ -44,6 +48,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
   const [user, setUser] = useState<User | null>(null);
   const [permissions, setPermissions] = useState<Record<string, boolean>>({});
+  const [mustChangePassword, setMustChangePassword] = useState(false);
 
   const loadPermissions = async () => {
     try {
@@ -61,13 +66,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(decoded);
         loadPermissions();
         setSocketAuth(token);
-        // Fetch full profile for preferences + name (needed for presence)
         getMe().then((fullUser) => {
           setUser(prev => prev ? {
             ...prev,
             name: fullUser.name || prev.name,
             preferences: fullUser.preferences,
+            must_change_password: (fullUser as any).must_change_password,
+            id: fullUser.id,
           } : prev);
+          if ((fullUser as any).must_change_password) {
+            setMustChangePassword(true);
+          }
         }).catch(err => console.error("Error fetching me", err));
       } catch (error) {
         console.error('Invalid token', error);
@@ -77,6 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
       setPermissions({});
       setSocketAuth(null);
+      setMustChangePassword(false);
     }
   }, [token]);
 
@@ -85,7 +95,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('lastActivity', Date.now().toString());
     setToken(newToken);
     if (userData) {
-      setUser(userData);
+      setUser({
+        userId: userData.id || userData.userId,
+        role: userData.role,
+        name: userData.name,
+        preferences: userData.preferences,
+        must_change_password: userData.must_change_password,
+        id: userData.id,
+      });
+      if (userData.must_change_password) {
+        setMustChangePassword(true);
+      }
     }
     setSocketAuth(newToken);
   };
@@ -97,12 +117,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setPermissions({});
     setSocketAuth(null);
+    setMustChangePassword(false);
   };
 
   const hasPermission = (permission: string): boolean => {
-    // Si el rol es administrador y no tiene los permisos cargados, tal vez por defecto darle true, 
-    // pero mejor guiarnos por la base de datos siempre. Sin embargo, para evitar bloqueos
-    // si falla la carga:
     if (user?.role === 'ADMINISTRADOR' && Object.keys(permissions).length === 0) {
       return true;
     }
@@ -113,9 +131,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(prev => prev ? { ...prev, preferences: prefs } : prev);
   };
 
+  const clearMustChangePassword = () => {
+    setMustChangePassword(false);
+    setUser(prev => prev ? { ...prev, must_change_password: false } : prev);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated: !!token, login, logout, hasPermission, updateUserPreferences }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        isAuthenticated: !!token,
+        mustChangePassword,
+        login,
+        logout,
+        hasPermission,
+        updateUserPreferences,
+        clearMustChangePassword,
+      }}
+    >
       {children}
+      <MustChangePasswordModal
+        isOpen={!!token && mustChangePassword}
+        onSuccess={clearMustChangePassword}
+      />
     </AuthContext.Provider>
   );
 };

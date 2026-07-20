@@ -57,6 +57,15 @@ export const DeveloperOptions = () => {
   const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
+  const [serverBackups, setServerBackups] = useState<
+    Array<{ file: string; stamp: string; size: number; mtime: string; hasUploads: boolean; uploadsFile?: string }>
+  >([]);
+  const [selectedBackupFile, setSelectedBackupFile] = useState('');
+  const [restoreUploads, setRestoreUploads] = useState(true);
+  const [isListingBackups, setIsListingBackups] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+  const [restoreConfirmText, setRestoreConfirmText] = useState('');
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -151,6 +160,7 @@ export const DeveloperOptions = () => {
       });
       if (res.data?.success) {
         setSuccessMsg(res.data.message || 'Respaldo creado con éxito.');
+        await loadServerBackups();
       } else {
         setError(res.data?.message || 'No se pudo crear el respaldo.');
       }
@@ -162,6 +172,69 @@ export const DeveloperOptions = () => {
       setError(`Fallo al crear el respaldo: ${detail}`);
     } finally {
       setIsBackingUp(false);
+    }
+  };
+
+  const loadServerBackups = async () => {
+    setIsListingBackups(true);
+    setError(null);
+    try {
+      const res = await axios.get('/dev/backups', {
+        headers: { 'x-dev-password': password }
+      });
+      const list = res.data?.backups || [];
+      setServerBackups(list);
+      if (list.length > 0) {
+        setSelectedBackupFile((prev) =>
+          list.some((b: { file: string }) => b.file === prev) ? prev : list[0].file
+        );
+      } else {
+        setSelectedBackupFile('');
+      }
+    } catch (err: unknown) {
+      const detail = axios.isAxiosError(err)
+        ? err.response?.data?.message || err.message
+        : err instanceof Error ? err.message : 'Error desconocido';
+      setError(`No se pudieron listar los respaldos: ${detail}`);
+    } finally {
+      setIsListingBackups(false);
+    }
+  };
+
+  const handleRestoreBackup = async () => {
+    if (!selectedBackupFile) {
+      setError('Selecciona un respaldo para restaurar.');
+      return;
+    }
+    if (restoreConfirmText !== 'RESTAURAR') {
+      setError('Escribe RESTAURAR para confirmar (esto borra los datos actuales).');
+      return;
+    }
+    setIsRestoring(true);
+    setError(null);
+    try {
+      const res = await axios.post(
+        '/dev/restore',
+        { file: selectedBackupFile, restoreUploads, confirm: 'RESTAURAR' },
+        { headers: { 'x-dev-password': password } }
+      );
+      if (res.data?.success) {
+        setSuccessMsg(
+          (res.data.message || 'Respaldo restaurado.') +
+            ' Recarga la página (F5) para ver los datos.'
+        );
+        setIsRestoreModalOpen(false);
+        setRestoreConfirmText('');
+      } else {
+        setError(res.data?.message || 'No se pudo restaurar el respaldo.');
+      }
+    } catch (err: unknown) {
+      const detail = axios.isAxiosError(err)
+        ? err.response?.data?.message || err.message
+        : err instanceof Error ? err.message : 'Error desconocido';
+      setError(`Fallo al restaurar: ${detail}`);
+    } finally {
+      setIsRestoring(false);
     }
   };
 
@@ -525,6 +598,17 @@ export const DeveloperOptions = () => {
                 >
                   <Save size={16} /> {isBackingUp ? 'Respaldando...' : 'Crear respaldo ahora'}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRestoreModalOpen(true);
+                    void loadServerBackups();
+                  }}
+                  disabled={isLoading || isRestoring}
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800 transition hover:bg-amber-100 disabled:opacity-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                >
+                  <HardDrive size={16} /> Restaurar respaldo
+                </button>
               </article>
             </div>
           </div>
@@ -748,6 +832,99 @@ export const DeveloperOptions = () => {
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50"
               >
                 {isLoading ? 'Vaciando...' : 'Confirmar Borrado'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restore server backup modal */}
+      {isRestoreModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400 mb-4">
+              <AlertTriangle size={24} />
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Restaurar respaldo del servidor</h3>
+            </div>
+            <p className="text-slate-600 dark:text-slate-400 mb-4 text-sm">
+              Esto <strong>borra los datos actuales</strong> y los reemplaza con el dump seleccionado
+              (<code className="mx-1 text-xs">fiix_*.sql.gz</code>
+              (y opcionalmente <code className="text-xs">uploads_*.tar.gz</code>). Después recarga la app.
+            </p>
+            <div className="mb-4 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void loadServerBackups()}
+                disabled={isListingBackups}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                <RefreshCw size={14} className={isListingBackups ? 'animate-spin' : undefined} />
+                Actualizar lista
+              </button>
+            </div>
+            {serverBackups.length === 0 ? (
+              <p className="mb-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                No hay respaldos <code>fiix_*.sql.gz</code> en la carpeta del servidor. Crea uno primero.
+              </p>
+            ) : (
+              <label className="mb-4 block">
+                <span className="mb-1.5 block text-sm font-bold text-slate-700 dark:text-slate-300">Respaldo</span>
+                <select
+                  value={selectedBackupFile}
+                  onChange={(e) => setSelectedBackupFile(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-amber-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                >
+                  {serverBackups.map((b) => (
+                    <option key={b.file} value={b.file}>
+                      {b.file}
+                      {b.hasUploads ? ' (+uploads)' : ''} — {(b.size / 1024).toFixed(0)} KB
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+              <input
+                type="checkbox"
+                checked={restoreUploads}
+                onChange={(e) => setRestoreUploads(e.target.checked)}
+                className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+              />
+              Restaurar también fotos/evidencias (uploads) si existen
+            </label>
+            <p className="mb-2 text-sm text-slate-600 dark:text-slate-400">
+              Escribe <strong>RESTAURAR</strong> para confirmar:
+            </p>
+            <input
+              type="text"
+              value={restoreConfirmText}
+              onChange={(e) => setRestoreConfirmText(e.target.value)}
+              className="mb-6 w-full rounded-lg border border-slate-300 bg-white p-3 text-center font-bold tracking-widest text-slate-800 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+              placeholder="Escribe RESTAURAR"
+            />
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRestoreModalOpen(false);
+                  setRestoreConfirmText('');
+                }}
+                className="flex-1 rounded-lg bg-slate-100 py-3 font-bold text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleRestoreBackup()}
+                disabled={
+                  restoreConfirmText !== 'RESTAURAR' ||
+                  !selectedBackupFile ||
+                  isRestoring ||
+                  serverBackups.length === 0
+                }
+                className="flex-1 rounded-lg bg-amber-600 py-3 font-bold text-white transition-colors hover:bg-amber-700 disabled:opacity-50"
+              >
+                {isRestoring ? 'Restaurando...' : 'Confirmar restauración'}
               </button>
             </div>
           </div>

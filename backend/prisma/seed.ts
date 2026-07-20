@@ -12,6 +12,7 @@ async function main() {
       name: 'Admin User',
       password_hash: passwordHash,
       role: 'ADMINISTRADOR',
+      must_change_password: true,
     },
   });
 
@@ -23,6 +24,7 @@ async function main() {
       name: 'Gestionador User',
       password_hash: passwordHash,
       role: 'GESTIONADOR',
+      must_change_password: true,
     },
   });
 
@@ -34,6 +36,7 @@ async function main() {
       name: 'Tecnico User',
       password_hash: passwordHash,
       role: 'TECNICO',
+      must_change_password: true,
     },
   });
 

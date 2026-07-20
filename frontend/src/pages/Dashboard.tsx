@@ -26,29 +26,42 @@ export const Dashboard = () => {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   
   const [activeTab, setActiveTab] = useState<'ACTIVAS' | 'MIS_ORDENES' | 'HISTORIAL'>('MIS_ORDENES');
+  const [myDayOnly, setMyDayOnly] = useState(false);
 
   useEffect(() => {
     const status = searchParams.get('status');
     const tab = searchParams.get('tab');
+    const myday = searchParams.get('myday');
+
+    if (myday === '1' || myday === 'true') {
+      setActiveTab('MIS_ORDENES');
+      setStatusFilter(null);
+      setMyDayOnly(true);
+      return;
+    }
 
     if (tab === 'mine' || tab === 'MIS_ORDENES') {
       setActiveTab('MIS_ORDENES');
       setStatusFilter(null);
+      setMyDayOnly(false);
       return;
     }
     if (tab === 'history' || tab === 'HISTORIAL') {
       setActiveTab('HISTORIAL');
       setStatusFilter(null);
+      setMyDayOnly(false);
       return;
     }
     if (tab === 'all' || tab === 'ACTIVAS') {
       setActiveTab(hasPermission('VIEW_ALL_WORK_ORDERS') ? 'ACTIVAS' : 'MIS_ORDENES');
       setStatusFilter(null);
+      setMyDayOnly(false);
       return;
     }
 
     if (status) {
       setStatusFilter(status);
+      setMyDayOnly(false);
       if (status === 'FINALIZADO' || status === 'ANULADO') {
         setActiveTab('HISTORIAL');
       } else {
@@ -216,11 +229,18 @@ export const Dashboard = () => {
 
   const getFilteredWorkOrders = () => {
     let list = workOrders;
+    const myId = user?.userId || (user as any)?.id;
 
     if (activeTab === 'ACTIVAS') {
       list = list.filter(wo => wo.status !== 'FINALIZADO' && wo.status !== 'ANULADO');
     } else if (activeTab === 'MIS_ORDENES') {
-      list = list.filter(wo => wo.status !== 'FINALIZADO' && wo.status !== 'ANULADO' && wo.assigned_technicians?.some(t => t.id === user?.userId || t.id === (user as any).id));
+      list = list.filter(wo => wo.status !== 'FINALIZADO' && wo.status !== 'ANULADO' && wo.assigned_technicians?.some(t => t.id === myId));
+      // Mi día: pendientes + en proceso + pausadas (en espera) asignadas a mí
+      if (myDayOnly) {
+        list = list.filter(wo =>
+          wo.status === 'PENDIENTE' || wo.status === 'EN_PROCESO' || wo.status === 'EN_ESPERA'
+        );
+      }
     } else if (activeTab === 'HISTORIAL') {
       list = list.filter(wo => wo.status === 'FINALIZADO' || wo.status === 'ANULADO');
     }
@@ -345,7 +365,15 @@ export const Dashboard = () => {
             <div className="flex bg-slate-100/80 p-1.5 rounded-xl shadow-inner overflow-x-auto min-w-[320px] max-w-full hide-scrollbar">
               {hasPermission('VIEW_ALL_WORK_ORDERS') && (
                 <button 
-                  onClick={() => { setActiveTab('ACTIVAS'); setStatusFilter(null); }}
+                  onClick={() => {
+                    setActiveTab('ACTIVAS');
+                    setStatusFilter(null);
+                    setMyDayOnly(false);
+                    const next = new URLSearchParams(searchParams);
+                    next.set('tab', 'all');
+                    next.delete('myday');
+                    setSearchParams(next, { replace: true });
+                  }}
                   className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === 'ACTIVAS' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
                   title="Muestra todas las órdenes de trabajo activas y pendientes de toda la planta."
                 >
@@ -353,14 +381,51 @@ export const Dashboard = () => {
                 </button>
               )}
               <button 
-                onClick={() => { setActiveTab('MIS_ORDENES'); setStatusFilter(null); }}
-                className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === 'MIS_ORDENES' ? 'bg-amber-100 text-amber-800 shadow-sm border border-amber-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                onClick={() => {
+                  setActiveTab('MIS_ORDENES');
+                  setStatusFilter(null);
+                  setMyDayOnly(false);
+                  const next = new URLSearchParams(searchParams);
+                  next.set('tab', 'mine');
+                  next.delete('myday');
+                  setSearchParams(next, { replace: true });
+                }}
+                className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === 'MIS_ORDENES' && !myDayOnly ? 'bg-amber-100 text-amber-800 shadow-sm border border-amber-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
                 title="Muestra únicamente las órdenes de trabajo activas que te han sido asignadas."
               >
                 Mis Órdenes
               </button>
+              {activeTab === 'MIS_ORDENES' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = new URLSearchParams(searchParams);
+                    next.set('tab', 'mine');
+                    if (myDayOnly) {
+                      next.delete('myday');
+                      setMyDayOnly(false);
+                    } else {
+                      next.set('myday', '1');
+                      setMyDayOnly(true);
+                    }
+                    setSearchParams(next, { replace: true });
+                  }}
+                  className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${myDayOnly ? 'bg-sky-100 text-sky-800 shadow-sm border border-sky-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                  title="Pendientes, en proceso y en espera (pausadas) asignadas a ti."
+                >
+                  {myDayOnly ? 'Ver todas mis OT' : 'Mi día'}
+                </button>
+              )}
               <button 
-                onClick={() => { setActiveTab('HISTORIAL'); setStatusFilter(null); }}
+                onClick={() => {
+                  setActiveTab('HISTORIAL');
+                  setStatusFilter(null);
+                  setMyDayOnly(false);
+                  const next = new URLSearchParams(searchParams);
+                  next.set('tab', 'history');
+                  next.delete('myday');
+                  setSearchParams(next, { replace: true });
+                }}
                 className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === 'HISTORIAL' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
                 title="Archivo histórico: muestra exclusivamente órdenes ya finalizadas o anuladas."
               >

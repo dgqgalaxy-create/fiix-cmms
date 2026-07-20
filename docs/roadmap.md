@@ -1,11 +1,17 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
-*(Última actualización: 18 de Julio de 2026)*
+*(Última actualización: 20 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.27.0 (Actualización: 18 de Julio de 2026)
+## 🚀 Versión Actual: v1.28.0 (Actualización: 20 de Julio de 2026)
 
-### Novedades en v1.27.0 (nginx puerto 80 + healthcheck Telegram)
+### Novedades en v1.28.0 (restore, contraseña obligatoria, Mi día, offline claro)
+- **Nuevo:** Restaurar respaldo del servidor (`fiix_*.sql.gz` + uploads opcional) desde Opciones de Desarrollador o `scripts/restore.sh`; confirmación fuerte «RESTAURAR».
+- **Nuevo:** Tras seed/CSV con contraseña temporal, el login obliga a cambiarla (`must_change_password`) antes de usar la app.
+- **Nuevo:** Atajo **Mi día** en la barra del técnico → OT pendientes / en proceso / en espera asignadas; chip «Ver todas mis OT» en el dashboard.
+- **Mejora:** Banner offline: éxito verde «Sincronización completa (N)», fallos parciales con motivo (401/409/red) y Reintentar/Descartar.
+
+### Novedades Anteriores (v1.27.0 - nginx puerto 80 + healthcheck Telegram)
 - **Nuevo:** Reverse proxy nginx opcional (`deploy/nginx-fiix.conf`): `http://lpet-cmms` (puerto 80) → Express/PM2 en `:3000`, con cabeceras WebSocket para Socket.IO. `install.sh` puede instalarlo; `update.sh` no lo toca.
 - **Nuevo:** Vigilancia de salud: `scripts/healthcheck.sh` (cron cada 5 min) comprueba API y Postgres y avisa por Telegram al caer (debounce + recordatorio cada 6 h). El backend también hace ping a la BD cada 5 min.
 - **Mejora:** `/api/health` incluye `db: "ok"|"error"`; el frontend trata puerto 80/443 como mismo origen detrás de nginx.

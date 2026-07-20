@@ -1,6 +1,6 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { Home, Package, QrCode, Wrench } from 'lucide-react';
+import { Home, Package, QrCode, ListChecks } from 'lucide-react';
 import { QRScannerModal } from './common/QRScannerModal';
 import { parseFiixQr } from '../utils/fiixQr';
 
@@ -12,6 +12,7 @@ const tabClass = (active: boolean) =>
 /**
  * Barra inferior móvil exclusiva para rol TECNICO.
  * Admin/Gestionador no la ven: conservan la UX completa.
+ * «Mi día» = OT asignadas pendientes + en proceso + en espera (pausadas).
  */
 export const TechnicianBottomNav = () => {
   const navigate = useNavigate();
@@ -55,9 +56,9 @@ export const TechnicianBottomNav = () => {
         aria-label="Navegación rápida de técnico"
       >
         <div className="flex h-16 items-stretch">
-          <NavLink to="/dashboard?tab=mine" className={tabClass(onMine)}>
-            <Wrench size={20} />
-            Mis OT
+          <NavLink to="/dashboard?tab=mine&myday=1" className={tabClass(onMine)}>
+            <ListChecks size={20} />
+            Mi día
           </NavLink>
 
           <button

@@ -192,7 +192,8 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
         name: true,
         email: true,
         role: true,
-        preferences: true
+        preferences: true,
+        must_change_password: true,
       }
     });
 
