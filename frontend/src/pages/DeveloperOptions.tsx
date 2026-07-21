@@ -17,6 +17,7 @@ import {
   Save,
 } from 'lucide-react';
 import axios from '../api/axios';
+import { isAxiosError } from 'axios';
 import { useAuth } from '../context/AuthContext';
 import {
   POST_WIPE_MESSAGE_KEY,
@@ -68,6 +69,10 @@ export const DeveloperOptions = () => {
   const [restoreConfirmText, setRestoreConfirmText] = useState('');
   const [restoreModalError, setRestoreModalError] = useState<string | null>(null);
   const [itemImagesZip, setItemImagesZip] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+
+  /** Límite alineado con multer / nginx (500 MB). */
+  const ZIP_MAX_BYTES = 500 * 1024 * 1024;
 
   useEffect(() => {
     const session = getValidDevOptionsSession();
@@ -303,14 +308,49 @@ export const DeveloperOptions = () => {
     }
   };
 
+  const handleZipSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] || null;
+    setError(null);
+    if (!f) {
+      setItemImagesZip(null);
+      return;
+    }
+    const nameOk = /\.zip$/i.test(f.name);
+    if (!nameOk) {
+      setItemImagesZip(null);
+      setError('El archivo de fotos debe ser un .zip');
+      e.target.value = '';
+      return;
+    }
+    if (f.size <= 0) {
+      setItemImagesZip(null);
+      setError('El zip está vacío o el navegador no pudo leerlo. Prueba otro archivo o súbelo vía :3000 directo.');
+      e.target.value = '';
+      return;
+    }
+    if (f.size > ZIP_MAX_BYTES) {
+      setItemImagesZip(null);
+      setError(
+        `El zip pesa ${(f.size / (1024 * 1024)).toFixed(0)} MB; el máximo es ${Math.round(ZIP_MAX_BYTES / (1024 * 1024))} MB (nginx/multer).`
+      );
+      e.target.value = '';
+      return;
+    }
+    setItemImagesZip(f);
+    setSuccessMsg(`Zip listo: ${f.name} (${(f.size / (1024 * 1024)).toFixed(1)} MB). Ahora selecciona los 7 CSV.`);
+    setTimeout(() => setSuccessMsg(null), 6000);
+    // No limpiar el input aquí: en algunos navegadores/remotos invalidaba la selección.
+  };
+
   const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     setIsLoading(true);
+    setUploadProgress(itemImagesZip ? 0 : null);
     setLoadingMessage(
       itemImagesZip
-        ? 'Procesando CSV y fotos (zip). Puede tardar varios minutos; no cierres esta ventana...'
+        ? `Subiendo CSV + zip (${(itemImagesZip.size / (1024 * 1024)).toFixed(1)} MB). Por Tailscale puede tardar varios minutos...`
         : 'Procesando archivos CSV. Por favor, no cierres esta ventana...'
     );
     setError(null);
@@ -324,12 +364,21 @@ export const DeveloperOptions = () => {
 
     try {
       const res = await axios.post(`/dev/import-csv`, formData, {
-        headers: { 
+        headers: {
           'x-dev-password': password,
-          'Content-Type': 'multipart/form-data'
+          // No fijar Content-Type: el navegador debe enviar boundary=...
         },
         timeout: 30 * 60 * 1000, // zip grande + miles de fotos
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+        onUploadProgress: (evt) => {
+          if (!itemImagesZip || !evt.total) return;
+          const pct = Math.min(99, Math.round((evt.loaded / evt.total) * 100));
+          setUploadProgress(pct);
+          setLoadingMessage(`Subiendo archivos... ${pct}% (luego se procesan CSV y fotos)`);
+        },
       });
+      setUploadProgress(100);
       const results = res.data.results;
       let msg = `Archivos CSV procesados: ${results.categories} Categorías, ${results.locations} Ubicaciones, ${results.vendors} Proveedores, ${results.items} Repuestos, ${results.users} Usuarios, ${results.inventory} Movimientos, ${results.orders} Órdenes.`;
       if (results.itemImages) {
@@ -341,18 +390,37 @@ export const DeveloperOptions = () => {
           msg += `, omitidas: ${results.itemImages.skipped}`;
         }
         msg += '.';
+      } else if (itemImagesZip) {
+        msg += ' (El zip se subió pero no se reportaron fotos asignadas; revisa logs del servidor / unzip).';
       }
       setSuccessMsg(msg);
       setItemImagesZip(null);
       setTimeout(() => setSuccessMsg(null), 10000);
     } catch (err: unknown) {
-      const detail = axios.isAxiosError(err)
-        ? err.response?.data?.message || err.message
-        : err instanceof Error ? err.message : 'Error desconocido';
+      let detail = 'Error desconocido';
+      if (isAxiosError(err)) {
+        const status = err.response?.status;
+        const serverMsg = err.response?.data?.message;
+        if (status === 413) {
+          detail =
+            'El servidor rechazó el zip (413 Payload Too Large). En Ubuntu: copia deploy/nginx-fiix.conf (client_max_body_size 500M), nginx -t && systemctl reload nginx. O entra por http://HOST:3000 sin nginx.';
+        } else if (!err.response && (err.code === 'ECONNABORTED' || /timeout/i.test(err.message))) {
+          detail =
+            'Se agotó el tiempo de espera al subir el zip (Tailscale lento o proxy cortó la conexión). Reintenta por :3000 o sube el zip por SSH a data/Items_Images/.';
+        } else if (!err.response && /network error/i.test(err.message)) {
+          detail =
+            'Network Error al subir el zip (nginx/proxy o Tailscale cortó el body grande). Revisa client_max_body_size o usa http://HOST:3000.';
+        } else {
+          detail = serverMsg || err.message;
+        }
+      } else if (err instanceof Error) {
+        detail = err.message;
+      }
       setError(`Fallo al importar archivos CSV: ${detail}`);
     } finally {
       setIsLoading(false);
       setLoadingMessage(null);
+      setUploadProgress(null);
       e.target.value = ''; // Reset input
     }
   };
@@ -518,15 +586,15 @@ export const DeveloperOptions = () => {
                       ? `Seleccionado: ${itemImagesZip.name} (${(itemImagesZip.size / (1024 * 1024)).toFixed(1)} MB)`
                       : 'Ningún archivo seleccionado'}
                   </span>
+                  <p className="text-[11px] leading-4 text-indigo-200/90">
+                    Por Tailscale un zip grande puede tardar; si falla con 413, actualiza nginx o entra por{' '}
+                    <code className="rounded bg-black/20 px-1">:3000</code>.
+                  </p>
                   <label className="mt-1 block cursor-pointer text-xs text-indigo-100">
                     <input
                       type="file"
-                      accept=".zip,application/zip,application/x-zip-compressed"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0] || null;
-                        setItemImagesZip(f);
-                        e.target.value = '';
-                      }}
+                      accept=".zip,application/zip,application/x-zip-compressed,application/octet-stream"
+                      onChange={handleZipSelected}
                       className="block w-full file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-indigo-700"
                       disabled={isLoading}
                     />
@@ -919,6 +987,17 @@ export const DeveloperOptions = () => {
             <div className="w-16 h-16 border-4 border-emerald-200 dark:border-emerald-900 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
             <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Procesando...</h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm">{loadingMessage}</p>
+            {uploadProgress !== null && (
+              <div className="mt-4 w-full">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">{uploadProgress}%</p>
+              </div>
+            )}
           </div>
         </div>
       )}

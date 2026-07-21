@@ -75,7 +75,7 @@ echo ">>> [1/8] Paquetes base (git, curl, build-essential, postgresql)..."
 if need_cmd apt-get; then
   sudo apt-get update -y
   sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    git curl ca-certificates build-essential \
+    git curl ca-certificates build-essential unzip \
     postgresql postgresql-contrib
   sudo systemctl enable --now postgresql
 else
