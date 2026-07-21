@@ -9,6 +9,7 @@ import bcrypt from 'bcrypt';
 import { generateInventoryCode } from '../utils/codeGenerator';
 import { parseWorkOrderFolio } from '../utils/folio';
 import { runBackup, listBackups, runRestore } from '../utils/backupService';
+import { assignItemImagesFromFolder } from '../utils/itemImageImport';
 
 const router = express.Router();
 
@@ -304,7 +305,27 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
     const invFile = files.find(f => f.originalname.includes('Inventory'));
     const woFile = files.find(f => f.originalname.includes('Solicitudes Mantenimiento'));
 
-    const results = { categories: 0, locations: 0, vendors: 0, items: 0, users: 0, inventory: 0, orders: 0 };
+    const assignItemImages =
+      req.body?.assignItemImages === 'true' ||
+      req.body?.assignItemImages === true ||
+      req.body?.assignItemImages === '1';
+
+    const results: {
+      categories: number;
+      locations: number;
+      vendors: number;
+      items: number;
+      users: number;
+      inventory: number;
+      orders: number;
+      itemImages?: {
+        matched: number;
+        missing: number;
+        skipped: number;
+        folderFound: boolean;
+        filesScanned: number;
+      };
+    } = { categories: 0, locations: 0, vendors: 0, items: 0, users: 0, inventory: 0, orders: 0 };
 
     if (catFile) {
       const data = parse(catFile.buffer.toString('utf8'), { columns: true, skip_empty_lines: true });
@@ -695,6 +716,29 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
 
         // Fix sequence for folio
         await prisma.$executeRawUnsafe(`SELECT setval(pg_get_serial_sequence('"WorkOrder"', 'folio'), coalesce(max(folio), 0) + 1, false) FROM "WorkOrder";`);
+      }
+    }
+
+    // Fotos de repuestos desde data/item-images/ (opcional; no rompe si la carpeta está vacía)
+    if (assignItemImages) {
+      try {
+        const photoResult = await assignItemImagesFromFolder();
+        results.itemImages = {
+          matched: photoResult.matched,
+          missing: photoResult.missing,
+          skipped: photoResult.skipped,
+          folderFound: photoResult.folderFound,
+          filesScanned: photoResult.filesScanned,
+        };
+      } catch (photoErr) {
+        console.error('Item images import error:', photoErr);
+        results.itemImages = {
+          matched: 0,
+          missing: 0,
+          skipped: 0,
+          folderFound: false,
+          filesScanned: 0,
+        };
       }
     }
 

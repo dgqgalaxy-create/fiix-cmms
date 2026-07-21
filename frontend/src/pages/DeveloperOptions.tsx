@@ -67,6 +67,7 @@ export const DeveloperOptions = () => {
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const [restoreConfirmText, setRestoreConfirmText] = useState('');
   const [restoreModalError, setRestoreModalError] = useState<string | null>(null);
+  const [assignItemImages, setAssignItemImages] = useState(true);
 
   useEffect(() => {
     const session = getValidDevOptionsSession();
@@ -313,6 +314,7 @@ export const DeveloperOptions = () => {
     for (let i = 0; i < files.length; i++) {
       formData.append('csvFiles', files[i]);
     }
+    formData.append('assignItemImages', assignItemImages ? 'true' : 'false');
 
     try {
       const res = await axios.post(`/dev/import-csv`, formData, {
@@ -322,8 +324,19 @@ export const DeveloperOptions = () => {
         }
       });
       const results = res.data.results;
-      setSuccessMsg(`Archivos CSV procesados: ${results.categories} Categorías, ${results.locations} Ubicaciones, ${results.vendors} Proveedores, ${results.items} Repuestos, ${results.users} Usuarios, ${results.inventory} Movimientos, ${results.orders} Órdenes.`);
-      setTimeout(() => setSuccessMsg(null), 8000);
+      let msg = `Archivos CSV procesados: ${results.categories} Categorías, ${results.locations} Ubicaciones, ${results.vendors} Proveedores, ${results.items} Repuestos, ${results.users} Usuarios, ${results.inventory} Movimientos, ${results.orders} Órdenes.`;
+      if (results.itemImages) {
+        msg += ` Fotos asignadas: ${results.itemImages.matched}`;
+        if (results.itemImages.missing > 0) {
+          msg += ` (${results.itemImages.missing} sin ítem coincidente)`;
+        }
+        if (results.itemImages.skipped > 0) {
+          msg += `, omitidas: ${results.itemImages.skipped}`;
+        }
+        msg += '.';
+      }
+      setSuccessMsg(msg);
+      setTimeout(() => setSuccessMsg(null), 10000);
     } catch (err: unknown) {
       const detail = axios.isAxiosError(err)
         ? err.response?.data?.message || err.message
@@ -474,6 +487,14 @@ export const DeveloperOptions = () => {
                 <p className="mt-2 max-w-xl text-sm leading-6 text-indigo-100">
                   Selecciónalos juntos. El sistema los reconoce y procesa automáticamente según sus dependencias.
                 </p>
+                <div className="mt-4 rounded-xl border border-white/15 bg-white/10 px-3.5 py-3 text-xs leading-5 text-indigo-50">
+                  <p className="font-bold text-white">Fotos de repuestos (opcional)</p>
+                  <p className="mt-1">
+                    Coloca las imágenes en <code className="rounded bg-black/20 px-1 py-0.5">data/item-images/</code> con el nombre del código interno, p. ej.{' '}
+                    <code className="rounded bg-black/20 px-1 py-0.5">MTTO-0001.jpg</code> o <code className="rounded bg-black/20 px-1 py-0.5">E2-0.png</code>
+                    {' '}(.jpg, .jpeg, .png, .webp, .gif). Ver <code className="rounded bg-black/20 px-1 py-0.5">data/item-images/README.txt</code>.
+                  </p>
+                </div>
                 <div className="mt-5 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
                   {['Categorías', 'Ubicaciones', 'Proveedores', 'Repuestos', 'Usuarios', 'Inventario', 'Órdenes'].map((label, index) => (
                     <div key={label} className="rounded-xl border border-white/10 bg-white/10 px-3 py-2.5">
@@ -481,7 +502,19 @@ export const DeveloperOptions = () => {
                     </div>
                   ))}
                 </div>
-                <label className="mt-6 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-5 py-3.5 font-black text-indigo-700 shadow-sm transition hover:bg-indigo-50 sm:w-fit">
+                <label className="mt-5 flex cursor-pointer items-start gap-2.5 text-sm text-indigo-50">
+                  <input
+                    type="checkbox"
+                    checked={assignItemImages}
+                    onChange={(e) => setAssignItemImages(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-400"
+                    disabled={isLoading}
+                  />
+                  <span>
+                    También asignar fotos desde <code className="rounded bg-black/20 px-1 py-0.5 text-xs">data/item-images/</code>
+                  </span>
+                </label>
+                <label className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-5 py-3.5 font-black text-indigo-700 shadow-sm transition hover:bg-indigo-50 sm:w-fit">
                   <Upload size={18} /> Seleccionar los CSV
                   <input
                     type="file"

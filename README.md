@@ -1,5 +1,5 @@
 # FIIX CMMS
-*(Última actualización: 18 de Julio de 2026 — v1.26.2)*
+*(Última actualización: 21 de Julio de 2026 — v1.29.0)*
 
 Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, activos, inventario, preventivos, checklist, KPIs, compras, RCA, roster y notificaciones (Telegram).
 
@@ -315,3 +315,6 @@ Para comprobar que un respaldo sirve:
 
 ### Manual de usuario
 Detalle de pantallas y módulos: [`docs/manual_usuario.md`](docs/manual_usuario.md). Roadmap/versiones: [`docs/roadmap.md`](docs/roadmap.md).
+
+### Importación CSV + fotos de repuestos
+Los CSV de ejemplo viven en `data/`. Para fotos de ítems al importar: coloca archivos en `data/item-images/` nombrados con el código interno (`MTTO-0001.jpg`, etc.) y deja marcada la casilla en Opciones de Desarrollador. Ver `data/item-images/README.txt`.
