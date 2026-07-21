@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.28.0";
+export const APP_VERSION = "1.28.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "20 de Julio, 2026";
+  const updateDate = "21 de Julio, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -28,6 +28,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Tras vaciar la BD (o restaurar un respaldo) en Opciones de Desarrollador se cierra la sesión y en el login aparece un aviso claro con las credenciales del admin recreado (`admin@fiix.com` / `password123`).",
+    "Corrección: Tras borrar la base en Opciones de Desarrollador, el admin de emergencia vuelve a ser `admin@fiix.com` / `password123` (igual que el seed y la pista del login), no `admin`.",
     "Nuevo: Restaurar respaldo del servidor desde Opciones de Desarrollador (lista fiix_*.sql.gz, confirma «RESTAURAR», restaura BD y opcionalmente uploads). También scripts/restore.sh en Ubuntu.",
     "Nuevo: Tras importar usuarios por CSV o usar cuentas seed, al iniciar sesión con contraseña temporal se obliga a cambiarla antes de usar la app.",
     "Nuevo: Atajo «Mi día» en la barra del técnico: muestra tus OT pendientes, en proceso y en espera (pausadas); en el dashboard puedes cambiar a «Ver todas mis OT».",

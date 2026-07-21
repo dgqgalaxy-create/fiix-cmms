@@ -688,8 +688,8 @@ export const UserManual = () => {
                     <h4 className="font-bold text-red-900 dark:text-red-200 text-sm uppercase tracking-wider mb-3">¿Qué sucede al ejecutarlo?</h4>
                     <ul className="space-y-3 text-sm text-red-800/80 dark:text-red-300/80">
                       <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-red-400" size={16} /> Toda la historia (órdenes de años pasados), activos, inventario, catálogos, y configuraciones (roles, checklists, roster) se borra a nivel de disco de forma irreversible.</li>
-                      <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-red-400" size={16} /> Dado que tu usuario será eliminado, tu sesión actual se cortará abruptamente expulsándote a la pantalla de inicio de sesión.</li>
-                      <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-red-400" size={16} /> Para que el sistema no se quede bloqueado permanentemente (sin usuarios para entrar), el sistema inyecta un salvavidas final: creará un usuario administrador base (`admin` / `password123`).</li>
+                      <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-red-400" size={16} /> Dado que tu usuario será eliminado, la app cierra la sesión y te lleva al login con un aviso explicando qué ocurrió.</li>
+                      <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-red-400" size={16} /> Para que el sistema no se quede bloqueado permanentemente (sin usuarios para entrar), el sistema inyecta un salvavidas final: creará un usuario administrador base (`admin@fiix.com` / `password123`); al entrar te pedirá cambiar la contraseña.</li>
                     </ul>
                   </div>
 

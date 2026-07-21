@@ -1,5 +1,5 @@
 # Manual de Usuario - FIIX CMMS (LPET)
-*(Versión 1.28.0 - 20 de Julio, 2026)*
+*(Versión 1.28.2 - 21 de Julio, 2026)*
 
 FIIX CMMS (despliegue LPET) centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 
@@ -164,7 +164,8 @@ Panel de indicadores de mantenimiento:
 
 - **Acceso:** la contraseña maestra de esta pantalla puede definirse en `backend/.env` (`DEV_MENU_PASSWORD`) **o cambiarse desde la propia interfaz** en la tarjeta **Cambiar contraseña maestra** (pide la contraseña actual, la nueva y su confirmación). Al guardarla queda protegida como hash en la base de datos y tiene prioridad sobre el `.env`; si la base de datos llegara a vaciarse, el `.env` sigue funcionando como respaldo de emergencia.
 - **Respaldo del servidor:** El botón **Crear respaldo ahora** genera en el servidor un dump comprimido de la base de datos y una copia de `uploads/` (fotos, firmas, evidencias). El mismo proceso corre automáticamente todos los días a las 2:15 AM y conserva los respaldos de los últimos 14 días. Por defecto guarda en `~/fiix-backups` (en Windows: `%USERPROFILE%\fiix-backups`). En el servidor Ubuntu no hace falta nada extra; en Windows local necesitas las herramientas de cliente de PostgreSQL (`pg_dump`/`psql`) y `tar`.
-- **Restaurar respaldo:** El botón **Restaurar respaldo** lista los `fiix_*.sql.gz` recientes, pide escribir **RESTAURAR** (esto borra los datos actuales) y vuelve a cargar la BD; opcionalmente restaura también `uploads_*.tar.gz`. Después **recarga la página**. En Ubuntu también puedes usar `./scripts/restore.sh fiix_YYYYMMDD_HHMM.sql.gz`.
+- **Restaurar respaldo:** El botón **Restaurar respaldo** lista los `fiix_*.sql.gz` recientes, pide escribir **RESTAURAR** (esto borra los datos actuales) y vuelve a cargar la BD; opcionalmente restaura también `uploads_*.tar.gz`. Al terminar se cierra la sesión y el login muestra un aviso (los usuarios pueden haber cambiado). En Ubuntu también puedes usar `./scripts/restore.sh fiix_YYYYMMDD_HHMM.sql.gz`.
+- **Vaciar base de datos:** Tras confirmar con **ELIMINAR**, se vacía la BD, se recrea el admin de emergencia y la app cierra la sesión; en el login verás un aviso con `admin@fiix.com` / `password123` (deberás cambiar la contraseña al entrar).
 - **Contraseña temporal:** Los usuarios creados por importación CSV (o el seed con `password123`) deben cambiar la contraseña al primer inicio de sesión; aparece un modal que no se puede cerrar hasta guardar una nueva.
 - **Distribución de herramientas:** La pantalla separa las acciones por propósito: Importación y respaldos, integración con Telegram, seguridad (contraseña maestra), mantenimiento local y Zona de peligro. Esto ayuda a distinguir las operaciones seguras de las destructivas.
 - **Selección conjunta:** Puedes seleccionar los 7 archivos CSV a la vez; no importa el orden en que los elijas. El sistema los reconoce por su nombre y los carga siempre en el orden correcto (Categorías → Ubicaciones → Proveedores → Items → Usuarios → Inventario → Órdenes de Trabajo) para respetar las dependencias entre tablas.

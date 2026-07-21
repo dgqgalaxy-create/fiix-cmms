@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
-import { Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Loader2, Eye, EyeOff, Info, X } from 'lucide-react';
 import { APP_VERSION } from '../components/VersionModal';
+import { POST_WIPE_MESSAGE_KEY } from '../utils/postWipeMessage';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
@@ -11,8 +12,19 @@ export const Login = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [postWipeMessage, setPostWipeMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  useEffect(() => {
+    const msg = sessionStorage.getItem(POST_WIPE_MESSAGE_KEY);
+    if (msg) {
+      setPostWipeMessage(msg);
+      sessionStorage.removeItem(POST_WIPE_MESSAGE_KEY);
+    }
+  }, []);
+
+  const dismissPostWipeMessage = () => setPostWipeMessage(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +56,30 @@ export const Login = () => {
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2">Inicia sesión para gestionar el mantenimiento</p>
         </div>
+
+        {postWipeMessage && (
+          <div
+            role="status"
+            className="mb-6 p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-100 rounded-2xl text-sm relative"
+          >
+            <button
+              type="button"
+              onClick={dismissPostWipeMessage}
+              className="absolute top-3 right-3 text-amber-600/70 dark:text-amber-300/70 hover:text-amber-800 dark:hover:text-amber-100 transition-colors"
+              aria-label="Cerrar aviso"
+            >
+              <X size={16} />
+            </button>
+            <div className="flex gap-3 pr-6">
+              <Info className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" size={18} />
+              <div className="space-y-1.5 font-medium leading-relaxed">
+                {postWipeMessage.split('\n').map((line, i) => (
+                  <p key={i}>{line}</p>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 text-red-600 dark:text-red-400 rounded-2xl text-sm text-center font-medium">

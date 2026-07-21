@@ -247,11 +247,12 @@ router.post('/delete', verifyDevPassword, async (req: Request, res: Response) =>
     }
 
     // Inyectar usuario administrador por defecto para evitar perder acceso
+    // Credenciales alineadas con seed y hint de Login.tsx
     const defaultPassword = await bcrypt.hash('password123', 10);
     await prisma.user.create({
       data: {
         name: 'Administrador',
-        email: 'admin',
+        email: 'admin@fiix.com',
         password_hash: defaultPassword,
         role: 'ADMINISTRADOR',
         is_active: true,

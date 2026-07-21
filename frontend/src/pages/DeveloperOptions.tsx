@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ShieldAlert,
   Download,
@@ -18,6 +19,12 @@ import {
   Save,
 } from 'lucide-react';
 import axios, { BACKEND_URL } from '../api/axios';
+import { useAuth } from '../context/AuthContext';
+import {
+  POST_WIPE_MESSAGE_KEY,
+  RESTORE_LOGOUT_MESSAGE,
+  WIPE_LOGOUT_MESSAGE,
+} from '../utils/postWipeMessage';
 
 type AssetCodeMapping = {
   id: string;
@@ -38,6 +45,8 @@ type AssetCodeMigrationPlan = {
 };
 
 export const DeveloperOptions = () => {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -201,6 +210,12 @@ export const DeveloperOptions = () => {
     }
   };
 
+  const forceLogoutAfterDbChange = (message: string) => {
+    sessionStorage.setItem(POST_WIPE_MESSAGE_KEY, message);
+    logout();
+    navigate('/login', { replace: true });
+  };
+
   const handleRestoreBackup = async () => {
     if (!selectedBackupFile) {
       setError('Selecciona un respaldo para restaurar.');
@@ -219,15 +234,12 @@ export const DeveloperOptions = () => {
         { headers: { 'x-dev-password': password } }
       );
       if (res.data?.success) {
-        setSuccessMsg(
-          (res.data.message || 'Respaldo restaurado.') +
-            ' Recarga la página (F5) para ver los datos.'
-        );
         setIsRestoreModalOpen(false);
         setRestoreConfirmText('');
-      } else {
-        setError(res.data?.message || 'No se pudo restaurar el respaldo.');
+        forceLogoutAfterDbChange(RESTORE_LOGOUT_MESSAGE);
+        return;
       }
+      setError(res.data?.message || 'No se pudo restaurar el respaldo.');
     } catch (err: unknown) {
       const detail = axios.isAxiosError(err)
         ? err.response?.data?.message || err.message
@@ -401,10 +413,10 @@ export const DeveloperOptions = () => {
       await axios.post(`/dev/delete`, {}, {
         headers: { 'x-dev-password': password }
       });
-      setSuccessMsg('Base de datos vaciada con éxito.');
       setIsDeleteModalOpen(false);
       setDeleteConfirmText('');
-      setTimeout(() => setSuccessMsg(null), 3000);
+      forceLogoutAfterDbChange(WIPE_LOGOUT_MESSAGE);
+      return;
     } catch {
       setError('Fallo al vaciar la base de datos.');
     } finally {

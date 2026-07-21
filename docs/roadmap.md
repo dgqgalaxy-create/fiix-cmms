@@ -1,11 +1,14 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
-*(Última actualización: 20 de Julio de 2026)*
+*(Última actualización: 21 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.28.0 (Actualización: 20 de Julio de 2026)
+## 🚀 Versión Actual: v1.28.2 (Actualización: 21 de Julio de 2026)
 
-### Novedades en v1.28.0 (restore, contraseña obligatoria, Mi día, offline claro)
+### Novedades en v1.28.2 (logout tras vaciar/restaurar BD)
+- **Mejora:** Tras vaciar la BD o restaurar un respaldo en Opciones de Desarrollador se cierra la sesión y el login muestra un aviso claro (credenciales del admin recreado tras wipe).
+
+### Novedades Anteriores (v1.28.0 - restore, contraseña obligatoria, Mi día, offline claro)
 - **Nuevo:** Restaurar respaldo del servidor (`fiix_*.sql.gz` + uploads opcional) desde Opciones de Desarrollador o `scripts/restore.sh`; confirmación fuerte «RESTAURAR».
 - **Nuevo:** Tras seed/CSV con contraseña temporal, el login obliga a cambiarla (`must_change_password`) antes de usar la app.
 - **Nuevo:** Atajo **Mi día** en la barra del técnico → OT pendientes / en proceso / en espera asignadas; chip «Ver todas mis OT» en el dashboard.
