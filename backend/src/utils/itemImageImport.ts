@@ -4,13 +4,32 @@ import prisma from '../config/prisma';
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
 
-/** Carpeta de staging en la raíz del repo: data/item-images/ */
+/** Carpeta de staging en la raíz del repo: data/Items_Images/ (casing exacto del export Fiix). */
 export function getItemImagesDir(): string {
-  return path.join(__dirname, '../../../data/item-images');
+  return path.join(__dirname, '../../../data/Items_Images');
 }
 
 function getInventoryUploadDir(): string {
   return path.join(__dirname, '../../uploads/inventory');
+}
+
+/**
+ * Extrae el Item ID / internal_code desde el nombre de archivo real.
+ * Patrones soportados (export Fiix y simplificado):
+ *   MTTO-0001.Image.163526.png  → MTTO-0001
+ *   E2-0.Image.120000.jpg       → E2-0
+ *   MTTO-0001.jpg               → MTTO-0001
+ */
+export function extractItemCodeFromFilename(filename: string): string | null {
+  const base = path.basename(filename, path.extname(filename));
+  if (!base) return null;
+
+  const fiixMatch = base.match(/^(.+)\.Image\.\d+$/i);
+  if (fiixMatch?.[1]) {
+    return fiixMatch[1].trim();
+  }
+
+  return base.trim() || null;
 }
 
 /** Normaliza un nombre para comparar con el slug del archivo (fallback). */
@@ -34,8 +53,9 @@ export interface ItemImageImportResult {
 }
 
 /**
- * Escanea data/item-images/, copia cada foto al mismo formato que ItemModal
+ * Escanea data/Items_Images/, copia cada foto al mismo formato que ItemModal
  * (uploads/inventory/image-{timestamp}-{random}.ext) y actualiza item.image_url.
+ * Empareja por el Item ID embebido en el nombre del archivo (p. ej. MTTO-0001.Image.163526.png).
  * No falla si la carpeta no existe o está vacía.
  */
 export async function assignItemImagesFromFolder(): Promise<ItemImageImportResult> {
@@ -100,14 +120,13 @@ export async function assignItemImagesFromFolder(): Promise<ItemImageImportResul
 
   for (const file of imageFiles) {
     const ext = path.extname(file).toLowerCase();
-    const base = path.basename(file, path.extname(file));
-    const key = base.toLowerCase();
-    const slugKey = slugifyName(base);
+    const code = extractItemCodeFromFilename(file);
+    const key = code ? code.toLowerCase() : '';
+    const slugKey = code ? slugifyName(code) : '';
 
     const item =
-      byCode.get(key) ||
-      (slugKey ? bySlug.get(slugKey) : undefined) ||
-      bySlug.get(key);
+      (key ? byCode.get(key) : undefined) ||
+      (slugKey ? bySlug.get(slugKey) : undefined);
 
     if (!item) {
       result.missing++;

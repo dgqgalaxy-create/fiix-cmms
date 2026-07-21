@@ -317,4 +317,4 @@ Para comprobar que un respaldo sirve:
 Detalle de pantallas y módulos: [`docs/manual_usuario.md`](docs/manual_usuario.md). Roadmap/versiones: [`docs/roadmap.md`](docs/roadmap.md).
 
 ### Importación CSV + fotos de repuestos
-Los CSV de ejemplo viven en `data/`. Para fotos de ítems al importar: coloca archivos en `data/item-images/` nombrados con el código interno (`MTTO-0001.jpg`, etc.) y deja marcada la casilla en Opciones de Desarrollador. Ver `data/item-images/README.txt`.
+Los CSV de ejemplo viven en `data/`. Para fotos de ítems al importar: coloca archivos en `data/Items_Images/` con el patrón del export Fiix (`MTTO-0001.Image.163526.png`, etc.) y deja marcada la casilla en Opciones de Desarrollador. Ver `data/Items_Images/README.txt`.

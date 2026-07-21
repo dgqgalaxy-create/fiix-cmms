@@ -3,10 +3,13 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 21 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.29.0 (Actualización: 21 de Julio de 2026)
+## 🚀 Versión Actual: v1.29.1 (Actualización: 21 de Julio de 2026)
+
+### Novedades en v1.29.1 (carpeta Items_Images del export Fiix)
+- **Cambio:** La importación de fotos de repuestos usa `data/Items_Images/` (casing exacto). Los archivos del export Fiix son `{Item ID}.Image.{HHMMSS}.{ext}` (p. ej. `MTTO-0001.Image.163526.png`); el emparejamiento se hace sobre los archivos reales de esa carpeta → `internal_code` / columna Item ID.
 
 ### Novedades en v1.29.0 (fotos de repuestos al importar CSV)
-- **Nuevo:** Carpeta `data/item-images/` para fotos de repuestos nombradas por código interno (`MTTO-0001.jpg`, etc.). Al importar CSV (casilla «También asignar fotos…») se copian a `uploads/inventory/` y se actualiza `image_url`.
+- **Nuevo:** Al importar CSV (casilla «También asignar fotos…») se copian fotos de repuestos a `uploads/inventory/` y se actualiza `image_url` (carpeta actualizada en 1.29.1 a `data/Items_Images/`).
 
 ### Novedades en v1.28.7 (sin herramienta de migración EQ→ACT)
 - **Cambio:** Se eliminó **Migrar códigos de activos → ACT-0001** de Opciones de Desarrollador (obsoleta: alta manual e importación CSV ya generan `ACT-XXXX`; el código no es editable).

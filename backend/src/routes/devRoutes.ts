@@ -719,7 +719,7 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
       }
     }
 
-    // Fotos de repuestos desde data/item-images/ (opcional; no rompe si la carpeta está vacía)
+    // Fotos de repuestos desde data/Items_Images/ (opcional; no rompe si la carpeta está vacía)
     if (assignItemImages) {
       try {
         const photoResult = await assignItemImagesFromFolder();

@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.29.0";
+export const APP_VERSION = "1.29.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,7 +28,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
-    "Nuevo: Al importar CSV puedes asignar fotos de repuestos desde la carpeta data/item-images/ (nombre = código interno, p. ej. MTTO-0001.jpg); se copian a uploads/inventory como la subida manual.",
+    "Cambio: Las fotos de repuestos al importar CSV se leen de data/Items_Images/ (nombre exacto del export Fiix: MTTO-0001.Image.163526.png = Item ID + .Image.HHMMSS); se emparejan por los archivos reales de esa carpeta.",
+    "Nuevo: Al importar CSV puedes asignar fotos de repuestos desde data/Items_Images/; se copian a uploads/inventory como la subida manual.",
     "Cambio: Se eliminó la herramienta «Migrar códigos de activos → ACT-0001» de Opciones de Desarrollador (obsoleta: los activos nuevos y la importación CSV ya generan ACT-XXXX y el código no es editable).",
     "Cambio: Se eliminó el respaldo JSON (exportar/importar). Solo queda el respaldo del servidor: Crear respaldo / Restaurar respaldo (pg_dump + uploads).",
     "Cambio: Se eliminó el atajo «Mi día» del técnico. La barra inferior vuelve a «Mis OT» y muestra todas las órdenes abiertas asignadas (pendientes, en proceso y en espera).",

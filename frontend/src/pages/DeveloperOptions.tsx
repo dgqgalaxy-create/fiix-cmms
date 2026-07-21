@@ -490,9 +490,9 @@ export const DeveloperOptions = () => {
                 <div className="mt-4 rounded-xl border border-white/15 bg-white/10 px-3.5 py-3 text-xs leading-5 text-indigo-50">
                   <p className="font-bold text-white">Fotos de repuestos (opcional)</p>
                   <p className="mt-1">
-                    Coloca las imágenes en <code className="rounded bg-black/20 px-1 py-0.5">data/item-images/</code> con el nombre del código interno, p. ej.{' '}
-                    <code className="rounded bg-black/20 px-1 py-0.5">MTTO-0001.jpg</code> o <code className="rounded bg-black/20 px-1 py-0.5">E2-0.png</code>
-                    {' '}(.jpg, .jpeg, .png, .webp, .gif). Ver <code className="rounded bg-black/20 px-1 py-0.5">data/item-images/README.txt</code>.
+                    Coloca las imágenes en <code className="rounded bg-black/20 px-1 py-0.5">data/Items_Images/</code> con el patrón del export Fiix, p. ej.{' '}
+                    <code className="rounded bg-black/20 px-1 py-0.5">MTTO-0001.Image.163526.png</code>
+                    {' '}(.jpg, .jpeg, .png, .webp, .gif). El nombre empieza por el Item ID del CSV. Ver <code className="rounded bg-black/20 px-1 py-0.5">data/Items_Images/README.txt</code>.
                   </p>
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
@@ -511,7 +511,7 @@ export const DeveloperOptions = () => {
                     disabled={isLoading}
                   />
                   <span>
-                    También asignar fotos desde <code className="rounded bg-black/20 px-1 py-0.5 text-xs">data/item-images/</code>
+                    También asignar fotos desde <code className="rounded bg-black/20 px-1 py-0.5 text-xs">data/Items_Images/</code>
                   </span>
                 </label>
                 <label className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-5 py-3.5 font-black text-indigo-700 shadow-sm transition hover:bg-indigo-50 sm:w-fit">
