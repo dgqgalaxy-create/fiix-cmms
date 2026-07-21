@@ -26,42 +26,29 @@ export const Dashboard = () => {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   
   const [activeTab, setActiveTab] = useState<'ACTIVAS' | 'MIS_ORDENES' | 'HISTORIAL'>('MIS_ORDENES');
-  const [myDayOnly, setMyDayOnly] = useState(false);
 
   useEffect(() => {
     const status = searchParams.get('status');
     const tab = searchParams.get('tab');
-    const myday = searchParams.get('myday');
-
-    if (myday === '1' || myday === 'true') {
-      setActiveTab('MIS_ORDENES');
-      setStatusFilter(null);
-      setMyDayOnly(true);
-      return;
-    }
 
     if (tab === 'mine' || tab === 'MIS_ORDENES') {
       setActiveTab('MIS_ORDENES');
       setStatusFilter(null);
-      setMyDayOnly(false);
       return;
     }
     if (tab === 'history' || tab === 'HISTORIAL') {
       setActiveTab('HISTORIAL');
       setStatusFilter(null);
-      setMyDayOnly(false);
       return;
     }
     if (tab === 'all' || tab === 'ACTIVAS') {
       setActiveTab(hasPermission('VIEW_ALL_WORK_ORDERS') ? 'ACTIVAS' : 'MIS_ORDENES');
       setStatusFilter(null);
-      setMyDayOnly(false);
       return;
     }
 
     if (status) {
       setStatusFilter(status);
-      setMyDayOnly(false);
       if (status === 'FINALIZADO' || status === 'ANULADO') {
         setActiveTab('HISTORIAL');
       } else {
@@ -235,12 +222,6 @@ export const Dashboard = () => {
       list = list.filter(wo => wo.status !== 'FINALIZADO' && wo.status !== 'ANULADO');
     } else if (activeTab === 'MIS_ORDENES') {
       list = list.filter(wo => wo.status !== 'FINALIZADO' && wo.status !== 'ANULADO' && wo.assigned_technicians?.some(t => t.id === myId));
-      // Mi día: pendientes + pausadas (en espera); excluye EN_PROCESO (esas van en «Mis Órdenes»)
-      if (myDayOnly) {
-        list = list.filter(wo =>
-          wo.status === 'PENDIENTE' || wo.status === 'EN_ESPERA'
-        );
-      }
     } else if (activeTab === 'HISTORIAL') {
       list = list.filter(wo => wo.status === 'FINALIZADO' || wo.status === 'ANULADO');
     }
@@ -368,10 +349,8 @@ export const Dashboard = () => {
                   onClick={() => {
                     setActiveTab('ACTIVAS');
                     setStatusFilter(null);
-                    setMyDayOnly(false);
                     const next = new URLSearchParams(searchParams);
                     next.set('tab', 'all');
-                    next.delete('myday');
                     setSearchParams(next, { replace: true });
                   }}
                   className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === 'ACTIVAS' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
@@ -384,46 +363,21 @@ export const Dashboard = () => {
                 onClick={() => {
                   setActiveTab('MIS_ORDENES');
                   setStatusFilter(null);
-                  setMyDayOnly(false);
                   const next = new URLSearchParams(searchParams);
                   next.set('tab', 'mine');
-                  next.delete('myday');
                   setSearchParams(next, { replace: true });
                 }}
-                className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === 'MIS_ORDENES' && !myDayOnly ? 'bg-amber-100 text-amber-800 shadow-sm border border-amber-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === 'MIS_ORDENES' ? 'bg-amber-100 text-amber-800 shadow-sm border border-amber-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
                 title="Muestra únicamente las órdenes de trabajo activas que te han sido asignadas."
               >
                 Mis Órdenes
               </button>
-              {activeTab === 'MIS_ORDENES' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = new URLSearchParams(searchParams);
-                    next.set('tab', 'mine');
-                    if (myDayOnly) {
-                      next.delete('myday');
-                      setMyDayOnly(false);
-                    } else {
-                      next.set('myday', '1');
-                      setMyDayOnly(true);
-                    }
-                    setSearchParams(next, { replace: true });
-                  }}
-                  className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${myDayOnly ? 'bg-sky-100 text-sky-800 shadow-sm border border-sky-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
-                  title="Solo pendientes y en espera (pausadas) asignadas a ti. Las en proceso siguen en Mis Órdenes."
-                >
-                  {myDayOnly ? 'Ver todas mis OT' : 'Mi día'}
-                </button>
-              )}
               <button 
                 onClick={() => {
                   setActiveTab('HISTORIAL');
                   setStatusFilter(null);
-                  setMyDayOnly(false);
                   const next = new URLSearchParams(searchParams);
                   next.set('tab', 'history');
-                  next.delete('myday');
                   setSearchParams(next, { replace: true });
                 }}
                 className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === 'HISTORIAL' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}

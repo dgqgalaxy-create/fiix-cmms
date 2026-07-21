@@ -12,7 +12,7 @@ const tabClass = (active: boolean) =>
 /**
  * Barra inferior móvil exclusiva para rol TECNICO.
  * Admin/Gestionador no la ven: conservan la UX completa.
- * «Mi día» = OT asignadas pendientes + en espera (pausadas). Las en proceso van en Mis Órdenes.
+ * «Mis OT» = todas las OT abiertas asignadas al técnico.
  */
 export const TechnicianBottomNav = () => {
   const navigate = useNavigate();
@@ -56,9 +56,9 @@ export const TechnicianBottomNav = () => {
         aria-label="Navegación rápida de técnico"
       >
         <div className="flex h-16 items-stretch">
-          <NavLink to="/dashboard?tab=mine&myday=1" className={tabClass(onMine)}>
+          <NavLink to="/dashboard?tab=mine" className={tabClass(onMine)}>
             <ListChecks size={20} />
-            Mi día
+            Mis OT
           </NavLink>
 
           <button

@@ -3,10 +3,10 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 21 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.28.4 (Actualización: 21 de Julio de 2026)
+## 🚀 Versión Actual: v1.28.5 (Actualización: 21 de Julio de 2026)
 
-### Novedades en v1.28.4 (Mi día ≠ Mis Órdenes)
-- **Corrección:** **Mi día** solo muestra OT **pendientes** y **en espera** (pausadas). Antes incluía también **en proceso**, así que coincidía con **Mis Órdenes**. Usa «Ver todas mis OT» para ver las en proceso.
+### Novedades en v1.28.5 (sin Mi día)
+- **Cambio:** Se eliminó **Mi día**. La barra del técnico vuelve a **Mis OT** → todas las OT abiertas asignadas. Sin filtro `myday` ni chip «Ver todas mis OT».
 
 ### Novedades en v1.28.3 (fix restore pg_dump/psql + URI Prisma)
 - **Corrección crítica:** En Windows/PostgreSQL 15+, `pg_dump`/`psql` rechazan `?schema=` de Prisma → dumps vacíos (~20 B) y restauración sin datos. Ahora se limpia la URI, se validan tamaños, se recrea `public` al restaurar y la UI muestra el error sin logout si falla.
@@ -14,10 +14,9 @@ Este documento contiene la lista de módulos y características pendientes de de
 ### Novedades en v1.28.2 (logout tras vaciar/restaurar BD)
 - **Mejora:** Tras vaciar la BD o restaurar un respaldo en Opciones de Desarrollador se cierra la sesión y el login muestra un aviso claro (credenciales del admin recreado tras wipe).
 
-### Novedades Anteriores (v1.28.0 - restore, contraseña obligatoria, Mi día, offline claro)
+### Novedades Anteriores (v1.28.0 - restore, contraseña obligatoria, offline claro)
 - **Nuevo:** Restaurar respaldo del servidor (`fiix_*.sql.gz` + uploads opcional) desde Opciones de Desarrollador o `scripts/restore.sh`; confirmación fuerte «RESTAURAR».
 - **Nuevo:** Tras seed/CSV con contraseña temporal, el login obliga a cambiarla (`must_change_password`) antes de usar la app.
-- **Nuevo:** Atajo **Mi día** en la barra del técnico → OT pendientes / en espera asignadas; chip «Ver todas mis OT» en el dashboard.
 - **Mejora:** Banner offline: éxito verde «Sincronización completa (N)», fallos parciales con motivo (401/409/red) y Reintentar/Descartar.
 
 ### Novedades Anteriores (v1.27.0 - nginx puerto 80 + healthcheck Telegram)
