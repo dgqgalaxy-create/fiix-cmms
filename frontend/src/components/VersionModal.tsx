@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.28.2";
+export const APP_VERSION = "1.28.3";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección crítica: Restaurar/crear respaldo del servidor fallaba con dumps vacíos (~20 B) porque PostgreSQL 15+ rechaza el parámetro Prisma `?schema=` en la URI de pg_dump/psql; ahora se limpia la URL, se rechazan respaldos vacíos, se recrea el schema al restaurar y el modal muestra el error en español sin cerrar sesión si falla.",
     "Mejora: Tras vaciar la BD (o restaurar un respaldo) en Opciones de Desarrollador se cierra la sesión y en el login aparece un aviso claro con las credenciales del admin recreado (`admin@fiix.com` / `password123`).",
     "Corrección: Tras borrar la base en Opciones de Desarrollador, el admin de emergencia vuelve a ser `admin@fiix.com` / `password123` (igual que el seed y la pista del login), no `admin`.",
     "Nuevo: Restaurar respaldo del servidor desde Opciones de Desarrollador (lista fiix_*.sql.gz, confirma «RESTAURAR», restaura BD y opcionalmente uploads). También scripts/restore.sh en Ubuntu.",

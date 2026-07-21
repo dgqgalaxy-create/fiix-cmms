@@ -3,7 +3,10 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 21 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.28.2 (Actualización: 21 de Julio de 2026)
+## 🚀 Versión Actual: v1.28.3 (Actualización: 21 de Julio de 2026)
+
+### Novedades en v1.28.3 (fix restore pg_dump/psql + URI Prisma)
+- **Corrección crítica:** En Windows/PostgreSQL 15+, `pg_dump`/`psql` rechazan `?schema=` de Prisma → dumps vacíos (~20 B) y restauración sin datos. Ahora se limpia la URI, se validan tamaños, se recrea `public` al restaurar y la UI muestra el error sin logout si falla.
 
 ### Novedades en v1.28.2 (logout tras vaciar/restaurar BD)
 - **Mejora:** Tras vaciar la BD o restaurar un respaldo en Opciones de Desarrollador se cierra la sesión y el login muestra un aviso claro (credenciales del admin recreado tras wipe).

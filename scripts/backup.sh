@@ -26,11 +26,18 @@ if [ -z "${DATABASE_URL:-}" ] && [ -f "${APP_DIR}/backend/.env" ]; then
   DATABASE_URL="$(grep -E '^DATABASE_URL=' "${APP_DIR}/backend/.env" | tail -n 1 | cut -d '=' -f2- | sed -e 's/^"//' -e 's/"$//')"
 fi
 DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/fiix_cmms?schema=public}"
+# Prisma añade ?schema=public; pg_dump (libpq) lo rechaza en PostgreSQL 15+.
+DATABASE_URL="$(printf '%s' "${DATABASE_URL}" | sed -E 's/([?&])schema=[^&]*//g; s/\?&/?/g; s/[?&]$//')"
 
 # --- Dump de la base de datos ---
 DUMP_FILE="${BACKUP_DIR}/fiix_${TIMESTAMP}.sql.gz"
 if command -v pg_dump >/dev/null 2>&1; then
-  pg_dump "${DATABASE_URL}" | gzip > "${DUMP_FILE}"
+  pg_dump --no-owner --no-acl "${DATABASE_URL}" | gzip > "${DUMP_FILE}"
+  if [ ! -s "${DUMP_FILE}" ] || [ "$(wc -c < "${DUMP_FILE}")" -lt 64 ]; then
+    rm -f "${DUMP_FILE}"
+    echo "  [ERROR] El dump quedó vacío. Revisa DATABASE_URL / pg_dump." >&2
+    exit 1
+  fi
   echo "  [OK] Base de datos: ${DUMP_FILE}"
 else
   echo "  [AVISO] pg_dump no está instalado; se omite el respaldo de base de datos."

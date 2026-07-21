@@ -60,6 +60,8 @@ if [ -z "${DATABASE_URL:-}" ] && [ -f "${APP_DIR}/backend/.env" ]; then
   DATABASE_URL="$(grep -E '^DATABASE_URL=' "${APP_DIR}/backend/.env" | tail -n 1 | cut -d '=' -f2- | sed -e 's/^"//' -e 's/"$//')"
 fi
 DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/fiix_cmms?schema=public}"
+# Prisma añade ?schema=public; psql (libpq) lo rechaza en PostgreSQL 15+.
+DATABASE_URL="$(printf '%s' "${DATABASE_URL}" | sed -E 's/([?&])schema=[^&]*//g; s/\?&/?/g; s/[?&]$//')"
 
 echo "=== Restaurar FIIX CMMS ==="
 echo "Archivo: ${SQL_PATH}"
@@ -78,7 +80,16 @@ if ! command -v psql >/dev/null 2>&1; then
 fi
 
 echo "Restaurando base de datos..."
-gunzip -c "${SQL_PATH}" | psql "${DATABASE_URL}" -v ON_ERROR_STOP=1
+GZ_SIZE="$(wc -c < "${SQL_PATH}")"
+if [ "${GZ_SIZE}" -lt 64 ]; then
+  echo "El archivo está vacío (${GZ_SIZE} bytes); no se restauró nada. Genera un respaldo nuevo." >&2
+  exit 1
+fi
+# Recrear public evita conflictos con tablas ya existentes (p. ej. tras wipe).
+{
+  printf '%s\n' 'DROP SCHEMA IF EXISTS public CASCADE;' 'CREATE SCHEMA public;' 'GRANT ALL ON SCHEMA public TO public;' 'GRANT ALL ON SCHEMA public TO CURRENT_USER;'
+  gunzip -c "${SQL_PATH}"
+} | psql "${DATABASE_URL}" -v ON_ERROR_STOP=1
 echo "  [OK] Base de datos restaurada."
 
 if [ "$RESTORE_UPLOADS" -eq 1 ]; then

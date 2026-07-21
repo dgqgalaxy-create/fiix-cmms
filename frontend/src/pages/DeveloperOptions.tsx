@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldAlert,
@@ -67,7 +67,15 @@ export const DeveloperOptions = () => {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [serverBackups, setServerBackups] = useState<
-    Array<{ file: string; stamp: string; size: number; mtime: string; hasUploads: boolean; uploadsFile?: string }>
+    Array<{
+      file: string;
+      stamp: string;
+      size: number;
+      mtime: string;
+      hasUploads: boolean;
+      uploadsFile?: string;
+      usable?: boolean;
+    }>
   >([]);
   const [selectedBackupFile, setSelectedBackupFile] = useState('');
   const [restoreUploads, setRestoreUploads] = useState(true);
@@ -75,6 +83,7 @@ export const DeveloperOptions = () => {
   const [isRestoring, setIsRestoring] = useState(false);
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const [restoreConfirmText, setRestoreConfirmText] = useState('');
+  const [restoreModalError, setRestoreModalError] = useState<string | null>(null);
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -187,15 +196,22 @@ export const DeveloperOptions = () => {
   const loadServerBackups = async () => {
     setIsListingBackups(true);
     setError(null);
+    setRestoreModalError(null);
     try {
       const res = await axios.get('/dev/backups', {
         headers: { 'x-dev-password': password }
       });
       const list = res.data?.backups || [];
       setServerBackups(list);
-      if (list.length > 0) {
+      const usableList = list.filter((b: { usable?: boolean }) => b.usable !== false);
+      if (usableList.length > 0) {
         setSelectedBackupFile((prev) =>
-          list.some((b: { file: string }) => b.file === prev) ? prev : list[0].file
+          usableList.some((b: { file: string }) => b.file === prev) ? prev : usableList[0].file
+        );
+      } else if (list.length > 0) {
+        setSelectedBackupFile('');
+        setRestoreModalError(
+          'Hay archivos de respaldo en el servidor, pero están vacíos o inválidos (0 datos). Crea un respaldo nuevo con «Crear respaldo ahora» antes de restaurar.'
         );
       } else {
         setSelectedBackupFile('');
@@ -205,6 +221,7 @@ export const DeveloperOptions = () => {
         ? err.response?.data?.message || err.message
         : err instanceof Error ? err.message : 'Error desconocido';
       setError(`No se pudieron listar los respaldos: ${detail}`);
+      setRestoreModalError(`No se pudieron listar los respaldos: ${detail}`);
     } finally {
       setIsListingBackups(false);
     }
@@ -218,33 +235,50 @@ export const DeveloperOptions = () => {
 
   const handleRestoreBackup = async () => {
     if (!selectedBackupFile) {
-      setError('Selecciona un respaldo para restaurar.');
+      setRestoreModalError('Selecciona un respaldo válido para restaurar.');
+      return;
+    }
+    const selected = serverBackups.find((b) => b.file === selectedBackupFile);
+    if (selected && selected.usable === false) {
+      setRestoreModalError(
+        'Ese archivo está vacío o es inválido. Genera un respaldo nuevo; los .sql.gz de ~20 bytes no contienen datos.'
+      );
       return;
     }
     if (restoreConfirmText !== 'RESTAURAR') {
-      setError('Escribe RESTAURAR para confirmar (esto borra los datos actuales).');
+      setRestoreModalError('Escribe RESTAURAR para confirmar (esto borra los datos actuales).');
       return;
     }
     setIsRestoring(true);
     setError(null);
+    setRestoreModalError(null);
     try {
       const res = await axios.post(
         '/dev/restore',
         { file: selectedBackupFile, restoreUploads, confirm: 'RESTAURAR' },
-        { headers: { 'x-dev-password': password } }
+        { headers: { 'x-dev-password': password }, timeout: 600000 }
       );
       if (res.data?.success) {
         setIsRestoreModalOpen(false);
         setRestoreConfirmText('');
-        forceLogoutAfterDbChange(RESTORE_LOGOUT_MESSAGE);
+        // Solo cerrar sesión tras éxito confirmado; el login muestra el aviso.
+        forceLogoutAfterDbChange(
+          res.data.message
+            ? `${RESTORE_LOGOUT_MESSAGE}\n\n${res.data.message}`
+            : RESTORE_LOGOUT_MESSAGE
+        );
         return;
       }
-      setError(res.data?.message || 'No se pudo restaurar el respaldo.');
+      const failMsg = res.data?.message || 'No se pudo restaurar el respaldo.';
+      setRestoreModalError(failMsg);
+      setError(failMsg);
     } catch (err: unknown) {
       const detail = axios.isAxiosError(err)
         ? err.response?.data?.message || err.message
         : err instanceof Error ? err.message : 'Error desconocido';
-      setError(`Fallo al restaurar: ${detail}`);
+      const failMsg = `Fallo al restaurar: ${detail}`;
+      setRestoreModalError(failMsg);
+      setError(failMsg);
     } finally {
       setIsRestoring(false);
     }
@@ -614,6 +648,7 @@ export const DeveloperOptions = () => {
                   type="button"
                   onClick={() => {
                     setIsRestoreModalOpen(true);
+                    setRestoreModalError(null);
                     void loadServerBackups();
                   }}
                   disabled={isLoading || isRestoring}
@@ -861,8 +896,18 @@ export const DeveloperOptions = () => {
             <p className="text-slate-600 dark:text-slate-400 mb-4 text-sm">
               Esto <strong>borra los datos actuales</strong> y los reemplaza con el dump seleccionado
               (<code className="mx-1 text-xs">fiix_*.sql.gz</code>
-              (y opcionalmente <code className="text-xs">uploads_*.tar.gz</code>). Después recarga la app.
+              (y opcionalmente <code className="text-xs">uploads_*.tar.gz</code>). Si falla, verás el error aquí y
+              no se cerrará la sesión.
             </p>
+            {restoreModalError && (
+              <div
+                role="alert"
+                className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+              >
+                <AlertTriangle className="mt-0.5 shrink-0" size={18} />
+                <span className="whitespace-pre-wrap">{restoreModalError}</span>
+              </div>
+            )}
             <div className="mb-4 flex items-center gap-2">
               <button
                 type="button"
@@ -883,13 +928,18 @@ export const DeveloperOptions = () => {
                 <span className="mb-1.5 block text-sm font-bold text-slate-700 dark:text-slate-300">Respaldo</span>
                 <select
                   value={selectedBackupFile}
-                  onChange={(e) => setSelectedBackupFile(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedBackupFile(e.target.value);
+                    setRestoreModalError(null);
+                  }}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-amber-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 >
                   {serverBackups.map((b) => (
-                    <option key={b.file} value={b.file}>
+                    <option key={b.file} value={b.file} disabled={b.usable === false}>
+                      {b.usable === false ? '[VACÍO] ' : ''}
                       {b.file}
-                      {b.hasUploads ? ' (+uploads)' : ''} — {(b.size / 1024).toFixed(0)} KB
+                      {b.hasUploads ? ' (+uploads)' : ''} —{' '}
+                      {b.size < 1024 ? `${b.size} B` : `${(b.size / 1024).toFixed(0)} KB`}
                     </option>
                   ))}
                 </select>
@@ -920,6 +970,7 @@ export const DeveloperOptions = () => {
                 onClick={() => {
                   setIsRestoreModalOpen(false);
                   setRestoreConfirmText('');
+                  setRestoreModalError(null);
                 }}
                 className="flex-1 rounded-lg bg-slate-100 py-3 font-bold text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
               >
@@ -932,7 +983,8 @@ export const DeveloperOptions = () => {
                   restoreConfirmText !== 'RESTAURAR' ||
                   !selectedBackupFile ||
                   isRestoring ||
-                  serverBackups.length === 0
+                  serverBackups.length === 0 ||
+                  serverBackups.find((b) => b.file === selectedBackupFile)?.usable === false
                 }
                 className="flex-1 rounded-lg bg-amber-600 py-3 font-bold text-white transition-colors hover:bg-amber-700 disabled:opacity-50"
               >

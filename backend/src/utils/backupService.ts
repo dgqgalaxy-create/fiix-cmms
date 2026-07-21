@@ -2,6 +2,7 @@ import { execFileSync, spawn } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import zlib from 'zlib';
 
@@ -17,12 +18,47 @@ const PG_CLIENT_HINT = IS_WIN
 
 const PG_DUMP_HINT = PG_CLIENT_HINT;
 const SAFE_BACKUP_FILE = /^(fiix|uploads)_\d{8}_\d{4}\.(sql\.gz|tar\.gz)$/;
+/** Gzip vacío ~20 bytes; un dump real de esquema+datos supera holgadamente este mínimo. */
+const MIN_SQL_GZ_BYTES = 64;
+const MIN_SQL_RAW_BYTES = 200;
+/** Parámetros de URI que usa Prisma / pools y que libpq (pg_dump/psql) rechaza (p. ej. PG 18). */
+const NON_LIBPQ_URL_PARAMS = [
+  'schema',
+  'connection_limit',
+  'pool_timeout',
+  'pgbouncer',
+  'connect_timeout',
+  'socket_timeout',
+  'statement_cache_size',
+];
 
 const timestamp = (): string => {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
 };
+
+/**
+ * Quita query params solo de Prisma/ORM para que pg_dump/psql acepten la URI.
+ * Sin esto, PostgreSQL 15+ falla con: «parámetro de URI no válido: schema».
+ */
+export function sanitizeDatabaseUrlForPgClients(raw: string): string {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return trimmed;
+  try {
+    const u = new URL(trimmed);
+    for (const key of NON_LIBPQ_URL_PARAMS) {
+      u.searchParams.delete(key);
+    }
+    return u.toString();
+  } catch {
+    return trimmed
+      .replace(/([?&])schema=[^&]*/gi, '$1')
+      .replace(/[?&]$/, '')
+      .replace(/\?&/, '?')
+      .replace(/\?$/, '');
+  }
+}
 
 /** Busca un binario de cliente PostgreSQL (pg_dump / psql) en PATH y rutas típicas de Windows. */
 function findPgBinary(binName: 'pg_dump' | 'psql'): string | null {
@@ -78,43 +114,98 @@ function findPsql(): string | null {
   return findPgBinary('psql');
 }
 
+/**
+ * Espera el cierre del hijo sin rechazar la promesa (evita unhandledRejection en Windows
+ * cuando pg_dump/psql fallan mientras aún corre el pipeline de streams).
+ */
+function waitForChildExit(
+  child: ReturnType<typeof spawn>
+): Promise<{ code: number | null; spawnError: NodeJS.ErrnoException | null }> {
+  return new Promise((resolve) => {
+    let spawnError: NodeJS.ErrnoException | null = null;
+    child.on('error', (err: NodeJS.ErrnoException) => {
+      spawnError = err;
+    });
+    child.on('close', (code) => {
+      resolve({ code, spawnError });
+    });
+  });
+}
+
+function unlinkQuiet(filePath: string) {
+  try {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch {
+    // ignore
+  }
+}
+
 /** Ejecuta pg_dump y comprime la salida con gzip vía streams de Node (sin bash). */
 async function dumpDatabase(pgDumpPath: string, databaseUrl: string, outFile: string): Promise<void> {
-  const child = spawn(pgDumpPath, [databaseUrl], {
-    shell: false,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    windowsHide: true,
-  });
+  const pgUrl = sanitizeDatabaseUrlForPgClients(databaseUrl);
+  const child = spawn(
+    pgDumpPath,
+    ['--no-owner', '--no-acl', pgUrl],
+    {
+      shell: false,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+    }
+  );
 
   let stderr = '';
   child.stderr?.on('data', (chunk: Buffer) => {
     stderr += chunk.toString();
   });
 
-  const exitPromise = new Promise<void>((resolve, reject) => {
-    child.on('error', (err: NodeJS.ErrnoException) => {
-      if (err.code === 'ENOENT') {
-        reject(new Error(`No se pudo ejecutar pg_dump. ${PG_DUMP_HINT}`));
-      } else {
-        reject(err);
-      }
-    });
-    child.on('close', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(stderr.trim() || `pg_dump terminó con código ${code}`));
-    });
-  });
+  const exitPromise = waitForChildExit(child);
 
   try {
     if (!child.stdout) throw new Error('pg_dump no produjo salida');
-    await pipeline(child.stdout, zlib.createGzip(), fs.createWriteStream(outFile));
-    await exitPromise;
-  } catch (error) {
     try {
-      if (fs.existsSync(outFile)) fs.unlinkSync(outFile);
-    } catch {
-      // ignore
+      await pipeline(child.stdout, zlib.createGzip(), fs.createWriteStream(outFile));
+    } catch (pipeErr: any) {
+      // Si el proceso ya murió, el cierre de stdout puede provocar EPIPE; el código de salida manda.
+      const { code, spawnError } = await exitPromise;
+      if (spawnError?.code === 'ENOENT') {
+        throw new Error(`No se pudo ejecutar pg_dump. ${PG_DUMP_HINT}`);
+      }
+      if (spawnError) throw spawnError;
+      if (code !== 0) {
+        throw new Error(stderr.trim() || `pg_dump terminó con código ${code}`);
+      }
+      throw pipeErr;
     }
+
+    const { code, spawnError } = await exitPromise;
+    if (spawnError?.code === 'ENOENT') {
+      throw new Error(`No se pudo ejecutar pg_dump. ${PG_DUMP_HINT}`);
+    }
+    if (spawnError) throw spawnError;
+    if (code !== 0) {
+      throw new Error(stderr.trim() || `pg_dump terminó con código ${code}`);
+    }
+
+    const gzSize = fs.existsSync(outFile) ? fs.statSync(outFile).size : 0;
+    if (gzSize < MIN_SQL_GZ_BYTES) {
+      throw new Error(
+        `El respaldo quedó vacío (${gzSize} bytes). Revisa DATABASE_URL y que pg_dump pueda conectar (PostgreSQL 15+ no acepta ?schema= de Prisma en la URI).`
+      );
+    }
+
+    let rawLen = 0;
+    try {
+      rawLen = zlib.gunzipSync(fs.readFileSync(outFile)).length;
+    } catch {
+      throw new Error('El archivo .sql.gz generado está corrupto o vacío.');
+    }
+    if (rawLen < MIN_SQL_RAW_BYTES) {
+      throw new Error(
+        `El dump SQL es demasiado pequeño (${rawLen} bytes). No se guardó un respaldo vacío.`
+      );
+    }
+  } catch (error) {
+    unlinkQuiet(outFile);
     throw error;
   }
 }
@@ -171,6 +262,8 @@ export interface BackupListEntry {
   mtime: string;
   hasUploads: boolean;
   uploadsFile?: string;
+  /** false si el .sql.gz está vacío/corrupto (p. ej. dumps fallidos por ?schema=). */
+  usable: boolean;
 }
 
 export interface RestoreResult {
@@ -195,6 +288,7 @@ export const listBackups = (): BackupListEntry[] => {
         const stamp = name.replace(/^fiix_/, '').replace(/\.sql\.gz$/, '');
         const uploadsName = `uploads_${stamp}.tar.gz`;
         const hasUploads = entries.includes(uploadsName);
+        const usable = stats.size >= MIN_SQL_GZ_BYTES;
         return {
           file: name,
           stamp,
@@ -202,6 +296,7 @@ export const listBackups = (): BackupListEntry[] => {
           mtime: stats.mtime.toISOString(),
           hasUploads,
           uploadsFile: hasUploads ? uploadsName : undefined,
+          usable,
         } satisfies BackupListEntry;
       })
       .sort((a, b) => b.stamp.localeCompare(a.stamp));
@@ -212,9 +307,42 @@ export const listBackups = (): BackupListEntry[] => {
   }
 };
 
-/** Restaura un dump gzip (plain SQL) vía psql stdin. */
+/** Restaura un dump gzip (plain SQL) vía psql stdin, tras recrear el schema public. */
 async function restoreDatabase(psqlPath: string, databaseUrl: string, sqlGzFile: string): Promise<void> {
-  const child = spawn(psqlPath, [databaseUrl, '-v', 'ON_ERROR_STOP=1'], {
+  const gzSize = fs.statSync(sqlGzFile).size;
+  if (gzSize < MIN_SQL_GZ_BYTES) {
+    throw new Error(
+      `El archivo de respaldo está vacío o es inválido (${gzSize} bytes). Genera un respaldo nuevo con «Crear respaldo ahora» (versiones anteriores podían dejar .sql.gz vacíos si pg_dump rechazaba ?schema=).`
+    );
+  }
+
+  let sqlRaw: Buffer;
+  try {
+    sqlRaw = zlib.gunzipSync(fs.readFileSync(sqlGzFile));
+  } catch {
+    throw new Error('No se pudo descomprimir el .sql.gz (archivo corrupto).');
+  }
+  if (sqlRaw.length < MIN_SQL_RAW_BYTES) {
+    throw new Error(
+      `El dump SQL está vacío (${sqlRaw.length} bytes). Este respaldo no contiene datos; no se restauró nada.`
+    );
+  }
+
+  const pgUrl = sanitizeDatabaseUrlForPgClients(databaseUrl);
+  // Recrear public evita «relation already exists» al restaurar un dump completo sobre tablas ya creadas (p. ej. tras wipe).
+  const preamble = Buffer.from(
+    [
+      'DROP SCHEMA IF EXISTS public CASCADE;',
+      'CREATE SCHEMA public;',
+      'GRANT ALL ON SCHEMA public TO public;',
+      'GRANT ALL ON SCHEMA public TO CURRENT_USER;',
+      '',
+    ].join('\n'),
+    'utf8'
+  );
+  const sqlPayload = Buffer.concat([preamble, sqlRaw]);
+
+  const child = spawn(psqlPath, [pgUrl, '-v', 'ON_ERROR_STOP=1'], {
     shell: false,
     stdio: ['pipe', 'ignore', 'pipe'],
     windowsHide: true,
@@ -225,23 +353,32 @@ async function restoreDatabase(psqlPath: string, databaseUrl: string, sqlGzFile:
     stderr += chunk.toString();
   });
 
-  const exitPromise = new Promise<void>((resolve, reject) => {
-    child.on('error', (err: NodeJS.ErrnoException) => {
-      if (err.code === 'ENOENT') {
-        reject(new Error(`No se pudo ejecutar psql. ${PG_CLIENT_HINT}`));
-      } else {
-        reject(err);
-      }
-    });
-    child.on('close', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(stderr.trim() || `psql terminó con código ${code}`));
-    });
-  });
+  const exitPromise = waitForChildExit(child);
 
   if (!child.stdin) throw new Error('psql no aceptó entrada');
-  await pipeline(fs.createReadStream(sqlGzFile), zlib.createGunzip(), child.stdin);
-  await exitPromise;
+
+  try {
+    await pipeline(Readable.from(sqlPayload), child.stdin);
+  } catch (pipeErr: any) {
+    const { code, spawnError } = await exitPromise;
+    if (spawnError?.code === 'ENOENT') {
+      throw new Error(`No se pudo ejecutar psql. ${PG_CLIENT_HINT}`);
+    }
+    if (spawnError) throw spawnError;
+    if (code !== 0) {
+      throw new Error(stderr.trim() || `psql terminó con código ${code}`);
+    }
+    throw pipeErr;
+  }
+
+  const { code, spawnError } = await exitPromise;
+  if (spawnError?.code === 'ENOENT') {
+    throw new Error(`No se pudo ejecutar psql. ${PG_CLIENT_HINT}`);
+  }
+  if (spawnError) throw spawnError;
+  if (code !== 0) {
+    throw new Error(stderr.trim() || `psql terminó con código ${code}`);
+  }
 }
 
 /** Extrae uploads_*.tar.gz sobre backend/ (reemplaza/mezcla la carpeta uploads). */
