@@ -25,6 +25,12 @@ import {
   RESTORE_LOGOUT_MESSAGE,
   WIPE_LOGOUT_MESSAGE,
 } from '../utils/postWipeMessage';
+import {
+  clearDevOptionsSession,
+  getValidDevOptionsSession,
+  saveDevOptionsSession,
+  touchDevOptionsSession,
+} from '../utils/devOptionsSession';
 
 type AssetCodeMapping = {
   id: string;
@@ -84,6 +90,38 @@ export const DeveloperOptions = () => {
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const [restoreConfirmText, setRestoreConfirmText] = useState('');
   const [restoreModalError, setRestoreModalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const session = getValidDevOptionsSession();
+    if (!session) return;
+
+    let cancelled = false;
+    const pwd = session.password;
+    setPassword(pwd);
+    setIsAuthenticated(true);
+    touchDevOptionsSession(); // refresh activity on enter
+
+    (async () => {
+      try {
+        const setRes = await axios.get('/dev/settings', {
+          headers: { 'x-dev-password': pwd },
+        });
+        if (!cancelled && setRes.data) {
+          setTelegramToken(setRes.data.telegram_bot_token || '');
+          setTelegramChatId(setRes.data.telegram_chat_id || '');
+        }
+      } catch (e) {
+        console.error('Error fetching settings', e);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      // Refresh last-activity timestamp on leave so the 5 min window starts from leaving the page
+      touchDevOptionsSession();
+    };
+  }, []);
+
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -104,6 +142,7 @@ export const DeveloperOptions = () => {
         console.error('Error fetching settings', e);
       }
       setIsAuthenticated(true);
+      saveDevOptionsSession(password);
     } catch {
       setError('Contraseña incorrecta o error de conexión.');
     } finally {
@@ -155,6 +194,7 @@ export const DeveloperOptions = () => {
       );
       setSuccessMsg('Contraseña maestra actualizada con éxito. Se usará automáticamente en esta sesión.');
       setPassword(newPasswordInput);
+      saveDevOptionsSession(newPasswordInput);
       setCurrentPasswordInput('');
       setNewPasswordInput('');
       setConfirmPasswordInput('');
@@ -229,6 +269,7 @@ export const DeveloperOptions = () => {
 
   const forceLogoutAfterDbChange = (message: string) => {
     sessionStorage.setItem(POST_WIPE_MESSAGE_KEY, message);
+    clearDevOptionsSession();
     logout();
     navigate('/login', { replace: true });
   };
