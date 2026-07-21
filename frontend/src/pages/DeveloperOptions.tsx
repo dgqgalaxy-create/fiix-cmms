@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldAlert,
-  Download,
   Upload,
   Trash2,
   KeyRound,
@@ -18,7 +17,7 @@ import {
   ShieldCheck,
   Save,
 } from 'lucide-react';
-import axios, { BACKEND_URL } from '../api/axios';
+import axios from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import {
   POST_WIPE_MESSAGE_KEY,
@@ -251,7 +250,7 @@ export const DeveloperOptions = () => {
       } else if (list.length > 0) {
         setSelectedBackupFile('');
         setRestoreModalError(
-          'Hay archivos de respaldo en el servidor, pero están vacíos o inválidos (0 datos). Crea un respaldo nuevo con «Crear respaldo ahora» antes de restaurar.'
+          'Hay archivos de respaldo en el servidor, pero están vacíos o inválidos (0 datos). Crea un respaldo nuevo con «Crear respaldo» antes de restaurar.'
         );
       } else {
         setSelectedBackupFile('');
@@ -362,7 +361,7 @@ export const DeveloperOptions = () => {
     const confirmed = window.confirm(
       `Se actualizarán ${assetCodePlan.to_change} códigos internos al formato ACT-0001.\n\n` +
         'Los QR de activos no se afectan (usan el ID interno).\n' +
-        'Se recomienda haber exportado un respaldo antes.\n\n¿Continuar?'
+        'Se recomienda haber creado un respaldo del servidor antes.\n\n¿Continuar?'
     );
     if (!confirmed) return;
 
@@ -382,62 +381,6 @@ export const DeveloperOptions = () => {
       setError('Error al aplicar la migración de códigos de activos.');
     } finally {
       setIsAssetCodeLoading(false);
-    }
-  };
-
-  const handleExport = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      // Export requires fetch since we handle a blob response
-      const response = await fetch(`${BACKEND_URL}/api/dev/export`, {
-        method: 'GET',
-        headers: { 'x-dev-password': password }
-      });
-      if (!response.ok) throw new Error('Error al exportar');
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `backup-cmms-${new Date().toISOString().slice(0,10)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setSuccessMsg('Base de datos exportada con éxito.');
-      setTimeout(() => setSuccessMsg(null), 3000);
-    } catch {
-      setError('Fallo al exportar la base de datos.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsLoading(true);
-    setLoadingMessage('Importando respaldo JSON. Esto puede tardar unos momentos...');
-    setError(null);
-    const formData = new FormData();
-    formData.append('backupFile', file);
-
-    try {
-      await axios.post(`/dev/import`, formData, {
-        headers: { 
-          'x-dev-password': password,
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      setSuccessMsg('Base de datos importada con éxito.');
-      setTimeout(() => setSuccessMsg(null), 3000);
-    } catch {
-      setError('Fallo al importar la base de datos.');
-    } finally {
-      setIsLoading(false);
-      setLoadingMessage(null);
-      e.target.value = ''; // Reset input
     }
   };
 
@@ -573,7 +516,7 @@ export const DeveloperOptions = () => {
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-slate-300">
               <span className="mb-1 block font-bold text-white">Recomendación</span>
-              Exporta un respaldo antes de importar o eliminar información.
+              Crea un respaldo del servidor antes de importar CSV o eliminar información.
             </div>
           </div>
         </header>
@@ -635,37 +578,6 @@ export const DeveloperOptions = () => {
             </article>
 
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
-              <article className="flex flex-col rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
-                    <Download size={21} />
-                  </div>
-                  <div>
-                    <h3 className="font-black text-slate-900 dark:text-white">Exportar respaldo</h3>
-                    <p className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">Descarga toda la base de datos en formato JSON.</p>
-                  </div>
-                </div>
-                <button onClick={handleExport} disabled={isLoading} className="mt-5 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
-                  Descargar JSON
-                </button>
-              </article>
-
-              <article className="flex flex-col rounded-3xl border border-emerald-200 bg-white p-5 shadow-sm dark:border-emerald-900/60 dark:bg-slate-900">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
-                    <HardDrive size={21} />
-                  </div>
-                  <div>
-                    <h3 className="font-black text-slate-900 dark:text-white">Restaurar respaldo</h3>
-                    <p className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">Reemplaza los datos actuales con un JSON válido.</p>
-                  </div>
-                </div>
-                <label className="mt-5 block w-full cursor-pointer rounded-xl bg-emerald-600 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-emerald-700">
-                  Seleccionar JSON
-                  <input type="file" accept=".json" onChange={handleImport} className="hidden" disabled={isLoading} />
-                </label>
-              </article>
-
               <article className="flex flex-col rounded-3xl border border-amber-200 bg-white p-5 shadow-sm dark:border-amber-900/60 dark:bg-slate-900">
                 <div className="flex items-start gap-4">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
@@ -674,7 +586,7 @@ export const DeveloperOptions = () => {
                   <div>
                     <h3 className="font-black text-slate-900 dark:text-white">Respaldo del servidor</h3>
                     <p className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">
-                      Genera un dump de PostgreSQL y una copia de <code>uploads/</code> en el servidor (se conservan los últimos 14 días). También corre automáticamente cada madrugada.
+                      Crea o restaura un dump de PostgreSQL (<code>pg_dump</code>) y una copia de <code>uploads/</code> en el servidor (se conservan los últimos 14 días). También corre automáticamente cada madrugada.
                     </p>
                   </div>
                 </div>
@@ -683,7 +595,7 @@ export const DeveloperOptions = () => {
                   disabled={isBackingUp || isLoading}
                   className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-amber-700 disabled:opacity-50"
                 >
-                  <Save size={16} /> {isBackingUp ? 'Respaldando...' : 'Crear respaldo ahora'}
+                  <Save size={16} /> {isBackingUp ? 'Creando respaldo...' : 'Crear respaldo'}
                 </button>
                 <button
                   type="button"

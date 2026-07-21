@@ -301,11 +301,11 @@ Las evidencias y fotos viven en **`backend/uploads/`** (disco del servidor), no 
 | GitHub | Cuenta/token de Git — **no** es la contraseña de Postgres |
 
 ### Respaldos y restauración (verificar una vez)
-Los respaldos diarios (y el botón **Crear respaldo ahora**) guardan `fiix_*.sql.gz` y `uploads_*.tar.gz` en `~/fiix-backups` (o `BACKUP_DIR`).
+Los respaldos diarios (y el botón **Crear respaldo**) guardan `fiix_*.sql.gz` y `uploads_*.tar.gz` en `~/fiix-backups` (o `BACKUP_DIR`).
 
 Para comprobar que un respaldo sirve:
 
-1. Crea uno desde **Configuración → Opciones de Desarrollador → Crear respaldo ahora** (o `./scripts/backup.sh` en Ubuntu).
+1. Crea uno desde **Configuración → Opciones de Desarrollador → Crear respaldo** (o `./scripts/backup.sh` en Ubuntu).
 2. Restaúralo con **Restaurar respaldo** (escribe `RESTAURAR`) o:
    ```bash
    chmod +x scripts/restore.sh

@@ -16,7 +16,7 @@ import { runBackup, listBackups, runRestore } from '../utils/backupService';
 
 const router = express.Router();
 
-// Multer in-memory storage for JSON uploads
+// Multer in-memory storage for CSV imports
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Middleware to verify the developer password
@@ -263,114 +263,6 @@ router.post('/delete', verifyDevPassword, async (req: Request, res: Response) =>
     res.json({ success: true, message: 'Database data has been deleted completely.' });
   } catch (error: any) {
     res.status(500).json({ message: 'Failed to delete database data.', error: error.message });
-  }
-});
-
-router.get('/export', verifyDevPassword, async (req: Request, res: Response) => {
-  try {
-    const exportData = {
-      User: await prisma.user.findMany(),
-      Requester: await prisma.requester.findMany(),
-      Zone: await prisma.zone.findMany(),
-      KPIGoal: await prisma.kPIGoal.findMany(),
-      RolePermission: await prisma.rolePermission.findMany(),
-      ItemCategory: await prisma.itemCategory.findMany(),
-      ItemLocation: await prisma.itemLocation.findMany(),
-      Vendor: await prisma.vendor.findMany(),
-      FailureProblem: await prisma.failureProblem.findMany(),
-      FailureCause: await prisma.failureCause.findMany(),
-      FailureRemedy: await prisma.failureRemedy.findMany(),
-      Asset: await prisma.asset.findMany(),
-      Item: await prisma.item.findMany(),
-      MaintenancePlan: await prisma.maintenancePlan.findMany(),
-      PlanItem: await prisma.planItem.findMany(),
-      InventoryTransaction: await prisma.inventoryTransaction.findMany(),
-      PurchaseOrder: await prisma.purchaseOrder.findMany(),
-      PurchaseOrderItem: await prisma.purchaseOrderItem.findMany(),
-      ChecklistActivity: await prisma.checklistActivity.findMany(),
-      DailyChecklist: await prisma.dailyChecklist.findMany(),
-      DailyChecklistRow: await prisma.dailyChecklistRow.findMany(),
-      WorkOrder: await prisma.workOrder.findMany({
-        include: { assigned_technicians: { select: { id: true } } }
-      })
-    };
-
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', 'attachment; filename=fiix-cmms-backup.json');
-    res.json(exportData);
-  } catch (error: any) {
-    res.status(500).json({ message: 'Failed to export database.', error: error.message });
-  }
-});
-
-router.post('/import', verifyDevPassword, upload.single('backupFile'), async (req: Request, res: Response): Promise<void> => {
-  try {
-    if (!req.file) {
-      res.status(400).json({ message: 'No backup file uploaded.' });
-      return;
-    }
-
-    const data = JSON.parse(req.file.buffer.toString('utf-8'));
-
-    // Truncate all tables first, EXCEPT ChecklistActivity to preserve the seed/base configuration.
-    const tablenames = await prisma.$queryRaw<Array<{ tablename: string }>>`SELECT tablename FROM pg_tables WHERE schemaname='public'`;
-    
-    await prisma.$executeRawUnsafe(`TRUNCATE TABLE "DailyChecklist" CASCADE;`);
-    await prisma.$executeRawUnsafe(`TRUNCATE TABLE "DailyChecklistRow" CASCADE;`);
-
-    for (const { tablename } of tablenames) {
-      if (tablename !== '_prisma_migrations' && tablename !== 'ChecklistActivity') {
-        await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${tablename}" CASCADE;`);
-      }
-    }
-
-    // Insert data in order of dependencies
-    if (data.User) await prisma.user.createMany({ data: data.User });
-    if (data.Requester) await prisma.requester.createMany({ data: data.Requester });
-    if (data.Zone) await prisma.zone.createMany({ data: data.Zone });
-    if (data.KPIGoal) await prisma.kPIGoal.createMany({ data: data.KPIGoal });
-    if (data.RolePermission) await prisma.rolePermission.createMany({ data: data.RolePermission });
-    if (data.ItemCategory) await prisma.itemCategory.createMany({ data: data.ItemCategory });
-    if (data.ItemLocation) await prisma.itemLocation.createMany({ data: data.ItemLocation });
-    if (data.Vendor) await prisma.vendor.createMany({ data: data.Vendor });
-    if (data.FailureProblem) await prisma.failureProblem.createMany({ data: data.FailureProblem });
-    if (data.FailureCause) await prisma.failureCause.createMany({ data: data.FailureCause });
-    if (data.FailureRemedy) await prisma.failureRemedy.createMany({ data: data.FailureRemedy });
-    if (data.Asset) await prisma.asset.createMany({ data: data.Asset });
-    if (data.Item) await prisma.item.createMany({ data: data.Item });
-    if (data.MaintenancePlan) await prisma.maintenancePlan.createMany({ data: data.MaintenancePlan });
-    if (data.PlanItem) await prisma.planItem.createMany({ data: data.PlanItem });
-    if (data.InventoryTransaction) await prisma.inventoryTransaction.createMany({ data: data.InventoryTransaction });
-    if (data.PurchaseOrder) await prisma.purchaseOrder.createMany({ data: data.PurchaseOrder });
-    if (data.PurchaseOrderItem) await prisma.purchaseOrderItem.createMany({ data: data.PurchaseOrderItem });
-
-    // Restore Checklist data if available
-    if (data.ChecklistActivity) {
-      await prisma.$executeRawUnsafe(`TRUNCATE TABLE "ChecklistActivity" CASCADE;`);
-      await prisma.checklistActivity.createMany({ data: data.ChecklistActivity });
-    }
-    if (data.DailyChecklist) await prisma.dailyChecklist.createMany({ data: data.DailyChecklist });
-    if (data.DailyChecklistRow) await prisma.dailyChecklistRow.createMany({ data: data.DailyChecklistRow });
-
-    // For WorkOrder, we handle the many-to-many relationship
-    if (data.WorkOrder) {
-      for (const wo of data.WorkOrder) {
-        const { assigned_technicians, ...rest } = wo;
-        await prisma.workOrder.create({
-          data: {
-            ...rest,
-            assigned_technicians: assigned_technicians && assigned_technicians.length > 0 
-              ? { connect: assigned_technicians } 
-              : undefined
-          }
-        });
-      }
-    }
-
-    res.json({ success: true, message: 'Database imported successfully.' });
-  } catch (error: any) {
-    console.error('Import error:', error);
-    res.status(500).json({ message: 'Failed to import database.', error: error.message });
   }
 });
 

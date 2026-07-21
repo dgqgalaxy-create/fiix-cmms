@@ -3,7 +3,10 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 21 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.28.5 (Actualización: 21 de Julio de 2026)
+## 🚀 Versión Actual: v1.28.6 (Actualización: 21 de Julio de 2026)
+
+### Novedades en v1.28.6 (sin respaldo JSON)
+- **Cambio:** Se eliminó exportar/importar respaldo JSON. Solo queda el respaldo del servidor (**Crear respaldo** / **Restaurar respaldo**: `pg_dump` + `uploads`).
 
 ### Novedades en v1.28.5 (sin Mi día)
 - **Cambio:** Se eliminó **Mi día**. La barra del técnico vuelve a **Mis OT** → todas las OT abiertas asignadas. Sin filtro `myday` ni chip «Ver todas mis OT».

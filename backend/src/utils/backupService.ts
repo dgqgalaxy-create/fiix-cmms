@@ -312,7 +312,7 @@ async function restoreDatabase(psqlPath: string, databaseUrl: string, sqlGzFile:
   const gzSize = fs.statSync(sqlGzFile).size;
   if (gzSize < MIN_SQL_GZ_BYTES) {
     throw new Error(
-      `El archivo de respaldo está vacío o es inválido (${gzSize} bytes). Genera un respaldo nuevo con «Crear respaldo ahora» (versiones anteriores podían dejar .sql.gz vacíos si pg_dump rechazaba ?schema=).`
+      `El archivo de respaldo está vacío o es inválido (${gzSize} bytes). Genera un respaldo nuevo con «Crear respaldo» (versiones anteriores podían dejar .sql.gz vacíos si pg_dump rechazaba ?schema=).`
     );
   }
 
