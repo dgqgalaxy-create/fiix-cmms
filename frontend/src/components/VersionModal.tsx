@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.28.6";
+export const APP_VERSION = "1.28.7";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Cambio: Se eliminó la herramienta «Migrar códigos de activos → ACT-0001» de Opciones de Desarrollador (obsoleta: los activos nuevos y la importación CSV ya generan ACT-XXXX y el código no es editable).",
     "Cambio: Se eliminó el respaldo JSON (exportar/importar). Solo queda el respaldo del servidor: Crear respaldo / Restaurar respaldo (pg_dump + uploads).",
     "Cambio: Se eliminó el atajo «Mi día» del técnico. La barra inferior vuelve a «Mis OT» y muestra todas las órdenes abiertas asignadas (pendientes, en proceso y en espera).",
     "Mejora: En Opciones de Desarrollador, tras desbloquear con la contraseña maestra la sesión permanece abierta unos 5 minutos si sales y vuelves a entrar; pasado ese tiempo se pide de nuevo.",
@@ -90,7 +91,6 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Corrección: SLA ya no satura Telegram con el rezago histórico: al arrancar marca en silencio las OT vencidas, y si hay muchos avisos nuevos envía un solo resumen.",
     "Nuevo: SLA y escalamiento por prioridad (respuesta, OT detenida y resolución) con recordatorios automáticos cada 15 min, Telegram al grupo e in-app a gestores/admins.",
     "Nuevo: Configuración de umbrales SLA editables en Configuración → Notificaciones, con badges Dentro de SLA / En riesgo / Vencido en órdenes.",
-    "Nuevo: Migración de códigos de activos históricos (EQ-XXXXX u otros) al formato estándar ACT-0001 desde Opciones de Desarrollador, con vista previa y mapa de equivalencias descargable.",
     "Corrección: La importación CSV de órdenes ya crea activos faltantes con código ACT-XXXX (ya no genera EQ- aleatorios).",
     "Mejora: El degradado del Manual ahora aparece progresivamente según el desplazamiento y el contenido llega hasta el borde inferior disponible.",
     "Mejora: El contenido del Manual se desvanece bajo un degradado al desplazarse detrás del encabezado y temario fijos.",

@@ -1,5 +1,5 @@
 # Manual de Usuario - FIIX CMMS (LPET)
-*(Versión 1.28.6 - 21 de Julio, 2026)*
+*(Versión 1.28.7 - 21 de Julio, 2026)*
 
 FIIX CMMS (despliegue LPET) centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 
@@ -148,7 +148,6 @@ Panel de indicadores de mantenimiento:
 - **Autoasignación:** Al registrar un nuevo activo (máquina, equipo), ya no se escribe el "Código Interno" manualmente. El sistema lo genera solo, de forma incremental, con el formato **ACT-0001, ACT-0002, ACT-0003...**
 - **Inmutable:** Una vez creado el activo, ese código ya no puede editarse ni desde el formulario de edición ni por ningún otro medio. Esto garantiza que la numeración de la planta sea siempre única y trazable, evitando duplicados o cambios accidentales.
 - **Migraciones de datos:** Cualquier importación o migración masiva de activos (histórica o futura) asigna este mismo formato de código automáticamente.
-- **Migración de códigos históricos:** Si la planta aún tiene activos con formatos antiguos (por ejemplo `EQ-28754`), en *Configuración → Opciones de Desarrollador → Herramientas locales* existe la acción **Migrar códigos de activos → ACT-0001**. Muestra una vista previa del mapa antiguo→nuevo, aplica el cambio en una sola operación y descarga el archivo JSON de equivalencias. Los códigos QR de activos **no se invalidan** porque usan el ID interno (UUID), no el código visible.
 
 ## 9.1 SLA (Acuerdo de Nivel de Servicio) y Escalamiento de Órdenes
 

@@ -8,10 +8,6 @@ import { Role, AssetStatus, WorkOrderStatus, Priority, MaintenanceType, Producti
 import bcrypt from 'bcrypt';
 import { generateInventoryCode } from '../utils/codeGenerator';
 import { parseWorkOrderFolio } from '../utils/folio';
-import {
-  executeAssetCodeMigration,
-  planAssetCodeMigration,
-} from '../utils/migrateAssetCodes';
 import { runBackup, listBackups, runRestore } from '../utils/backupService';
 
 const router = express.Router();
@@ -706,35 +702,6 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
   } catch (error: any) {
     console.error('CSV Import error:', error);
     res.status(500).json({ message: 'Error procesando archivos CSV.', error: error.message });
-  }
-});
-
-// Vista previa de migración EQ-* / otros → ACT-0001
-router.get('/migrate-asset-codes/preview', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
-  try {
-    const plan = await planAssetCodeMigration();
-    res.json(plan);
-  } catch (error: any) {
-    console.error('Asset code migration preview error:', error);
-    res.status(500).json({ message: 'Error al generar la vista previa de migración.', error: error.message });
-  }
-});
-
-// Ejecuta la migración de códigos internos de activos
-router.post('/migrate-asset-codes', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
-  try {
-    const result = await executeAssetCodeMigration();
-    res.json({
-      success: true,
-      message:
-        result.to_change === 0
-          ? 'No hay códigos pendientes de migrar. Todos los activos ya usan el formato ACT-XXXX.'
-          : `Migración completada: ${result.to_change} de ${result.total} activos actualizados.`,
-      ...result,
-    });
-  } catch (error: any) {
-    console.error('Asset code migration error:', error);
-    res.status(500).json({ message: 'Error al migrar códigos de activos.', error: error.message });
   }
 });
 

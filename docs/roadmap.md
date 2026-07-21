@@ -3,7 +3,10 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 21 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.28.6 (Actualización: 21 de Julio de 2026)
+## 🚀 Versión Actual: v1.28.7 (Actualización: 21 de Julio de 2026)
+
+### Novedades en v1.28.7 (sin herramienta de migración EQ→ACT)
+- **Cambio:** Se eliminó **Migrar códigos de activos → ACT-0001** de Opciones de Desarrollador (obsoleta: alta manual e importación CSV ya generan `ACT-XXXX`; el código no es editable).
 
 ### Novedades en v1.28.6 (sin respaldo JSON)
 - **Cambio:** Se eliminó exportar/importar respaldo JSON. Solo queda el respaldo del servidor (**Crear respaldo** / **Restaurar respaldo**: `pg_dump` + `uploads`).
@@ -121,9 +124,8 @@ Este documento contiene la lista de módulos y características pendientes de de
 - **Configuración:** umbrales editables en **Configuración → SLA (Acuerdo de Nivel de Servicio)**; en Notificaciones solo toggles de avisos. Badges de cumplimiento en listado y detalle de OT.
 
 ### Novedades Anteriores (v1.13.0 - Migración de códigos de activos)
-- **EQ → ACT:** Herramienta en Opciones de Desarrollador para convertir códigos históricos (`EQ-XXXXX` u otros) al formato estándar `ACT-0001`, con vista previa y mapa JSON de equivalencias.
-- **Importación CSV:** Los activos creados al importar órdenes ya reciben `ACT-XXXX` (deja de generarse `EQ-` aleatorio).
-- **QR intactos:** La migración no afecta códigos QR impresos; siguen apuntando al UUID del activo.
+- **Importación CSV:** Los activos creados al importar órdenes reciben `ACT-XXXX` (deja de generarse `EQ-` aleatorio).
+- **Nota (v1.28.7):** La herramienta de migración masiva EQ→ACT en Opciones de Desarrollador se retiró por obsoleta.
 
 ### Novedades Anteriores (v1.12.9 - Desplazamiento suave del manual)
 - **Degradado progresivo:** La intensidad aumenta gradualmente durante los primeros píxeles de desplazamiento, sin activación repentina.

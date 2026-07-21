@@ -662,20 +662,6 @@ export const UserManual = () => {
                   <h2 className="text-3xl font-black text-slate-900 dark:text-white">Opciones de Desarrollador</h2>
                 </div>
                 
-                <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/30 p-6 rounded-2xl shadow-sm mb-6">
-                  <h3 className="text-xl font-bold text-emerald-800 dark:text-emerald-300 mb-3 flex items-center gap-2">
-                    <CheckCircle2 size={24} /> Migrar códigos de activos (EQ → ACT)
-                  </h3>
-                  <p className="text-emerald-700 dark:text-emerald-400/90 text-sm leading-relaxed mb-4">
-                    En <strong>Herramientas locales</strong> encontrarás la acción para convertir códigos históricos al estándar <strong>ACT-0001</strong>. Primero se muestra la vista previa; al confirmar se actualizan los códigos y se descarga el mapa de equivalencias en JSON.
-                  </p>
-                  <ul className="space-y-2 text-sm text-emerald-800/80 dark:text-emerald-300/80">
-                    <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-emerald-500" size={16} /> Conserva los códigos que ya están en formato ACT-XXXX.</li>
-                    <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-emerald-500" size={16} /> Reasigna el resto de forma incremental y estable.</li>
-                    <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-emerald-500" size={16} /> No afecta QR impresos (usan el ID interno del activo).</li>
-                  </ul>
-                </div>
-
                 <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 p-6 rounded-2xl shadow-sm">
                   <h3 className="text-xl font-bold text-red-800 dark:text-red-300 mb-3 flex items-center gap-2">
                     <AlertTriangle size={24} className="animate-pulse" /> El Botón Rojo Nuclear
