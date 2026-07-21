@@ -235,10 +235,10 @@ export const Dashboard = () => {
       list = list.filter(wo => wo.status !== 'FINALIZADO' && wo.status !== 'ANULADO');
     } else if (activeTab === 'MIS_ORDENES') {
       list = list.filter(wo => wo.status !== 'FINALIZADO' && wo.status !== 'ANULADO' && wo.assigned_technicians?.some(t => t.id === myId));
-      // Mi día: pendientes + en proceso + pausadas (en espera) asignadas a mí
+      // Mi día: pendientes + pausadas (en espera); excluye EN_PROCESO (esas van en «Mis Órdenes»)
       if (myDayOnly) {
         list = list.filter(wo =>
-          wo.status === 'PENDIENTE' || wo.status === 'EN_PROCESO' || wo.status === 'EN_ESPERA'
+          wo.status === 'PENDIENTE' || wo.status === 'EN_ESPERA'
         );
       }
     } else if (activeTab === 'HISTORIAL') {
@@ -411,7 +411,7 @@ export const Dashboard = () => {
                     setSearchParams(next, { replace: true });
                   }}
                   className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${myDayOnly ? 'bg-sky-100 text-sky-800 shadow-sm border border-sky-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
-                  title="Pendientes, en proceso y en espera (pausadas) asignadas a ti."
+                  title="Solo pendientes y en espera (pausadas) asignadas a ti. Las en proceso siguen en Mis Órdenes."
                 >
                   {myDayOnly ? 'Ver todas mis OT' : 'Mi día'}
                 </button>

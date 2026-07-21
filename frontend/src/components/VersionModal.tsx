@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.28.3";
+export const APP_VERSION = "1.28.4";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,12 +28,14 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: En Opciones de Desarrollador, tras desbloquear con la contraseña maestra la sesión permanece abierta unos 5 minutos si sales y vuelves a entrar; pasado ese tiempo se pide de nuevo.",
+    "Corrección: «Mi día» del técnico ya no incluye OT en proceso (quedaba igual que «Mis Órdenes»); ahora solo pendientes y pausadas (en espera). Usa «Ver todas mis OT» para ver también las en proceso.",
     "Corrección crítica: Restaurar/crear respaldo del servidor fallaba con dumps vacíos (~20 B) porque PostgreSQL 15+ rechaza el parámetro Prisma `?schema=` en la URI de pg_dump/psql; ahora se limpia la URL, se rechazan respaldos vacíos, se recrea el schema al restaurar y el modal muestra el error en español sin cerrar sesión si falla.",
     "Mejora: Tras vaciar la BD (o restaurar un respaldo) en Opciones de Desarrollador se cierra la sesión y en el login aparece un aviso claro con las credenciales del admin recreado (`admin@fiix.com` / `password123`).",
     "Corrección: Tras borrar la base en Opciones de Desarrollador, el admin de emergencia vuelve a ser `admin@fiix.com` / `password123` (igual que el seed y la pista del login), no `admin`.",
     "Nuevo: Restaurar respaldo del servidor desde Opciones de Desarrollador (lista fiix_*.sql.gz, confirma «RESTAURAR», restaura BD y opcionalmente uploads). También scripts/restore.sh en Ubuntu.",
     "Nuevo: Tras importar usuarios por CSV o usar cuentas seed, al iniciar sesión con contraseña temporal se obliga a cambiarla antes de usar la app.",
-    "Nuevo: Atajo «Mi día» en la barra del técnico: muestra tus OT pendientes, en proceso y en espera (pausadas); en el dashboard puedes cambiar a «Ver todas mis OT».",
+    "Nuevo: Atajo «Mi día» en la barra del técnico: muestra tus OT pendientes y en espera (pausadas); en el dashboard puedes cambiar a «Ver todas mis OT».",
     "Mejora: Mensajes offline más claros: sincronización completa (N cambios), fallos parciales con motivo breve (401, 409, red) y opciones Reintentar/Descartar; ya no se queda en «Sincronizando…» sin progreso.",
     "Nuevo: Acceso sin :3000 en Ubuntu con nginx (puerto 80 → Express :3000, WebSocket/Socket.IO); plantilla en deploy/nginx-fiix.conf e instalación opcional desde install.sh.",
     "Nuevo: Vigilancia de salud (API + Postgres) con alertas Telegram: cron externo scripts/healthcheck.sh cada 5 min y autocomprobación de BD dentro del backend; sin spam (solo al caer y recordatorio cada 6 h).",

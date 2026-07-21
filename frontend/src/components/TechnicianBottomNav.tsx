@@ -12,7 +12,7 @@ const tabClass = (active: boolean) =>
 /**
  * Barra inferior móvil exclusiva para rol TECNICO.
  * Admin/Gestionador no la ven: conservan la UX completa.
- * «Mi día» = OT asignadas pendientes + en proceso + en espera (pausadas).
+ * «Mi día» = OT asignadas pendientes + en espera (pausadas). Las en proceso van en Mis Órdenes.
  */
 export const TechnicianBottomNav = () => {
   const navigate = useNavigate();
