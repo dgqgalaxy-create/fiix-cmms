@@ -67,7 +67,7 @@ export const DeveloperOptions = () => {
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const [restoreConfirmText, setRestoreConfirmText] = useState('');
   const [restoreModalError, setRestoreModalError] = useState<string | null>(null);
-  const [assignItemImages, setAssignItemImages] = useState(true);
+  const [itemImagesZip, setItemImagesZip] = useState<File | null>(null);
 
   useEffect(() => {
     const session = getValidDevOptionsSession();
@@ -308,20 +308,27 @@ export const DeveloperOptions = () => {
     if (!files || files.length === 0) return;
 
     setIsLoading(true);
-    setLoadingMessage('Procesando archivos CSV. Por favor, no cierres esta ventana...');
+    setLoadingMessage(
+      itemImagesZip
+        ? 'Procesando CSV y fotos (zip). Puede tardar varios minutos; no cierres esta ventana...'
+        : 'Procesando archivos CSV. Por favor, no cierres esta ventana...'
+    );
     setError(null);
     const formData = new FormData();
     for (let i = 0; i < files.length; i++) {
       formData.append('csvFiles', files[i]);
     }
-    formData.append('assignItemImages', assignItemImages ? 'true' : 'false');
+    if (itemImagesZip) {
+      formData.append('itemImagesZip', itemImagesZip);
+    }
 
     try {
       const res = await axios.post(`/dev/import-csv`, formData, {
         headers: { 
           'x-dev-password': password,
           'Content-Type': 'multipart/form-data'
-        }
+        },
+        timeout: 30 * 60 * 1000, // zip grande + miles de fotos
       });
       const results = res.data.results;
       let msg = `Archivos CSV procesados: ${results.categories} Categorías, ${results.locations} Ubicaciones, ${results.vendors} Proveedores, ${results.items} Repuestos, ${results.users} Usuarios, ${results.inventory} Movimientos, ${results.orders} Órdenes.`;
@@ -336,6 +343,7 @@ export const DeveloperOptions = () => {
         msg += '.';
       }
       setSuccessMsg(msg);
+      setItemImagesZip(null);
       setTimeout(() => setSuccessMsg(null), 10000);
     } catch (err: unknown) {
       const detail = axios.isAxiosError(err)
@@ -490,9 +498,10 @@ export const DeveloperOptions = () => {
                 <div className="mt-4 rounded-xl border border-white/15 bg-white/10 px-3.5 py-3 text-xs leading-5 text-indigo-50">
                   <p className="font-bold text-white">Fotos de repuestos (opcional)</p>
                   <p className="mt-1">
-                    Coloca las imágenes en <code className="rounded bg-black/20 px-1 py-0.5">data/Items_Images/</code> con el patrón del export Fiix, p. ej.{' '}
-                    <code className="rounded bg-black/20 px-1 py-0.5">MTTO-0001.Image.163526.png</code>
-                    {' '}(.jpg, .jpeg, .png, .webp, .gif). El nombre empieza por el Item ID del CSV. Ver <code className="rounded bg-black/20 px-1 py-0.5">data/Items_Images/README.txt</code>.
+                    Selecciona un <strong>.zip</strong> con las fotos del export Fiix (p. ej. carpeta{' '}
+                    <code className="rounded bg-black/20 px-1 py-0.5">Items_Images/</code> dentro).
+                    Nombres: <code className="rounded bg-black/20 px-1 py-0.5">MTTO-0001.Image.163526.png</code>
+                    {' '}(.jpg, .jpeg, .png, .webp, .gif). Límite ~500&nbsp;MB.
                   </p>
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
@@ -502,18 +511,37 @@ export const DeveloperOptions = () => {
                     </div>
                   ))}
                 </div>
-                <label className="mt-5 flex cursor-pointer items-start gap-2.5 text-sm text-indigo-50">
-                  <input
-                    type="checkbox"
-                    checked={assignItemImages}
-                    onChange={(e) => setAssignItemImages(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-400"
-                    disabled={isLoading}
-                  />
-                  <span>
-                    También asignar fotos desde <code className="rounded bg-black/20 px-1 py-0.5 text-xs">data/Items_Images/</code>
+                <div className="mt-5 flex w-full flex-col gap-1.5 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-indigo-50">
+                  <span className="font-bold text-white">Zip de fotos (opcional)</span>
+                  <span className="text-xs text-indigo-100">
+                    {itemImagesZip
+                      ? `Seleccionado: ${itemImagesZip.name} (${(itemImagesZip.size / (1024 * 1024)).toFixed(1)} MB)`
+                      : 'Ningún archivo seleccionado'}
                   </span>
-                </label>
+                  <label className="mt-1 block cursor-pointer text-xs text-indigo-100">
+                    <input
+                      type="file"
+                      accept=".zip,application/zip,application/x-zip-compressed"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] || null;
+                        setItemImagesZip(f);
+                        e.target.value = '';
+                      }}
+                      className="block w-full file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-indigo-700"
+                      disabled={isLoading}
+                    />
+                  </label>
+                  {itemImagesZip && (
+                    <button
+                      type="button"
+                      onClick={() => setItemImagesZip(null)}
+                      className="mt-1 self-start text-xs font-semibold text-indigo-200 underline hover:text-white"
+                      disabled={isLoading}
+                    >
+                      Quitar zip
+                    </button>
+                  )}
+                </div>
                 <label className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-5 py-3.5 font-black text-indigo-700 shadow-sm transition hover:bg-indigo-50 sm:w-fit">
                   <Upload size={18} /> Seleccionar los CSV
                   <input

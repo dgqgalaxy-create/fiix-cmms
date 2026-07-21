@@ -3,18 +3,81 @@ import prisma from '../config/prisma';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import { parse } from 'csv-parse/sync';
 import { Role, AssetStatus, WorkOrderStatus, Priority, MaintenanceType, ProductionGroup } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { generateInventoryCode } from '../utils/codeGenerator';
 import { parseWorkOrderFolio } from '../utils/folio';
 import { runBackup, listBackups, runRestore } from '../utils/backupService';
-import { assignItemImagesFromFolder } from '../utils/itemImageImport';
+import { assignItemImagesFromZip } from '../utils/itemImageImport';
 
 const router = express.Router();
 
-// Multer in-memory storage for CSV imports
-const upload = multer({ storage: multer.memoryStorage() });
+/** Límite del zip de fotos (~171 MB típico; deja margen). CSV son pequeños. */
+export const IMPORT_MAX_FILE_BYTES = 500 * 1024 * 1024;
+
+const importTmpDir = path.join(os.tmpdir(), 'fiix-csv-import');
+
+const importStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    try {
+      fs.mkdirSync(importTmpDir, { recursive: true });
+      cb(null, importTmpDir);
+    } catch (err) {
+      cb(err as Error, importTmpDir);
+    }
+  },
+  filename: (_req, file, cb) => {
+    const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}-${safe}`);
+  },
+});
+
+const uploadImport = multer({
+  storage: importStorage,
+  limits: { fileSize: IMPORT_MAX_FILE_BYTES, files: 25 },
+});
+
+function uploadImportFields(req: Request, res: Response, next: express.NextFunction): void {
+  uploadImport.fields([
+    { name: 'csvFiles', maxCount: 20 },
+    { name: 'itemImagesZip', maxCount: 1 },
+  ])(req, res, (err: unknown) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        res.status(413).json({
+          message: `El archivo es demasiado grande (máximo ${Math.round(IMPORT_MAX_FILE_BYTES / (1024 * 1024))} MB para el zip de fotos).`,
+        });
+        return;
+      }
+      res.status(400).json({ message: `Error al subir archivos: ${err.message}` });
+      return;
+    }
+    if (err) {
+      const message = err instanceof Error ? err.message : 'Error al subir archivos.';
+      res.status(400).json({ message });
+      return;
+    }
+    next();
+  });
+}
+
+function readUploadedUtf8(file: Express.Multer.File): string {
+  if (file.buffer && file.buffer.length > 0) {
+    return file.buffer.toString('utf8');
+  }
+  return fs.readFileSync(file.path, 'utf8');
+}
+
+function unlinkUploadedSafe(file?: Express.Multer.File): void {
+  if (!file?.path) return;
+  try {
+    fs.unlinkSync(file.path);
+  } catch {
+    /* ignore */
+  }
+}
 
 // Middleware to verify the developer password
 const verifyDevPassword = async (req: Request, res: Response, next: express.NextFunction): Promise<void> => {
@@ -263,7 +326,16 @@ router.post('/delete', verifyDevPassword, async (req: Request, res: Response) =>
   }
 });
 
-router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (req: Request, res: Response): Promise<void> => {
+router.post(
+  '/import-csv',
+  verifyDevPassword,
+  uploadImportFields,
+  async (req: Request, res: Response): Promise<void> => {
+  const filesMap = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+  const files = filesMap?.csvFiles || [];
+  const zipFile = filesMap?.itemImagesZip?.[0];
+  const uploadedTemps = [...files, ...(zipFile ? [zipFile] : [])];
+
   try {
     const parseSafeDate = (dString: string) => {
        if (!dString) return null;
@@ -291,7 +363,6 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
       return isNaN(n) ? 0 : n;
     };
 
-    const files = req.files as Express.Multer.File[];
     if (!files || files.length === 0) {
       res.status(400).json({ message: 'No se subieron archivos CSV.' });
       return;
@@ -304,11 +375,6 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
     const userFile = files.find(f => f.originalname.includes('Users'));
     const invFile = files.find(f => f.originalname.includes('Inventory'));
     const woFile = files.find(f => f.originalname.includes('Solicitudes Mantenimiento'));
-
-    const assignItemImages =
-      req.body?.assignItemImages === 'true' ||
-      req.body?.assignItemImages === true ||
-      req.body?.assignItemImages === '1';
 
     const results: {
       categories: number;
@@ -328,7 +394,7 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
     } = { categories: 0, locations: 0, vendors: 0, items: 0, users: 0, inventory: 0, orders: 0 };
 
     if (catFile) {
-      const data = parse(catFile.buffer.toString('utf8'), { columns: true, skip_empty_lines: true });
+      const data = parse(readUploadedUtf8(catFile), { columns: true, skip_empty_lines: true });
       for (const row of data as any[]) {
         try {
           const id = (row['ID'] || '').trim();
@@ -345,7 +411,7 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
     }
 
     if (locFile) {
-      const data = parse(locFile.buffer.toString('utf8'), { columns: true, skip_empty_lines: true });
+      const data = parse(readUploadedUtf8(locFile), { columns: true, skip_empty_lines: true });
       for (const row of data as any[]) {
         try {
           const id = (row['ID'] || '').trim();
@@ -362,7 +428,7 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
     }
 
     if (venFile) {
-      const data = parse(venFile.buffer.toString('utf8'), { columns: true, skip_empty_lines: true });
+      const data = parse(readUploadedUtf8(venFile), { columns: true, skip_empty_lines: true });
       for (const row of data as any[]) {
         try {
           const id = (row['ID'] || '').trim();
@@ -404,7 +470,7 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
       }
       const unassignedLocId = unassignedLoc.id;
 
-      const data = parse(itemFile.buffer.toString('utf8'), { columns: true, skip_empty_lines: true });
+      const data = parse(readUploadedUtf8(itemFile), { columns: true, skip_empty_lines: true });
 
       // Extraer y crear UOMs faltantes
       try {
@@ -480,7 +546,7 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
     }
 
     if (userFile) {
-      const data = parse(userFile.buffer.toString('utf8'), { columns: true, skip_empty_lines: true });
+      const data = parse(readUploadedUtf8(userFile), { columns: true, skip_empty_lines: true });
       const defaultHash = await bcrypt.hash('CMMS2026*', 10);
       for (const row of data as any[]) {
         try {
@@ -518,7 +584,7 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
     }
 
     if (invFile) {
-      const data = parse(invFile.buffer.toString('utf8'), { columns: true, skip_empty_lines: true });
+      const data = parse(readUploadedUtf8(invFile), { columns: true, skip_empty_lines: true });
       const allUsers = await prisma.user.findMany();
       const allItems = await prisma.item.findMany();
       const userMap: Record<string, string> = Object.fromEntries(allUsers.map(u => [u.email, u.id]));
@@ -575,7 +641,7 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
     }
 
     if (woFile) {
-      const data = parse(woFile.buffer.toString('utf8'), { columns: true, skip_empty_lines: true });
+      const data = parse(readUploadedUtf8(woFile), { columns: true, skip_empty_lines: true });
       const allUsers = await prisma.user.findMany();
       const adminUser = allUsers.find(u => u.role === 'ADMINISTRADOR') || allUsers[0];
       
@@ -719,10 +785,10 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
       }
     }
 
-    // Fotos de repuestos desde data/Items_Images/ (opcional; no rompe si la carpeta está vacía)
-    if (assignItemImages) {
+    // Fotos de repuestos desde zip subido (opcional; no rompe si falta o no hay coincidencias)
+    if (zipFile?.path) {
       try {
-        const photoResult = await assignItemImagesFromFolder();
+        const photoResult = await assignItemImagesFromZip(zipFile.path);
         results.itemImages = {
           matched: photoResult.matched,
           missing: photoResult.missing,
@@ -746,6 +812,10 @@ router.post('/import-csv', verifyDevPassword, upload.array('csvFiles'), async (r
   } catch (error: any) {
     console.error('CSV Import error:', error);
     res.status(500).json({ message: 'Error procesando archivos CSV.', error: error.message });
+  } finally {
+    for (const f of uploadedTemps) {
+      unlinkUploadedSafe(f);
+    }
   }
 });
 
