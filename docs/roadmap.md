@@ -3,9 +3,12 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 21 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.30.7 (Actualización: 21 de Julio de 2026)
+## 🚀 Versión Actual: v1.30.8 (Actualización: 21 de Julio de 2026)
 
-### Novedades en v1.30.7 (compat zip OT en import)
+### Novedades en v1.30.8 (fotos OT visibles en listado)
+- **Corrección:** La importación del zip de solicitudes copia FOTO ANTES también a `request_image_url` (visible en tarjetas/tabla) y a evidencia «Antes»; FOTO DESPUÉS a «Después».
+
+### Novedades Anteriores (v1.30.7 - compat zip OT en import)
 - **Corrección:** El zip de órdenes se sube como parte de `csvFiles` para no romper Multer en backends antiguos; el servidor lo detecta por extensión/nombre. `/api/health` ahora incluye `version`.
 
 ### Novedades Anteriores (v1.30.6 - import CSV + zip OT)

@@ -804,9 +804,19 @@ router.post(
                started_at,
                paused_at: parseSafeDate(row['HORA PAUSA']) || null,
                completed_at: status === WorkOrderStatus.ANULADO && !completed_at ? new Date() : completed_at,
-               accumulated_time_ms: Math.floor(parseNumber(row['TIEMPO REPARACIÓN']) * 60000),
+               accumulated_time_ms: Math.min(
+                 2147483647,
+                 Math.max(0, Math.floor(parseNumber(row['TIEMPO REPARACIÓN']) * 60000))
+               ),
                assigned_technicians: { connect: assignedUserIds }
             };
+
+            // Mapear fotos aunque el upsert falle después (p. ej. datos raros).
+            const beforePath = sanitizeWorkOrderPhotoPath(row['FOTO ANTES']);
+            const afterPath = sanitizeWorkOrderPhotoPath(row['FOTO DESPUÉS']);
+            if (beforePath || afterPath) {
+              woPhotoMappings.push({ folio: folioCsv, beforePath, afterPath });
+            }
 
             if (existingWO) {
                await prisma.workOrder.update({
@@ -819,12 +829,6 @@ router.post(
                });
             }
             results.orders++;
-
-            const beforePath = sanitizeWorkOrderPhotoPath(row['FOTO ANTES']);
-            const afterPath = sanitizeWorkOrderPhotoPath(row['FOTO DESPUÉS']);
-            if (beforePath || afterPath) {
-              woPhotoMappings.push({ folio: folioCsv, beforePath, afterPath });
-            }
           } catch(e) { 
             console.error('Work order row error', e);
           }
@@ -883,6 +887,26 @@ router.post(
           afterAssigned: 0,
         };
       }
+    } else if (woPhotoMappings.length > 0 && !woZipFile) {
+      results.workOrderImages = {
+        matched: 0,
+        missing: woPhotoMappings.length,
+        skipped: 0,
+        folderFound: false,
+        filesScanned: 0,
+        beforeAssigned: 0,
+        afterAssigned: 0,
+      };
+    } else if (woZipFile && woPhotoMappings.length === 0) {
+      results.workOrderImages = {
+        matched: 0,
+        missing: 0,
+        skipped: 0,
+        folderFound: true,
+        filesScanned: 0,
+        beforeAssigned: 0,
+        afterAssigned: 0,
+      };
     }
 
     res.json({ success: true, message: 'Archivos CSV importados con éxito.', results });

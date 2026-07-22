@@ -213,13 +213,21 @@ export async function assignWorkOrderImagesFromFolder(
       continue;
     }
 
-    const updateData: { before_image_url?: string; after_image_url?: string } = {};
+    const updateData: {
+      before_image_url?: string;
+      after_image_url?: string;
+      request_image_url?: string;
+    } = {};
 
     const beforeSrc = resolveMappedFile(mapping.beforePath, index);
     if (sanitizeWorkOrderPhotoPath(mapping.beforePath)) {
       if (beforeSrc) {
         try {
-          updateData.before_image_url = copyToUploads(beforeSrc, 'before');
+          const url = copyToUploads(beforeSrc, 'before');
+          updateData.before_image_url = url;
+          // El listado de OT usa request_image_url; en el export Fiix la foto
+          // de evidencia "antes" es la que debe verse en tarjetas/tabla.
+          updateData.request_image_url = url;
           result.beforeAssigned++;
           result.matched++;
         } catch (err) {

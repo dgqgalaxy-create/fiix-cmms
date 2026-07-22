@@ -417,6 +417,9 @@ export const DeveloperOptions = () => {
         if (results.workOrderImages.missing > 0) {
           msg += `, sin archivo: ${results.workOrderImages.missing}`;
         }
+        if (!results.workOrderImages.folderFound && results.workOrderImages.matched === 0) {
+          msg += ' — no se detectó el zip de órdenes; selecciónalo antes de los CSV.';
+        }
         msg += '.';
       } else if (workOrderImagesZip) {
         msg += ' (El zip de órdenes se subió pero no se reportaron fotos; revisa logs / unzip).';

@@ -119,18 +119,20 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
     <div>
       {/* Vista de Tarjetas para Celulares */}
       <div className="block xl:hidden flex flex-col gap-3">
-        {sortedWorkOrders.map((wo) => (
-          <div 
+        {sortedWorkOrders.map((wo) => {
+          const cardPhotoUrl = wo.request_image_url || wo.before_image_url;
+          return (
+        <div 
           key={wo.id} 
           onClick={() => onRowClick && onRowClick(wo)}
           className="group bg-white dark:bg-slate-900 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500 transition-all cursor-pointer overflow-hidden flex flex-col md:flex-row"
         >
           {/* Main Content Area */}
           <div className="relative isolate overflow-hidden p-4 md:p-5 flex-1 flex flex-col">
-            {wo.request_image_url && (
+            {cardPhotoUrl && (
               <div className="pointer-events-none absolute inset-0 z-0" aria-hidden="true">
                 <img
-                  src={`${BACKEND_URL}${wo.request_image_url}`}
+                  src={`${BACKEND_URL}${cardPhotoUrl}`}
                   alt=""
                   loading="lazy"
                   decoding="async"
@@ -147,7 +149,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
                   {formatWorkOrderFolio(wo.folio)}
                 </span>
 
-                {wo.request_image_url && (
+                {cardPhotoUrl && (
                   <span
                     className="inline-flex items-center justify-center rounded-full border border-emerald-200/80 bg-white/85 p-1 text-emerald-700 shadow-sm backdrop-blur-sm dark:border-emerald-800 dark:bg-slate-900/80 dark:text-emerald-300"
                     title="Incluye foto de la solicitud"
@@ -261,7 +263,8 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
             </div>
           </div>
         </div>
-      ))}
+          );
+        })}
       </div>
 
       {/* Vista de Tabla para Escritorio */}
@@ -286,15 +289,17 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-              {sortedWorkOrders.map((wo) => (
+              {sortedWorkOrders.map((wo) => {
+                const rowPhotoUrl = wo.request_image_url || wo.before_image_url;
+                return (
                 <tr
                   key={wo.id} 
                   onClick={() => onRowClick && onRowClick(wo)}
                   className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group ${
-                    wo.request_image_url ? 'wo-photo-row' : ''
+                    rowPhotoUrl ? 'wo-photo-row' : ''
                   }`}
-                  style={wo.request_image_url
-                    ? ({ '--wo-photo-url': `url("${BACKEND_URL}${wo.request_image_url}")` } as React.CSSProperties)
+                  style={rowPhotoUrl
+                    ? ({ '--wo-photo-url': `url("${BACKEND_URL}${rowPhotoUrl}")` } as React.CSSProperties)
                     : undefined}
                 >
                   <td className="px-6 py-4 align-top">
@@ -302,7 +307,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
                       <span className="bg-slate-800 dark:bg-slate-700 text-white px-2.5 py-1 rounded-md text-xs font-bold tracking-wide">
                         {formatWorkOrderFolio(wo.folio)}
                       </span>
-                      {wo.request_image_url && (
+                      {rowPhotoUrl && (
                         <span
                           className="inline-flex items-center gap-1 rounded-full border border-emerald-200/80 bg-white/90 px-2 py-0.5 text-[10px] font-bold text-emerald-700 backdrop-blur-sm dark:border-emerald-800 dark:bg-slate-900/85 dark:text-emerald-300"
                           title="Incluye foto de la solicitud"
@@ -371,7 +376,8 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
                     {getStatusBadge(wo.status)}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
