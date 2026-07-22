@@ -120,11 +120,15 @@ cd "${APP_DIR}/backend"
 mkdir -p uploads
 # npm ci no reescribe package-lock.json (evita ensuciar el working tree
 # y bloquear el próximo git pull del auto-deploy).
-npm ci
+# Si NODE_ENV=production está en el entorno, npm omite devDependencies
+# (nodemon/ts-node) y rompe arranques antiguos con "npm run dev".
+npm ci --include=dev
 npx prisma generate
 # --accept-data-loss: necesario p. ej. al agregar unique nullable (client_request_id).
 # Sin el flag, update.sh aborta con set -e y el servidor puede quedar en 502.
 npx prisma db push --accept-data-loss
+info "Compilando backend (dist/)..."
+npm run build
 ok "Backend listo"
 
 # --- 3. Frontend ---
@@ -139,13 +143,9 @@ ok "Frontend listo (dist)"
 echo ">>> [4/5] Servicio PM2 (fiix-backend)..."
 
 cd "${APP_DIR}/backend"
-if pm2 describe fiix-backend >/dev/null 2>&1; then
-  info "Reiniciando fiix-backend..."
-  pm2 restart fiix-backend --update-env
-else
-  info "No existía fiix-backend; iniciando..."
-  pm2 start npm --name fiix-backend -- run dev
-fi
+# Recrear el proceso con cwd correcto y arranque de producción (sin nodemon).
+pm2 delete fiix-backend >/dev/null 2>&1 || true
+pm2 start npm --name fiix-backend --cwd "${APP_DIR}/backend" -- run start
 
 # Limpieza: instalaciones antiguas corrían Vite en :5173
 if pm2 describe fiix-frontend >/dev/null 2>&1; then
@@ -165,16 +165,23 @@ if ! command -v curl >/dev/null 2>&1; then
   info "curl no está instalado; se omite el smoke test HTTP (opcional: sudo apt install curl)."
 else
   http_code() {
-    curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 "$1" 2>/dev/null || echo '000'
+    # Solo el código HTTP; si curl falla del todo, devolver 000 (sin concatenar).
+    local code
+    code="$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 "$1" 2>/dev/null || true)"
+    if [ -z "$code" ] || [ "$code" = "000" ]; then
+      echo "000"
+    else
+      echo "$code"
+    fi
   }
 
   API_CODE="$(http_code 'http://127.0.0.1:3000/api/health')"
   UI_CODE="$(http_code 'http://127.0.0.1:3000/')"
 
-  if [ "$API_CODE" = "000" ]; then
+  if [ "$API_CODE" = "000" ] || [ "$API_CODE" = "000000" ]; then
     die "El backend no responde en :3000. Revisa: pm2 logs fiix-backend --lines 50"
   fi
-  if [ "$UI_CODE" = "000" ]; then
+  if [ "$UI_CODE" = "000" ] || [ "$UI_CODE" = "000000" ]; then
     die "La interfaz (SPA) no responde en :3000/. Revisa: pm2 logs fiix-backend --lines 50"
   fi
 

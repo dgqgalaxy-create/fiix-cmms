@@ -135,9 +135,10 @@ EOF
 fi
 
 cd "${APP_DIR}/backend"
-npm install
+npm install --include=dev
 npx prisma generate
-npx prisma db push
+npx prisma db push --accept-data-loss
+npm run build
 
 SEED_NOW="$(ask "¿Cargar datos iniciales (admin@fiix.com / password123)? [s/N]" "N")"
 if [[ "${SEED_NOW}" =~ ^[sS]$ ]]; then
@@ -155,7 +156,7 @@ load_nvm
 cd "${APP_DIR}/backend"
 pm2 delete fiix-backend >/dev/null 2>&1 || true
 pm2 delete fiix-frontend >/dev/null 2>&1 || true
-pm2 start npm --name fiix-backend -- run dev
+pm2 start npm --name fiix-backend --cwd "${APP_DIR}/backend" -- run start
 
 pm2 save
 echo "  [OK] En producción, backend (puerto ${PORT:-3000}) sirve la API y la interfaz (frontend/dist)."
