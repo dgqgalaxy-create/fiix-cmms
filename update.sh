@@ -122,7 +122,9 @@ mkdir -p uploads
 # y bloquear el próximo git pull del auto-deploy).
 npm ci
 npx prisma generate
-npx prisma db push
+# --accept-data-loss: necesario p. ej. al agregar unique nullable (client_request_id).
+# Sin el flag, update.sh aborta con set -e y el servidor puede quedar en 502.
+npx prisma db push --accept-data-loss
 ok "Backend listo"
 
 # --- 3. Frontend ---

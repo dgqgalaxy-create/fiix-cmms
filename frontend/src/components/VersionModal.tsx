@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.32.0";
+export const APP_VERSION = "1.32.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: update.sh aplica prisma db push con --accept-data-loss para no abortar el deploy (p. ej. unique client_request_id) y dejar nginx en 502.",
     "Nuevo: Sala de control en Inicio (admin/gestionador): tarjetas de Urgentes, Sin asignar, SLA en riesgo y SLA vencido; abren Órdenes filtradas. Badge en la pestaña del navegador y sonido opcional al subir el conteo crítico.",
     "Nuevo: Offline ampliado — puedes editar/enviar el checklist diario y registrar salidas de inventario (OUT) sin señal; las entradas (IN) siguen requiriendo conexión. Las salidas usan una clave anti-doble descuento al sincronizar.",
     "Mejora: Al descartar la cola offline también se limpian las fotos guardadas en el dispositivo; avisos más claros si un sync falla por conflicto (409) con fotos.",
