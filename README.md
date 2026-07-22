@@ -1,5 +1,5 @@
 # FIIX CMMS
-*(Última actualización: 22 de Julio de 2026 — v1.33.1)*
+*(Última actualización: 22 de Julio de 2026 — v1.34.0)*
 
 Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, activos, inventario, preventivos, checklist, KPIs, compras, RCA, roster y notificaciones (Telegram).
 

@@ -4,6 +4,8 @@ export interface PurchaseOrderItem {
   id: string;
   item_id: string;
   quantity: number;
+  /** Cantidad capturada al recibir; null si aún no se recibió. */
+  received_quantity?: number | null;
   unit_cost: number;
   item?: {
     id: string;
@@ -59,7 +61,15 @@ export const createDraftsFromLowStock = async (): Promise<LowStockDraftResult> =
   return data;
 };
 
-export const updatePurchaseOrderStatus = async (id: string, status: string): Promise<PurchaseOrder> => {
-  const { data } = await api.patch(`/purchase-orders/${id}/status`, { status });
+export type ReceivedItemPayload = { id: string; received_quantity: number };
+
+export const updatePurchaseOrderStatus = async (
+  id: string,
+  status: string,
+  received_items?: ReceivedItemPayload[],
+): Promise<PurchaseOrder> => {
+  const body: { status: string; received_items?: ReceivedItemPayload[] } = { status };
+  if (received_items) body.received_items = received_items;
+  const { data } = await api.patch(`/purchase-orders/${id}/status`, body);
   return data;
 };

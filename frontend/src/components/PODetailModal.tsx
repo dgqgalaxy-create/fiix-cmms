@@ -13,9 +13,27 @@ interface PODetailModalProps {
 export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const { hasPermission, user } = useAuth();
+  const [receivingMode, setReceivingMode] = useState(false);
+  const [receivedQty, setReceivedQty] = useState<Record<string, string>>({});
+  const { user } = useAuth();
 
   const isManagerOrAdmin = user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR';
+
+  const startReceiving = () => {
+    const initial: Record<string, string> = {};
+    for (const oi of order.items) {
+      initial[oi.id] = String(oi.quantity);
+    }
+    setReceivedQty(initial);
+    setReceivingMode(true);
+    setError('');
+  };
+
+  const cancelReceiving = () => {
+    setReceivingMode(false);
+    setReceivedQty({});
+    setError('');
+  };
 
   const handleUpdateStatus = async (newStatus: string) => {
     setIsSubmitting(true);
@@ -30,9 +48,35 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
     }
   };
 
+  const handleConfirmReceive = async () => {
+    const payload: { id: string; received_quantity: number }[] = [];
+    for (const oi of order.items) {
+      const raw = receivedQty[oi.id];
+      const qty = Number(raw);
+      if (!Number.isFinite(qty) || qty < 0) {
+        setError(`Cantidad recibida inválida en ${oi.item?.internal_code || oi.item?.name || 'ítem'}`);
+        return;
+      }
+      payload.push({ id: oi.id, received_quantity: qty });
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await updatePurchaseOrderStatus(order.id, 'RECIBIDA', payload);
+      setReceivingMode(false);
+      onUpdate();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al recibir la orden');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const total = order.items.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
+  const showReceivedCol = receivingMode || order.status === 'RECIBIDA';
 
   const renderStatusStepper = () => {
     const steps = ['BORRADOR', 'APROBADA', 'ENVIADA', 'RECIBIDA'];
@@ -77,6 +121,16 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
     );
   };
 
+  const qtyBadge = (ordered: number, received: number) => {
+    if (received < ordered) {
+      return <span className="ml-1 text-[10px] font-bold uppercase text-amber-700 dark:text-amber-400">menos</span>;
+    }
+    if (received > ordered) {
+      return <span className="ml-1 text-[10px] font-bold uppercase text-sky-700 dark:text-sky-400">más</span>;
+    }
+    return null;
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -102,6 +156,13 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm font-medium">
               {error}
+            </div>
+          )}
+
+          {receivingMode && (
+            <div className="mb-6 p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 rounded-2xl text-sm">
+              Indica la cantidad <strong>realmente recibida</strong> por línea (puede ser menos, igual o más que lo pedido).
+              Solo lo recibido se suma al inventario. La orden se cerrará como RECIBIDA.
             </div>
           )}
 
@@ -134,27 +195,61 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                 <tr>
                   <th className="px-4 py-3 font-medium">Internal Code</th>
                   <th className="px-4 py-3 font-medium">Ítem</th>
-                  <th className="px-4 py-3 font-medium text-right">Cantidad</th>
+                  <th className="px-4 py-3 font-medium text-right">Pedido</th>
+                  {showReceivedCol && (
+                    <th className="px-4 py-3 font-medium text-right">Recibido</th>
+                  )}
                   <th className="px-4 py-3 font-medium text-right">Costo Unit.</th>
                   <th className="px-4 py-3 font-medium text-right">Subtotal</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {order.items.map((oi) => (
-                  <tr key={oi.id} className="bg-white dark:bg-slate-900">
-                    <td className="px-4 py-3 font-medium text-slate-500 dark:text-slate-400">{oi.item?.internal_code}</td>
-                    <td className="px-4 py-3 font-bold text-slate-800 dark:text-slate-100">{oi.item?.name}</td>
-                    <td className="px-4 py-3 text-right">{oi.quantity} {oi.item?.uom}</td>
-                    <td className="px-4 py-3 text-right">${oi.unit_cost.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right font-medium text-slate-700 dark:text-slate-200">
-                      ${(oi.quantity * oi.unit_cost).toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
+                {order.items.map((oi) => {
+                  const receivedDisplay =
+                    order.status === 'RECIBIDA' && oi.received_quantity != null
+                      ? oi.received_quantity
+                      : null;
+                  const draftReceived = Number(receivedQty[oi.id]);
+                  return (
+                    <tr key={oi.id} className="bg-white dark:bg-slate-900">
+                      <td className="px-4 py-3 font-medium text-slate-500 dark:text-slate-400">{oi.item?.internal_code}</td>
+                      <td className="px-4 py-3 font-bold text-slate-800 dark:text-slate-100">{oi.item?.name}</td>
+                      <td className="px-4 py-3 text-right">{oi.quantity} {oi.item?.uom}</td>
+                      {showReceivedCol && (
+                        <td className="px-4 py-3 text-right">
+                          {receivingMode ? (
+                            <div className="flex items-center justify-end gap-1">
+                              <input
+                                type="number"
+                                min={0}
+                                step="any"
+                                value={receivedQty[oi.id] ?? ''}
+                                onChange={(e) =>
+                                  setReceivedQty((prev) => ({ ...prev, [oi.id]: e.target.value }))
+                                }
+                                className="w-24 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-right text-slate-800 dark:text-slate-100"
+                              />
+                              {Number.isFinite(draftReceived) && qtyBadge(oi.quantity, draftReceived)}
+                            </div>
+                          ) : (
+                            <span>
+                              {receivedDisplay ?? '—'} {oi.item?.uom}
+                              {receivedDisplay != null && qtyBadge(oi.quantity, receivedDisplay)}
+                            </span>
+                          )}
+                        </td>
+                      )}
+                      <td className="px-4 py-3 text-right">${oi.unit_cost.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-medium text-slate-700 dark:text-slate-200">
+                        ${(oi.quantity * oi.unit_cost).toFixed(2)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
               <tfoot className="bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
                 <tr>
-                  <td colSpan={4} className="px-4 py-4 text-right font-bold text-slate-600 dark:text-slate-400">Total de la Orden:</td>
+                  <td colSpan={showReceivedCol ? 5 : 4} className="px-4 py-4 text-right font-bold text-slate-600 dark:text-slate-400">Total de la Orden:</td>
                   <td className="px-4 py-4 text-right font-black text-emerald-700 dark:text-emerald-400 text-lg">
                     ${total.toFixed(2)}
                   </td>
@@ -173,7 +268,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
             Descargar PDF / Imprimir
           </button>
 
-          {order.status !== 'RECIBIDA' && order.status !== 'CANCELADA' && (
+          {!receivingMode && order.status !== 'RECIBIDA' && order.status !== 'CANCELADA' && (
             <button
               onClick={() => handleUpdateStatus('CANCELADA')}
               disabled={isSubmitting}
@@ -184,13 +279,13 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
           )}
 
           <button
-            onClick={onClose}
+            onClick={receivingMode ? cancelReceiving : onClose}
             className="px-5 py-2.5 text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-xl transition-colors"
           >
-            Cerrar
+            {receivingMode ? 'Volver' : 'Cerrar'}
           </button>
 
-          {order.status === 'BORRADOR' && isManagerOrAdmin && (
+          {!receivingMode && order.status === 'BORRADOR' && isManagerOrAdmin && (
             <button
               onClick={() => handleUpdateStatus('APROBADA')}
               disabled={isSubmitting}
@@ -200,7 +295,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
             </button>
           )}
 
-          {order.status === 'APROBADA' && (
+          {!receivingMode && order.status === 'APROBADA' && (
             <button
               onClick={() => handleUpdateStatus('ENVIADA')}
               disabled={isSubmitting}
@@ -210,13 +305,23 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
             </button>
           )}
 
-          {order.status === 'ENVIADA' && isManagerOrAdmin && (
+          {!receivingMode && order.status === 'ENVIADA' && isManagerOrAdmin && (
             <button
-              onClick={() => handleUpdateStatus('RECIBIDA')}
+              onClick={startReceiving}
               disabled={isSubmitting}
               className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white font-bold hover:bg-emerald-700 rounded-xl transition-all shadow-md shadow-emerald-200 disabled:opacity-70"
             >
-              {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : 'Recibir y Sumar a Inventario'}
+              Recibir…
+            </button>
+          )}
+
+          {receivingMode && (
+            <button
+              onClick={handleConfirmReceive}
+              disabled={isSubmitting}
+              className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white font-bold hover:bg-emerald-700 rounded-xl transition-all shadow-md shadow-emerald-200 disabled:opacity-70"
+            >
+              {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : 'Confirmar recepción'}
             </button>
           )}
         </div>
@@ -258,7 +363,10 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
               <tr>
                 <th className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200">Código</th>
                 <th className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200">Descripción del Artículo</th>
-                <th className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200 text-center">Cant.</th>
+                <th className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200 text-center">Pedido</th>
+                {order.status === 'RECIBIDA' && (
+                  <th className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200 text-center">Recibido</th>
+                )}
                 <th className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200 text-right">P. Unitario</th>
                 <th className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200 text-right">Subtotal</th>
               </tr>
@@ -269,6 +377,9 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                   <td className="px-4 py-3 font-medium text-slate-500 dark:text-slate-400">{oi.item?.internal_code}</td>
                   <td className="px-4 py-3 font-bold text-slate-800 dark:text-slate-100">{oi.item?.name}</td>
                   <td className="px-4 py-3 text-center">{oi.quantity} {oi.item?.uom}</td>
+                  {order.status === 'RECIBIDA' && (
+                    <td className="px-4 py-3 text-center">{oi.received_quantity ?? '—'} {oi.item?.uom}</td>
+                  )}
                   <td className="px-4 py-3 text-right">${oi.unit_cost.toFixed(2)}</td>
                   <td className="px-4 py-3 text-right font-bold">${(oi.quantity * oi.unit_cost).toFixed(2)}</td>
                 </tr>

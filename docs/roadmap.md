@@ -3,7 +3,10 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 22 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.33.1 (Actualización: 22 de Julio de 2026)
+## 🚀 Versión Actual: v1.34.0 (Actualización: 22 de Julio de 2026)
+
+### Novedades en v1.34.0 (recepción parcial OC)
+- **Nuevo:** Al recibir una Orden de Compra puedes capturar cantidad real por línea (más/menos que lo pedido). Solo lo recibido suma al inventario; se guarda pedido vs recibido y el movimiento lo documenta.
 
 ### Novedades en v1.33.1 (deploy endurecido)
 - **Mejora:** `install.sh` / `update.sh` listos para servidor nuevo: PM2 con `node dist/index.js`, Node 22 default, smoke test con reintentos, `chmod +x` tras pull, defaults **S** para PM2 startup y nginx+healthcheck.

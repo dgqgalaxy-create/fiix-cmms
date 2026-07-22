@@ -22,6 +22,7 @@ En celular, el temario del manual aparece como una barra horizontal deslizable. 
 - **Impresión masiva de QR:** En **Activos**, Inventario → **Repuestos** o Inventario → **Ubicaciones**, usa **QR masivo**, selecciona registros (incluidos todos los filtrados) e imprime una hoja con las etiquetas.
 - **Detalle compacto de OT:** La ventana de detalle aprovecha mejor el ancho de pantalla, muestra campos en columnas, permite que nombres y textos largos ocupen varias líneas y presenta las fotografías completas sin recortarlas.
 - **Borrador de compra desde Stock Crítico:** En Inventario, la tarjeta superior muestra cuántos ítems están bajo mínimo. Un clic filtra la lista; con permiso de compras, **Generar borrador OC** crea Órdenes de Compra en estado Borrador (una por proveedor, cantidad = lo faltante para llegar al mínimo). Los ítems sin proveedor se omiten y se listan en el aviso. Revisa y avanza el flujo en **Órdenes de Compra**.
+- **Recepción parcial:** En una OC **Enviada**, **Recibir…** pide la cantidad real por línea (puede ser menos, igual o más que lo pedido). Solo lo recibido entra al inventario como movimiento de entrada; la OC se cierra como Recibida y queda el histórico pedido vs recibido. No hay entregas parciales abiertas: es un cierre en un solo paso.
 
 ## 1. Módulo Checklist: Campos Numéricos y de Texto
 Las actividades del Checklist ahora son más flexibles:

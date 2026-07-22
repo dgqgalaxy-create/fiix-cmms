@@ -153,7 +153,7 @@ export const createDraftsFromLowStock = async (req: AuthRequest, res: Response):
 export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { status } = req.body;
+    const { status, received_items } = req.body;
     const user_id = req.user?.userId;
 
     if (!user_id) {
@@ -191,38 +191,78 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
 
     // Wrap in transaction if we are receiving it, to update inventory stock
     if (status === 'RECIBIDA') {
-      await prisma.$transaction(async (tx) => {
-        // Update Order
+      // Map optional per-line received quantities (fallback = ordered quantity).
+      const receivedMap = new Map<string, number>();
+      if (Array.isArray(received_items)) {
+        for (const row of received_items) {
+          const lineId = typeof row?.id === 'string' ? row.id : null;
+          const qty = Number(row?.received_quantity);
+          if (!lineId) {
+            res.status(400).json({ error: 'Cada ítem recibido debe incluir id de línea' });
+            return;
+          }
+          if (!Number.isFinite(qty) || qty < 0) {
+            res.status(400).json({ error: 'received_quantity debe ser un número ≥ 0' });
+            return;
+          }
+          const belongs = existingOrder.items.some((i) => i.id === lineId);
+          if (!belongs) {
+            res.status(400).json({ error: 'Hay líneas que no pertenecen a esta orden de compra' });
+            return;
+          }
+          receivedMap.set(lineId, qty);
+        }
+      }
+
+      const updatedOrder = await prisma.$transaction(async (tx) => {
         await tx.purchaseOrder.update({
           where: { id: id },
           data: updateData
         });
 
-        // Loop over items to increase stock and update unit_cost
         for (const orderItem of existingOrder.items) {
-          // Increase stock
-          await tx.item.update({
-            where: { id: orderItem.item_id },
-            data: {
-              stock: { increment: orderItem.quantity },
-              purchase_cost: orderItem.unit_cost // Actualizamos al último precio de compra
-            }
+          const receivedQty = receivedMap.has(orderItem.id)
+            ? (receivedMap.get(orderItem.id) as number)
+            : orderItem.quantity;
+
+          await tx.purchaseOrderItem.update({
+            where: { id: orderItem.id },
+            data: { received_quantity: receivedQty },
           });
 
-          // Register transaction
-          await tx.inventoryTransaction.create({
-            data: {
-              item_id: orderItem.item_id,
-              user_id: user_id,
-              amount: orderItem.quantity,
-              reason: `Recepción de Orden de Compra PO-${existingOrder.folio}`
-            }
-          });
+          if (receivedQty > 0) {
+            await tx.item.update({
+              where: { id: orderItem.item_id },
+              data: {
+                stock: { increment: receivedQty },
+                purchase_cost: orderItem.unit_cost,
+              },
+            });
+
+            await tx.inventoryTransaction.create({
+              data: {
+                item_id: orderItem.item_id,
+                user_id: user_id,
+                amount: receivedQty,
+                reason: `Recepción de Orden de Compra PO-${existingOrder.folio} (pedido: ${orderItem.quantity}, recibido: ${receivedQty})`,
+              },
+            });
+          }
         }
+
+        return tx.purchaseOrder.findUnique({
+          where: { id },
+          include: {
+            vendor: true,
+            created_by: { select: { id: true, name: true, email: true, role: true } },
+            items: { include: { item: true } },
+          },
+        });
       });
+
       emitRefresh('refresh_purchase_orders');
       emitRefresh('refresh_inventory');
-      res.json({ message: 'Orden recibida y el inventario ha sido actualizado' });
+      res.json(updatedOrder);
       return;
     }
 

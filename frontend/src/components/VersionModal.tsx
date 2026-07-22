@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.33.1";
+export const APP_VERSION = "1.34.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Recepción parcial de Órdenes de Compra — al recibir puedes indicar cantidad real por línea (más o menos que lo pedido); solo lo recibido entra al inventario y queda registrado pedido vs recibido.",
     "Mejora: install.sh / update.sh listos para servidor nuevo sin fallos típicos de 502: arranque PM2 con node dist/index.js, Node 22 por defecto, smoke test con reintentos, chmod de scripts tras pull, defaults S para PM2 startup y nginx+healthcheck. README con checklist de despliegue y tabla de fallos.",
     "Nuevo: Exportación nativa a Excel (.xlsx) — Órdenes (lista filtrada), Inventario/Repuestos (filtrados) y KPIs (libro multi-hoja del periodo). Se mantiene CSV e impresión donde ya existían.",
     "Corrección crítica: tsc genera dist/index.js (rootDir=src); el start de PM2 ya no busca un archivo inexistente y deja de fallar el healthcheck en :3000. update.sh vuelve a marcarse ejecutable tras git restore.",
