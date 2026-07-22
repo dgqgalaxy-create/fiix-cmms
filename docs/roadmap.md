@@ -3,13 +3,16 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 21 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.30.9 (Actualización: 21 de Julio de 2026)
+## 🚀 Versión Actual: v1.30.10 (Actualización: 21 de Julio de 2026)
 
-### Novedades en v1.30.9 (fotos OT en detalle tras importar)
+### Novedades en v1.30.10 (semántica FOTO ANTES)
+- **Cambio:** En la importación CSV/zip, **FOTO ANTES** solo llena `before_image_url` (evidencia del técnico). No se usa como foto del solicitante (`request_image_url`).
+
+### Novedades Anteriores (v1.30.9 - fotos OT en detalle tras importar)
 - **Corrección:** El detalle de la OT vuelve a pedir los datos al abrir, para mostrar Antes/Después importados aunque la lista en memoria estuviera vieja.
 
 ### Novedades Anteriores (v1.30.8 - fotos OT visibles en listado)
-- **Corrección:** La importación del zip de solicitudes copia FOTO ANTES también a `request_image_url` (visible en tarjetas/tabla) y a evidencia «Antes»; FOTO DESPUÉS a «Después».
+- **Corrección:** La importación del zip de solicitudes asigna FOTO ANTES → evidencia «Antes» y FOTO DESPUÉS → «Después»; el listado puede mostrar la de «Antes» en tarjetas.
 
 ### Novedades Anteriores (v1.30.7 - compat zip OT en import)
 - **Corrección:** El zip de órdenes se sube como parte de `csvFiles` para no romper Multer en backends antiguos; el servidor lo detecta por extensión/nombre. `/api/health` ahora incluye `version`.
