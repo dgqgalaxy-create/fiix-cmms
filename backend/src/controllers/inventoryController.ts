@@ -329,10 +329,12 @@ export const getTransactions = async (req: Request, res: Response): Promise<void
         item: true,
         user: { select: { id: true, name: true, email: true } }
       },
-      orderBy: { created_at: 'desc' }
+      orderBy: { created_at: 'desc' },
+      take: 1000,
     });
     res.json(transactions);
   } catch (error) {
+    console.error('Error al obtener transacciones:', error);
     res.status(500).json({ error: 'Error al obtener transacciones' });
   }
 };

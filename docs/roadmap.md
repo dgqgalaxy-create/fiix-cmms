@@ -3,9 +3,12 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 21 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.29.1 (Actualización: 21 de Julio de 2026)
+## 🚀 Versión Actual: v1.30.2 (Actualización: 21 de Julio de 2026)
 
-### Novedades en v1.29.1 (carpeta Items_Images del export Fiix)
+### Novedades en v1.30.2 (Inventario visible tras importación)
+- **Corrección:** Tras importar CSV, los repuestos no se veían porque fallaba `/inventory/transactions` por columnas faltantes (`work_order_id`, `unit_cost`). Migración aplicada; la UI carga repuestos aunque un catálogo falle.
+
+### Novedades Anteriores (v1.29.1 - carpeta Items_Images del export Fiix)
 - **Cambio:** La importación de fotos de repuestos usa `data/Items_Images/` (casing exacto). Los archivos del export Fiix son `{Item ID}.Image.{HHMMSS}.{ext}` (p. ej. `MTTO-0001.Image.163526.png`); el emparejamiento se hace sobre los archivos reales de esa carpeta → `internal_code` / columna Item ID.
 
 ### Novedades en v1.29.0 (fotos de repuestos al importar CSV)

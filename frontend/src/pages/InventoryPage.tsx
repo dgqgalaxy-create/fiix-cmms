@@ -76,28 +76,41 @@ export const InventoryPage = () => {
   const fetchData = async (backgroundFetch: boolean = false) => {
     if (!backgroundFetch) setIsLoading(true);
     try {
-      const [fetchedItems, fetchedTrans, fetchedCats, fetchedLocs, fetchedVends] = await Promise.all([
+      // Repuestos y catálogos primero (para no dejar la vista vacía si movimientos van lentos o fallan).
+      const [itemsRes, catsRes, locsRes, vendsRes] = await Promise.allSettled([
         getItems(),
-        getTransactions(),
         getCategories(),
         getLocations(),
         getVendors()
       ]);
-      setItems(fetchedItems);
-      setTransactions(fetchedTrans);
-      setCategories(fetchedCats);
-      setLocations(fetchedLocs);
-      setVendors(fetchedVends);
+      if (itemsRes.status === 'fulfilled') setItems(itemsRes.value);
+      else console.error('Error fetching items', itemsRes.reason);
+      if (catsRes.status === 'fulfilled') setCategories(catsRes.value);
+      else console.error('Error fetching categories', catsRes.reason);
+      if (locsRes.status === 'fulfilled') setLocations(locsRes.value);
+      else console.error('Error fetching locations', locsRes.reason);
+      if (vendsRes.status === 'fulfilled') setVendors(vendsRes.value);
+      else console.error('Error fetching vendors', vendsRes.reason);
     } catch (error) {
       console.error('Error fetching inventory data', error);
     } finally {
       if (!backgroundFetch) setIsLoading(false);
     }
+
+    try {
+      const fetchedTrans = await getTransactions();
+      setTransactions(fetchedTrans);
+    } catch (error) {
+      console.error('Error fetching transactions', error);
+      setTransactions([]);
+    }
   };
 
   useEffect(() => {
     fetchData();
-  }, [hasPermission]);
+    // Solo al montar: hasPermission del AuthContext no es estable entre renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useSocketRefresh('refresh_inventory', () => fetchData(true));
 

@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.30.1";
+export const APP_VERSION = "1.30.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: El inventario ya estaba importado, pero la pantalla salía vacía porque fallaba la carga de movimientos (faltaban columnas work_order_id/unit_cost en la BD). Se aplicó la migración y la vista ya no se tumba si un catálogo falla.",
     "Corrección: Importar CSV + zip de fotos por Tailscale/nginx — progreso de subida, errores 413 claros, nginx con body 500M y timeouts largos (update.sh recuerda recargar nginx a mano).",
     "Nuevo: Al importar CSV puedes seleccionar un zip de fotos de repuestos desde tu laptop (en lugar de la carpeta data/Items_Images/ en el servidor); se descomprime temporalmente, se emparejan por Item ID (.Image.HHMMSS) y se copian a uploads/inventory.",
     "Corrección: El detalle de Proveedores (y Categorías/Ubicaciones) ya se adapta a la altura de la pantalla: el contenido y los repuestos asociados son desplazables y ya no se ocultan en pantallas bajas.",
