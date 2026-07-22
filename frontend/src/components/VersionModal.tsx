@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.32.2";
+export const APP_VERSION = "1.32.3";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección crítica: tsc genera dist/index.js (rootDir=src); el start de PM2 ya no busca un archivo inexistente y deja de fallar el healthcheck en :3000. update.sh vuelve a marcarse ejecutable tras git restore.",
     "Corrección crítica: en Ubuntu/PM2 el backend ya no usa nodemon (fallaba con «nodemon: not found» y dejaba 502). Arranca con npm run start (dist/) y update.sh recrea el proceso con cwd correcto.",
     "Corrección: update.sh aplica prisma db push con --accept-data-loss para no abortar el deploy (p. ej. unique client_request_id) y dejar nginx en 502.",
     "Nuevo: Sala de control en Inicio (admin/gestionador): tarjetas de Urgentes, Sin asignar, SLA en riesgo y SLA vencido; abren Órdenes filtradas. Badge en la pestaña del navegador y sonido opcional al subir el conteo crítico.",

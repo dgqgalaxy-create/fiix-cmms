@@ -98,6 +98,8 @@ echo ">>> [1/5] Código desde GitHub..."
 # Descarta cambios locales en archivos trackeados (evita conflictos al pull).
 # No toca .env ni uploads/ (están en .gitignore).
 git restore .
+# Tras git restore, el bit ejecutable de update.sh puede perderse en el runner.
+chmod +x "${APP_DIR}/update.sh" "${APP_DIR}/install.sh" 2>/dev/null || true
 git status --short || true
 
 BEFORE_SHA="$(git rev-parse --short HEAD)"
@@ -129,6 +131,9 @@ npx prisma generate
 npx prisma db push --accept-data-loss
 info "Compilando backend (dist/)..."
 npm run build
+if [ ! -f "${APP_DIR}/backend/dist/index.js" ]; then
+  die "No existe backend/dist/index.js tras tsc. Revisa tsconfig (rootDir=src)."
+fi
 ok "Backend listo"
 
 # --- 3. Frontend ---
