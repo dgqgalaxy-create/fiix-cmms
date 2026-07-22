@@ -36,6 +36,28 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
   };
 
   const handlePrint = () => {
+    const STYLE_ID = 'po-print-page-style';
+    document.getElementById(STYLE_ID)?.remove();
+
+    const style = document.createElement('style');
+    style.id = STYLE_ID;
+    // Override the app-wide landscape @page so this print is always A4 portrait.
+    style.textContent = '@page { size: A4 portrait; margin: 12mm; }';
+    document.head.appendChild(style);
+    document.body.classList.add('po-printing');
+
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      document.body.classList.remove('po-printing');
+      document.getElementById(STYLE_ID)?.remove();
+      window.removeEventListener('afterprint', cleanup);
+      window.clearTimeout(fallbackTimer);
+    };
+    window.addEventListener('afterprint', cleanup);
+    // Fallback if afterprint never fires (some browsers / cancelled dialogs).
+    const fallbackTimer = window.setTimeout(cleanup, 60_000);
     window.print();
   };
 
@@ -155,8 +177,9 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm print:static print:inset-auto print:p-0 print:bg-transparent print:backdrop-blur-none">
+      {/* Screen UI — hidden during print so only .po-print-sheet is rendered */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] print:hidden">
         <div className="flex justify-between items-start p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
           <div>
             <div className="flex items-center gap-3 mb-1">
@@ -376,7 +399,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
       </div>
 
       {/* --- PRINTABLE FORMAT (HIDDEN ON SCREEN) --- */}
-      <div className="po-print-sheet hidden print:block fixed inset-0 z-[100000] bg-white dark:bg-slate-900 p-6 w-full h-full text-black text-[11px] leading-snug">
+      <div className="po-print-sheet hidden print:block bg-white text-black text-[11px] leading-snug w-full max-w-[210mm] mx-auto">
         <div className="border-b-2 border-slate-800 pb-4 mb-6 flex justify-between items-start">
           <div className="flex items-center gap-3">
             <img src="/lpet.png" alt="Logo" className="h-12 object-contain" />

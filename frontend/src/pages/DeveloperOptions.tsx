@@ -15,6 +15,7 @@ import {
   LockKeyhole,
   ShieldCheck,
   Save,
+  ImageOff,
 } from 'lucide-react';
 import axios from '../api/axios';
 import { isAxiosError } from 'axios';
@@ -42,6 +43,18 @@ export const DeveloperOptions = () => {
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteUploads, setDeleteUploads] = useState(true);
+  const [isOrphanModalOpen, setIsOrphanModalOpen] = useState(false);
+  const [orphanConfirmText, setOrphanConfirmText] = useState('');
+  const [orphanPreview, setOrphanPreview] = useState<{
+    referencedCount: number;
+    fileCount: number;
+    orphanCount: number;
+    orphanBytes: number;
+    orphans: string[];
+  } | null>(null);
+  const [isOrphanScanning, setIsOrphanScanning] = useState(false);
+  const [isOrphanCleaning, setIsOrphanCleaning] = useState(false);
   const [telegramToken, setTelegramToken] = useState('');
   const [telegramChatId, setTelegramChatId] = useState('');
   const [isSavingTelegram, setIsSavingTelegram] = useState(false);
@@ -521,6 +534,69 @@ export const DeveloperOptions = () => {
     }
   };
 
+  const formatBytes = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const handleOrphanPreview = async () => {
+    setIsOrphanScanning(true);
+    setError(null);
+    setOrphanPreview(null);
+    setOrphanConfirmText('');
+    try {
+      const res = await axios.post(
+        '/dev/orphan-uploads/preview',
+        {},
+        { headers: { 'x-dev-password': password } }
+      );
+      setOrphanPreview(res.data);
+      setIsOrphanModalOpen(true);
+    } catch (err: unknown) {
+      const detail = axios.isAxiosError(err)
+        ? err.response?.data?.message || err.message
+        : err instanceof Error ? err.message : 'Error desconocido';
+      setError(`No se pudo escanear fotos huérfanas: ${detail}`);
+    } finally {
+      setIsOrphanScanning(false);
+    }
+  };
+
+  const handleOrphanCleanup = async () => {
+    if (orphanConfirmText !== 'LIMPIAR') {
+      setError('Escribe LIMPIAR para confirmar.');
+      return;
+    }
+    setIsOrphanCleaning(true);
+    setError(null);
+    try {
+      const res = await axios.post(
+        '/dev/orphan-uploads/cleanup',
+        { confirm: 'LIMPIAR' },
+        { headers: { 'x-dev-password': password } }
+      );
+      const deleted = res.data?.deletedCount ?? 0;
+      const freed = res.data?.freedBytes ?? 0;
+      setIsOrphanModalOpen(false);
+      setOrphanConfirmText('');
+      setOrphanPreview(null);
+      setSuccessMsg(
+        deleted > 0
+          ? `Fotos huérfanas eliminadas: ${deleted} archivo(s) (${formatBytes(freed)} liberados).`
+          : 'No había fotos huérfanas que eliminar.'
+      );
+      setTimeout(() => setSuccessMsg(null), 8000);
+    } catch (err: unknown) {
+      const detail = axios.isAxiosError(err)
+        ? err.response?.data?.message || err.message
+        : err instanceof Error ? err.message : 'Error desconocido';
+      setError(`Fallo al limpiar fotos huérfanas: ${detail}`);
+    } finally {
+      setIsOrphanCleaning(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (deleteConfirmText !== 'ELIMINAR') {
       setError('Escribe ELIMINAR para confirmar.');
@@ -528,14 +604,21 @@ export const DeveloperOptions = () => {
     }
 
     setIsLoading(true);
-    setLoadingMessage('Vaciando la base de datos de manera segura...');
+    setLoadingMessage(
+      deleteUploads
+        ? 'Vaciando la base de datos y la carpeta uploads...'
+        : 'Vaciando la base de datos de manera segura...'
+    );
     setError(null);
     try {
-      await axios.post(`/dev/delete`, {}, {
-        headers: { 'x-dev-password': password }
-      });
+      await axios.post(
+        `/dev/delete`,
+        { deleteUploads },
+        { headers: { 'x-dev-password': password } }
+      );
       setIsDeleteModalOpen(false);
       setDeleteConfirmText('');
+      setDeleteUploads(true);
       forceLogoutAfterDbChange(WIPE_LOGOUT_MESSAGE);
       return;
     } catch {
@@ -941,6 +1024,22 @@ export const DeveloperOptions = () => {
                   </span>
                 </span>
               </button>
+              <button
+                type="button"
+                onClick={() => void handleOrphanPreview()}
+                disabled={isOrphanScanning || isOrphanCleaning || isLoading}
+                className="flex w-full items-center gap-3 rounded-2xl border border-orange-200 bg-orange-50/60 p-4 text-left transition hover:bg-orange-50 disabled:opacity-50 dark:border-orange-900/50 dark:bg-orange-950/20"
+              >
+                <ImageOff className="shrink-0 text-orange-600" size={20} />
+                <span>
+                  <span className="block text-sm font-black text-slate-800 dark:text-white">
+                    {isOrphanScanning ? 'Escaneando uploads…' : 'Limpiar fotos huérfanas'}
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    Elimina archivos en uploads/ que ya no están referenciados en la base de datos.
+                  </span>
+                </span>
+              </button>
             </div>
           </article>
         </section>
@@ -1013,7 +1112,9 @@ export const DeveloperOptions = () => {
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-red-600 dark:text-red-400">Zona de peligro</p>
                 <h2 className="mt-1 text-lg font-black text-slate-900 dark:text-white">Vaciar base de datos</h2>
-                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Elimina todos los registros y conserva únicamente la estructura de tablas.</p>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                  Elimina todos los registros y, por defecto, también las fotos en <code className="text-xs">uploads/</code>. Conserva la estructura de tablas.
+                </p>
               </div>
             </div>
             <button onClick={() => setIsDeleteModalOpen(true)} disabled={isLoading} className="shrink-0 rounded-xl bg-red-600 px-5 py-3 text-sm font-black text-white transition hover:bg-red-700 disabled:opacity-50">
@@ -1031,9 +1132,21 @@ export const DeveloperOptions = () => {
               <AlertTriangle size={24} />
               <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">¡Peligro de pérdida de datos!</h3>
             </div>
-            <p className="text-slate-600 dark:text-slate-400 mb-6">
+            <p className="text-slate-600 dark:text-slate-400 mb-4">
               Estás a punto de <strong>ELIMINAR TODOS LOS DATOS</strong> de la base de datos de manera irreversible. Las tablas quedarán vacías.
+              {deleteUploads && (
+                <> También se vaciará la carpeta <code className="text-xs">uploads/</code> (fotos y evidencias).</>
+              )}
             </p>
+            <label className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+              <input
+                type="checkbox"
+                checked={deleteUploads}
+                onChange={(e) => setDeleteUploads(e.target.checked)}
+                className="rounded border-slate-300 text-red-600 focus:ring-red-500"
+              />
+              También borrar carpeta uploads (fotos)
+            </label>
             <p className="text-slate-600 dark:text-slate-400 mb-3 text-sm">
               Para confirmar, escribe <strong>ELIMINAR</strong> en el siguiente campo:
             </p>
@@ -1046,7 +1159,7 @@ export const DeveloperOptions = () => {
             />
             <div className="flex gap-3">
               <button 
-                onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmText(''); }}
+                onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmText(''); setDeleteUploads(true); }}
                 className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-lg transition-colors"
               >
                 Cancelar
@@ -1058,6 +1171,93 @@ export const DeveloperOptions = () => {
               >
                 {isLoading ? 'Vaciando...' : 'Confirmar Borrado'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Orphan uploads cleanup modal */}
+      {isOrphanModalOpen && orphanPreview && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center gap-3 text-orange-600 dark:text-orange-400 mb-4">
+              <ImageOff size={24} />
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Limpiar fotos huérfanas</h3>
+            </div>
+            <p className="text-slate-600 dark:text-slate-400 mb-4 text-sm">
+              Se eliminarán archivos en <code className="text-xs">uploads/</code> que no estén referenciados en la base de datos.
+              Las firmas (base64) no se tocan.
+            </p>
+            <div className="mb-4 grid grid-cols-2 gap-2 text-sm">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800">
+                <span className="block text-xs text-slate-500">Referenciados</span>
+                <span className="font-black text-slate-900 dark:text-white">{orphanPreview.referencedCount}</span>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800">
+                <span className="block text-xs text-slate-500">Archivos en disco</span>
+                <span className="font-black text-slate-900 dark:text-white">{orphanPreview.fileCount}</span>
+              </div>
+              <div className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2.5 dark:border-orange-900/50 dark:bg-orange-950/30">
+                <span className="block text-xs text-orange-700 dark:text-orange-300">Huérfanos</span>
+                <span className="font-black text-orange-800 dark:text-orange-200">{orphanPreview.orphanCount}</span>
+              </div>
+              <div className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2.5 dark:border-orange-900/50 dark:bg-orange-950/30">
+                <span className="block text-xs text-orange-700 dark:text-orange-300">Espacio a liberar</span>
+                <span className="font-black text-orange-800 dark:text-orange-200">{formatBytes(orphanPreview.orphanBytes)}</span>
+              </div>
+            </div>
+            {orphanPreview.orphanCount === 0 ? (
+              <p className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+                No hay fotos huérfanas. La carpeta uploads está alineada con la BD.
+              </p>
+            ) : (
+              <>
+                {orphanPreview.orphans.length > 0 && (
+                  <div className="mb-4 max-h-32 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+                    {orphanPreview.orphans.map((p) => (
+                      <div key={p} className="truncate font-mono">{p}</div>
+                    ))}
+                    {orphanPreview.orphanCount > orphanPreview.orphans.length && (
+                      <div className="mt-1 italic">
+                        … y {orphanPreview.orphanCount - orphanPreview.orphans.length} más
+                      </div>
+                    )}
+                  </div>
+                )}
+                <p className="mb-2 text-sm text-slate-600 dark:text-slate-400">
+                  Escribe <strong>LIMPIAR</strong> para confirmar:
+                </p>
+                <input
+                  type="text"
+                  value={orphanConfirmText}
+                  onChange={(e) => setOrphanConfirmText(e.target.value)}
+                  className="mb-6 w-full rounded-lg border border-slate-300 bg-white p-3 text-center font-bold tracking-widest text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                  placeholder="Escribe LIMPIAR"
+                />
+              </>
+            )}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOrphanModalOpen(false);
+                  setOrphanConfirmText('');
+                  setOrphanPreview(null);
+                }}
+                className="flex-1 rounded-lg bg-slate-100 py-3 font-bold text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              >
+                {orphanPreview.orphanCount === 0 ? 'Cerrar' : 'Cancelar'}
+              </button>
+              {orphanPreview.orphanCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => void handleOrphanCleanup()}
+                  disabled={orphanConfirmText !== 'LIMPIAR' || isOrphanCleaning}
+                  className="flex-1 rounded-lg bg-orange-600 py-3 font-bold text-white transition-colors hover:bg-orange-700 disabled:opacity-50"
+                >
+                  {isOrphanCleaning ? 'Eliminando...' : 'Confirmar limpieza'}
+                </button>
+              )}
             </div>
           </div>
         </div>

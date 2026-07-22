@@ -17,6 +17,11 @@ import {
   type WorkOrderPhotoMapping,
 } from '../utils/workOrderImageImport';
 import { emitRefresh } from '../utils/socket';
+import {
+  previewOrphanUploads,
+  cleanupOrphanUploads,
+  emptyUploadsDirectory,
+} from '../utils/uploadsCleanup';
 
 const router = express.Router();
 
@@ -314,6 +319,9 @@ router.post('/restore', verifyDevPassword, async (req: Request, res: Response): 
 
 router.post('/delete', verifyDevPassword, async (req: Request, res: Response) => {
   try {
+    // Por defecto true (UI envía deleteUploads: true). false solo si se pide explícitamente.
+    const deleteUploads = req.body?.deleteUploads !== false;
+
     const tablenames = await prisma.$queryRaw<Array<{ tablename: string }>>`SELECT tablename FROM pg_tables WHERE schemaname='public'`;
     
     // Explicitly delete checklist records just in case
@@ -340,9 +348,50 @@ router.post('/delete', verifyDevPassword, async (req: Request, res: Response) =>
       }
     });
 
-    res.json({ success: true, message: 'Database data has been deleted completely.' });
+    let uploadsResult: { deletedCount: number; freedBytes: number; errors?: string[] } | undefined;
+    if (deleteUploads) {
+      uploadsResult = await emptyUploadsDirectory();
+    }
+
+    res.json({
+      success: true,
+      message: deleteUploads
+        ? 'Base de datos vaciada y carpeta uploads limpiada.'
+        : 'Database data has been deleted completely.',
+      deleteUploads,
+      uploads: uploadsResult,
+    });
   } catch (error: any) {
     res.status(500).json({ message: 'Failed to delete database data.', error: error.message });
+  }
+});
+
+// Vista previa de fotos/archivos en uploads/ no referenciados por la BD.
+router.post('/orphan-uploads/preview', verifyDevPassword, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const preview = await previewOrphanUploads(prisma);
+    res.json(preview);
+  } catch (error: any) {
+    console.error('Error previewing orphan uploads:', error);
+    res.status(500).json({ message: 'Error al escanear fotos huérfanas.', error: error.message });
+  }
+});
+
+// Elimina archivos en uploads/ que no están referenciados en la BD. Requiere confirm: "LIMPIAR".
+router.post('/orphan-uploads/cleanup', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { confirm } = req.body || {};
+    if (confirm !== 'LIMPIAR') {
+      res.status(400).json({
+        message: 'Confirmación requerida. Envía confirm: "LIMPIAR".',
+      });
+      return;
+    }
+    const result = await cleanupOrphanUploads(prisma);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error cleaning orphan uploads:', error);
+    res.status(500).json({ message: 'Error al limpiar fotos huérfanas.', error: error.message });
   }
 });
 

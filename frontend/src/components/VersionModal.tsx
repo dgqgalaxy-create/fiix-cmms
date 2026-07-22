@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.34.2";
+export const APP_VERSION = "1.35.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: El PDF/impresión de Órdenes de Compra ya no duplica el contenido (antes salían ~4 hojas idénticas en OC recibidas) y fuerza A4 vertical (retrato).",
+    "Nuevo: En Opciones de Desarrollador → Limpiar fotos huérfanas (escanea uploads/ vs BD y borra archivos no referenciados; confirma con LIMPIAR). Vaciar BD también puede borrar uploads/ (checkbox activado por defecto).",
     "Corrección: Movimientos de recepción de OC usan la fecha/hora exacta del momento de recibir (aunque llegue antes de lo pactado) y el listado ya no corta a 1000 (el CSV con fechas futuras los ocultaba). PDF de OC en vertical.",
     "Mejora: En recepción de OC se muestran dos montos — Total pedido (orden original) y Total recibido (cantidad real × costo unit.); también subtotales por línea al recibir o ya recibida.",
     "Nuevo: Recepción parcial de Órdenes de Compra — al recibir puedes indicar cantidad real por línea (más o menos que lo pedido); solo lo recibido entra al inventario y queda registrado pedido vs recibido.",
