@@ -351,10 +351,23 @@ router.post(
   uploadImportFields,
   async (req: Request, res: Response): Promise<void> => {
   const filesMap = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
-  const files = filesMap?.csvFiles || [];
+  const csvFieldFiles = filesMap?.csvFiles || [];
+  // Zips pueden venir en csvFiles (compat) o en campos dedicados.
+  const files = csvFieldFiles.filter((f) => !/\.zip$/i.test(f.originalname || ''));
   const zipFile = filesMap?.itemImagesZip?.[0];
-  const woZipFile = filesMap?.workOrderImagesZip?.[0];
-  const uploadedTemps = [...files, ...(zipFile ? [zipFile] : []), ...(woZipFile ? [woZipFile] : [])];
+  const woZipFile =
+    filesMap?.workOrderImagesZip?.[0] ||
+    csvFieldFiles.find((f) => {
+      const n = f.originalname || '';
+      if (!/\.zip$/i.test(n)) return false;
+      if (/items?_?images/i.test(n)) return false;
+      return true;
+    });
+  const uploadedTemps = [
+    ...csvFieldFiles,
+    ...(zipFile ? [zipFile] : []),
+    ...(filesMap?.workOrderImagesZip || []),
+  ];
 
   try {
     const parseSafeDate = (dString: string) => {

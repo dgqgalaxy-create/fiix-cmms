@@ -3,9 +3,12 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 21 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.30.6 (Actualización: 21 de Julio de 2026)
+## 🚀 Versión Actual: v1.30.7 (Actualización: 21 de Julio de 2026)
 
-### Novedades en v1.30.6 (import CSV + zip OT)
+### Novedades en v1.30.7 (compat zip OT en import)
+- **Corrección:** El zip de órdenes se sube como parte de `csvFiles` para no romper Multer en backends antiguos; el servidor lo detecta por extensión/nombre. `/api/health` ahora incluye `version`.
+
+### Novedades Anteriores (v1.30.6 - import CSV + zip OT)
 - **Corrección:** Multer ya no responde `Unexpected field` al subir el zip de fotos de órdenes; la importación acepta los campos de archivo de forma flexible.
 
 ### Novedades Anteriores (v1.30.5 - fotos antes/después al importar OT)

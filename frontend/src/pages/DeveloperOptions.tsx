@@ -375,8 +375,10 @@ export const DeveloperOptions = () => {
     if (itemImagesZip) {
       formData.append('itemImagesZip', itemImagesZip);
     }
+    // El zip de OT va como csvFiles (no como workOrderImagesZip): backends viejos con
+    // multer.fields([csvFiles, itemImagesZip]) rechazan campos desconocidos → Unexpected field.
     if (workOrderImagesZip) {
-      formData.append('workOrderImagesZip', workOrderImagesZip);
+      formData.append('csvFiles', workOrderImagesZip, workOrderImagesZip.name);
     }
 
     try {
@@ -439,7 +441,7 @@ export const DeveloperOptions = () => {
             'Network Error al subir el zip (nginx/proxy o Tailscale cortó el body grande). Revisa client_max_body_size o usa http://HOST:3000.';
         } else if (typeof serverMsg === 'string' && /unexpected field/i.test(serverMsg)) {
           detail =
-            'El servidor aún no acepta el zip de órdenes (versión antigua). Espera a que el Action deje v1.30.6 en verde, recarga la página (Cmd+Shift+R) e inténtalo de nuevo.';
+            'El servidor rechazó un campo de archivo (Unexpected field). En Ubuntu: cd ~/fiix-cmms && git pull && ./update.sh ; luego abre /api/health y confirma "version":"1.30.7" o superior.';
         } else {
           detail = serverMsg || err.message;
         }

@@ -48,9 +48,18 @@ app.get('/api/health', async (_req: Request, res: Response) => {
   const dbOk = await pingDatabase();
   const db = dbOk ? 'ok' : 'error';
   const status = dbOk ? 'ok' : 'degraded';
+  let version = 'unknown';
+  try {
+    version = JSON.parse(
+      fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8')
+    ).version;
+  } catch {
+    /* ignore */
+  }
   res.status(dbOk ? 200 : 503).json({
     status,
     db,
+    version,
     message: dbOk ? 'CMMS API is running' : 'CMMS API is up but database is unreachable',
   });
 });
