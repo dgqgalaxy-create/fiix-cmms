@@ -69,6 +69,7 @@ export const DeveloperOptions = () => {
   const [restoreConfirmText, setRestoreConfirmText] = useState('');
   const [restoreModalError, setRestoreModalError] = useState<string | null>(null);
   const [itemImagesZip, setItemImagesZip] = useState<File | null>(null);
+  const [workOrderImagesZip, setWorkOrderImagesZip] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   /** Límite alineado con multer / nginx (500 MB). */
@@ -308,49 +309,62 @@ export const DeveloperOptions = () => {
     }
   };
 
-  const handleZipSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const pickZipFile = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    kind: 'items' | 'workOrders'
+  ) => {
     const f = e.target.files?.[0] || null;
+    const clear = () => {
+      if (kind === 'items') setItemImagesZip(null);
+      else setWorkOrderImagesZip(null);
+    };
+    const setZip = (file: File | null) => {
+      if (kind === 'items') setItemImagesZip(file);
+      else setWorkOrderImagesZip(file);
+    };
+
     setError(null);
     if (!f) {
-      setItemImagesZip(null);
+      clear();
       return;
     }
-    const nameOk = /\.zip$/i.test(f.name);
-    if (!nameOk) {
-      setItemImagesZip(null);
+    if (!/\.zip$/i.test(f.name)) {
+      clear();
       setError('El archivo de fotos debe ser un .zip');
       e.target.value = '';
       return;
     }
     if (f.size <= 0) {
-      setItemImagesZip(null);
+      clear();
       setError('El zip está vacío o el navegador no pudo leerlo. Prueba otro archivo o súbelo vía :3000 directo.');
       e.target.value = '';
       return;
     }
     if (f.size > ZIP_MAX_BYTES) {
-      setItemImagesZip(null);
+      clear();
       setError(
         `El zip pesa ${(f.size / (1024 * 1024)).toFixed(0)} MB; el máximo es ${Math.round(ZIP_MAX_BYTES / (1024 * 1024))} MB (nginx/multer).`
       );
       e.target.value = '';
       return;
     }
-    setItemImagesZip(f);
-    setSuccessMsg(`Zip listo: ${f.name} (${(f.size / (1024 * 1024)).toFixed(1)} MB). Ahora selecciona los 7 CSV.`);
+    setZip(f);
+    const label = kind === 'items' ? 'repuestos' : 'órdenes (antes/después)';
+    setSuccessMsg(`Zip de ${label} listo: ${f.name} (${(f.size / (1024 * 1024)).toFixed(1)} MB).`);
     setTimeout(() => setSuccessMsg(null), 6000);
-    // No limpiar el input aquí: en algunos navegadores/remotos invalidaba la selección.
   };
 
   const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    const zipBytes = (itemImagesZip?.size || 0) + (workOrderImagesZip?.size || 0);
+    const hasZips = Boolean(itemImagesZip || workOrderImagesZip);
     setIsLoading(true);
-    setUploadProgress(itemImagesZip ? 0 : null);
+    setUploadProgress(hasZips ? 0 : null);
     setLoadingMessage(
-      itemImagesZip
-        ? `Subiendo CSV + zip (${(itemImagesZip.size / (1024 * 1024)).toFixed(1)} MB). Por Tailscale puede tardar varios minutos...`
+      hasZips
+        ? `Subiendo CSV + zip (${(zipBytes / (1024 * 1024)).toFixed(1)} MB). Por Tailscale puede tardar varios minutos...`
         : 'Procesando archivos CSV. Por favor, no cierres esta ventana...'
     );
     setError(null);
@@ -360,6 +374,9 @@ export const DeveloperOptions = () => {
     }
     if (itemImagesZip) {
       formData.append('itemImagesZip', itemImagesZip);
+    }
+    if (workOrderImagesZip) {
+      formData.append('workOrderImagesZip', workOrderImagesZip);
     }
 
     try {
@@ -372,7 +389,7 @@ export const DeveloperOptions = () => {
         maxBodyLength: Infinity,
         maxContentLength: Infinity,
         onUploadProgress: (evt) => {
-          if (!itemImagesZip || !evt.total) return;
+          if (!hasZips || !evt.total) return;
           const pct = Math.min(99, Math.round((evt.loaded / evt.total) * 100));
           setUploadProgress(pct);
           setLoadingMessage(`Subiendo archivos... ${pct}% (luego se procesan CSV y fotos)`);
@@ -382,7 +399,7 @@ export const DeveloperOptions = () => {
       const results = res.data.results;
       let msg = `Archivos CSV procesados: ${results.categories} Categorías, ${results.locations} Ubicaciones, ${results.vendors} Proveedores, ${results.items} Repuestos, ${results.users} Usuarios, ${results.inventory} Movimientos, ${results.orders} Órdenes.`;
       if (results.itemImages) {
-        msg += ` Fotos asignadas: ${results.itemImages.matched}`;
+        msg += ` Fotos repuestos: ${results.itemImages.matched}`;
         if (results.itemImages.missing > 0) {
           msg += ` (${results.itemImages.missing} sin ítem coincidente)`;
         }
@@ -391,11 +408,21 @@ export const DeveloperOptions = () => {
         }
         msg += '.';
       } else if (itemImagesZip) {
-        msg += ' (El zip se subió pero no se reportaron fotos asignadas; revisa logs del servidor / unzip).';
+        msg += ' (El zip de repuestos se subió pero no se reportaron fotos asignadas; revisa logs del servidor / unzip).';
+      }
+      if (results.workOrderImages) {
+        msg += ` Fotos OT: ${results.workOrderImages.matched} (antes ${results.workOrderImages.beforeAssigned}, después ${results.workOrderImages.afterAssigned})`;
+        if (results.workOrderImages.missing > 0) {
+          msg += `, sin archivo: ${results.workOrderImages.missing}`;
+        }
+        msg += '.';
+      } else if (workOrderImagesZip) {
+        msg += ' (El zip de órdenes se subió pero no se reportaron fotos; revisa logs / unzip).';
       }
       setSuccessMsg(msg);
       setItemImagesZip(null);
-      setTimeout(() => setSuccessMsg(null), 10000);
+      setWorkOrderImagesZip(null);
+      setTimeout(() => setSuccessMsg(null), 12000);
     } catch (err: unknown) {
       let detail = 'Error desconocido';
       if (isAxiosError(err)) {
@@ -564,12 +591,14 @@ export const DeveloperOptions = () => {
                   Selecciónalos juntos. El sistema los reconoce y procesa automáticamente según sus dependencias.
                 </p>
                 <div className="mt-4 rounded-xl border border-white/15 bg-white/10 px-3.5 py-3 text-xs leading-5 text-indigo-50">
-                  <p className="font-bold text-white">Fotos de repuestos (opcional)</p>
+                  <p className="font-bold text-white">Zips de fotos (opcionales)</p>
                   <p className="mt-1">
-                    Selecciona un <strong>.zip</strong> con las fotos del export Fiix (p. ej. carpeta{' '}
-                    <code className="rounded bg-black/20 px-1 py-0.5">Items_Images/</code> dentro).
-                    Nombres: <code className="rounded bg-black/20 px-1 py-0.5">MTTO-0001.Image.163526.png</code>
-                    {' '}(.jpg, .jpeg, .png, .webp, .gif). Límite ~500&nbsp;MB.
+                    <strong>Repuestos:</strong> carpeta <code className="rounded bg-black/20 px-1 py-0.5">Items_Images/</code>{' '}
+                    (<code className="rounded bg-black/20 px-1 py-0.5">MTTO-0001.Image.163526.png</code>).
+                  </p>
+                  <p className="mt-1">
+                    <strong>Órdenes:</strong> <code className="rounded bg-black/20 px-1 py-0.5">Formulario Solicitudes_Images.zip</code>{' '}
+                    — solo se usan <em>FOTO ANTES</em> / <em>FOTO DESPUÉS</em> (las firmas se ignoran). Límite ~500&nbsp;MB c/u.
                   </p>
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
@@ -580,21 +609,17 @@ export const DeveloperOptions = () => {
                   ))}
                 </div>
                 <div className="mt-5 flex w-full flex-col gap-1.5 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-indigo-50">
-                  <span className="font-bold text-white">Zip de fotos (opcional)</span>
+                  <span className="font-bold text-white">Zip fotos de repuestos (opcional)</span>
                   <span className="text-xs text-indigo-100">
                     {itemImagesZip
                       ? `Seleccionado: ${itemImagesZip.name} (${(itemImagesZip.size / (1024 * 1024)).toFixed(1)} MB)`
                       : 'Ningún archivo seleccionado'}
                   </span>
-                  <p className="text-[11px] leading-4 text-indigo-200/90">
-                    Por Tailscale un zip grande puede tardar; si falla con 413, actualiza nginx o entra por{' '}
-                    <code className="rounded bg-black/20 px-1">:3000</code>.
-                  </p>
                   <label className="mt-1 block cursor-pointer text-xs text-indigo-100">
                     <input
                       type="file"
                       accept=".zip,application/zip,application/x-zip-compressed,application/octet-stream"
-                      onChange={handleZipSelected}
+                      onChange={(e) => pickZipFile(e, 'items')}
                       className="block w-full file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-indigo-700"
                       disabled={isLoading}
                     />
@@ -606,10 +631,44 @@ export const DeveloperOptions = () => {
                       className="mt-1 self-start text-xs font-semibold text-indigo-200 underline hover:text-white"
                       disabled={isLoading}
                     >
-                      Quitar zip
+                      Quitar zip de repuestos
                     </button>
                   )}
                 </div>
+                <div className="mt-3 flex w-full flex-col gap-1.5 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-indigo-50">
+                  <span className="font-bold text-white">Zip fotos de órdenes (opcional)</span>
+                  <span className="text-xs text-indigo-100">
+                    {workOrderImagesZip
+                      ? `Seleccionado: ${workOrderImagesZip.name} (${(workOrderImagesZip.size / (1024 * 1024)).toFixed(1)} MB)`
+                      : 'Ningún archivo seleccionado'}
+                  </span>
+                  <p className="text-[11px] leading-4 text-indigo-200/90">
+                    Empareja por la ruta del CSV (FOLIO ↔ FOTO ANTES / FOTO DESPUÉS). Firmas no se importan.
+                  </p>
+                  <label className="mt-1 block cursor-pointer text-xs text-indigo-100">
+                    <input
+                      type="file"
+                      accept=".zip,application/zip,application/x-zip-compressed,application/octet-stream"
+                      onChange={(e) => pickZipFile(e, 'workOrders')}
+                      className="block w-full file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-indigo-700"
+                      disabled={isLoading}
+                    />
+                  </label>
+                  {workOrderImagesZip && (
+                    <button
+                      type="button"
+                      onClick={() => setWorkOrderImagesZip(null)}
+                      className="mt-1 self-start text-xs font-semibold text-indigo-200 underline hover:text-white"
+                      disabled={isLoading}
+                    >
+                      Quitar zip de órdenes
+                    </button>
+                  )}
+                </div>
+                <p className="mt-3 text-[11px] leading-4 text-indigo-200/90">
+                  Por Tailscale un zip grande puede tardar; si falla con 413, actualiza nginx o entra por{' '}
+                  <code className="rounded bg-black/20 px-1">:3000</code>.
+                </p>
                 <label className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-5 py-3.5 font-black text-indigo-700 shadow-sm transition hover:bg-indigo-50 sm:w-fit">
                   <Upload size={18} /> Seleccionar los CSV
                   <input

@@ -11,6 +11,11 @@ import { generateInventoryCode } from '../utils/codeGenerator';
 import { parseWorkOrderFolio } from '../utils/folio';
 import { runBackup, listBackups, runRestore } from '../utils/backupService';
 import { assignItemImagesFromZip } from '../utils/itemImageImport';
+import {
+  assignWorkOrderImagesFromZip,
+  sanitizeWorkOrderPhotoPath,
+  type WorkOrderPhotoMapping,
+} from '../utils/workOrderImageImport';
 
 const router = express.Router();
 
@@ -43,6 +48,7 @@ function uploadImportFields(req: Request, res: Response, next: express.NextFunct
   uploadImport.fields([
     { name: 'csvFiles', maxCount: 20 },
     { name: 'itemImagesZip', maxCount: 1 },
+    { name: 'workOrderImagesZip', maxCount: 1 },
   ])(req, res, (err: unknown) => {
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {
@@ -334,7 +340,8 @@ router.post(
   const filesMap = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
   const files = filesMap?.csvFiles || [];
   const zipFile = filesMap?.itemImagesZip?.[0];
-  const uploadedTemps = [...files, ...(zipFile ? [zipFile] : [])];
+  const woZipFile = filesMap?.workOrderImagesZip?.[0];
+  const uploadedTemps = [...files, ...(zipFile ? [zipFile] : []), ...(woZipFile ? [woZipFile] : [])];
 
   try {
     const parseSafeDate = (dString: string) => {
@@ -391,7 +398,18 @@ router.post(
         folderFound: boolean;
         filesScanned: number;
       };
+      workOrderImages?: {
+        matched: number;
+        missing: number;
+        skipped: number;
+        folderFound: boolean;
+        filesScanned: number;
+        beforeAssigned: number;
+        afterAssigned: number;
+      };
     } = { categories: 0, locations: 0, vendors: 0, items: 0, users: 0, inventory: 0, orders: 0 };
+
+    const woPhotoMappings: WorkOrderPhotoMapping[] = [];
 
     if (catFile) {
       const data = parse(readUploadedUtf8(catFile), { columns: true, skip_empty_lines: true });
@@ -775,6 +793,12 @@ router.post(
                });
             }
             results.orders++;
+
+            const beforePath = sanitizeWorkOrderPhotoPath(row['FOTO ANTES']);
+            const afterPath = sanitizeWorkOrderPhotoPath(row['FOTO DESPUÉS']);
+            if (beforePath || afterPath) {
+              woPhotoMappings.push({ folio: folioCsv, beforePath, afterPath });
+            }
           } catch(e) { 
             console.error('Work order row error', e);
           }
@@ -804,6 +828,33 @@ router.post(
           skipped: 0,
           folderFound: false,
           filesScanned: 0,
+        };
+      }
+    }
+
+    // Fotos antes/después de OT desde zip (ignora firmas del export)
+    if (woZipFile?.path && woPhotoMappings.length > 0) {
+      try {
+        const woPhotoResult = await assignWorkOrderImagesFromZip(woZipFile.path, woPhotoMappings);
+        results.workOrderImages = {
+          matched: woPhotoResult.matched,
+          missing: woPhotoResult.missing,
+          skipped: woPhotoResult.skipped,
+          folderFound: woPhotoResult.folderFound,
+          filesScanned: woPhotoResult.filesScanned,
+          beforeAssigned: woPhotoResult.beforeAssigned,
+          afterAssigned: woPhotoResult.afterAssigned,
+        };
+      } catch (woPhotoErr) {
+        console.error('Work order images import error:', woPhotoErr);
+        results.workOrderImages = {
+          matched: 0,
+          missing: 0,
+          skipped: 0,
+          folderFound: false,
+          filesScanned: 0,
+          beforeAssigned: 0,
+          afterAssigned: 0,
         };
       }
     }

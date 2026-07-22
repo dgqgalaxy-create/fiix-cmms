@@ -3,9 +3,12 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 21 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.30.4 (Actualización: 21 de Julio de 2026)
+## 🚀 Versión Actual: v1.30.5 (Actualización: 21 de Julio de 2026)
 
-### Novedades en v1.30.4 (navegación en detalle de repuesto)
+### Novedades en v1.30.5 (fotos antes/después al importar OT)
+- **Nuevo:** En Opciones de Desarrollador puedes seleccionar `Formulario Solicitudes_Images.zip` junto con los CSV. Se emparejan `FOTO ANTES` / `FOTO DESPUÉS` por FOLIO; firmas del export se ignoran.
+
+### Novedades Anteriores (v1.30.4 - navegación en detalle de repuesto)
 - **Nuevo:** En el modal de detalle/edición de un repuesto, flechas ← → (o botones del encabezado) cambian al anterior/siguiente según la lista filtrada y ordenada de Inventario.
 
 ### Novedades Anteriores (v1.30.3 - auto-deploy Ubuntu)
