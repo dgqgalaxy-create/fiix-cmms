@@ -3,9 +3,12 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 21 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.30.3 (Actualización: 21 de Julio de 2026)
+## 🚀 Versión Actual: v1.30.4 (Actualización: 21 de Julio de 2026)
 
-### Novedades en v1.30.3 (auto-deploy Ubuntu)
+### Novedades en v1.30.4 (navegación en detalle de repuesto)
+- **Nuevo:** En el modal de detalle/edición de un repuesto, flechas ← → (o botones del encabezado) cambian al anterior/siguiente según la lista filtrada y ordenada de Inventario.
+
+### Novedades Anteriores (v1.30.3 - auto-deploy Ubuntu)
 - **Corrección:** GitHub Actions ya no aborta el `git pull` si `npm install` dejó modificados los `package-lock.json` en el servidor: el workflow hace `git restore .` antes del pull y `update.sh` usa `npm ci`.
 
 ### Novedades Anteriores (v1.30.2 - Inventario visible tras importación)

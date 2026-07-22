@@ -1,5 +1,5 @@
 # Manual de Usuario - FIIX CMMS (LPET)
-*(Versión 1.30.3 - 21 de Julio, 2026)*
+*(Versión 1.30.4 - 21 de Julio, 2026)*
 
 FIIX CMMS (despliegue LPET) centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 
@@ -40,6 +40,7 @@ Se han mejorado las reglas del almacén para prevenir errores y mejorar la fluid
 - **Bloqueo de Inventario Negativo:** Si intentas sacar más piezas de las que existen actualmente, el sistema bloqueará la operación con una alerta.
 - **Ubicación Automática:** Si creas un nuevo repuesto o importas un CSV sin definir lugar, el sistema lo agrupará bajo la ubicación "Sin Asignación".
 - **Ver Detalle desde Categorías, Ubicaciones y Proveedores:** Al abrir el detalle de una Categoría, Ubicación o Proveedor, la lista de "Repuestos Asociados" ahora es clickeable: selecciona cualquier repuesto de esa lista para abrir su ficha completa de detalle, igual que si lo hubieras abierto desde la pestaña de "Repuestos".
+- **Navegar entre repuestos:** Con la ficha de un repuesto abierta (desde la lista de Inventario), usa las flechas ← → del teclado o los botones del encabezado para pasar al anterior/siguiente según el filtro y orden actuales. Mientras editas un campo de texto las flechas no cambian de ítem.
 - **Búsqueda y QR en Ubicaciones:** La pestaña "Ubicaciones" ahora tiene barra de búsqueda (por nombre o código) y botón de escaneo QR, igual que la pestaña de Repuestos. Cada tarjeta de ubicación incluye un botón "Ver / Imprimir QR" para generar el código de esa ubicación física; al escanearlo se abre automáticamente el detalle con todos los repuestos que contiene.
 - **Stock Crítico accionable:** La tarjeta superior indica la cantidad de ítems bajo mínimo. Haz clic en ella para filtrar la lista (puedes quitar el filtro con la pastilla). Con permiso **Gestionar compras**, usa **Generar borrador OC** para crear borradores de Orden de Compra agrupados por proveedor. Ya no hace falta el filtro duplicado junto a la búsqueda ni descargar una lista .txt.
 

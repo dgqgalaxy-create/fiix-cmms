@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.30.3";
+export const APP_VERSION = "1.30.4";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: En el detalle de un repuesto puedes pasar al anterior/siguiente de la lista filtrada con las flechas ← → del teclado (o los botones del encabezado).",
     "Corrección: El auto-deploy en Ubuntu ya no falla cuando npm ensucia package-lock.json: el workflow hace git restore antes del pull y update.sh usa npm ci.",
     "Corrección: El inventario ya estaba importado, pero la pantalla salía vacía porque fallaba la carga de movimientos (faltaban columnas work_order_id/unit_cost en la BD). Se aplicó la migración y la vista ya no se tumba si un catálogo falla.",
     "Corrección: Importar CSV + zip de fotos por Tailscale/nginx — progreso de subida, errores 413 claros, nginx con body 500M y timeouts largos (update.sh recuerda recargar nginx a mano).",

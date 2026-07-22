@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, Save, Upload, Package, ArrowRightLeft } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { X, Save, Upload, Package, ArrowRightLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { createItem, updateItem } from '../../api/inventory';
 import { getUoms } from '../../api/settings';
 import type { UnitOfMeasure } from '../../api/settings';
@@ -18,9 +18,28 @@ interface Props {
   transactions?: InventoryTransaction[];
   readOnly?: boolean;
   onQuickTransaction?: (itemId: string) => void;
+  /** Lista filtrada/ordenada de la tabla de Inventario (para ← →). */
+  itemList?: Item[];
+  onNavigateItem?: (item: Item) => void;
+  /** Pausa ← → si hay otro modal encima (p. ej. movimiento). */
+  navigationPaused?: boolean;
 }
 
-export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, locations, vendors, transactions, readOnly, onQuickTransaction }: Props) => {
+export const ItemModal = ({
+  isOpen,
+  onClose,
+  onSaved,
+  item,
+  categories,
+  locations,
+  vendors,
+  transactions,
+  readOnly,
+  onQuickTransaction,
+  itemList,
+  onNavigateItem,
+  navigationPaused = false,
+}: Props) => {
   const [dateFilter, setDateFilter] = useState<'all' | 'this_week' | 'last_week' | 'this_month' | 'last_3_months'>('all');
   const [formData, setFormData] = useState({
     internal_code: '',
@@ -45,7 +64,53 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
     getUoms().then(setUoms).catch(console.error);
   }, []);
 
-  const filteredTransactions = React.useMemo(() => {
+  const navIndex = useMemo(() => {
+    if (!item || !itemList?.length) return -1;
+    return itemList.findIndex((i) => i.id === item.id);
+  }, [item, itemList]);
+
+  const canNavigate = Boolean(
+    item &&
+      onNavigateItem &&
+      itemList &&
+      itemList.length > 1 &&
+      navIndex >= 0 &&
+      !navigationPaused &&
+      !isImageSearchModalOpen
+  );
+  const hasPrev = canNavigate && navIndex > 0;
+  const hasNext = canNavigate && navIndex < (itemList?.length ?? 0) - 1;
+
+  const goPrev = useCallback(() => {
+    if (!hasPrev || !itemList || !onNavigateItem) return;
+    onNavigateItem(itemList[navIndex - 1]);
+  }, [hasPrev, itemList, navIndex, onNavigateItem]);
+
+  const goNext = useCallback(() => {
+    if (!hasNext || !itemList || !onNavigateItem) return;
+    onNavigateItem(itemList[navIndex + 1]);
+  }, [hasNext, itemList, navIndex, onNavigateItem]);
+
+  useEffect(() => {
+    if (!isOpen || !canNavigate) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) {
+        return;
+      }
+      e.preventDefault();
+      if (e.key === 'ArrowLeft') goPrev();
+      else goNext();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, canNavigate, goPrev, goNext]);
+
+  const filteredTransactions = useMemo(() => {
     if (!item || !transactions) return [];
     
     const now = new Date();
@@ -168,24 +233,53 @@ export const ItemModal = ({ isOpen, onClose, onSaved, item, categories, location
   return (
     <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-4xl max-h-[95vh] flex flex-col overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
-          <div className="flex items-center gap-4">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center gap-3 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 truncate">
               {readOnly ? 'Detalles del Repuesto' : item ? 'Editar Repuesto' : 'Nuevo Repuesto'}
             </h2>
             {item && onQuickTransaction && (
               <button
                 type="button"
                 onClick={() => onQuickTransaction(item.id)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200"
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200"
               >
                 <ArrowRightLeft size={14} /> Movimiento
               </button>
             )}
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            {canNavigate && (
+              <>
+                <button
+                  type="button"
+                  onClick={goPrev}
+                  disabled={!hasPrev}
+                  title="Anterior (←)"
+                  aria-label="Repuesto anterior"
+                  className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <span className="text-xs tabular-nums text-slate-400 dark:text-slate-500 px-0.5 min-w-[3.5rem] text-center">
+                  {navIndex + 1}/{itemList!.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={goNext}
+                  disabled={!hasNext}
+                  title="Siguiente (→)"
+                  aria-label="Repuesto siguiente"
+                  className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </>
+            )}
+            <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         <div className="overflow-y-auto flex-1">

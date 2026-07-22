@@ -1357,6 +1357,9 @@ export const InventoryPage = () => {
         transactions={transactions}
         readOnly={!canManage}
         onQuickTransaction={canManage ? handleOpenTransactionModal : undefined}
+        itemList={selectedItem ? filteredItems : undefined}
+        onNavigateItem={setSelectedItem}
+        navigationPaused={isTransactionModalOpen}
       />
       
       <TransactionModal
