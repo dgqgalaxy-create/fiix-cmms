@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.30.10";
+export const APP_VERSION = "1.30.11";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: La búsqueda de órdenes reconoce folios FOL-0001 (antes solo coincidía el patrón interno wo-0001).",
     "Cambio: Al importar el zip de solicitudes, FOTO ANTES solo se guarda como evidencia del técnico (Antes), no como foto al levantar la solicitud.",
     "Corrección: Al abrir el detalle de una OT se recarga desde el servidor (así se ven las fotos importadas por CSV/zip) y se muestran Antes/Después aunque la lista estuviera desactualizada.",
     "Corrección: Al importar fotos de OT se llenan también request_image_url (listado) además de antes/después; se evita que fallos de tiempo del CSV impidan mapear fotos.",

@@ -3,9 +3,12 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 21 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.30.10 (Actualización: 21 de Julio de 2026)
+## 🚀 Versión Actual: v1.30.11 (Actualización: 21 de Julio de 2026)
 
-### Novedades en v1.30.10 (semántica FOTO ANTES)
+### Novedades en v1.30.11 (búsqueda FOL)
+- **Corrección:** Filtrar por `FOL-0001` en Órdenes de Trabajo ya encuentra la orden (antes el buscador solo miraba `wo-####`).
+
+### Novedades Anteriores (v1.30.10 - semántica FOTO ANTES)
 - **Cambio:** En la importación CSV/zip, **FOTO ANTES** solo llena `before_image_url` (evidencia del técnico). No se usa como foto del solicitante (`request_image_url`).
 
 ### Novedades Anteriores (v1.30.9 - fotos OT en detalle tras importar)

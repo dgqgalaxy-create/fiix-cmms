@@ -270,7 +270,10 @@ export const Dashboard = () => {
     if (searchTerm.trim() !== '') {
       const term = searchTerm.toLowerCase();
       list = list.filter(wo => {
-        const folioMatch = `wo-${(wo.folio || 0).toString().padStart(4, '0')}`.includes(term);
+        const folioMatch =
+          `wo-${(wo.folio || 0).toString().padStart(4, '0')}`.includes(term) ||
+          `fol-${(wo.folio || 0).toString().padStart(4, '0')}`.includes(term) ||
+          String(wo.folio || '').includes(term);
         const assetMatch = wo.asset?.name?.toLowerCase().includes(term);
         const zoneMatch = wo.zone?.name?.toLowerCase().includes(term);
         const titleMatch = wo.title?.toLowerCase().includes(term);
