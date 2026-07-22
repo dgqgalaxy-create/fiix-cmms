@@ -3,7 +3,14 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 22 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.34.0 (Actualización: 22 de Julio de 2026)
+## 🚀 Versión Actual: v1.34.2 (Actualización: 22 de Julio de 2026)
+
+### Novedades en v1.34.2 (movimientos OC + PDF vertical)
+- **Corrección:** Movimientos de recepción de OC con **fecha = instante de recepción** (válido si el material llega antes de lo pactado). El listado de movimientos ya no corta a 1000. PDF de OC en **vertical**.
+- **Mejora:** Busca `PO-` o `Recepción` en Inventario → Movimientos.
+
+### Novedades en v1.34.1 (totales pedido vs recibido)
+- **Mejora:** En recepción/detalle de OC: **Total pedido** (orden original) y **Total recibido** (cantidad real × costo unitario), con subtotales por línea.
 
 ### Novedades en v1.34.0 (recepción parcial OC)
 - **Nuevo:** Al recibir una Orden de Compra puedes capturar cantidad real por línea (más/menos que lo pedido). Solo lo recibido suma al inventario; se guarda pedido vs recibido y el movimiento lo documenta.

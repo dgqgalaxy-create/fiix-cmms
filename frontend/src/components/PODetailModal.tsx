@@ -35,6 +35,10 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
     setError('');
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   const handleUpdateStatus = async (newStatus: string) => {
     setIsSubmitting(true);
     setError('');
@@ -75,8 +79,27 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
 
   if (!isOpen) return null;
 
-  const total = order.items.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
+  const totalOrdered = order.items.reduce((sum, item) => sum + item.quantity * item.unit_cost, 0);
+
+  const effectiveReceivedQty = (oi: (typeof order.items)[0]): number | null => {
+    if (receivingMode) {
+      const n = Number(receivedQty[oi.id]);
+      return Number.isFinite(n) && n >= 0 ? n : null;
+    }
+    if (order.status === 'RECIBIDA' && oi.received_quantity != null) {
+      return oi.received_quantity;
+    }
+    return null;
+  };
+
+  const totalReceived = order.items.reduce((sum, oi) => {
+    const rq = effectiveReceivedQty(oi);
+    if (rq == null) return sum;
+    return sum + rq * oi.unit_cost;
+  }, 0);
+
   const showReceivedCol = receivingMode || order.status === 'RECIBIDA';
+  const showReceivedTotals = showReceivedCol;
 
   const renderStatusStepper = () => {
     const steps = ['BORRADOR', 'APROBADA', 'ENVIADA', 'RECIBIDA'];
@@ -200,15 +223,15 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                     <th className="px-4 py-3 font-medium text-right">Recibido</th>
                   )}
                   <th className="px-4 py-3 font-medium text-right">Costo Unit.</th>
-                  <th className="px-4 py-3 font-medium text-right">Subtotal</th>
+                  <th className="px-4 py-3 font-medium text-right">Subt. pedido</th>
+                  {showReceivedCol && (
+                    <th className="px-4 py-3 font-medium text-right">Subt. recibido</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {order.items.map((oi) => {
-                  const receivedDisplay =
-                    order.status === 'RECIBIDA' && oi.received_quantity != null
-                      ? oi.received_quantity
-                      : null;
+                  const receivedDisplay = effectiveReceivedQty(oi);
                   const draftReceived = Number(receivedQty[oi.id]);
                   return (
                     <tr key={oi.id} className="bg-white dark:bg-slate-900">
@@ -243,17 +266,42 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                       <td className="px-4 py-3 text-right font-medium text-slate-700 dark:text-slate-200">
                         ${(oi.quantity * oi.unit_cost).toFixed(2)}
                       </td>
+                      {showReceivedCol && (
+                        <td className="px-4 py-3 text-right font-medium text-emerald-800 dark:text-emerald-300">
+                          {receivedDisplay != null
+                            ? `$${(receivedDisplay * oi.unit_cost).toFixed(2)}`
+                            : '—'}
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
               </tbody>
               <tfoot className="bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
                 <tr>
-                  <td colSpan={showReceivedCol ? 5 : 4} className="px-4 py-4 text-right font-bold text-slate-600 dark:text-slate-400">Total de la Orden:</td>
-                  <td className="px-4 py-4 text-right font-black text-emerald-700 dark:text-emerald-400 text-lg">
-                    ${total.toFixed(2)}
+                  <td
+                    colSpan={showReceivedCol ? 6 : 4}
+                    className="px-4 py-3 text-right font-bold text-slate-600 dark:text-slate-400"
+                  >
+                    Total pedido (orden original):
+                  </td>
+                  <td className="px-4 py-3 text-right font-black text-slate-800 dark:text-slate-100 text-lg">
+                    ${totalOrdered.toFixed(2)}
                   </td>
                 </tr>
+                {showReceivedTotals && (
+                  <tr>
+                    <td
+                      colSpan={showReceivedCol ? 6 : 4}
+                      className="px-4 py-3 text-right font-bold text-emerald-800 dark:text-emerald-300"
+                    >
+                      Total recibido (inventario / costo real):
+                    </td>
+                    <td className="px-4 py-3 text-right font-black text-emerald-700 dark:text-emerald-400 text-lg">
+                      ${totalReceived.toFixed(2)}
+                    </td>
+                  </tr>
+                )}
               </tfoot>
             </table>
           </div>
@@ -261,7 +309,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
 
         <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-wrap justify-end gap-3 print:hidden">
           <button
-            onClick={() => window.print()}
+            onClick={handlePrint}
             className="flex items-center gap-2 px-5 py-2.5 text-emerald-700 dark:text-emerald-400 font-bold hover:bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-xl transition-colors mr-auto"
           >
             <Printer size={18} />
@@ -328,19 +376,19 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
       </div>
 
       {/* --- PRINTABLE FORMAT (HIDDEN ON SCREEN) --- */}
-      <div className="hidden print:block fixed inset-0 z-[100000] bg-white dark:bg-slate-900 p-8 w-full h-full text-black">
-        <div className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-start">
-          <div className="flex items-center gap-4">
-            <img src="/lpet.png" alt="Logo" className="h-16 object-contain" />
+      <div className="po-print-sheet hidden print:block fixed inset-0 z-[100000] bg-white dark:bg-slate-900 p-6 w-full h-full text-black text-[11px] leading-snug">
+        <div className="border-b-2 border-slate-800 pb-4 mb-6 flex justify-between items-start">
+          <div className="flex items-center gap-3">
+            <img src="/lpet.png" alt="Logo" className="h-12 object-contain" />
             <div>
-              <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">ORDEN DE COMPRA</h1>
-              <p className="text-slate-500 dark:text-slate-400 font-medium">Departamento de Mantenimiento</p>
+              <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">ORDEN DE COMPRA</h1>
+              <p className="text-slate-500 dark:text-slate-400 font-medium text-xs">Departamento de Mantenimiento</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 mb-1">PO-{order.folio.toString().padStart(4, '0')}</p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Fecha: {new Date(order.created_at).toLocaleDateString()}</p>
-            <p className="text-sm font-bold mt-2 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg inline-block">Estado: {order.status}</p>
+            <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400 mb-1">PO-{order.folio.toString().padStart(4, '0')}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Fecha: {new Date(order.created_at).toLocaleDateString()}</p>
+            <p className="text-xs font-bold mt-2 px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg inline-block">Estado: {order.status}</p>
           </div>
         </div>
 
@@ -368,7 +416,10 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                   <th className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200 text-center">Recibido</th>
                 )}
                 <th className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200 text-right">P. Unitario</th>
-                <th className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200 text-right">Subtotal</th>
+                <th className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200 text-right">Subt. pedido</th>
+                {order.status === 'RECIBIDA' && (
+                  <th className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200 text-right">Subt. recibido</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 border-b border-slate-300">
@@ -382,14 +433,29 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                   )}
                   <td className="px-4 py-3 text-right">${oi.unit_cost.toFixed(2)}</td>
                   <td className="px-4 py-3 text-right font-bold">${(oi.quantity * oi.unit_cost).toFixed(2)}</td>
+                  {order.status === 'RECIBIDA' && (
+                    <td className="px-4 py-3 text-right font-bold">
+                      {oi.received_quantity != null
+                        ? `$${(oi.received_quantity * oi.unit_cost).toFixed(2)}`
+                        : '—'}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
           <div className="flex justify-end mt-4">
-            <div className="w-1/3 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-right">
-              <span className="text-sm font-bold text-slate-500 dark:text-slate-400 mr-4">Gran Total:</span>
-              <span className="text-xl font-black text-emerald-700 dark:text-emerald-400">${total.toFixed(2)}</span>
+            <div className="w-1/2 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-right space-y-2">
+              <div>
+                <span className="text-sm font-bold text-slate-500 dark:text-slate-400 mr-4">Total pedido:</span>
+                <span className="text-xl font-black text-slate-800 dark:text-slate-100">${totalOrdered.toFixed(2)}</span>
+              </div>
+              {order.status === 'RECIBIDA' && (
+                <div>
+                  <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 mr-4">Total recibido:</span>
+                  <span className="text-xl font-black text-emerald-700 dark:text-emerald-400">${totalReceived.toFixed(2)}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

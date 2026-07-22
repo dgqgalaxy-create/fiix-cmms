@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.34.0";
+export const APP_VERSION = "1.34.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Movimientos de recepción de OC usan la fecha/hora exacta del momento de recibir (aunque llegue antes de lo pactado) y el listado ya no corta a 1000 (el CSV con fechas futuras los ocultaba). PDF de OC en vertical.",
+    "Mejora: En recepción de OC se muestran dos montos — Total pedido (orden original) y Total recibido (cantidad real × costo unit.); también subtotales por línea al recibir o ya recibida.",
     "Nuevo: Recepción parcial de Órdenes de Compra — al recibir puedes indicar cantidad real por línea (más o menos que lo pedido); solo lo recibido entra al inventario y queda registrado pedido vs recibido.",
     "Mejora: install.sh / update.sh listos para servidor nuevo sin fallos típicos de 502: arranque PM2 con node dist/index.js, Node 22 por defecto, smoke test con reintentos, chmod de scripts tras pull, defaults S para PM2 startup y nginx+healthcheck. README con checklist de despliegue y tabla de fallos.",
     "Nuevo: Exportación nativa a Excel (.xlsx) — Órdenes (lista filtrada), Inventario/Repuestos (filtrados) y KPIs (libro multi-hoja del periodo). Se mantiene CSV e impresión donde ya existían.",

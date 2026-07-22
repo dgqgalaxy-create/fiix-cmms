@@ -185,8 +185,10 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
     }
 
     const updateData: any = { status };
-    if (status === 'RECIBIDA') {
-      updateData.received_at = new Date();
+    // Momento real de recepción (puede ser antes de la fecha pactada / expected_date).
+    const receivedAt = status === 'RECIBIDA' ? new Date() : null;
+    if (receivedAt) {
+      updateData.received_at = receivedAt;
     }
 
     // Wrap in transaction if we are receiving it, to update inventory stock
@@ -239,12 +241,14 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
               },
             });
 
+            // Fecha del movimiento = instante de recepción (no la fecha pactada de la OC).
             await tx.inventoryTransaction.create({
               data: {
                 item_id: orderItem.item_id,
                 user_id: user_id,
                 amount: receivedQty,
                 reason: `Recepción de Orden de Compra PO-${existingOrder.folio} (pedido: ${orderItem.quantity}, recibido: ${receivedQty})`,
+                created_at: receivedAt!,
               },
             });
           }

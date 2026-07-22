@@ -102,6 +102,14 @@ body {
     size: A4 landscape;
     margin: 10mm;
   }
+  /* Hoja vertical solo para PDF de Órdenes de Compra */
+  @page po-portrait {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+  .po-print-sheet {
+    page: po-portrait;
+  }
   body {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;

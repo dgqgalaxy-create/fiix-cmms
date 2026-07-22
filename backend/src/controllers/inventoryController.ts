@@ -324,13 +324,14 @@ export const getInventorySummary = async (req: Request, res: Response): Promise<
 // ==========================================
 export const getTransactions = async (req: Request, res: Response): Promise<void> => {
   try {
+    // Sin tope bajo: un take:1000 ordenado por fecha ocultaba recepciones de OC
+    // cuando el CSV histórico trae fechas futuras (p. ej. dic 2026).
     const transactions = await prisma.inventoryTransaction.findMany({
       include: {
         item: true,
         user: { select: { id: true, name: true, email: true } }
       },
       orderBy: { created_at: 'desc' },
-      take: 1000,
     });
     res.json(transactions);
   } catch (error) {

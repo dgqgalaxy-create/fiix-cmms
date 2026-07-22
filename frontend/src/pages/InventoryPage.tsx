@@ -1337,7 +1337,7 @@ export const InventoryPage = () => {
               </div>
               <input
                 type="text"
-                placeholder="Buscar en movimientos..."
+                placeholder="Buscar en movimientos (ej. PO-25, Recepción)..."
                 className="w-full bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 px-2 py-1.5"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
