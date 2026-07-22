@@ -1,5 +1,5 @@
 # Manual de Usuario - FIIX CMMS (LPET)
-*(Versión 1.30.8 - 21 de Julio, 2026)*
+*(Versión 1.30.9 - 21 de Julio, 2026)*
 
 FIIX CMMS (despliegue LPET) centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 

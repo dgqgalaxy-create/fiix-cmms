@@ -85,7 +85,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
     if (workOrder) setLiveWorkOrder(workOrder);
   }, [workOrder]);
 
-  // Sync detalle en vivo (sobre todo si otro usuario es el editor)
+  // Al abrir, siempre traer la OT fresca (p. ej. tras importar fotos CSV/zip).
   useEffect(() => {
     if (!isOpen || !workOrder?.id) return;
 
@@ -97,6 +97,8 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
         // ignore
       }
     };
+
+    void refreshDetail();
 
     const onUpdated = (payload: { id?: string }) => {
       if (payload?.id === workOrder.id) void refreshDetail();
@@ -142,6 +144,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
       if (wo.status === 'FINALIZADO') {
         getWorkOrderById(wo.id)
           .then((full) => {
+            setLiveWorkOrder(full);
             setConsumedParts(full.inventory_transactions || []);
             setPartsCostTotal(full.parts_cost_total || 0);
           })
@@ -532,42 +535,50 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
               {workOrder.description || <span className="italic text-slate-400">Sin descripción...</span>}
             </div>
 
-            {workOrder.request_image_url && (
+            {displayWO.request_image_url && displayWO.request_image_url !== displayWO.before_image_url && (
               <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-3">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">📸 Foto al reportar la falla</span>
-                <img src={`${BACKEND_URL}${workOrder.request_image_url}`} alt="Falla Reportada" className="w-full max-h-64 object-contain bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700" />
+                <img src={`${BACKEND_URL}${displayWO.request_image_url}`} alt="Falla Reportada" className="w-full max-h-64 object-contain bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700" />
               </div>
             )}
 
-            {workOrder.before_image_url && (
+            {displayWO.before_image_url && (
               <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-3">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">📸 Evidencia Técnica (Antes de reparar)</span>
-                <img src={`${BACKEND_URL}${workOrder.before_image_url}`} alt="Antes" className="w-full max-h-64 object-contain bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700" />
+                <img
+                  src={`${BACKEND_URL}${displayWO.before_image_url}`}
+                  alt="Antes"
+                  className="w-full max-h-64 object-contain bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700"
+                />
               </div>
             )}
           </div>
 
-          {workOrder.after_image_url && (
+          {displayWO.after_image_url && (
             <div className="mb-4 bg-emerald-50 dark:bg-emerald-950/20 p-3 sm:p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/50">
                <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider block mb-2">📸 Evidencia de Reparación (Después)</span>
-               <img src={`${BACKEND_URL}${workOrder.after_image_url}`} alt="Después" className="w-full max-h-72 object-contain bg-white dark:bg-slate-900 rounded-xl border border-emerald-200 dark:border-emerald-900" />
+               <img
+                 src={`${BACKEND_URL}${displayWO.after_image_url}`}
+                 alt="Después"
+                 className="w-full max-h-72 object-contain bg-white dark:bg-slate-900 rounded-xl border border-emerald-200 dark:border-emerald-900"
+               />
 
-               {workOrder.signature_clean_area && workOrder.signature_delivery && (
+               {displayWO.signature_clean_area && displayWO.signature_delivery && (
                  <div className="mt-4 pt-4 border-t border-emerald-200/50 grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <div>
                      <span className="text-xs font-semibold text-emerald-700 block mb-1">Firma Liberación de Área:</span>
-                     {typeof workOrder.signature_clean_area === 'string' && workOrder.signature_clean_area.startsWith('data:image') ? (
-                       <img src={workOrder.signature_clean_area} alt="Firma" className="h-16 object-contain bg-white dark:bg-slate-900 rounded-lg border border-emerald-100 p-1 block" />
+                     {typeof displayWO.signature_clean_area === 'string' && displayWO.signature_clean_area.startsWith('data:image') ? (
+                       <img src={displayWO.signature_clean_area} alt="Firma" className="h-16 object-contain bg-white dark:bg-slate-900 rounded-lg border border-emerald-100 p-1 block" />
                      ) : (
-                       <span className="text-sm font-medium text-emerald-900 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-emerald-100 block">{workOrder.signature_clean_area}</span>
+                       <span className="text-sm font-medium text-emerald-900 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-emerald-100 block">{displayWO.signature_clean_area}</span>
                      )}
                    </div>
                    <div>
                      <span className="text-xs font-semibold text-emerald-700 block mb-1">Firma Entrega de Trabajo:</span>
-                     {typeof workOrder.signature_delivery === 'string' && workOrder.signature_delivery.startsWith('data:image') ? (
-                       <img src={workOrder.signature_delivery} alt="Firma" className="h-16 object-contain bg-white dark:bg-slate-900 rounded-lg border border-emerald-100 p-1 block" />
+                     {typeof displayWO.signature_delivery === 'string' && displayWO.signature_delivery.startsWith('data:image') ? (
+                       <img src={displayWO.signature_delivery} alt="Firma" className="h-16 object-contain bg-white dark:bg-slate-900 rounded-lg border border-emerald-100 p-1 block" />
                      ) : (
-                       <span className="text-sm font-medium text-emerald-900 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-emerald-100 block">{workOrder.signature_delivery}</span>
+                       <span className="text-sm font-medium text-emerald-900 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-emerald-100 block">{displayWO.signature_delivery}</span>
                      )}
                    </div>
                  </div>

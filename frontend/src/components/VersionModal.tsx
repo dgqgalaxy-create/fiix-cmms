@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.30.8";
+export const APP_VERSION = "1.30.9";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Al abrir el detalle de una OT se recarga desde el servidor (así se ven las fotos importadas por CSV/zip) y se muestran Antes/Después aunque la lista estuviera desactualizada.",
     "Corrección: Al importar fotos de OT se llenan también request_image_url (listado) además de antes/después; se evita que fallos de tiempo del CSV impidan mapear fotos.",
     "Corrección: El zip de fotos de órdenes se envía de forma compatible con servidores que aún no tenían el campo workOrderImagesZip (evita Unexpected field).",
     "Corrección: Importar CSV + zip de fotos de órdenes ya no falla con «Unexpected field»; el servidor acepta los campos de zip de forma flexible.",

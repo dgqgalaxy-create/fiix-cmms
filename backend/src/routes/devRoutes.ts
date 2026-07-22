@@ -16,6 +16,7 @@ import {
   sanitizeWorkOrderPhotoPath,
   type WorkOrderPhotoMapping,
 } from '../utils/workOrderImageImport';
+import { emitRefresh } from '../utils/socket';
 
 const router = express.Router();
 
@@ -910,6 +911,8 @@ router.post(
     }
 
     res.json({ success: true, message: 'Archivos CSV importados con éxito.', results });
+    emitRefresh('refresh_work_orders');
+    emitRefresh('refresh_inventory');
   } catch (error: any) {
     console.error('CSV Import error:', error);
     res.status(500).json({ message: 'Error procesando archivos CSV.', error: error.message });
