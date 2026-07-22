@@ -3,7 +3,13 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 21 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.31.0 (Actualización: 21 de Julio de 2026)
+## 🚀 Versión Actual: v1.32.0 (Actualización: 22 de Julio de 2026)
+
+### Novedades en v1.32.0 (offline ampliado, sala de control, Node 22)
+- **Nuevo:** Offline: checklist (editar/enviar) + salidas de inventario OUT con `client_request_id` idempotente; endurecimiento de sync de fotos (limpia blobs al descartar).
+- **Nuevo:** Inicio «sala de control» (admin/gestionador): Urgentes / Sin asignar / SLA riesgo / SLA vencido + badge en pestaña + sonido opcional.
+- **Mejora:** Code-splitting por rutas + `manualChunks` (react/recharts/jspdf).
+- **Cambio:** Node.js 22+ (`.nvmrc`, install/update, `engines`).
 
 ### Novedades en v1.31.0 (UX OT + import fotos + rendimiento)
 - **Nuevo:** Asignar solo fotos de OT (zip + CSV Solicitudes) sin reimportar los 7 CSV.
@@ -334,7 +340,7 @@ Este documento contiene la lista de módulos y características pendientes de de
 - [ ] **Checklists avanzados y LOTO:** Pasos obligatorios dentro de la Orden de Trabajo y firmas de bloqueo de energías peligrosas.
 - [x] **Notificaciones y Escalamiento:** Recordatorios y escalamiento SLA por prioridad (respuesta, detenida, resolución) vía Telegram + in-app a gestores/admins (v1.14.0).
 - [ ] **Control de Medidores (CBM):** Registro histórico de horómetros y detonación automática de PMs por uso real.
-- [x] **Soporte PWA (Offline) para técnicos (v1.26.0 + fix v1.26.3):** Aceptar/pausar/finalizar/reanudar OT funciona sin conexión (cola en IndexedDB + sync automático al reconectar); v1.26.3 evita falsos positivos de encolado, reintentos infinitos y permite descartar la cola. Pendiente: sync fiable de fotos en segundo plano y offline en otros módulos (inventario, checklist).
+- [x] **Soporte PWA (Offline) para técnicos (v1.26.0 + fix v1.26.3 + v1.32.0):** Aceptar/pausar/finalizar/reanudar OT funciona sin conexión; v1.32 añade checklist (editar/enviar) y salidas de inventario OUT con idempotencia; sync de fotos limpia blobs al descartar. Pendiente: IN/catálogo offline y más módulos.
 - [x] **Gestión con Códigos QR:** Escaneo físico en máquinas para abrir historiales y escaneo en estantes para el control rápido de refacciones (incluye galería si no hay HTTPS).
 - [x] **Árbol de Fallas (RCA):** Clasificación Problema → Causa → Solución para Pareto; al cerrar correctivas es **opcional**.
 - [x] **Calendario de Carga de Trabajo / Turnos (Roster):** Vista interactiva para gestionar y asignar turnos, días festivos y faltas del personal (Completado en v1.7.3).

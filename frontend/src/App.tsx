@@ -1,29 +1,52 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { syncOfflineQueue } from './utils/offlineSync';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
-import { Dashboard } from './pages/Dashboard';
-import { HomePage } from './pages/HomePage';
-import { AssetsPage } from './pages/AssetsPage';
-import { UsersPage } from './pages/UsersPage';
-import { KPIPage } from './pages/KPIPage';
-import { PermissionsPage } from './pages/PermissionsPage';
-import { ZonesPage } from './pages/ZonesPage';
-import { InventoryPage } from './pages/InventoryPage';
-import { MaintenancePlansPage } from './pages/MaintenancePlansPage';
-import { PurchaseOrdersPage } from './pages/PurchaseOrdersPage';
-import { RCAPage } from './pages/RCAPage';
-import { RequestPortal } from './pages/RequestPortal';
-import { SettingsPage } from './pages/SettingsPage';
-import { CalendarPage } from './pages/CalendarPage';
-import { UserManual } from './pages/UserManual';
-import DailyChecklistsPage from './pages/DailyChecklistsPage';
-import ChecklistFormPage from './pages/ChecklistFormPage';
-import { RosterPage } from './pages/RosterPage';
+
+const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
+const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })));
+const AssetsPage = lazy(() => import('./pages/AssetsPage').then((m) => ({ default: m.AssetsPage })));
+const UsersPage = lazy(() => import('./pages/UsersPage').then((m) => ({ default: m.UsersPage })));
+const KPIPage = lazy(() => import('./pages/KPIPage').then((m) => ({ default: m.KPIPage })));
+const PermissionsPage = lazy(() =>
+  import('./pages/PermissionsPage').then((m) => ({ default: m.PermissionsPage }))
+);
+const ZonesPage = lazy(() => import('./pages/ZonesPage').then((m) => ({ default: m.ZonesPage })));
+const InventoryPage = lazy(() =>
+  import('./pages/InventoryPage').then((m) => ({ default: m.InventoryPage }))
+);
+const MaintenancePlansPage = lazy(() =>
+  import('./pages/MaintenancePlansPage').then((m) => ({ default: m.MaintenancePlansPage }))
+);
+const PurchaseOrdersPage = lazy(() =>
+  import('./pages/PurchaseOrdersPage').then((m) => ({ default: m.PurchaseOrdersPage }))
+);
+const RCAPage = lazy(() => import('./pages/RCAPage').then((m) => ({ default: m.RCAPage })));
+const RequestPortal = lazy(() =>
+  import('./pages/RequestPortal').then((m) => ({ default: m.RequestPortal }))
+);
+const SettingsPage = lazy(() =>
+  import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage }))
+);
+const CalendarPage = lazy(() =>
+  import('./pages/CalendarPage').then((m) => ({ default: m.CalendarPage }))
+);
+const UserManual = lazy(() => import('./pages/UserManual').then((m) => ({ default: m.UserManual })));
+const DailyChecklistsPage = lazy(() => import('./pages/DailyChecklistsPage'));
+const ChecklistFormPage = lazy(() => import('./pages/ChecklistFormPage'));
+const RosterPage = lazy(() => import('./pages/RosterPage').then((m) => ({ default: m.RosterPage })));
+
+function PageFallback() {
+  return (
+    <div className="flex min-h-[40vh] items-center justify-center text-sm font-medium text-slate-500">
+      Cargando…
+    </div>
+  );
+}
 
 function App() {
   useEffect(() => {
@@ -60,6 +83,7 @@ function App() {
     <AuthProvider>
       <ThemeProvider>
         <BrowserRouter>
+          <Suspense fallback={<PageFallback />}>
           <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/request" element={<RequestPortal />} />
@@ -246,6 +270,7 @@ function App() {
 
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
+          </Suspense>
       </BrowserRouter>
       </ThemeProvider>
     </AuthProvider>

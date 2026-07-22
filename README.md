@@ -242,7 +242,7 @@ cd ~/fiix-cmms
 
 Para programar en Windows/Mac/Linux de escritorio:
 
-1. Instala [Node.js 20+](https://nodejs.org/) y [PostgreSQL](https://www.postgresql.org/download/).
+1. Instala [Node.js 22+](https://nodejs.org/) y [PostgreSQL](https://www.postgresql.org/download/).
 2. Clona el repo (mismas opciones SSH o HTTPS+token del §1) e instala paquetes:
    ```bash
    # Ejemplo SSH

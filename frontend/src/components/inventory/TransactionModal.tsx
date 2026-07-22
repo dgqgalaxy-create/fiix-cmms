@@ -57,12 +57,33 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
         setIsSubmitting(false);
         return;
       }
-      
-      await createTransaction({
+
+      // Entradas (IN) requieren conexión; salidas (OUT) pueden encolarse offline.
+      if (formData.type === 'IN' && typeof navigator !== 'undefined' && !navigator.onLine) {
+        setError('Las entradas de inventario requieren conexión. Intenta de nuevo cuando haya señal.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const clientRequestId =
+        formData.type === 'OUT'
+          ? typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `out-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+          : undefined;
+
+      const result = await createTransaction({
         item_id: formData.item_id,
         amount: amountValue,
-        reason: formData.reason
+        reason: formData.reason,
+        ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
       });
+
+      if ((result as { offline?: boolean })?.offline) {
+        alert(
+          'Sin conexión: la salida de inventario se guardó en el dispositivo y se aplicará al recuperar señal.'
+        );
+      }
 
       onSaved();
       onClose();
@@ -70,6 +91,14 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
       setFormData({ item_id: '', amount: '', reason: '', type: hasPermission('REGISTER_INVENTORY_ENTRIES') ? 'IN' : 'OUT' });
       setSearchQuery('');
     } catch (err: any) {
+      if (err?.isOfflineHandled || err?.response?.data?.offline) {
+        alert(
+          'Sin conexión: la salida de inventario se guardó en el dispositivo y se aplicará al recuperar señal.'
+        );
+        onSaved();
+        onClose();
+        return;
+      }
       setError(err.response?.data?.error || 'Error al registrar el movimiento');
     } finally {
       setIsSubmitting(false);

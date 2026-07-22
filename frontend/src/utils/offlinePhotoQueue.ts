@@ -64,6 +64,14 @@ export async function removeOfflinePhotoBlobs(keys: string[]): Promise<void> {
   await Promise.all(keys.map((k) => removeOfflinePhotoBlob(k)));
 }
 
+export async function clearAllOfflinePhotoBlobs(): Promise<number> {
+  const db = await getDB();
+  const all = await db.getAll(STORE_NAME);
+  const count = all.length;
+  await db.clear(STORE_NAME);
+  return count;
+}
+
 /** Marcador en la cola JSON para reconstruir FormData al sincronizar. */
 export type OfflineMultipartBody = {
   __fiixMultipart: true;

@@ -143,9 +143,16 @@ export const OfflineBanner = () => {
   } else if (lastResult && (lastResult.failed > 0 || lastResult.discarded > 0)) {
     tone = 'partial';
     const failedTotal = lastResult.failed + lastResult.discarded;
+    const withPhotos = lastResult.failures.filter((f) =>
+      /foto|multipart|imagen|conflicto \(409\)/i.test(f.reason)
+    ).length;
+    const photoHint =
+      withPhotos > 0
+        ? ` (${withPhotos} con fotos/conflicto — revisa el detalle)`
+        : '';
     label = `${lastResult.synced} sincronizado${lastResult.synced === 1 ? '' : 's'}, ${failedTotal} fallaron${
       briefFailure ? `: ${briefFailure}` : ''
-    }`;
+    }${photoHint}`;
   } else if (pendingCount > 0) {
     tone = 'pending';
     label = `${pendingCount} cambio${pendingCount === 1 ? '' : 's'} pendiente${pendingCount === 1 ? '' : 's'}`;

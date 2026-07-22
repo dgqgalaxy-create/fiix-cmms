@@ -1,4 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { clearAllOfflinePhotoBlobs, isOfflineMultipartBody, removeOfflinePhotoBlobs } from './offlinePhotoQueue';
 
 const DB_NAME = 'fiix-offline-db';
 const STORE_NAME = 'requests-queue';
@@ -81,12 +82,19 @@ export async function setOfflineRequestRetries(id: number, retries: number) {
   await db.put(STORE_NAME, { ...normalize(existing), retries });
 }
 
-/** Vacía toda la cola offline (IndexedDB). */
+/** Vacía toda la cola offline (IndexedDB) y limpia blobs de fotos asociados. */
 export async function clearOfflineQueue(): Promise<number> {
   const db = await getDB();
   const all = await db.getAll(STORE_NAME);
   const count = all.length;
+  for (const entry of all) {
+    if (isOfflineMultipartBody(entry.body)) {
+      await removeOfflinePhotoBlobs(entry.body.files.map((f) => f.blobKey));
+    }
+  }
   await db.clear(STORE_NAME);
+  // Seguridad: limpia cualquier blob huérfano restante.
+  await clearAllOfflinePhotoBlobs();
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('fiix-offline-sync-done'));
   }

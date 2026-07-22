@@ -41,8 +41,20 @@ export default function DailyChecklistsPage() {
   useSocketRefresh('refresh_checklists', () => fetchData(true));
 
   const handleCreateToday = async () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      alert(
+        'Crear el checklist de hoy requiere conexión. Abre o crea el del día mientras haya señal; luego puedes editarlo y enviarlo sin conexión.'
+      );
+      return;
+    }
     try {
       const newChecklist = await createTodayChecklist();
+      if (!newChecklist?.id || (newChecklist as { offline?: boolean }).offline) {
+        alert(
+          'No se pudo crear el checklist sin conexión o el servidor no devolvió un ID. Conéctate e inténtalo de nuevo.'
+        );
+        return;
+      }
       navigate(`/checklists/${newChecklist.id}`);
     } catch (error: any) {
       alert(error.response?.data?.error || 'Error creando checklist');

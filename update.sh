@@ -49,7 +49,7 @@ if [ "$NVM_LOADED" -eq 1 ]; then
   # Activar una versión conocida; no abortar si el alias falta.
   if command -v nvm >/dev/null 2>&1; then
     nvm use default >/dev/null 2>&1 \
-      || nvm use 20 >/dev/null 2>&1 \
+      || nvm use 22 >/dev/null 2>&1 \
       || nvm use --lts >/dev/null 2>&1 \
       || nvm use node >/dev/null 2>&1 \
       || true
@@ -82,7 +82,7 @@ if [ "${#MISSING_CMDS[@]}" -gt 0 ]; then
       echo "    - ${cand} (no existe)" >&2
     fi
   done
-  echo "  Ejecuta install.sh como el mismo usuario del runner, o instala Node 20+ y pm2 en el PATH." >&2
+  echo "  Ejecuta install.sh como el mismo usuario del runner, o instala Node 22+ y pm2 en el PATH." >&2
   exit 1
 fi
 

@@ -67,9 +67,12 @@ export default function ChecklistFormPage() {
     });
     setChecklist({ ...checklist, rows: updatedRows });
 
-    // Save to server
+    // Save to server (o cola offline)
     try {
-      await updateChecklistRow(rowId, { line, status });
+      const result = await updateChecklistRow(rowId, { line, status });
+      if ((result as { offline?: boolean })?.offline && !navigator.onLine) {
+        // Silencioso en celdas; el banner global muestra la cola.
+      }
     } catch (error) {
       console.error('Error updating row', error);
       // Opcional: Revertir si falla
@@ -102,11 +105,23 @@ export default function ChecklistFormPage() {
     
     try {
       setIsSaving(true);
-      await submitChecklist(id);
+      const result = await submitChecklist(id);
+      if ((result as { offline?: boolean })?.offline) {
+        alert(
+          'Sin conexión: el envío del checklist se guardó en el dispositivo y se completará al recuperar señal.'
+        );
+        return;
+      }
       await fetchChecklist(id); // Reload to get updated status and signatures
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error enviando checklist', error);
-      alert('Error al enviar el checklist.');
+      if (error?.isOfflineHandled) {
+        alert(
+          'Sin conexión: el envío del checklist se guardó en el dispositivo y se completará al recuperar señal.'
+        );
+        return;
+      }
+      alert(error?.response?.data?.error || 'Error al enviar el checklist.');
     } finally {
       setIsSaving(false);
     }

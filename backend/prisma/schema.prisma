@@ -299,6 +299,9 @@ model InventoryTransaction {
   work_order_id String?    @db.Uuid
   work_order    WorkOrder? @relation(fields: [work_order_id], references: [id], onDelete: SetNull)
 
+  /// Idempotencia offline: mismo client_request_id no crea dos salidas.
+  client_request_id String? @unique
+
   unit_cost   Float?   // Costo unitario al momento del consumo (para ligar costo a la OT)
   amount      Float    // Positivo para entradas, negativo para salidas
   reason      String   // Texto libre

@@ -9,6 +9,11 @@ import {
   Clock,
   LayoutDashboard,
   RefreshCw,
+  ShieldAlert,
+  Siren,
+  UserX,
+  Volume2,
+  VolumeX,
   Wrench,
   XCircle,
 } from 'lucide-react';
@@ -31,14 +36,35 @@ import { getWorkOrders, getWorkOrdersSummary } from '../api/workOrders';
 import type { WorkOrder } from '../api/workOrders';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import { useAuth } from '../context/AuthContext';
+import { useControlRoomAlerts } from '../hooks/useControlRoomAlerts';
+
+const isOpenWo = (wo: WorkOrder) => wo.status !== 'FINALIZADO' && wo.status !== 'ANULADO';
 
 export const HomePage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [summary, setSummary] = useState<Record<string, number>>({});
   const [summaryStartDate, setSummaryStartDate] = useState('');
   const [summaryEndDate, setSummaryEndDate] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+
+  const isControlRoomRole =
+    user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR';
+
+  const openOrders = workOrders.filter(isOpenWo);
+  const controlCounts = {
+    urgentOpen: openOrders.filter((wo) => wo.priority === 'URGENTE').length,
+    unassigned: openOrders.filter((wo) => !wo.assigned_technicians?.length).length,
+    slaRisk: openOrders.filter((wo) => wo.sla?.overall === 'RISK').length,
+    slaBreached: openOrders.filter((wo) => wo.sla?.overall === 'BREACHED').length,
+  };
+
+  const { soundEnabled, setSoundEnabled } = useControlRoomAlerts(
+    controlCounts,
+    isControlRoomRole
+  );
 
   const fetchDashboard = async (backgroundFetch = false) => {
     try {
@@ -153,6 +179,8 @@ export const HomePage = () => {
   const goToStatus = (status?: string) =>
     navigate(status ? `/dashboard?status=${status}` : '/dashboard');
 
+  const goControlRoom = (query: string) => navigate(`/dashboard?${query}`);
+
   const getCurrentWeekRange = () => {
     const now = new Date();
     const day = now.getDay(); // 0 = Dom, 1 = Lun
@@ -204,14 +232,78 @@ export const HomePage = () => {
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Inicio</h1>
           <p className="text-slate-500 dark:text-slate-300 mt-1">Resumen operativo del mantenimiento.</p>
         </div>
-        <button
-          onClick={() => fetchDashboard()}
-          className="p-2.5 text-slate-500 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors shadow-sm"
-          title="Actualizar"
-        >
-          <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
-        </button>
+        <div className="flex items-center gap-2">
+          {isControlRoomRole && (
+            <button
+              type="button"
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors shadow-sm ${
+                soundEnabled
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                  : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400'
+              }`}
+              title="Sonido al llegar OT críticas"
+            >
+              {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+              Sonido al llegar OT críticas
+            </button>
+          )}
+          <button
+            onClick={() => fetchDashboard()}
+            className="p-2.5 text-slate-500 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors shadow-sm"
+            title="Actualizar"
+          >
+            <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+          </button>
+        </div>
       </div>
+
+      {isControlRoomRole && (
+        <section className="mb-6 rounded-2xl border border-rose-200/80 bg-rose-50/40 p-3 sm:p-4 dark:border-rose-900/50 dark:bg-rose-950/20">
+          <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300">
+            <Siren size={14} />
+            Sala de control · atención inmediata
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <button
+              type="button"
+              onClick={() => goControlRoom('priority=URGENTE')}
+              className="rounded-xl border border-rose-200 bg-white p-3 text-left shadow-sm transition hover:border-rose-400 dark:border-rose-900 dark:bg-slate-900"
+            >
+              <p className="text-[11px] font-semibold uppercase text-rose-600">Urgentes abiertas</p>
+              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{controlCounts.urgentOpen}</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => goControlRoom('unassigned=1')}
+              className="rounded-xl border border-amber-200 bg-white p-3 text-left shadow-sm transition hover:border-amber-400 dark:border-amber-900 dark:bg-slate-900"
+            >
+              <p className="text-[11px] font-semibold uppercase text-amber-700 flex items-center gap-1">
+                <UserX size={12} /> Sin asignar
+              </p>
+              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{controlCounts.unassigned}</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => goControlRoom('sla=RISK')}
+              className="rounded-xl border border-orange-200 bg-white p-3 text-left shadow-sm transition hover:border-orange-400 dark:border-orange-900 dark:bg-slate-900"
+            >
+              <p className="text-[11px] font-semibold uppercase text-orange-700 flex items-center gap-1">
+                <ShieldAlert size={12} /> SLA en riesgo
+              </p>
+              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{controlCounts.slaRisk}</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => goControlRoom('sla=BREACHED')}
+              className="rounded-xl border border-rose-300 bg-white p-3 text-left shadow-sm transition hover:border-rose-500 dark:border-rose-800 dark:bg-slate-900"
+            >
+              <p className="text-[11px] font-semibold uppercase text-rose-800">SLA vencido</p>
+              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{controlCounts.slaBreached}</p>
+            </button>
+          </div>
+        </section>
+      )}
 
       {paretoData.length > 0 && (
         <div className="mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">

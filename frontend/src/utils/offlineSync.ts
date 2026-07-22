@@ -49,7 +49,11 @@ function reasonFromError(error: unknown): { reason: string; status?: number } {
     return { reason: 'sesión expirada o sin permiso (401/403)', status };
   }
   if (status === 409) {
-    return { reason: 'conflicto: otro usuario ya cambió el registro (409)', status };
+    return {
+      reason:
+        'conflicto (409): otro usuario ya cambió el registro; si había fotos offline, no se subieron',
+      status,
+    };
   }
   if (status === 404) {
     return { reason: 'recurso no encontrado (404)', status };

@@ -27,9 +27,33 @@ export const Dashboard = () => {
   
   const [activeTab, setActiveTab] = useState<'ACTIVAS' | 'MIS_ORDENES' | 'HISTORIAL'>('MIS_ORDENES');
 
+  const [dateFilter, setDateFilter] = useState<string>('ALL');
+  const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
+  const [assetFilter, setAssetFilter] = useState<string>('ALL');
+  const [unassignedFilter, setUnassignedFilter] = useState(false);
+  const [slaFilter, setSlaFilter] = useState<string | null>(null);
+
+  const [sortOrder, setSortOrder] = useState<'NEWEST' | 'OLDEST' | 'PRIORITY'>('NEWEST');
+
   useEffect(() => {
     const status = searchParams.get('status');
     const tab = searchParams.get('tab');
+    const priority = searchParams.get('priority');
+    const unassigned = searchParams.get('unassigned');
+    const sla = searchParams.get('sla');
+
+    if (priority === 'URGENTE' || priority === 'NORMAL' || priority === 'BAJO') {
+      setPriorityFilter(priority);
+    } else if (!priority) {
+      // keep local unless clearing via URL without priority — only reset when param absent and was set from URL
+    }
+
+    setUnassignedFilter(unassigned === '1' || unassigned === 'true');
+    if (sla === 'RISK' || sla === 'BREACHED') {
+      setSlaFilter(sla);
+    } else {
+      setSlaFilter(null);
+    }
 
     if (tab === 'mine' || tab === 'MIS_ORDENES') {
       setActiveTab('MIS_ORDENES');
@@ -47,6 +71,11 @@ export const Dashboard = () => {
       return;
     }
 
+    // Deep-links de sala de control: ver activas
+    if (priority || unassigned === '1' || sla === 'RISK' || sla === 'BREACHED') {
+      setActiveTab(hasPermission('VIEW_ALL_WORK_ORDERS') ? 'ACTIVAS' : 'MIS_ORDENES');
+    }
+
     if (status) {
       setStatusFilter(status);
       if (status === 'FINALIZADO' || status === 'ANULADO') {
@@ -57,6 +86,20 @@ export const Dashboard = () => {
     } else {
       // Quitar filtro de estado de la URL sin forzar el tab (p. ej. al cerrar detalle con Atrás)
       setStatusFilter(null);
+    }
+
+    if (priority === 'URGENTE' || priority === 'NORMAL' || priority === 'BAJO') {
+      setPriorityFilter(priority);
+    } else if (!priority) {
+      // Si no viene priority en URL, no pisar el selector manual salvo deep-link limpio
+      if (!status && !tab && !unassigned && !sla) {
+        /* leave priorityFilter as user set */
+      } else if (!priority) {
+        // deep-link sin priority: no forzar ALL si el usuario cambió el select; solo al entrar con unassigned/sla
+        if (unassigned === '1' || sla === 'RISK' || sla === 'BREACHED') {
+          setPriorityFilter('ALL');
+        }
+      }
     }
   }, [searchParams, hasPermission]);
 
@@ -118,12 +161,6 @@ export const Dashboard = () => {
     setSelectedWorkOrder(null);
     clearDeepLinkParams();
   };
-
-  const [dateFilter, setDateFilter] = useState<string>('ALL');
-  const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
-  const [assetFilter, setAssetFilter] = useState<string>('ALL');
-
-  const [sortOrder, setSortOrder] = useState<'NEWEST' | 'OLDEST' | 'PRIORITY'>('NEWEST');
 
   const uniqueAssets = Array.from(new Set(workOrders.map(wo => wo.asset?.name).filter(Boolean))) as string[];
 
@@ -232,6 +269,14 @@ export const Dashboard = () => {
 
     if (priorityFilter !== 'ALL') {
       list = list.filter(wo => wo.priority === priorityFilter);
+    }
+
+    if (unassignedFilter) {
+      list = list.filter(wo => !wo.assigned_technicians?.length);
+    }
+
+    if (slaFilter === 'RISK' || slaFilter === 'BREACHED') {
+      list = list.filter(wo => wo.sla?.overall === slaFilter);
     }
     
     if (assetFilter !== 'ALL') {
@@ -468,7 +513,7 @@ export const Dashboard = () => {
               <option value="PRIORITY">Por prioridad (Urgentes)</option>
             </select>
 
-            {(dateFilter !== 'ALL' || priorityFilter !== 'ALL' || assetFilter !== 'ALL' || searchTerm !== '' || statusFilter !== null) && (
+            {(dateFilter !== 'ALL' || priorityFilter !== 'ALL' || assetFilter !== 'ALL' || searchTerm !== '' || statusFilter !== null || unassignedFilter || slaFilter) && (
               <button 
                 onClick={() => {
                   setDateFilter('ALL');
@@ -476,6 +521,14 @@ export const Dashboard = () => {
                   setAssetFilter('ALL');
                   setSearchTerm('');
                   setStatusFilter(null);
+                  setUnassignedFilter(false);
+                  setSlaFilter(null);
+                  const next = new URLSearchParams(searchParams);
+                  next.delete('status');
+                  next.delete('priority');
+                  next.delete('unassigned');
+                  next.delete('sla');
+                  setSearchParams(next, { replace: true });
                 }}
                 className="px-3 py-2 bg-white text-rose-600 hover:bg-rose-50 hover:text-rose-700 border border-rose-200 rounded-lg text-sm font-medium focus:outline-none shadow-sm transition-colors flex items-center gap-2 ml-auto"
               >

@@ -6,7 +6,7 @@ set -euo pipefail
 
 # Directorio del repo = carpeta donde está este script
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NODE_MAJOR="${NODE_MAJOR:-20}"
+NODE_MAJOR="${NODE_MAJOR:-22}"
 
 echo "=== Instalación FIIX CMMS ==="
 echo "Directorio del proyecto: ${APP_DIR}"

@@ -341,14 +341,34 @@ export const getTransactions = async (req: Request, res: Response): Promise<void
 
 export const createTransaction = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { item_id, amount, reason } = req.body;
+    const { item_id, amount, reason, client_request_id } = req.body;
     const user_id = (req as any).user.userId; // Tomamos el ID del usuario autenticado
 
     const transactionAmount = parseFloat(amount);
+    const requestId =
+      typeof client_request_id === 'string' && client_request_id.trim()
+        ? client_request_id.trim().slice(0, 64)
+        : null;
 
     if (!item_id || isNaN(transactionAmount) || !reason) {
       res.status(400).json({ error: 'Faltan campos requeridos (item_id, amount, reason)' });
       return;
+    }
+
+    // Idempotencia offline: si ya se aplicó esta salida, devolver la misma tx.
+    if (requestId) {
+      const existing = await prisma.inventoryTransaction.findUnique({
+        where: { client_request_id: requestId },
+      });
+      if (existing) {
+        const item = await prisma.item.findUnique({ where: { id: existing.item_id } });
+        res.status(200).json({
+          transaction: existing,
+          stock_actual: item?.stock ?? 0,
+          idempotent: true,
+        });
+        return;
+      }
     }
 
     // Usamos una transacción de Prisma para asegurar que el stock se descuente o sume de manera segura
@@ -367,7 +387,8 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
           item_id,
           user_id,
           amount: transactionAmount,
-          reason
+          reason,
+          ...(requestId ? { client_request_id: requestId } : {}),
         }
       });
 
@@ -390,6 +411,25 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
     if (error.message === 'INSUFFICIENT_STOCK') {
       res.status(400).json({ error: 'Inventario insuficiente. No es posible retirar una cantidad mayor a las existencias actuales.' });
       return;
+    }
+    // Carrera: dos syncs con el mismo client_request_id
+    if (error?.code === 'P2002' && error?.meta?.target?.includes?.('client_request_id')) {
+      const requestId =
+        typeof req.body?.client_request_id === 'string' ? req.body.client_request_id.trim() : null;
+      if (requestId) {
+        const existing = await prisma.inventoryTransaction.findUnique({
+          where: { client_request_id: requestId },
+        });
+        if (existing) {
+          const item = await prisma.item.findUnique({ where: { id: existing.item_id } });
+          res.status(200).json({
+            transaction: existing,
+            stock_actual: item?.stock ?? 0,
+            idempotent: true,
+          });
+          return;
+        }
+      }
     }
     res.status(500).json({ error: 'Error al registrar transacción de inventario' });
   }

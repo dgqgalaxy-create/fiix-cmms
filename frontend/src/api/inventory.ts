@@ -160,7 +160,17 @@ export const getTransactions = async () => {
   return response.data;
 };
 
-export const createTransaction = async (data: { item_id: string; amount: number; reason: string }) => {
-  const response = await axiosInstance.post<{ transaction: InventoryTransaction; stock_actual: number }>('/inventory/transactions', data);
+export const createTransaction = async (data: {
+  item_id: string;
+  amount: number;
+  reason: string;
+  client_request_id?: string;
+}) => {
+  const response = await axiosInstance.post<{
+    transaction: InventoryTransaction;
+    stock_actual: number;
+    offline?: boolean;
+    idempotent?: boolean;
+  }>('/inventory/transactions', data);
   return response.data;
 };

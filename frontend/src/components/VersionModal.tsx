@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.31.0";
+export const APP_VERSION = "1.32.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "21 de Julio, 2026";
+  const updateDate = "22 de Julio, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -28,6 +28,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Sala de control en Inicio (admin/gestionador): tarjetas de Urgentes, Sin asignar, SLA en riesgo y SLA vencido; abren Órdenes filtradas. Badge en la pestaña del navegador y sonido opcional al subir el conteo crítico.",
+    "Nuevo: Offline ampliado — puedes editar/enviar el checklist diario y registrar salidas de inventario (OUT) sin señal; las entradas (IN) siguen requiriendo conexión. Las salidas usan una clave anti-doble descuento al sincronizar.",
+    "Mejora: Al descartar la cola offline también se limpian las fotos guardadas en el dispositivo; avisos más claros si un sync falla por conflicto (409) con fotos.",
+    "Mejora: La app carga pantallas bajo demanda (code-splitting) para arrancar más rápido en celular/Tailscale.",
+    "Cambio: Node.js recomendado 22+ (install.sh / update.sh / .nvmrc).",
     "Nuevo: En Opciones de Desarrollador puedes asignar solo fotos de OT (zip + CSV Solicitudes) sin reimportar los 7 CSV.",
     "Mejora: update.sh pregunta si quieres actualizar la conf nginx (body 500M) para no olvidar el 413 al subir zips; también UPDATE_NGINX=1.",
     "Mejora: El listado de Órdenes carga más rápido (~750 OT): ya no trae firmas base64 ni árboles RCA; el detalle sigue pidiendo esos datos al abrir.",
