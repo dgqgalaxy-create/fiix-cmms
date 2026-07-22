@@ -45,15 +45,20 @@ const uploadImport = multer({
 });
 
 function uploadImportFields(req: Request, res: Response, next: express.NextFunction): void {
-  uploadImport.fields([
-    { name: 'csvFiles', maxCount: 20 },
-    { name: 'itemImagesZip', maxCount: 1 },
-    { name: 'workOrderImagesZip', maxCount: 1 },
-  ])(req, res, (err: unknown) => {
+  // .any() evita "Unexpected field" si el cliente envía zips nuevos (p. ej. workOrderImagesZip)
+  // y el proceso aún no listaba ese nombre en .fields().
+  uploadImport.any()(req, res, (err: unknown) => {
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {
         res.status(413).json({
           message: `El archivo es demasiado grande (máximo ${Math.round(IMPORT_MAX_FILE_BYTES / (1024 * 1024))} MB para el zip de fotos).`,
+        });
+        return;
+      }
+      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        res.status(400).json({
+          message:
+            'El servidor rechazó un archivo inesperado. Actualiza a v1.30.5+ (git pull / update.sh) e inténtalo de nuevo.',
         });
         return;
       }
@@ -65,6 +70,14 @@ function uploadImportFields(req: Request, res: Response, next: express.NextFunct
       res.status(400).json({ message });
       return;
     }
+
+    const list = (Array.isArray(req.files) ? req.files : []) as Express.Multer.File[];
+    const byField: { [fieldname: string]: Express.Multer.File[] } = {};
+    for (const file of list) {
+      if (!byField[file.fieldname]) byField[file.fieldname] = [];
+      byField[file.fieldname].push(file);
+    }
+    req.files = byField;
     next();
   });
 }

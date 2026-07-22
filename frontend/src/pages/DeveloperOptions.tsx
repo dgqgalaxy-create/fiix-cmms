@@ -437,6 +437,9 @@ export const DeveloperOptions = () => {
         } else if (!err.response && /network error/i.test(err.message)) {
           detail =
             'Network Error al subir el zip (nginx/proxy o Tailscale cortó el body grande). Revisa client_max_body_size o usa http://HOST:3000.';
+        } else if (typeof serverMsg === 'string' && /unexpected field/i.test(serverMsg)) {
+          detail =
+            'El servidor aún no acepta el zip de órdenes (versión antigua). Espera a que el Action deje v1.30.6 en verde, recarga la página (Cmd+Shift+R) e inténtalo de nuevo.';
         } else {
           detail = serverMsg || err.message;
         }

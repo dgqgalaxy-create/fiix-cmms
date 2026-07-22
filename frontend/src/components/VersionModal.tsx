@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.30.5";
+export const APP_VERSION = "1.30.6";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Importar CSV + zip de fotos de órdenes ya no falla con «Unexpected field»; el servidor acepta los campos de zip de forma flexible.",
     "Nuevo: Al importar CSV puedes adjuntar también el zip Formulario Solicitudes_Images.zip; se asignan FOTO ANTES / FOTO DESPUÉS a cada OT por FOLIO (las firmas se ignoran).",
     "Nuevo: En el detalle de un repuesto puedes pasar al anterior/siguiente de la lista filtrada con las flechas ← → del teclado (o los botones del encabezado).",
     "Corrección: El auto-deploy en Ubuntu ya no falla cuando npm ensucia package-lock.json: el workflow hace git restore antes del pull y update.sh usa npm ci.",
