@@ -53,6 +53,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { formatWorkOrderFolio } from '../utils/folio';
+import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
 
 type MetricStatus = 'good' | 'warn' | 'bad' | 'neutral';
 
@@ -255,6 +256,63 @@ export const KPIPage = () => {
     return `${start} — ${end}`;
   };
 
+  const handleExportExcel = () => {
+    if (!data) {
+      alert('No hay datos de KPIs para exportar. Espera a que cargue el periodo.');
+      return;
+    }
+    const periodLabel = formatPeriodLabel();
+    const resumenRows = Object.entries(data.metrics).map(([key, metric]) => {
+      const meta = GOAL_LABELS[key];
+      return {
+        Indicador: meta?.label || key,
+        Valor: metric.isNull ? '' : metric.value,
+        Meta: metric.goal.targetValue,
+        Unidad: meta?.unit || metric.goal.unit || '',
+        Muestra: metric.sampleSize ?? '',
+        Periodo: periodLabel,
+        'OT relevantes': data.totalOrders,
+      };
+    });
+    const ordenesRows = topFailingAssets.map((a) => ({
+      Equipo: a.assetName,
+      Fallas: a.count,
+      Periodo: periodLabel,
+    }));
+    const costosRows = assetCosts.map((a) => ({
+      Equipo: a.assetName,
+      'Costo total': a.totalCost,
+      Periodo: periodLabel,
+    }));
+    const tecnicosRows = techPerformance.map((t) => ({
+      Técnico: t.name,
+      Finalizadas: t.Finalizadas,
+      'En proceso': t.EnProceso,
+      Pendientes: t.Pendientes,
+      Pausadas: t.Pausadas,
+      Total: t.Total,
+      'Carga hoy': t.CargaHoy,
+      'Tiempo espera (h)': t.TiempoEsperaHoras,
+      'Finalizadas semana': t.FinalizadasSemana,
+      'Horas labor semana': t.HorasLaborSemana,
+    }));
+    const chartsRows = charts.map((c) => ({
+      Mes: c.month,
+      Costos: c.costos,
+      MTTR: c.mttr,
+      MTBF: c.mtbf,
+      'Muestra MTBF': c.mtbfSample ?? '',
+    }));
+
+    downloadWorkbook(`kpis_${excelDateStamp()}.xlsx`, [
+      { name: 'Resumen', rows: resumenRows },
+      { name: 'Top fallas', rows: ordenesRows },
+      { name: 'Costos por equipo', rows: costosRows },
+      { name: 'Tecnicos', rows: tecnicosRows },
+      { name: 'Tendencia', rows: chartsRows },
+    ]);
+  };
+
   const techDashSummary = {
     cargaHoy: techPerformance.reduce((s, r) => s + (r.CargaHoy ?? 0), 0),
     pausadas: techPerformance.reduce((s, r) => s + (r.Pausadas ?? 0), 0),
@@ -375,11 +433,21 @@ export const KPIPage = () => {
           </button>
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={handleExportExcel}
             className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700"
+            title="Exportar periodo a Excel (.xlsx)"
           >
             <Download size={16} />
-            Exportar
+            Excel
+          </button>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800"
+            title="Imprimir / PDF"
+          >
+            <Download size={16} />
+            Imprimir
           </button>
           {hasPermission('MANAGE_KPIS') && (
             <button

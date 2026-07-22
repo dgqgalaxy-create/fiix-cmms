@@ -1,9 +1,29 @@
 # FIIX CMMS
-*(Última actualización: 21 de Julio de 2026 — v1.29.0)*
+*(Última actualización: 22 de Julio de 2026 — v1.33.1)*
 
 Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, activos, inventario, preventivos, checklist, KPIs, compras, RCA, roster y notificaciones (Telegram).
 
-**Stack:** PostgreSQL · Prisma · Node.js/Express · React/Vite · Tailwind v4 · Socket.IO · PM2 (servidor)
+**Stack:** PostgreSQL · Prisma · Node.js 22+ / Express · React/Vite · Tailwind v4 · Socket.IO · PM2 (servidor)
+
+---
+
+## Servidor nuevo (checklist rápido)
+
+En un Ubuntu limpio, el flujo completo es:
+
+| # | Qué | Comando / detalle |
+|---|---|---|
+| 1 | Git | `sudo apt update && sudo apt install -y git` |
+| 2 | Clonar (SSH recomendado) | §1 abajo → `git clone … ~/fiix-cmms` |
+| 3 | Instalar | `cd ~/fiix-cmms && chmod +x install.sh update.sh && ./install.sh` |
+| 4 | Abrir | `http://IP:3000` (o `http://IP/` si activaste nginx) |
+| 5 | Actualizar después | `cd ~/fiix-cmms && ./update.sh` (o push a `main` con Actions self-hosted) |
+
+**Recomendado en `install.sh` (defaults actuales):** **S** a PM2 al reiniciar y **S** a nginx + healthcheck. Telegram y ufw siguen opcionales (**N** por defecto).
+
+**Qué se conserva en cada update:** `backend/.env`, `backend/uploads/` y la base de datos (Prisma solo ajusta el schema; no vacía datos).
+
+**Producción:** un solo proceso PM2 `fiix-backend` → `node dist/index.js` en **:3000** (API + SPA). Sin nodemon. nginx opcional en **:80**.
 
 ---
 
@@ -163,10 +183,10 @@ chmod +x install.sh update.sh
 **Opcionales al final (todas aceptan N = omitir)**
 | Pregunta | Si dices **S** | Si dices **N** |
 |---|---|---|
-| ¿Registrar PM2 al reiniciar? (sudo) | Ejecuta el comando `pm2 startup` con sudo para que FIIX vuelva tras un reboot. | Lo haces después a mano con `pm2 startup`. |
+| ¿Registrar PM2 al reiniciar? (sudo) **[S por defecto]** | Ejecuta `pm2 startup` con sudo para que FIIX vuelva tras un reboot. | Lo haces después a mano con `pm2 startup`. |
 | ¿Configurar/activar **ufw**? | Abre SSH (22), el puerto **80** (nginx) y el **3000** (UI + API) y activa el firewall. Pide **segunda confirmación** (riesgo de cortar acceso si SSH falla). | Sin firewall del script; útil si solo usarás Tailscale. |
 | ¿Telegram en `.env` ahora? | Pides Bot Token y Chat ID; los escribe en `backend/.env` y reinicia el backend. | Lo configuras luego en la app o en `.env`. |
-| ¿Instalar **healthcheck cron + nginx**? | Instala/configura nginx (`deploy/nginx-fiix.conf` → `:80` → Express `:3000`, WebSocket/Socket.IO) y un cron cada 5 min (`scripts/healthcheck.sh`) que avisa por Telegram si la API o Postgres caen. | Puedes activarlo después a mano (sección siguiente). |
+| ¿Instalar **nginx + healthcheck**? **[S por defecto]** | nginx (`deploy/nginx-fiix.conf` → `:80` → Express `:3000`) y cron cada 5 min (`scripts/healthcheck.sh`) con alertas Telegram. | Puedes activarlo después a mano (sección siguiente). |
 | ¿Instalar **Tailscale**? | Instala el cliente. Si pegas un *auth key*, hace `tailscale up` solo; si no, te indica `sudo tailscale up`. MagicDNS/HTTPS se activan en la consola web de Tailscale. | Lo instalas cuando quieras. |
 
 | Al terminar | Dirección |
@@ -221,20 +241,38 @@ cd ~/fiix-cmms
 ./update.sh
 ```
 
-`update.sh` intenta cargar nvm (`$NVM_DIR`, `~/.nvm`, `/home/usuario/.nvm`) o usa `node`/`npm`/`pm2` ya presentes en el PATH; valida `.env`/repo, ejecuta `git restore .` (descarta cambios locales en archivos del repo), luego `git pull --ff-only`, `npm ci`, `prisma db push`, compila el frontend (`npm run build:app` → `frontend/dist`), reinicia PM2 (`fiix-backend`) y comprueba que `:3000` responda tanto `/api/health` como `/` (SPA). **No modifica** `backend/.env` ni `backend/uploads/`. Al final pregunta (si hay TTY) si actualizar **nginx**; responde `s` o usa `UPDATE_NGINX=1` para aplicar `deploy/nginx-fiix.conf` (body 500M). No edites código en el servidor: se pierde en el próximo update.
+`update.sh` (modo silencioso / CI-friendly):
 
-**GitHub Actions (self-hosted):** el runner debe ser el mismo usuario que tiene Node/nvm (p. ej. `~/.nvm`). El workflow hace `git restore .`, luego `git pull --ff-only` y `./update.sh` (así no falla si `npm` dejó ensuciados los `package-lock.json`). Si un deploy falló antes de este arreglo, en el servidor ejecuta una vez a mano: `cd ~/fiix-cmms && git restore . && git pull --ff-only && ./update.sh`.
+1. Carga nvm (Node **22**) o usa `node`/`npm`/`pm2` del PATH.
+2. `git restore .` + `git pull --ff-only` + `chmod +x` de scripts.
+3. Backend: `npm ci --include=dev` → `prisma generate` → `db push --accept-data-loss` → `npm run build` (exige `dist/index.js`).
+4. Frontend: `npm ci` → `npm run build:app` (exige `frontend/dist/index.html`).
+5. PM2: borra y crea `fiix-backend` con **`node dist/index.js`** (`--cwd` backend). Quita `fiix-frontend` legado.
+6. Smoke test con reintentos: `GET /api/health` y `/` en `:3000`.
+
+**No toca** `backend/.env` ni `backend/uploads/`. Al final (solo con TTY) pregunta si actualizar **nginx**; en CI usa `UPDATE_NGINX=1 ./update.sh` si hace falta. No edites código en el servidor: se pierde en el próximo update.
+
+**GitHub Actions (self-hosted):** mismo usuario que tiene nvm. El workflow hace `git restore .`, `git pull --ff-only` y `bash ./update.sh`. Si un deploy quedó a medias: `cd ~/fiix-cmms && git restore . && git pull --ff-only && bash ./update.sh`.
 
 | | `install.sh` (primera vez) | `update.sh` (después) |
 |---|---|---|
 | `git clone` / SSH | **No** (ya debiste clonar en §1) | No |
 | `git pull` | No | Sí |
-| Node, PostgreSQL, PM2 | Instala / configura | No |
-| Crear BD y `.env` | Sí (interactivo) | No (exige `.env` existente) |
-| Código + dependencias + Prisma | `npm` + Prisma sobre el código local | Sí (`pull` + `npm` + Prisma) |
-| Build frontend (`frontend/dist`) | Sí (`npm run build:app`) | Sí (`npm run build:app`) |
+| Node, PostgreSQL, PM2 | Instala / configura | No (usa lo instalado) |
+| Crear BD y `.env` | Sí (interactivo) | No (exige `.env`) |
+| Código + deps + Prisma | `npm` + build backend/frontend | `pull` + `npm ci` + Prisma + builds |
 | Seed admin | Opcional | No |
-| PM2 | Arranca solo `fiix-backend` (sirve UI + API en :3000) | Reinicia `fiix-backend`; retira `fiix-frontend` si existía de una instalación anterior |
+| PM2 | `node dist/index.js` → UI+API :3000 | Igual; retira `fiix-frontend` legado |
+
+### Si algo falla (502 / Permission denied / health)
+
+| Síntoma | Qué hacer |
+|---|---|
+| nginx **502** | `pm2 status` y `pm2 logs fiix-backend --lines 80`. Suele ser proceso caído. Corre `bash ./update.sh` (arranca `node dist/index.js`, no nodemon). |
+| `nodemon: not found` | Instalación antigua con `npm run dev`. Recrea con update.sh o: `pm2 delete fiix-backend && pm2 start ~/fiix-cmms/backend/dist/index.js --name fiix-backend --cwd ~/fiix-cmms/backend && pm2 save` |
+| `Permission denied: ./update.sh` | `chmod +x update.sh` o usa `bash ./update.sh` |
+| `Cannot find module …/dist/index.js` | Build incompleto; `cd backend && npm run build` y reinicia PM2 |
+| Healthcheck rojo tras update | Espera ~30 s (el script reintenta); si sigue: logs de PM2 y `curl -i http://127.0.0.1:3000/api/health` |
 
 ---
 

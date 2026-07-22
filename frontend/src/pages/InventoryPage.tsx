@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, type MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X } from 'lucide-react';
+import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download } from 'lucide-react';
 import { 
   getItems, getTransactions, getCategories, getLocations, getVendors
 } from '../api/inventory';
@@ -17,6 +17,7 @@ import { QRScannerModal } from '../components/common/QRScannerModal';
 import { BulkQRPrintModal } from '../components/common/BulkQRPrintModal';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { parseFiixQr } from '../utils/fiixQr';
+import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
 
 export const InventoryPage = () => {
   const navigate = useNavigate();
@@ -329,6 +330,22 @@ export const InventoryPage = () => {
   const clearStockFilters = () => {
     setShowLowStockOnly(false);
     setShowNoVendorOnly(false);
+  };
+
+  const handleExportItemsExcel = () => {
+    const rows = filteredItems.map((i) => ({
+      Código: i.internal_code || '',
+      Nombre: i.name || '',
+      Categoría: i.category?.name || '',
+      Ubicación: i.location?.name || '',
+      Proveedor: i.vendor?.name || '',
+      Stock: i.stock,
+      Mínimo: i.minimum_inventory,
+      UOM: i.uom || '',
+      'Costo compra': i.purchase_cost ?? '',
+      Activo: i.is_active ? 'Sí' : 'No',
+    }));
+    downloadWorkbook(`inventario_${excelDateStamp()}.xlsx`, [{ name: 'Repuestos', rows }]);
   };
 
   const paginatedItems = useMemo(() => {
@@ -1183,12 +1200,22 @@ export const InventoryPage = () => {
             </button>
           )}
           {activeTab === 'items' && (
-            <button 
-              onClick={() => handleOpenTransactionModal()}
-              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors w-full md:w-auto shadow-sm shadow-blue-600/20"
-            >
-              <ArrowRightLeft size={18} /> Registrar Movimiento
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={handleExportItemsExcel}
+                className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 px-5 py-2.5 rounded-xl font-medium transition-colors w-full md:w-auto shadow-sm"
+                title="Exportar repuestos filtrados a Excel"
+              >
+                <Download size={18} /> Excel
+              </button>
+              <button 
+                onClick={() => handleOpenTransactionModal()}
+                className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors w-full md:w-auto shadow-sm shadow-blue-600/20"
+              >
+                <ArrowRightLeft size={18} /> Registrar Movimiento
+              </button>
+            </>
           )}
           {(activeTab === 'categories' || activeTab === 'locations' || activeTab === 'vendors') && canManage && (
             <button 

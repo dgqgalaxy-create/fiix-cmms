@@ -10,6 +10,7 @@ import type { WorkOrder } from '../api/workOrders';
 import { useSearchParams } from 'react-router-dom';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
 
 export const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -187,6 +188,21 @@ export const Dashboard = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleExportExcel = () => {
+    const list = getFilteredWorkOrders();
+    const rows = list.map((wo) => ({
+      Folio: formatWorkOrderFolio(wo.folio),
+      Título: wo.title || '',
+      Equipo: wo.asset?.name || '',
+      Zona: wo.zone?.name || '',
+      Prioridad: wo.priority || '',
+      Estado: wo.status || '',
+      Técnicos: wo.assigned_technicians?.map((t) => t.name).join(', ') || '',
+      'Fecha creación': new Date(wo.created_at).toLocaleString('es-MX'),
+    }));
+    downloadWorkbook(`ordenes_${excelDateStamp()}.xlsx`, [{ name: 'Ordenes', rows }]);
   };
 
   const handleExportPDF = () => {
@@ -448,8 +464,16 @@ export const Dashboard = () => {
               </div>
               <div className="flex gap-2">
                 <button
+                  onClick={handleExportExcel}
+                  title="Exportar a Excel (.xlsx)"
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50 transition-colors shadow-sm text-sm font-medium"
+                >
+                  <Download size={16} />
+                  Excel
+                </button>
+                <button
                   onClick={handleExportCSV}
-                  title="Exportar a Excel (CSV)"
+                  title="Exportar a CSV"
                   className="flex items-center justify-center gap-2 px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50 transition-colors shadow-sm text-sm font-medium"
                 >
                   <Download size={16} />

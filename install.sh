@@ -87,10 +87,12 @@ echo ">>> [2/8] Node.js ${NODE_MAJOR} (nvm)..."
 if [ ! -s "${HOME}/.nvm/nvm.sh" ]; then
   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
 fi
-load_nvm
+load_nvm || die "nvm no se pudo cargar tras la instalación. Reabre la sesión SSH y vuelve a correr ./install.sh"
 nvm install "$NODE_MAJOR"
 nvm use "$NODE_MAJOR"
+nvm alias default "$NODE_MAJOR" >/dev/null 2>&1 || true
 npm install -g pm2
+echo "  [OK] Node $(node -v) · npm $(npm -v) · pm2 $(pm2 -v 2>/dev/null || echo '?')"
 
 # --- 3. Credenciales ---
 echo
@@ -135,10 +137,15 @@ EOF
 fi
 
 cd "${APP_DIR}/backend"
+unset NODE_ENV || true
 npm install --include=dev
 npx prisma generate
 npx prisma db push --accept-data-loss
+echo "  --> Compilando backend (dist/)..."
 npm run build
+if [ ! -f "${APP_DIR}/backend/dist/index.js" ]; then
+  die "No existe backend/dist/index.js tras tsc. Revisa tsconfig (rootDir=src)."
+fi
 
 SEED_NOW="$(ask "¿Cargar datos iniciales (admin@fiix.com / password123)? [s/N]" "N")"
 if [[ "${SEED_NOW}" =~ ^[sS]$ ]]; then
@@ -146,9 +153,13 @@ if [[ "${SEED_NOW}" =~ ^[sS]$ ]]; then
 fi
 
 cd "${APP_DIR}/frontend"
+unset NODE_ENV || true
 npm install
-echo "Compilando frontend (frontend/dist)..."
+echo "  --> Compilando frontend (frontend/dist)..."
 npm run build:app
+if [ ! -f "${APP_DIR}/frontend/dist/index.html" ]; then
+  die "No existe frontend/dist/index.html tras el build."
+fi
 
 # --- 6. PM2 (un solo proceso: el backend sirve la API y el frontend ya compilado) ---
 echo ">>> [6/8] Servicio PM2 (fiix-backend)..."
@@ -156,18 +167,21 @@ load_nvm
 cd "${APP_DIR}/backend"
 pm2 delete fiix-backend >/dev/null 2>&1 || true
 pm2 delete fiix-frontend >/dev/null 2>&1 || true
-pm2 start npm --name fiix-backend --cwd "${APP_DIR}/backend" -- run start
+# Arranque directo con node (sin npm/nodemon): estable en producción.
+pm2 start "${APP_DIR}/backend/dist/index.js" \
+  --name fiix-backend \
+  --cwd "${APP_DIR}/backend"
 
 pm2 save
-echo "  [OK] En producción, backend (puerto ${PORT:-3000}) sirve la API y la interfaz (frontend/dist)."
-echo "  Para desarrollar con recarga en caliente: cd frontend && npm run dev -- --host 0.0.0.0 --port 5173"
+echo "  [OK] Producción: Express en :${PORT:-3000} sirve API + UI (frontend/dist)."
+echo "  Desarrollo con recarga: cd frontend && npm run dev -- --host 0.0.0.0 --port 5173"
 
 # --- 7. Opcionales (preguntas) ---
 echo
 echo ">>> [7/8] Configuración opcional (puedes responder N y hacerlo después)..."
 
 # 7a. PM2 al reiniciar
-DO_PM2_STARTUP="$(ask "¿Registrar PM2 para que FIIX arranque al reiniciar el PC? (requiere sudo) [s/N]" "N")"
+DO_PM2_STARTUP="$(ask "¿Registrar PM2 para que FIIX arranque al reiniciar el PC? (requiere sudo) [S/n]" "S")"
 if [[ "${DO_PM2_STARTUP}" =~ ^[sS]$ ]]; then
   load_nvm
   STARTUP_LINE="$(pm2 startup systemd -u "${USER}" --hp "${HOME}" 2>/dev/null | grep -E '^sudo ' | tail -n 1 || true)"
@@ -249,8 +263,8 @@ fi
 echo
 echo "  Acceso sin :3000 (nginx → Express) y vigilancia Telegram si PM2/Postgres caen."
 echo "  Requiere Telegram configurado (pregunta anterior o Opciones de Desarrollador) para las alertas."
-DO_NGINX_HEALTH="$(ask "¿Instalar healthcheck cron + nginx? [s/N]" "N")"
-if [[ "${DO_NGINX_HEALTH}" =~ ^[sS]$ ]]; then
+DO_NGINX_HEALTH="$(ask "¿Instalar nginx (:80) + healthcheck cron? Recomendado en servidor de planta [S/n]" "S")"
+if [[ "${DO_NGINX_HEALTH}" =~ ^[sS]$ ]] || [[ -z "${DO_NGINX_HEALTH}" ]]; then
   # --- nginx ---
   echo "  --> nginx..."
   if ! need_cmd nginx; then
@@ -316,14 +330,53 @@ else
   echo "  Omitido. Guía: https://tailscale.com/download/linux"
 fi
 
-# --- 8. Resumen ---
+# --- 8. Smoke test + resumen ---
+echo
+echo ">>> [8/8] Comprobación y resumen..."
+chmod +x \
+  "${APP_DIR}/update.sh" \
+  "${APP_DIR}/install.sh" \
+  "${APP_DIR}/scripts/backup.sh" \
+  "${APP_DIR}/scripts/restore.sh" \
+  "${APP_DIR}/scripts/healthcheck.sh" \
+  2>/dev/null || true
+
+http_code() {
+  local code
+  code="$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 "$1" 2>/dev/null || true)"
+  if [ -z "$code" ] || [[ "$code" == 000* ]]; then
+    echo "000"
+  else
+    echo "$code"
+  fi
+}
+
+if need_cmd curl; then
+  HEALTH_OK=0
+  for i in $(seq 1 15); do
+    CODE="$(http_code 'http://127.0.0.1:3000/api/health')"
+    if [[ "$CODE" =~ ^[23][0-9][0-9]$ ]]; then
+      echo "  [OK] API /api/health → HTTP ${CODE}"
+      HEALTH_OK=1
+      break
+    fi
+    sleep 2
+  done
+  if [ "$HEALTH_OK" -ne 1 ]; then
+    echo "  [AVISO] /api/health no respondió a tiempo. Revisa: pm2 logs fiix-backend --lines 80"
+  fi
+else
+  echo "  [AVISO] curl no está instalado; se omite el smoke test."
+fi
+
 IP_LAN="$(hostname -I 2>/dev/null | awk '{print $1}')"
 echo
-echo "=== [8/8] Instalación completada ==="
+echo "=== Instalación completada ==="
 echo "UI + API (Express/PM2): http://${IP_LAN:-IP}:3000"
 echo "Con nginx (si lo activaste): http://${IP_LAN:-IP}/  o  http://lpet-cmms/"
 echo "Login seed (si lo corriste): admin@fiix.com / password123  → cámbialo"
 echo
-echo "Actualizaciones futuras (NO vuelve a pedir .env; no toca nginx):"
+echo "Actualizaciones futuras (conserva .env y uploads/; no vacía la BD):"
 echo "  cd ${APP_DIR} && ./update.sh"
+echo "Si algo falla: pm2 logs fiix-backend --lines 80"
 echo "=== Listo ==="

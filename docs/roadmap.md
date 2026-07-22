@@ -1,9 +1,16 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
-*(Última actualización: 21 de Julio de 2026)*
+*(Última actualización: 22 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.32.0 (Actualización: 22 de Julio de 2026)
+## 🚀 Versión Actual: v1.33.1 (Actualización: 22 de Julio de 2026)
+
+### Novedades en v1.33.1 (deploy endurecido)
+- **Mejora:** `install.sh` / `update.sh` listos para servidor nuevo: PM2 con `node dist/index.js`, Node 22 default, smoke test con reintentos, `chmod +x` tras pull, defaults **S** para PM2 startup y nginx+healthcheck.
+- **Docs:** README con checklist «servidor nuevo» y tabla de fallos (502 / nodemon / Permission denied).
+
+### Novedades en v1.33.0 (export Excel nativo)
+- **Nuevo:** Exportación `.xlsx` en Órdenes (lista filtrada), Inventario/Repuestos (filtrados) y KPIs (multi-hoja: resumen, top fallas, costos, técnicos, tendencia). CSV e impresión se conservan.
 
 ### Novedades en v1.32.0 (offline ampliado, sala de control, Node 22)
 - **Nuevo:** Offline: checklist (editar/enviar) + salidas de inventario OUT con `client_request_id` idempotente; endurecimiento de sync de fotos (limpia blobs al descartar).
@@ -327,7 +334,7 @@ Este documento contiene la lista de módulos y características pendientes de de
 ## [x] Módulo 8: Analíticas y Reportes Gráficos (Dashboard Avanzado)
 - [x] Gráficas de Tiempo Medio de Reparación (MTTR) y Tiempo Medio Entre Fallas (MTBF).
 - [x] Reportes de Costos de Mantenimiento desglosados por Máquina y por Fecha.
-- [x] Exportación / impresión de reportes (CSV en órdenes, PDF de OT, impresión desde KPIs). *(Excel nativo: no implementado.)*
+- [x] Exportación / impresión de reportes (CSV en órdenes, PDF de OT, impresión desde KPIs, **Excel nativo .xlsx** en Órdenes / Inventario / KPIs — v1.33.0).
 
 ## [x] Módulo 9: Sistema Integral de Órdenes de Compra (POs)
 - [x] Convertir la actual "Lista de compras .txt" en Órdenes de Compra digitales reales guardadas en la base de datos.

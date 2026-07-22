@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.32.3";
+export const APP_VERSION = "1.33.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,8 +28,10 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: install.sh / update.sh listos para servidor nuevo sin fallos típicos de 502: arranque PM2 con node dist/index.js, Node 22 por defecto, smoke test con reintentos, chmod de scripts tras pull, defaults S para PM2 startup y nginx+healthcheck. README con checklist de despliegue y tabla de fallos.",
+    "Nuevo: Exportación nativa a Excel (.xlsx) — Órdenes (lista filtrada), Inventario/Repuestos (filtrados) y KPIs (libro multi-hoja del periodo). Se mantiene CSV e impresión donde ya existían.",
     "Corrección crítica: tsc genera dist/index.js (rootDir=src); el start de PM2 ya no busca un archivo inexistente y deja de fallar el healthcheck en :3000. update.sh vuelve a marcarse ejecutable tras git restore.",
-    "Corrección crítica: en Ubuntu/PM2 el backend ya no usa nodemon (fallaba con «nodemon: not found» y dejaba 502). Arranca con npm run start (dist/) y update.sh recrea el proceso con cwd correcto.",
+    "Corrección crítica: en Ubuntu/PM2 el backend ya no usa nodemon (fallaba con «nodemon: not found» y dejaba 502). Arranca con node dist/index.js y update.sh recrea el proceso con cwd correcto.",
     "Corrección: update.sh aplica prisma db push con --accept-data-loss para no abortar el deploy (p. ej. unique client_request_id) y dejar nginx en 502.",
     "Nuevo: Sala de control en Inicio (admin/gestionador): tarjetas de Urgentes, Sin asignar, SLA en riesgo y SLA vencido; abren Órdenes filtradas. Badge en la pestaña del navegador y sonido opcional al subir el conteo crítico.",
     "Nuevo: Offline ampliado — puedes editar/enviar el checklist diario y registrar salidas de inventario (OUT) sin señal; las entradas (IN) siguen requiriendo conexión. Las salidas usan una clave anti-doble descuento al sincronizar.",

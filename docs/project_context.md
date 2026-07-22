@@ -24,7 +24,7 @@ Un Sistema Computarizado de Gestión de Mantenimiento (CMMS / GMAO) self-hosted 
 13. **Manual de Usuario:** Integrado en la app + `docs/manual_usuario.md` de referencia.
 14. **SLA y notificaciones:** Umbrales por prioridad; Telegram + in-app; campana.
 15. **Capa móvil técnico:** Barra Mis OT / Escanear / Inventario / Inicio.
-16. **Despliegue:** `install.sh` (Ubuntu limpio) y `update.sh` (actualizaciones con PM2).
+16. **Despliegue:** `install.sh` (Ubuntu limpio) y `update.sh` (pull + builds + PM2 `node dist/index.js`); producción UI+API en `:3000`, nginx opcional `:80`.
 
 ## Datos y documentación
 - Seeds/importadores históricos: `backend/src/seed_*.ts`, herramientas en Opciones de desarrollador.
@@ -32,5 +32,5 @@ Un Sistema Computarizado de Gestión de Mantenimiento (CMMS / GMAO) self-hosted 
 
 ## Tecnologías
 - **Frontend:** React, TypeScript, Tailwind CSS v4, Vite, Lucide, Socket.IO client, PWA (parcial).
-- **Backend:** Node.js, Express, TypeScript, Prisma, PostgreSQL, Socket.IO, node-cron, Multer (`uploads/`).
-- **Ops:** nvm, PM2, scripts `install.sh` / `update.sh`; API `:3000`, UI `:5173`.
+- **Backend:** Node.js 22+, Express, TypeScript, Prisma, PostgreSQL, Socket.IO, node-cron, Multer (`uploads/`).
+- **Ops:** nvm, PM2, `install.sh` / `update.sh`; producción `:3000` (UI+API); desarrollo UI Vite `:5173`.
