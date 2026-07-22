@@ -66,24 +66,47 @@ export const globalSearch = async (req: AuthRequest, res: Response): Promise<voi
         orderBy: { name: 'asc' },
         select: { id: true, name: true, internal_id: true },
       }),
-      prisma.workOrder.findMany({
-        where: {
-          OR: [
-            ...(folioNum != null ? [{ folio: folioNum }] : []),
-            { title: { contains: q, mode: 'insensitive' } },
-            { description: { contains: q, mode: 'insensitive' } },
-          ],
-        },
-        take: LIMIT_PER_TYPE,
-        orderBy: { folio: 'desc' },
-        select: {
-          id: true,
-          folio: true,
-          title: true,
-          status: true,
-          asset: { select: { name: true, internal_code: true } },
-        },
-      }),
+      folioNum != null
+        ? prisma.workOrder.findMany({
+            where: {
+              OR: [
+                { folio: folioNum },
+                { title: { contains: q, mode: 'insensitive' } },
+                { description: { contains: q, mode: 'insensitive' } },
+              ],
+            },
+            take: LIMIT_PER_TYPE,
+            orderBy: { folio: 'desc' },
+            select: {
+              id: true,
+              folio: true,
+              title: true,
+              status: true,
+              asset: { select: { name: true, internal_code: true } },
+            },
+          }).then((rows) => {
+            // Folio exacto primero (Cmd+K con FOL-0001).
+            const exact = rows.filter((r) => r.folio === folioNum);
+            const rest = rows.filter((r) => r.folio !== folioNum);
+            return [...exact, ...rest].slice(0, LIMIT_PER_TYPE);
+          })
+        : prisma.workOrder.findMany({
+            where: {
+              OR: [
+                { title: { contains: q, mode: 'insensitive' } },
+                { description: { contains: q, mode: 'insensitive' } },
+              ],
+            },
+            take: LIMIT_PER_TYPE,
+            orderBy: { folio: 'desc' },
+            select: {
+              id: true,
+              folio: true,
+              title: true,
+              status: true,
+              asset: { select: { name: true, internal_code: true } },
+            },
+          }),
     ]);
 
     res.json({ assets, items, locations, work_orders });

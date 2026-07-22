@@ -23,22 +23,40 @@ export const getRequesters = async (req: Request, res: Response): Promise<void> 
 
 export const getWorkOrders = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userRole = req.user?.role;
-    const userId = req.user?.userId;
-
-    const whereClause: any = {};
+    // Listado ligero: sin firmas base64 ni árboles RCA (van en getWorkOrderById).
     const workOrders = await prisma.workOrder.findMany({
-      where: whereClause,
-      include: {
-        asset: true,
-        zone: true,
+      select: {
+        id: true,
+        folio: true,
+        title: true,
+        description: true,
+        status: true,
+        hold_reason: true,
+        priority: true,
+        maintenance_type: true,
+        machine_stopped: true,
+        requester_name: true,
+        production_group: true,
+        scheduled_date: true,
+        due_date: true,
+        started_at: true,
+        paused_at: true,
+        last_resumed_at: true,
+        accumulated_time_ms: true,
+        completed_at: true,
+        created_at: true,
+        updated_at: true,
+        request_image_url: true,
+        before_image_url: true,
+        after_image_url: true,
+        resolution_notes: true,
+        maintenance_plan_id: true,
+        asset: { select: { id: true, name: true, internal_code: true } },
+        zone: { select: { id: true, name: true } },
         created_by: { select: { id: true, name: true } },
         assigned_technicians: { select: { id: true, name: true } },
-        failure_problem: true,
-        failure_cause: true,
-        failure_remedy: true
       },
-      orderBy: { created_at: 'desc' } // Opcional, pero bueno para ordenar las más recientes primero
+      orderBy: { created_at: 'desc' },
     });
 
     const { sla_policy } = await getSlaSettings();

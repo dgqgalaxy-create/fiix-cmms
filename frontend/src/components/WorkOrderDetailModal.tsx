@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, ChevronDown, CheckCircle2, Users, PauseCircle, PlayCircle } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, ChevronDown, CheckCircle2, Users, PauseCircle, PlayCircle, ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
 import type { WorkOrder } from '../api/workOrders';
 import { getWorkOrderById } from '../api/workOrders';
 import { useAuth } from '../context/AuthContext';
@@ -36,9 +36,50 @@ interface Props {
   onUpdate: (id: string, data: any) => Promise<any>;
   onDelete?: (id: string) => Promise<void>;
   onJoin?: (id: string) => Promise<void>;
+  /** Lista filtrada/ordenada del Dashboard (para ← →). */
+  workOrderList?: WorkOrder[];
+  onNavigateWorkOrder?: (wo: WorkOrder) => void;
 }
 
-export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onDelete, onJoin }: Props) => {
+const EvidenceThumb = ({
+  src,
+  alt,
+  label,
+  onZoom,
+}: {
+  src: string;
+  alt: string;
+  label: string;
+  onZoom: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onZoom}
+    className="group relative block w-full overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+    title="Ampliar"
+  >
+    <div className="aspect-[4/3] w-full">
+      <img src={src} alt={alt} className="h-full w-full object-cover" />
+    </div>
+    <span className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-white text-left">
+      {label}
+    </span>
+    <span className="absolute top-2 right-2 rounded-full bg-black/50 p-1.5 text-white opacity-80 group-hover:opacity-100">
+      <ZoomIn size={14} />
+    </span>
+  </button>
+);
+
+export const WorkOrderDetailModal = ({
+  workOrder,
+  isOpen,
+  onClose,
+  onUpdate,
+  onDelete,
+  onJoin,
+  workOrderList,
+  onNavigateWorkOrder,
+}: Props) => {
   const { user, hasPermission } = useAuth();
   const { canEdit, remoteEditorName } = useWorkOrderPresence(workOrder?.id, isOpen);
   const isMobile = useIsMobile();
@@ -80,6 +121,65 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
   const [failureRemedyId, setFailureRemedyId] = useState<string>('');
   const [consumedParts, setConsumedParts] = useState<NonNullable<WorkOrder['inventory_transactions']>>([]);
   const [partsCostTotal, setPartsCostTotal] = useState(0);
+  const [zoomSrc, setZoomSrc] = useState<string | null>(null);
+
+  const navIndex = useMemo(() => {
+    if (!workOrder || !workOrderList?.length) return -1;
+    return workOrderList.findIndex((w) => w.id === workOrder.id);
+  }, [workOrder, workOrderList]);
+
+  const canNavigate =
+    Boolean(onNavigateWorkOrder) &&
+    Boolean(workOrderList) &&
+    (workOrderList?.length ?? 0) > 1 &&
+    navIndex >= 0;
+
+  const hasPrev = canNavigate && navIndex > 0;
+  const hasNext = canNavigate && navIndex < (workOrderList?.length ?? 0) - 1;
+
+  const goPrev = useCallback(() => {
+    if (!hasPrev || !workOrderList || !onNavigateWorkOrder) return;
+    onNavigateWorkOrder(workOrderList[navIndex - 1]);
+  }, [hasPrev, workOrderList, navIndex, onNavigateWorkOrder]);
+
+  const goNext = useCallback(() => {
+    if (!hasNext || !workOrderList || !onNavigateWorkOrder) return;
+    onNavigateWorkOrder(workOrderList[navIndex + 1]);
+  }, [hasNext, workOrderList, navIndex, onNavigateWorkOrder]);
+
+  useEffect(() => {
+    if (!isOpen || !canNavigate) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) {
+        return;
+      }
+      e.preventDefault();
+      if (e.key === 'ArrowLeft') goPrev();
+      else goNext();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, canNavigate, goPrev, goNext]);
+
+  useEffect(() => {
+    if (!isOpen) setZoomSrc(null);
+  }, [isOpen, workOrder?.id]);
+
+  // Al cambiar de OT (← →), limpia borradores locales de fotos/repuestos.
+  useEffect(() => {
+    setBeforeImage(null);
+    setAfterImage(null);
+    setUsedItems([]);
+    setItemSearchText('');
+    setSelectedItemToAdd('');
+    setAmountToAdd('');
+    setError('');
+  }, [workOrder?.id]);
 
   useEffect(() => {
     if (workOrder) setLiveWorkOrder(workOrder);
@@ -337,9 +437,11 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
       const result = await onUpdate(workOrder.id, updateData);
       if (result?.offline) {
         alert(
-          result.offline_images_skipped
-            ? 'Sin conexión: se guardaron el estado y las notas, pero las fotos no se subieron. Cuando recuperes la señal, vuelve a guardar para adjuntarlas.'
-            : 'Sin conexión: el cambio se guardó en este dispositivo y se sincronizará automáticamente cuando recuperes la señal.'
+          result.offline_images_queued
+            ? 'Sin conexión: se guardaron el estado, las notas y las fotos en este dispositivo. Se subirán automáticamente cuando recuperes la señal.'
+            : result.offline_images_skipped
+              ? 'Sin conexión: se guardaron el estado y las notas, pero las fotos no se subieron. Cuando recuperes la señal, vuelve a guardar para adjuntarlas.'
+              : 'Sin conexión: el cambio se guardó en este dispositivo y se sincronizará automáticamente cuando recuperes la señal.'
         );
       }
       onClose();
@@ -426,9 +528,38 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
               )}
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            {canNavigate && (
+              <>
+                <button
+                  type="button"
+                  onClick={goPrev}
+                  disabled={!hasPrev}
+                  title="Anterior (←)"
+                  aria-label="Orden anterior"
+                  className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <span className="text-xs tabular-nums text-slate-400 dark:text-slate-500 px-0.5 min-w-[3.5rem] text-center">
+                  {navIndex + 1}/{workOrderList!.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={goNext}
+                  disabled={!hasNext}
+                  title="Siguiente (→)"
+                  aria-label="Orden siguiente"
+                  className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </>
+            )}
+            <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         <div className="p-4 sm:p-5 overflow-y-auto">
@@ -535,36 +666,48 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
               {workOrder.description || <span className="italic text-slate-400">Sin descripción...</span>}
             </div>
 
-            {displayWO.request_image_url && displayWO.request_image_url !== displayWO.before_image_url && (
+            {(displayWO.request_image_url && displayWO.request_image_url !== displayWO.before_image_url) ||
+            displayWO.before_image_url ||
+            displayWO.after_image_url ? (
               <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-3">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">📸 Foto al reportar la falla</span>
-                <img src={`${BACKEND_URL}${displayWO.request_image_url}`} alt="Falla Reportada" className="w-full max-h-64 object-contain bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700" />
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
+                  Evidencias fotográficas
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {displayWO.request_image_url &&
+                    displayWO.request_image_url !== displayWO.before_image_url && (
+                      <EvidenceThumb
+                        src={`${BACKEND_URL}${displayWO.request_image_url}`}
+                        alt="Falla reportada"
+                        label="Al reportar"
+                        onZoom={() => setZoomSrc(`${BACKEND_URL}${displayWO.request_image_url}`)}
+                      />
+                    )}
+                  {displayWO.before_image_url && (
+                    <EvidenceThumb
+                      src={`${BACKEND_URL}${displayWO.before_image_url}`}
+                      alt="Antes"
+                      label="Antes de reparar"
+                      onZoom={() => setZoomSrc(`${BACKEND_URL}${displayWO.before_image_url}`)}
+                    />
+                  )}
+                  {displayWO.after_image_url && (
+                    <EvidenceThumb
+                      src={`${BACKEND_URL}${displayWO.after_image_url}`}
+                      alt="Después"
+                      label="Después"
+                      onZoom={() => setZoomSrc(`${BACKEND_URL}${displayWO.after_image_url}`)}
+                    />
+                  )}
+                </div>
               </div>
-            )}
-
-            {displayWO.before_image_url && (
-              <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-3">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">📸 Evidencia Técnica (Antes de reparar)</span>
-                <img
-                  src={`${BACKEND_URL}${displayWO.before_image_url}`}
-                  alt="Antes"
-                  className="w-full max-h-64 object-contain bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700"
-                />
-              </div>
-            )}
+            ) : null}
           </div>
 
-          {displayWO.after_image_url && (
+          {displayWO.after_image_url && displayWO.signature_clean_area && displayWO.signature_delivery && (
             <div className="mb-4 bg-emerald-50 dark:bg-emerald-950/20 p-3 sm:p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/50">
-               <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider block mb-2">📸 Evidencia de Reparación (Después)</span>
-               <img
-                 src={`${BACKEND_URL}${displayWO.after_image_url}`}
-                 alt="Después"
-                 className="w-full max-h-72 object-contain bg-white dark:bg-slate-900 rounded-xl border border-emerald-200 dark:border-emerald-900"
-               />
-
-               {displayWO.signature_clean_area && displayWO.signature_delivery && (
-                 <div className="mt-4 pt-4 border-t border-emerald-200/50 grid grid-cols-1 sm:grid-cols-2 gap-4">
+               <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider block mb-2">Firmas de cierre</span>
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <div>
                      <span className="text-xs font-semibold text-emerald-700 block mb-1">Firma Liberación de Área:</span>
                      {typeof displayWO.signature_clean_area === 'string' && displayWO.signature_clean_area.startsWith('data:image') ? (
@@ -581,8 +724,7 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
                        <span className="text-sm font-medium text-emerald-900 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-emerald-100 block">{displayWO.signature_delivery}</span>
                      )}
                    </div>
-                 </div>
-               )}
+               </div>
             </div>
           )}
 
@@ -1147,6 +1289,30 @@ export const WorkOrderDetailModal = ({ workOrder, isOpen, onClose, onUpdate, onD
         </div>
       </div>
     </div>
+    {zoomSrc && (
+      <div
+        className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4"
+        onClick={() => setZoomSrc(null)}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Vista ampliada de evidencia"
+      >
+        <button
+          type="button"
+          onClick={() => setZoomSrc(null)}
+          className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+          aria-label="Cerrar zoom"
+        >
+          <X size={22} />
+        </button>
+        <img
+          src={zoomSrc}
+          alt="Evidencia ampliada"
+          className="max-h-[92vh] max-w-[96vw] object-contain rounded-lg shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
+    )}
     </ErrorBoundary>
   );
 };

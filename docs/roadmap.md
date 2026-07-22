@@ -3,9 +3,18 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 21 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.30.11 (Actualización: 21 de Julio de 2026)
+## 🚀 Versión Actual: v1.31.0 (Actualización: 21 de Julio de 2026)
 
-### Novedades en v1.30.11 (búsqueda FOL)
+### Novedades en v1.31.0 (UX OT + import fotos + rendimiento)
+- **Nuevo:** Asignar solo fotos de OT (zip + CSV Solicitudes) sin reimportar los 7 CSV.
+- **Mejora:** `update.sh` pregunta si actualizar nginx (o `UPDATE_NGINX=1`) para evitar 413 en zips.
+- **Mejora:** Listado de Órdenes más ligero (sin firmas base64 en el GET de lista).
+- **Mejora:** Galería Antes/Después con tamaño fijo y zoom.
+- **Mejora:** Fotos offline al finalizar se encolan y se suben al recuperar señal.
+- **Nuevo:** Navegación ← → entre OT en el detalle (lista filtrada).
+- **Corrección:** Búsqueda global Cmd/Ctrl+K encuentra `FOL-0001`.
+
+### Novedades Anteriores (v1.30.11 - búsqueda FOL)
 - **Corrección:** Filtrar por `FOL-0001` en Órdenes de Trabajo ya encuentra la orden (antes el buscador solo miraba `wo-####`).
 
 ### Novedades Anteriores (v1.30.10 - semántica FOTO ANTES)

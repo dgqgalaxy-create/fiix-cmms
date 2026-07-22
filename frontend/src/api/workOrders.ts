@@ -1,4 +1,9 @@
-import api from './axios';
+import api, { BACKEND_URL } from './axios';
+import { addOfflineRequest } from '../utils/offlineQueue';
+import {
+  putOfflinePhotoBlob,
+  type OfflineMultipartBody,
+} from '../utils/offlinePhotoQueue';
 
 export interface WorkOrder {
   id: string;
@@ -10,6 +15,7 @@ export interface WorkOrder {
   asset: {
     id: string;
     name: string;
+    internal_code?: string;
   };
   zone_id?: string;
   zone?: {
@@ -36,6 +42,8 @@ export interface WorkOrder {
   last_resumed_at?: string;
   accumulated_time_ms?: number;
   completed_at?: string;
+  scheduled_date?: string;
+  due_date?: string;
   request_image_url?: string;
   before_image_url?: string;
   after_image_url?: string;
@@ -99,17 +107,63 @@ export const createWorkOrder = async (data: any) => {
   return response.data;
 };
 
+/** Encola PATCH multipart con fotos en IndexedDB (blobs + metadatos). */
+async function queueOfflineWorkOrderWithPhotos(id: string, data: any) {
+  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const files: OfflineMultipartBody['files'] = [];
+  const fields: Record<string, string> = {};
+
+  if (data.status) fields.status = String(data.status);
+  if (data.hold_reason) fields.hold_reason = String(data.hold_reason);
+  if (data.resolution_notes) fields.resolution_notes = String(data.resolution_notes);
+  if (data.signature_clean_area) fields.signature_clean_area = String(data.signature_clean_area);
+  if (data.signature_delivery) fields.signature_delivery = String(data.signature_delivery);
+  if (data.used_items) fields.used_items = JSON.stringify(data.used_items);
+  if (data.failure_problem_id) fields.failure_problem_id = String(data.failure_problem_id);
+  if (data.failure_cause_id) fields.failure_cause_id = String(data.failure_cause_id);
+  if (data.failure_remedy_id) fields.failure_remedy_id = String(data.failure_remedy_id);
+  if (data.assigned_technicians_ids !== undefined) {
+    fields.assigned_technicians_ids = JSON.stringify(data.assigned_technicians_ids);
+  }
+
+  if (data.before_image instanceof Blob) {
+    const key = `wo-${id}-before-${stamp}`;
+    const name = (data.before_image as File).name || 'before.jpg';
+    const type = data.before_image.type || 'image/jpeg';
+    await putOfflinePhotoBlob(key, data.before_image, name, type);
+    files.push({ field: 'before_image', blobKey: key, name, type });
+  }
+  if (data.after_image instanceof Blob) {
+    const key = `wo-${id}-after-${stamp}`;
+    const name = (data.after_image as File).name || 'after.jpg';
+    const type = data.after_image.type || 'image/jpeg';
+    await putOfflinePhotoBlob(key, data.after_image, name, type);
+    files.push({ field: 'after_image', blobKey: key, name, type });
+  }
+
+  const body: OfflineMultipartBody = {
+    __fiixMultipart: true,
+    fields,
+    files,
+  };
+
+  const token = localStorage.getItem('token');
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  await addOfflineRequest(`${BACKEND_URL}/api/work-orders/${id}`, 'PATCH', headers, body);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('fiix-offline-sync-done'));
+  }
+}
+
 export const updateWorkOrder = async (id: string, data: any) => {
   const hasImages = !!(data.before_image || data.after_image);
 
-  // Sin conexión no se pueden subir fotos: se guarda solo estado/notas (JSON) y
-  // se encola; el usuario deberá volver a adjuntar las imágenes cuando haya señal.
+  // Sin conexión: guarda estado + fotos en IndexedDB y sincroniza al volver la señal.
   if (hasImages && !navigator.onLine) {
-    const jsonOnly = { ...data };
-    delete jsonOnly.before_image;
-    delete jsonOnly.after_image;
-    const response = await api.patch(`/work-orders/${id}`, jsonOnly);
-    return { ...response.data, offline_images_skipped: true };
+    await queueOfflineWorkOrderWithPhotos(id, data);
+    return { success: true, offline: true, offline_images_queued: true };
   }
 
   if (hasImages) {

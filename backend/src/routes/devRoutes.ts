@@ -923,4 +923,105 @@ router.post(
   }
 });
 
+/**
+ * Asigna solo fotos antes/después de OT existentes (sin reimportar los 7 CSV).
+ * Multipart: workOrderImagesZip (o .zip en csvFiles) + CSV Solicitudes (FOLIO / FOTO ANTES / FOTO DESPUÉS).
+ */
+router.post(
+  '/import-wo-photos',
+  verifyDevPassword,
+  uploadImportFields,
+  async (req: Request, res: Response): Promise<void> => {
+    const filesMap = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const csvFieldFiles = filesMap?.csvFiles || [];
+    const csvFiles = csvFieldFiles.filter((f) => !/\.zip$/i.test(f.originalname || ''));
+    const woZipFile =
+      filesMap?.workOrderImagesZip?.[0] ||
+      csvFieldFiles.find((f) => /\.zip$/i.test(f.originalname || ''));
+    const uploadedTemps = [
+      ...csvFieldFiles,
+      ...(filesMap?.workOrderImagesZip || []),
+    ];
+
+    try {
+      if (!woZipFile?.path) {
+        res.status(400).json({
+          message:
+            'Falta el zip de fotos de órdenes (Formulario Solicitudes_Images.zip).',
+        });
+        return;
+      }
+      if (csvFiles.length === 0) {
+        res.status(400).json({
+          message:
+            'Falta el CSV de Solicitudes (columnas FOLIO, FOTO ANTES, FOTO DESPUÉS) para emparejar fotos.',
+        });
+        return;
+      }
+
+      const woPhotoMappings: WorkOrderPhotoMapping[] = [];
+      for (const file of csvFiles) {
+        const content = readUploadedUtf8(file);
+        const records = parse(content, {
+          columns: true,
+          skip_empty_lines: true,
+          relax_column_count: true,
+          bom: true,
+        }) as Record<string, string>[];
+
+        for (const row of records) {
+          const folioCsv = parseWorkOrderFolio(row['FOLIO'] ?? row['Folio'] ?? row['folio']);
+          if (!folioCsv) continue;
+          const beforePath = sanitizeWorkOrderPhotoPath(
+            row['FOTO ANTES'] ?? row['FOTO ANTES '] ?? row['Foto Antes'] ?? ''
+          );
+          const afterPath = sanitizeWorkOrderPhotoPath(
+            row['FOTO DESPUÉS'] ??
+              row['FOTO DESPUES'] ??
+              row['Foto Después'] ??
+              row['Foto Despues'] ??
+              ''
+          );
+          if (beforePath || afterPath) {
+            woPhotoMappings.push({ folio: folioCsv, beforePath, afterPath });
+          }
+        }
+      }
+
+      if (woPhotoMappings.length === 0) {
+        res.status(400).json({
+          message:
+            'No se encontraron filas con FOLIO y FOTO ANTES / FOTO DESPUÉS en el CSV.',
+        });
+        return;
+      }
+
+      const woPhotoResult = await assignWorkOrderImagesFromZip(woZipFile.path, woPhotoMappings);
+      emitRefresh('refresh_work_orders');
+      res.json({
+        success: true,
+        message: 'Fotos de órdenes asignadas.',
+        results: {
+          mappings: woPhotoMappings.length,
+          matched: woPhotoResult.matched,
+          missing: woPhotoResult.missing,
+          skipped: woPhotoResult.skipped,
+          folderFound: woPhotoResult.folderFound,
+          filesScanned: woPhotoResult.filesScanned,
+          beforeAssigned: woPhotoResult.beforeAssigned,
+          afterAssigned: woPhotoResult.afterAssigned,
+        },
+      });
+    } catch (error: unknown) {
+      console.error('WO photos-only import error:', error);
+      const message = error instanceof Error ? error.message : 'Error asignando fotos de OT.';
+      res.status(500).json({ message });
+    } finally {
+      for (const f of uploadedTemps) {
+        unlinkUploadedSafe(f);
+      }
+    }
+  }
+);
+
 export default router;

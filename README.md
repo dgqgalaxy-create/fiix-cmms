@@ -193,7 +193,7 @@ sudo nginx -t && sudo systemctl reload nginx
 sudo ufw allow 80/tcp
 ```
 
-Ajusta `server_name` en el conf si tu hostname no es `lpet-cmms`. `update.sh` **no modifica** nginx.
+Ajusta `server_name` en el conf si tu hostname no es `lpet-cmms`. Al final de `update.sh` (modo interactivo) te pregunta si quieres **actualizar nginx** desde `deploy/nginx-fiix.conf` (útil tras cambios de `client_max_body_size`); en CI no pregunta. También puedes forzar: `UPDATE_NGINX=1 ./update.sh`.
 
 **Windows / desarrollo local:** sigue usando `http://localhost:3000` (build de producción) o Vite en `:5173`; nginx es para el servidor Ubuntu.
 
@@ -221,7 +221,7 @@ cd ~/fiix-cmms
 ./update.sh
 ```
 
-`update.sh` intenta cargar nvm (`$NVM_DIR`, `~/.nvm`, `/home/usuario/.nvm`) o usa `node`/`npm`/`pm2` ya presentes en el PATH; valida `.env`/repo, ejecuta `git restore .` (descarta cambios locales en archivos del repo), luego `git pull --ff-only`, `npm ci`, `prisma db push`, compila el frontend (`npm run build:app` → `frontend/dist`), reinicia PM2 (`fiix-backend`) y comprueba que `:3000` responda tanto `/api/health` como `/` (SPA). **No modifica** `backend/.env`, `backend/uploads/` ni la configuración de **nginx**. No edites código en el servidor: se pierde en el próximo update.
+`update.sh` intenta cargar nvm (`$NVM_DIR`, `~/.nvm`, `/home/usuario/.nvm`) o usa `node`/`npm`/`pm2` ya presentes en el PATH; valida `.env`/repo, ejecuta `git restore .` (descarta cambios locales en archivos del repo), luego `git pull --ff-only`, `npm ci`, `prisma db push`, compila el frontend (`npm run build:app` → `frontend/dist`), reinicia PM2 (`fiix-backend`) y comprueba que `:3000` responda tanto `/api/health` como `/` (SPA). **No modifica** `backend/.env` ni `backend/uploads/`. Al final pregunta (si hay TTY) si actualizar **nginx**; responde `s` o usa `UPDATE_NGINX=1` para aplicar `deploy/nginx-fiix.conf` (body 500M). No edites código en el servidor: se pierde en el próximo update.
 
 **GitHub Actions (self-hosted):** el runner debe ser el mismo usuario que tiene Node/nvm (p. ej. `~/.nvm`). El workflow hace `git restore .`, luego `git pull --ff-only` y `./update.sh` (así no falla si `npm` dejó ensuciados los `package-lock.json`). Si un deploy falló antes de este arreglo, en el servidor ejecuta una vez a mano: `cd ~/fiix-cmms && git restore . && git pull --ff-only && ./update.sh`.
 

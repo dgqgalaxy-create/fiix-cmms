@@ -181,10 +181,45 @@ else
 fi
 
 echo
+# nginx: pregunta interactiva (evita olvidar client_max_body_size → 413 en zips).
+# En CI / sin TTY no pregunta; se puede forzar con UPDATE_NGINX=1.
+NGINX_SRC="${APP_DIR}/deploy/nginx-fiix.conf"
+DO_NGINX="${UPDATE_NGINX:-}"
+if [ -z "$DO_NGINX" ]; then
+  if [ -t 0 ] && [ -z "${CI:-}" ] && [ -z "${GITHUB_ACTIONS:-}" ] && [ -f "$NGINX_SRC" ]; then
+    echo
+    read -r -p "¿Actualizar conf nginx (body 500M para zips de importación)? [s/N] " DO_NGINX_ANS || DO_NGINX_ANS="N"
+    DO_NGINX="$DO_NGINX_ANS"
+  else
+    DO_NGINX="N"
+  fi
+fi
+if [[ "${DO_NGINX}" =~ ^[sSyY1]$ ]]; then
+  if command -v nginx >/dev/null 2>&1 && [ -f "$NGINX_SRC" ]; then
+    info "Actualizando nginx desde deploy/nginx-fiix.conf..."
+    sudo cp "$NGINX_SRC" /etc/nginx/sites-available/fiix
+    sudo ln -sf /etc/nginx/sites-available/fiix /etc/nginx/sites-enabled/fiix
+    if [ -L /etc/nginx/sites-enabled/default ] || [ -f /etc/nginx/sites-enabled/default ]; then
+      sudo rm -f /etc/nginx/sites-enabled/default
+    fi
+    if sudo nginx -t; then
+      sudo systemctl reload nginx
+      ok "nginx recargado (client_max_body_size 500M)"
+    else
+      echo "  [AVISO] nginx -t falló; revisa /etc/nginx/sites-available/fiix"
+    fi
+  else
+    echo "  [AVISO] nginx no está instalado o falta ${NGINX_SRC}; omite."
+  fi
+else
+  info "nginx no modificado. Si el zip de importación falla con 413:"
+  echo "    sudo cp ${APP_DIR}/deploy/nginx-fiix.conf /etc/nginx/sites-available/fiix"
+  echo "    sudo nginx -t && sudo systemctl reload nginx"
+  echo "  (o vuelve a correr update.sh y responde «s», o UPDATE_NGINX=1 ./update.sh)"
+fi
+
+echo
 echo "=== Actualización completada con éxito (${AFTER_SHA}) ==="
 echo "  .env y uploads/ se conservaron."
-echo "  nginx (si lo configuraste) no se toca — Express sigue en :3000 detrás del proxy."
-echo "  Si el zip de importación CSV falla con 413, actualiza nginx a mano:"
-echo "    sudo cp ${APP_DIR}/deploy/nginx-fiix.conf /etc/nginx/sites-available/fiix"
-echo "    sudo nginx -t && sudo systemctl reload nginx"
+echo "  Express sigue en :3000 (nginx, si existe, hace de proxy en :80)."
 echo "  Si algo falla en uso real: pm2 logs"

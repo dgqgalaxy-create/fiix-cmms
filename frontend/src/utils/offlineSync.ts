@@ -5,6 +5,11 @@ import {
   setOfflineRequestRetries,
   type OfflineQueuedRequest,
 } from './offlineQueue';
+import {
+  getOfflinePhotoBlob,
+  isOfflineMultipartBody,
+  removeOfflinePhotoBlobs,
+} from './offlinePhotoQueue';
 
 export const MAX_OFFLINE_SYNC_RETRIES = 5;
 
@@ -93,6 +98,9 @@ export async function syncOfflineQueue(): Promise<SyncResult> {
 
         // 4xx: no tiene sentido reintentar (URL mala, 401/403/404/409, validación).
         if (status && status >= 400 && status < 500) {
+          if (isOfflineMultipartBody(req.body)) {
+            await removeOfflinePhotoBlobs(req.body.files.map((f) => f.blobKey));
+          }
           await removeOfflineRequest(req.id);
           discarded += 1;
           failures.push({ id: req.id, method: req.method, url: req.url, reason, status });
@@ -102,6 +110,9 @@ export async function syncOfflineQueue(): Promise<SyncResult> {
 
         const nextRetries = (req.retries || 0) + 1;
         if (nextRetries >= MAX_OFFLINE_SYNC_RETRIES) {
+          if (isOfflineMultipartBody(req.body)) {
+            await removeOfflinePhotoBlobs(req.body.files.map((f) => f.blobKey));
+          }
           await removeOfflineRequest(req.id);
           discarded += 1;
           failures.push({
@@ -139,6 +150,31 @@ export async function syncOfflineQueue(): Promise<SyncResult> {
   return syncInFlight;
 }
 
+async function rebuildMultipart(body: {
+  fields: Record<string, string>;
+  files: Array<{ field: string; blobKey: string; name: string; type: string }>;
+}): Promise<FormData> {
+  const formData = new FormData();
+  for (const [k, v] of Object.entries(body.fields || {})) {
+    if (v != null && v !== '') formData.append(k, v);
+  }
+  for (const fileMeta of body.files) {
+    const stored = await getOfflinePhotoBlob(fileMeta.blobKey);
+    if (!stored) {
+      throw Object.assign(new Error(`Foto offline no encontrada: ${fileMeta.blobKey}`), {
+        response: { status: 400 },
+      });
+    }
+    formData.append(
+      fileMeta.field,
+      new File([stored.blob], fileMeta.name || stored.name, {
+        type: fileMeta.type || stored.type,
+      })
+    );
+  }
+  return formData;
+}
+
 async function replayRequest(req: QueuedItem) {
   const token = localStorage.getItem('token');
   const headers: Record<string, string> = { ...(req.headers || {}) };
@@ -148,7 +184,16 @@ async function replayRequest(req: QueuedItem) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  if (req.body && typeof req.body === 'object' && !(req.body instanceof FormData)) {
+  let data: unknown = req.body;
+  let blobKeysToClean: string[] = [];
+
+  if (isOfflineMultipartBody(req.body)) {
+    data = await rebuildMultipart(req.body);
+    blobKeysToClean = req.body.files.map((f) => f.blobKey);
+    // Dejar que el navegador ponga multipart boundary.
+    delete headers['Content-Type'];
+    delete headers['content-type'];
+  } else if (req.body && typeof req.body === 'object' && !(req.body instanceof FormData)) {
     headers['Content-Type'] = headers['Content-Type'] || 'application/json';
   }
 
@@ -160,8 +205,12 @@ async function replayRequest(req: QueuedItem) {
     url: req.url,
     method: req.method,
     headers,
-    data: req.body,
-    timeout: 30000,
+    data,
+    timeout: 120000,
     validateStatus: (s) => s >= 200 && s < 300,
   });
+
+  if (blobKeysToClean.length > 0) {
+    await removeOfflinePhotoBlobs(blobKeysToClean);
+  }
 }

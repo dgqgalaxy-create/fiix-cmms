@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.30.11";
+export const APP_VERSION = "1.31.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,13 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: En Opciones de Desarrollador puedes asignar solo fotos de OT (zip + CSV Solicitudes) sin reimportar los 7 CSV.",
+    "Mejora: update.sh pregunta si quieres actualizar la conf nginx (body 500M) para no olvidar el 413 al subir zips; también UPDATE_NGINX=1.",
+    "Mejora: El listado de Órdenes carga más rápido (~750 OT): ya no trae firmas base64 ni árboles RCA; el detalle sigue pidiendo esos datos al abrir.",
+    "Mejora: Galería Antes/Después con miniaturas de tamaño fijo y zoom al tocar (menos huecos blancos).",
+    "Mejora: Al finalizar una OT sin señal, las fotos se guardan en el dispositivo y se suben solas al recuperar conexión.",
+    "Nuevo: En el detalle de una OT puedes pasar a la anterior/siguiente de la lista filtrada con ← → (como en Inventario).",
+    "Corrección: La búsqueda global (Cmd/Ctrl+K) prioriza y reconoce folios FOL-0001 (también con espacios o guiones raros).",
     "Corrección: La búsqueda de órdenes reconoce folios FOL-0001 (antes solo coincidía el patrón interno wo-0001).",
     "Cambio: Al importar el zip de solicitudes, FOTO ANTES solo se guarda como evidencia del técnico (Antes), no como foto al levantar la solicitud.",
     "Corrección: Al abrir el detalle de una OT se recarga desde el servidor (así se ven las fotos importadas por CSV/zip) y se muestran Antes/Después aunque la lista estuviera desactualizada.",

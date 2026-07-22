@@ -522,6 +522,8 @@ export const Dashboard = () => {
             onUpdate={handleUpdateWorkOrder}
             onDelete={handleDeleteWorkOrder}
             onJoin={handleJoinWorkOrder}
+            workOrderList={filteredList}
+            onNavigateWorkOrder={openWorkOrderDetail}
           />
         </ErrorBoundary>
       )}

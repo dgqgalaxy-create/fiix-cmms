@@ -70,6 +70,8 @@ export const DeveloperOptions = () => {
   const [restoreModalError, setRestoreModalError] = useState<string | null>(null);
   const [itemImagesZip, setItemImagesZip] = useState<File | null>(null);
   const [workOrderImagesZip, setWorkOrderImagesZip] = useState<File | null>(null);
+  const [woPhotosOnlyZip, setWoPhotosOnlyZip] = useState<File | null>(null);
+  const [woPhotosOnlyCsv, setWoPhotosOnlyCsv] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   /** Límite alineado con multer / nginx (500 MB). */
@@ -460,6 +462,65 @@ export const DeveloperOptions = () => {
     }
   };
 
+  const handleImportWoPhotosOnly = async () => {
+    if (!woPhotosOnlyZip || !woPhotosOnlyCsv) {
+      setError('Selecciona el zip de fotos y el CSV de Solicitudes (FOLIO / FOTO ANTES / FOTO DESPUÉS).');
+      return;
+    }
+    setIsLoading(true);
+    setUploadProgress(0);
+    setLoadingMessage(
+      `Asignando fotos OT (${(woPhotosOnlyZip.size / (1024 * 1024)).toFixed(1)} MB). No cierres esta ventana...`
+    );
+    setError(null);
+    const formData = new FormData();
+    formData.append('csvFiles', woPhotosOnlyCsv);
+    formData.append('csvFiles', woPhotosOnlyZip, woPhotosOnlyZip.name);
+
+    try {
+      const res = await axios.post(`/dev/import-wo-photos`, formData, {
+        headers: { 'x-dev-password': password },
+        timeout: 30 * 60 * 1000,
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+        onUploadProgress: (evt) => {
+          if (!evt.total) return;
+          const pct = Math.min(99, Math.round((evt.loaded / evt.total) * 100));
+          setUploadProgress(pct);
+          setLoadingMessage(`Subiendo zip + CSV... ${pct}%`);
+        },
+      });
+      setUploadProgress(100);
+      const r = res.data.results || {};
+      let msg = `Fotos OT: ${r.matched ?? 0} (antes ${r.beforeAssigned ?? 0}, después ${r.afterAssigned ?? 0})`;
+      if (r.missing > 0) msg += `, sin archivo: ${r.missing}`;
+      msg += '.';
+      setSuccessMsg(msg);
+      setWoPhotosOnlyZip(null);
+      setWoPhotosOnlyCsv(null);
+      setTimeout(() => setSuccessMsg(null), 12000);
+    } catch (err: unknown) {
+      let detail = 'Error desconocido';
+      if (isAxiosError(err)) {
+        const status = err.response?.status;
+        const serverMsg = err.response?.data?.message;
+        if (status === 413) {
+          detail =
+            'El servidor rechazó el zip (413). En Ubuntu: responde «s» al actualizar nginx en update.sh, o entra por :3000.';
+        } else {
+          detail = (typeof serverMsg === 'string' && serverMsg) || err.message;
+        }
+      } else if (err instanceof Error) {
+        detail = err.message;
+      }
+      setError(`Fallo al asignar fotos de OT: ${detail}`);
+    } finally {
+      setIsLoading(false);
+      setLoadingMessage(null);
+      setUploadProgress(null);
+    }
+  };
+
   const handleDelete = async () => {
     if (deleteConfirmText !== 'ELIMINAR') {
       setError('Escribe ELIMINAR para confirmar.');
@@ -688,6 +749,71 @@ export const DeveloperOptions = () => {
                     disabled={isLoading}
                   />
                 </label>
+              </div>
+            </article>
+
+            <article className="flex flex-col rounded-3xl border border-sky-200 bg-gradient-to-br from-sky-600 to-cyan-700 p-5 text-white shadow-sm sm:col-span-2 lg:col-span-1">
+              <div className="flex items-start gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-white">
+                  <Upload size={21} />
+                </div>
+                <div>
+                  <h3 className="font-black text-white">Solo fotos de órdenes</h3>
+                  <p className="mt-1 text-sm leading-5 text-sky-100">
+                    Si las OT ya están en la BD, sube solo el zip + el CSV de Solicitudes. No hace falta volver a importar los 7 CSV.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-col gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm">
+                <span className="font-bold">Zip Formulario Solicitudes_Images.zip</span>
+                <span className="text-xs text-sky-100">
+                  {woPhotosOnlyZip
+                    ? `${woPhotosOnlyZip.name} (${(woPhotosOnlyZip.size / (1024 * 1024)).toFixed(1)} MB)`
+                    : 'Ningún zip seleccionado'}
+                </span>
+                <label className="mt-1 block cursor-pointer text-xs">
+                  <input
+                    type="file"
+                    accept=".zip,application/zip,application/x-zip-compressed"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = '';
+                      if (!f) return;
+                      if (f.size > ZIP_MAX_BYTES) {
+                        setError(`El zip supera ${Math.round(ZIP_MAX_BYTES / (1024 * 1024))} MB.`);
+                        return;
+                      }
+                      setWoPhotosOnlyZip(f);
+                    }}
+                    className="block w-full file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-sky-700"
+                    disabled={isLoading}
+                  />
+                </label>
+                <span className="mt-2 font-bold">CSV Solicitudes (FOLIO / fotos)</span>
+                <span className="text-xs text-sky-100">
+                  {woPhotosOnlyCsv ? woPhotosOnlyCsv.name : 'Ningún CSV seleccionado'}
+                </span>
+                <label className="mt-1 block cursor-pointer text-xs">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] || null;
+                      e.target.value = '';
+                      setWoPhotosOnlyCsv(f);
+                    }}
+                    className="block w-full file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-sky-700"
+                    disabled={isLoading}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void handleImportWoPhotosOnly()}
+                  disabled={isLoading || !woPhotosOnlyZip || !woPhotosOnlyCsv}
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 font-black text-sky-700 shadow-sm transition hover:bg-sky-50 disabled:opacity-50"
+                >
+                  <Upload size={18} /> Asignar fotos OT
+                </button>
               </div>
             </article>
 
