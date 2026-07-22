@@ -16,5 +16,8 @@ jobs:
           # el script antiguo fallaba en nvm antes del git pull).
           export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
           [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          # npm install puede ensuciar package-lock.json en el servidor;
+          # sin restore, git pull aborta y el auto-deploy queda parado.
+          git restore .
           git pull --ff-only
           bash ./update.sh

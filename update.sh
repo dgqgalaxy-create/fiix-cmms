@@ -118,7 +118,9 @@ fi
 echo ">>> [2/5] Backend (npm + Prisma)..."
 cd "${APP_DIR}/backend"
 mkdir -p uploads
-npm install
+# npm ci no reescribe package-lock.json (evita ensuciar el working tree
+# y bloquear el próximo git pull del auto-deploy).
+npm ci
 npx prisma generate
 npx prisma db push
 ok "Backend listo"
@@ -126,7 +128,7 @@ ok "Backend listo"
 # --- 3. Frontend ---
 echo ">>> [3/5] Frontend (npm + build)..."
 cd "${APP_DIR}/frontend"
-npm install
+npm ci
 info "Compilando frontend (frontend/dist)..."
 npm run build:app
 ok "Frontend listo (dist)"

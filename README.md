@@ -221,9 +221,9 @@ cd ~/fiix-cmms
 ./update.sh
 ```
 
-`update.sh` intenta cargar nvm (`$NVM_DIR`, `~/.nvm`, `/home/usuario/.nvm`) o usa `node`/`npm`/`pm2` ya presentes en el PATH; valida `.env`/repo, ejecuta `git restore .` (descarta cambios locales en archivos del repo), luego `git pull --ff-only`, `npm install`, `prisma db push`, compila el frontend (`npm run build:app` → `frontend/dist`), reinicia PM2 (`fiix-backend`) y comprueba que `:3000` responda tanto `/api/health` como `/` (SPA). **No modifica** `backend/.env`, `backend/uploads/` ni la configuración de **nginx**. No edites código en el servidor: se pierde en el próximo update.
+`update.sh` intenta cargar nvm (`$NVM_DIR`, `~/.nvm`, `/home/usuario/.nvm`) o usa `node`/`npm`/`pm2` ya presentes en el PATH; valida `.env`/repo, ejecuta `git restore .` (descarta cambios locales en archivos del repo), luego `git pull --ff-only`, `npm ci`, `prisma db push`, compila el frontend (`npm run build:app` → `frontend/dist`), reinicia PM2 (`fiix-backend`) y comprueba que `:3000` responda tanto `/api/health` como `/` (SPA). **No modifica** `backend/.env`, `backend/uploads/` ni la configuración de **nginx**. No edites código en el servidor: se pierde en el próximo update.
 
-**GitHub Actions (self-hosted):** el runner debe ser el mismo usuario que tiene Node/nvm (p. ej. `~/.nvm`). El workflow hace `git pull` y después `./update.sh`. Si un deploy falló antes de este arreglo, en el servidor ejecuta una vez a mano: `cd ~/fiix-cmms && git pull --ff-only && ./update.sh`.
+**GitHub Actions (self-hosted):** el runner debe ser el mismo usuario que tiene Node/nvm (p. ej. `~/.nvm`). El workflow hace `git restore .`, luego `git pull --ff-only` y `./update.sh` (así no falla si `npm` dejó ensuciados los `package-lock.json`). Si un deploy falló antes de este arreglo, en el servidor ejecuta una vez a mano: `cd ~/fiix-cmms && git restore . && git pull --ff-only && ./update.sh`.
 
 | | `install.sh` (primera vez) | `update.sh` (después) |
 |---|---|---|
