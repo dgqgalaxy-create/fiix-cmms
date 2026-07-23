@@ -8,6 +8,7 @@ import type { Item } from '../api/inventory';
 import { getItems } from '../api/inventory';
 import { MaintenancePlanModal } from '../components/maintenance/MaintenancePlanModal';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import { formatDate } from '../utils/dateUtils';
 
 export const MaintenancePlansPage = () => {
   const [plans, setPlans] = useState<MaintenancePlan[]>([]);
@@ -157,7 +158,7 @@ export const MaintenancePlansPage = () => {
                       <td className="px-6 py-4">
                         <div className={`flex items-center gap-2 ${isDueSoon ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-slate-700 dark:text-slate-300'}`}>
                           <Clock size={16} />
-                          {new Date(plan.next_due_date).toLocaleDateString()}
+                          {formatDate(plan.next_due_date)}
                         </div>
                       </td>
                       <td className="px-6 py-4">

@@ -1,6 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import type { InventoryTransaction } from '../../api/inventory';
+import { formatDateTime } from '../../utils/dateUtils';
 
 interface Props {
   isOpen: boolean;
@@ -27,7 +28,7 @@ export const TransactionDetailModal = ({ isOpen, onClose, transaction }: Props) 
             <input
               type="text"
               disabled
-              value={new Date(transaction.created_at).toLocaleString()}
+              value={formatDateTime(transaction.created_at)}
               className="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-sm disabled:opacity-80"
             />
           </div>

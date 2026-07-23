@@ -5,27 +5,9 @@ import prisma from './config/prisma';
 import bcrypt from 'bcrypt';
 import { generateInventoryCode } from './utils/codeGenerator';
 
-// Helper to parse dates like "20/2/2026 15:38:29" or "20/02/2026 20:25:25"
-function parseDate(dateStr: string): Date | null {
-  if (!dateStr || dateStr.trim() === '') return null;
-  try {
-    const [datePart, timePart] = dateStr.trim().split(' ');
-    const [day, month, year] = datePart.split('/');
-    if (!year || !month || !day) return null;
-    
-    let hours = 0, mins = 0, secs = 0;
-    if (timePart) {
-      const parts = timePart.split(':');
-      hours = parseInt(parts[0] || '0', 10);
-      mins = parseInt(parts[1] || '0', 10);
-      secs = parseInt(parts[2] || '0', 10);
-    }
-    
-    return new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10), hours, mins, secs);
-  } catch (err) {
-    return null;
-  }
-}
+import { parseCsvDate } from './utils/parseCsvDate';
+
+const parseDate = parseCsvDate;
 
 async function seedOrders() {
   const filePath = path.resolve(__dirname, '../../data/Ordenes_trabajo.csv');

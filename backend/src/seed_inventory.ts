@@ -3,6 +3,7 @@ import path from 'path';
 import { parse } from 'csv-parse';
 import prisma from './config/prisma';
 import bcrypt from 'bcrypt';
+import { parseCsvDate } from './utils/parseCsvDate';
 
 const parseCost = (costStr: string) => {
   if (!costStr) return 0;
@@ -10,27 +11,7 @@ const parseCost = (costStr: string) => {
   return parseFloat(cleaned) || 0;
 };
 
-// Helper for dates like "13/1/2026 8:57:42"
-function parseDate(dateStr: string): Date | null {
-  if (!dateStr || dateStr.trim() === '') return null;
-  try {
-    const [datePart, timePart] = dateStr.trim().split(' ');
-    const [day, month, year] = datePart.split('/');
-    if (!year || !month || !day) return null;
-    
-    let hours = 0, mins = 0, secs = 0;
-    if (timePart) {
-      const parts = timePart.split(':');
-      hours = parseInt(parts[0] || '0', 10);
-      mins = parseInt(parts[1] || '0', 10);
-      secs = parseInt(parts[2] || '0', 10);
-    }
-    
-    return new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10), hours, mins, secs);
-  } catch (err) {
-    return null;
-  }
-}
+const parseDate = parseCsvDate;
 
 async function readCSV(filePath: string): Promise<any[]> {
   const absolutePath = path.resolve(__dirname, filePath);
@@ -212,7 +193,8 @@ async function seedInventory() {
           item_id: itemDbId,
           user_id: userId,
           amount: parseFloat(row['Amount']),
-          reason: row['Reason'] || 'Sin motivo'
+          reason: row['Reason'] || 'Sin motivo',
+          created_at: txDate,
         }
       });
     }

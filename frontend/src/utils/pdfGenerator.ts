@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 import type { WorkOrder } from '../api/workOrders';
 import { BACKEND_URL } from '../api/axios';
 import { formatWorkOrderFolio } from './folio';
+import { formatDate, formatDateTime } from './dateUtils';
 
 const loadImgAsBase64 = (url: string): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -32,7 +33,7 @@ export const generateWorkOrderPDF = async (workOrder: WorkOrder) => {
   doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
   doc.text(`Folio: ${formatWorkOrderFolio(workOrder.folio)}`, 20, 30);
-  doc.text(`Generado el: ${new Date().toLocaleDateString()}`, 140, 30);
+  doc.text(`Generado el: ${formatDate(new Date())}`, 140, 30);
   
   doc.line(20, 35, 190, 35);
 
@@ -97,8 +98,8 @@ export const generateWorkOrderPDF = async (workOrder: WorkOrder) => {
   doc.setFont("helvetica", "bold");
   doc.text("Registro de Tiempos:", 110, nextY);
   doc.setFont("helvetica", "normal");
-  doc.text(`Inicio: ${workOrder.started_at ? new Date(workOrder.started_at).toLocaleString() : 'N/A'}`, 110, nextY + 7);
-  doc.text(`Fin: ${workOrder.completed_at ? new Date(workOrder.completed_at).toLocaleString() : 'N/A'}`, 110, nextY + 13);
+  doc.text(`Inicio: ${workOrder.started_at ? formatDateTime(workOrder.started_at) : 'N/A'}`, 110, nextY + 7);
+  doc.text(`Fin: ${workOrder.completed_at ? formatDateTime(workOrder.completed_at) : 'N/A'}`, 110, nextY + 13);
 
   nextY += 25;
 

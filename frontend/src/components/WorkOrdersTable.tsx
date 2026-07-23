@@ -28,7 +28,7 @@ const formatFriendlyDate = (dateString: string) => {
       return `Hoy ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     }
     
-    return d.toLocaleString('es-ES', { 
+    return d.toLocaleString('es-MX', { 
       day: 'numeric', 
       month: 'short', 
       hour: '2-digit', 
@@ -66,40 +66,43 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
     });
   }, [workOrders, sortField, sortDirection]);
 
+  const statusBadgePrint =
+    'print:gap-0 print:px-1 print:py-0 print:text-[9px] print:rounded print:shadow-none print:leading-tight print:[&_svg]:hidden';
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'PENDIENTE':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 shadow-sm">
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 shadow-sm ${statusBadgePrint}`}>
             <Clock size={14} /> Pendiente
           </span>
         );
       case 'EN_PROCESO':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-blue-100 text-emerald-800 dark:text-emerald-300 border border-blue-200 shadow-sm">
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-blue-100 text-emerald-800 dark:text-emerald-300 border border-blue-200 shadow-sm ${statusBadgePrint}`}>
             <Wrench size={14} /> En Proceso
           </span>
         );
       case 'EN_ESPERA':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-red-100 text-red-800 border border-red-200 shadow-sm">
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-red-100 text-red-800 border border-red-200 shadow-sm ${statusBadgePrint}`}>
             <AlertCircle size={14} /> En Espera
           </span>
         );
       case 'FINALIZADO':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm">
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm ${statusBadgePrint}`}>
             <CheckCircle2 size={14} /> Finalizado
           </span>
         );
       case 'ANULADO':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-slate-200 text-slate-600 dark:text-slate-400 border border-slate-300 shadow-sm line-through">
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-slate-200 text-slate-600 dark:text-slate-400 border border-slate-300 shadow-sm line-through ${statusBadgePrint}`}>
             <AlertCircle size={14} /> Anulado
           </span>
         );
       default:
-        return <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">{status}</span>;
+        return <span className={`px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 ${statusBadgePrint}`}>{status}</span>;
     }
   };
 
@@ -116,9 +119,9 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
   }
 
   return (
-    <div>
-      {/* Vista de Tarjetas para Celulares */}
-      <div className="block xl:hidden flex flex-col gap-3">
+    <div className="wo-print-list">
+      {/* Vista de Tarjetas para Celulares (oculta al imprimir: las tarjetas gastan ~1/4 de hoja c/u) */}
+      <div className="wo-print-cards block xl:hidden print:hidden flex flex-col gap-3">
         {sortedWorkOrders.map((wo) => {
           const cardPhotoUrl = wo.request_image_url || wo.before_image_url;
           return (
@@ -267,49 +270,49 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
         })}
       </div>
 
-      {/* Vista de Tabla para Escritorio */}
-      <div className="hidden xl:block bg-white dark:bg-slate-900 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold shadow-md shadow-[#739239]/40 dark:shadow-[#739239]/20 relative z-10">
+      {/* Vista de Tabla para Escritorio (+ impresión: forzar tabla aunque el viewport de print sea < xl) */}
+      <div className="wo-print-table hidden xl:block print:block bg-white dark:bg-slate-900 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden print:rounded-none print:border-0 print:shadow-none">
+        <div className="overflow-x-auto print:overflow-visible">
+          <table className="w-full text-left border-collapse print:text-[9px] print:leading-tight">
+            <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold shadow-md shadow-[#739239]/40 dark:shadow-[#739239]/20 relative z-10 print:bg-slate-100 print:shadow-none print:text-[8px] print:tracking-normal">
               <tr>
-                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('folio'); setSortDirection(sortField === 'folio' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                  <div className="flex items-center gap-1.5">Orden {sortField === 'folio' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                <th className="px-6 py-4 print:px-1.5 print:py-1 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('folio'); setSortDirection(sortField === 'folio' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">Orden {sortField === 'folio' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 print:hidden"/> : <ChevronDown size={14} className="text-emerald-500 print:hidden"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity print:hidden" />}</div>
                 </th>
-                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('asset'); setSortDirection(sortField === 'asset' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                  <div className="flex items-center gap-1.5">Equipo / Tarea {sortField === 'asset' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                <th className="px-6 py-4 print:px-1.5 print:py-1 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('asset'); setSortDirection(sortField === 'asset' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">Equipo / Tarea {sortField === 'asset' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 print:hidden"/> : <ChevronDown size={14} className="text-emerald-500 print:hidden"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity print:hidden" />}</div>
                 </th>
-                <th className="px-6 py-4">Técnicos</th>
-                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('date'); setSortDirection(sortField === 'date' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                  <div className="flex items-center gap-1.5">Programación {sortField === 'date' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                <th className="px-6 py-4 print:hidden">Técnicos</th>
+                <th className="px-6 py-4 print:px-1.5 print:py-1 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('date'); setSortDirection(sortField === 'date' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">Fecha {sortField === 'date' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 print:hidden"/> : <ChevronDown size={14} className="text-emerald-500 print:hidden"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity print:hidden" />}</div>
                 </th>
-                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('status'); setSortDirection(sortField === 'status' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                  <div className="flex items-center gap-1.5">Estado {sortField === 'status' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                <th className="px-6 py-4 print:px-1.5 print:py-1 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('status'); setSortDirection(sortField === 'status' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">Estado {sortField === 'status' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 print:hidden"/> : <ChevronDown size={14} className="text-emerald-500 print:hidden"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity print:hidden" />}</div>
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50 print:divide-slate-300">
               {sortedWorkOrders.map((wo) => {
                 const rowPhotoUrl = wo.request_image_url || wo.before_image_url;
                 return (
                 <tr
                   key={wo.id} 
                   onClick={() => onRowClick && onRowClick(wo)}
-                  className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group ${
+                  className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group print:break-inside-avoid ${
                     rowPhotoUrl ? 'wo-photo-row' : ''
                   }`}
                   style={rowPhotoUrl
                     ? ({ '--wo-photo-url': `url("${BACKEND_URL}${rowPhotoUrl}")` } as React.CSSProperties)
                     : undefined}
                 >
-                  <td className="px-6 py-4 align-top">
-                    <div className="flex flex-col gap-1.5 items-start">
-                      <span className="bg-slate-800 dark:bg-slate-700 text-white px-2.5 py-1 rounded-md text-xs font-bold tracking-wide">
+                  <td className="px-6 py-4 print:px-1.5 print:py-0.5 align-top print:align-middle whitespace-nowrap">
+                    <div className="flex flex-col gap-1.5 print:gap-0 items-start print:flex-row print:items-center print:gap-1">
+                      <span className="bg-slate-800 dark:bg-slate-700 text-white px-2.5 py-1 print:px-1 print:py-0 rounded-md print:rounded text-xs print:text-[9px] font-bold tracking-wide">
                         {formatWorkOrderFolio(wo.folio)}
                       </span>
                       {rowPhotoUrl && (
                         <span
-                          className="inline-flex items-center gap-1 rounded-full border border-emerald-200/80 bg-white/90 px-2 py-0.5 text-[10px] font-bold text-emerald-700 backdrop-blur-sm dark:border-emerald-800 dark:bg-slate-900/85 dark:text-emerald-300"
+                          className="inline-flex items-center gap-1 rounded-full border border-emerald-200/80 bg-white/90 px-2 py-0.5 text-[10px] font-bold text-emerald-700 backdrop-blur-sm dark:border-emerald-800 dark:bg-slate-900/85 dark:text-emerald-300 print:hidden"
                           title="Incluye foto de la solicitud"
                           aria-label="Incluye foto de la solicitud"
                         >
@@ -317,30 +320,30 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
                         </span>
                       )}
                       {wo.priority === 'URGENTE' && (
-                        <span className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100 dark:border-red-800 uppercase tracking-widest flex items-center gap-1">
+                        <span className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-0.5 print:px-0.5 print:py-0 rounded text-[10px] print:text-[8px] font-bold border border-red-100 dark:border-red-800 uppercase tracking-widest flex items-center gap-1 print:gap-0 print:[&_svg]:hidden">
                           <AlertCircle size={10} /> Urgente
                         </span>
                       )}
-                      <SlaBadge sla={wo.sla} compact />
+                      <span className="print:hidden"><SlaBadge sla={wo.sla} compact /></span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 align-top">
-                    <div className="flex flex-col gap-1 mb-2">
-                      <div className="font-bold text-slate-900 dark:text-slate-100 text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  <td className="px-6 py-4 print:px-1.5 print:py-0.5 align-top print:align-middle">
+                    <div className="flex flex-col gap-1 mb-2 print:gap-0 print:mb-0">
+                      <div className="font-bold text-slate-900 dark:text-slate-100 text-sm print:text-[9px] print:font-semibold print:leading-tight print:line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         {wo.title}
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                        <span className="font-semibold">{wo.asset.name}</span>
+                      <div className="flex items-center gap-2 text-xs print:text-[8px] print:gap-1 text-slate-500 dark:text-slate-400 print:leading-tight">
+                        <span className="font-semibold truncate max-w-[28ch] print:max-w-[36ch]">{wo.asset.name}</span>
                         {wo.zone?.name && (
                           <>
-                            <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
-                            <span className="flex items-center gap-1"><MapPin size={10}/> {wo.zone.name}</span>
+                            <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 print:hidden" />
+                            <span className="flex items-center gap-1 print:hidden"><MapPin size={10}/> {wo.zone.name}</span>
                           </>
                         )}
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 align-top">
+                  <td className="px-6 py-4 align-top print:hidden">
                     {wo.assigned_technicians && wo.assigned_technicians.length > 0 ? (
                       <div className="flex flex-wrap gap-1.5">
                         {wo.assigned_technicians.map((t) => (
@@ -356,23 +359,23 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
                       <span className="text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400 italic">Sin asignar</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 align-top">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-1.5 text-xs">
-                        <Calendar size={12} className="text-slate-400" />
+                  <td className="px-6 py-4 print:px-1.5 print:py-0.5 align-top print:align-middle whitespace-nowrap">
+                    <div className="flex flex-col gap-1.5 print:gap-0">
+                      <div className="flex items-center gap-1.5 text-xs print:text-[9px] print:gap-0.5">
+                        <Calendar size={12} className="text-slate-400 print:hidden" />
                         <span className="text-slate-700 dark:text-slate-200 dark:text-slate-300">
                           {wo.scheduled_date ? formatFriendlyDate(wo.scheduled_date) : '-'}
                         </span>
                       </div>
                       {wo.due_date && (
-                        <div className={`flex items-center gap-1.5 text-xs ${new Date(wo.due_date) < new Date() && wo.status !== 'FINALIZADO' ? 'text-red-600 dark:text-red-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+                        <div className={`flex items-center gap-1.5 text-xs print:hidden ${new Date(wo.due_date) < new Date() && wo.status !== 'FINALIZADO' ? 'text-red-600 dark:text-red-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
                           <AlertCircle size={12} />
                           <span>Límite: {formatFriendlyDate(wo.due_date)}</span>
                         </div>
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 align-top text-right">
+                  <td className="px-6 py-4 print:px-1.5 print:py-0.5 align-top print:align-middle text-right print:text-left whitespace-nowrap">
                     {getStatusBadge(wo.status)}
                   </td>
                 </tr>

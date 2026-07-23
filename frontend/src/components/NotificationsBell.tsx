@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { socket } from '../api/socket';
 import { BACKEND_URL } from '../api/axios';
 import { parseWorkOrderFolio } from '../utils/folio';
+import { formatDateTime } from '../utils/dateUtils';
 
 export const NotificationsBell = () => {
   const navigate = useNavigate();
@@ -144,7 +145,7 @@ export const NotificationsBell = () => {
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{notif.message}</p>
                   <p className="text-[10px] text-slate-400 mt-1">
-                    {new Date(notif.created_at).toLocaleString()}
+                    {formatDateTime(notif.created_at)}
                   </p>
                 </button>
               ))

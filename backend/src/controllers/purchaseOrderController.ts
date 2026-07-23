@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import prisma from '../config/prisma';
 import { emitRefresh } from '../utils/socket';
+import { parseDateInput } from '../utils/parseDateInput';
 
 export const getPurchaseOrders = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -40,7 +41,8 @@ export const createPurchaseOrder = async (req: AuthRequest, res: Response): Prom
       data: {
         vendor_id,
         created_by_id: user_id,
-        expected_date: expected_date ? new Date(expected_date) : null,
+        // yyyy-MM-dd del <input type="date">: local noon (no UTC midnight → día anterior en MX)
+        expected_date: expected_date ? parseDateInput(expected_date) : null,
         items: {
           create: items.map((i: any) => ({
             item_id: i.item_id,

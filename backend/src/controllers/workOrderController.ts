@@ -5,6 +5,7 @@ import { emitRefresh, emitWorkOrderUpdated } from '../utils/socket';
 import { triggerNewWorkOrderNotification } from '../services/NotificationService';
 import { computeWorkOrderSla, getSlaSettings } from '../services/SlaService';
 import { formatWorkOrderFolio } from '../utils/folio';
+import { parseDateInput } from '../utils/parseDateInput';
 
 export const getRequesters = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -262,8 +263,8 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
         requester_name,
         production_group,
         status: 'PENDIENTE',
-        scheduled_date: scheduled_date ? new Date(scheduled_date) : null,
-        due_date: due_date ? new Date(due_date) : null,
+        scheduled_date: scheduled_date ? parseDateInput(scheduled_date) : null,
+        due_date: due_date ? parseDateInput(due_date) : null,
         request_image_url,
         created_by_id: req.user.userId,
         assigned_technicians: assigned_technicians_ids && assigned_technicians_ids.length > 0
@@ -374,8 +375,8 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
     if (failure_problem_id !== undefined) updateData.failure_problem_id = failure_problem_id;
     if (failure_cause_id !== undefined) updateData.failure_cause_id = failure_cause_id;
     if (failure_remedy_id !== undefined) updateData.failure_remedy_id = failure_remedy_id;
-    if (scheduled_date !== undefined) updateData.scheduled_date = scheduled_date ? new Date(scheduled_date) : null;
-    if (due_date !== undefined) updateData.due_date = due_date ? new Date(due_date) : null;
+    if (scheduled_date !== undefined) updateData.scheduled_date = scheduled_date ? parseDateInput(scheduled_date) : null;
+    if (due_date !== undefined) updateData.due_date = due_date ? parseDateInput(due_date) : null;
     
     // Solo permitir que Administradores y Gestionadores reasignen masivamente
     if (userRole !== 'TECNICO' && assigned_technicians_ids !== undefined) {

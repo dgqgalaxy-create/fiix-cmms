@@ -11,6 +11,7 @@ import { getWorkOrders, updateWorkOrder, joinWorkOrder, deleteWorkOrder } from '
 import type { WorkOrder } from '../api/workOrders';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import { formatDateTime } from '../utils/dateUtils';
 
 const withDragAndDrop = (withDragAndDropRaw as any).default || withDragAndDropRaw;
 const DnDCalendar = withDragAndDrop(BigCalendar);
@@ -347,7 +348,7 @@ export const CalendarPage = () => {
                 {selectedOrder.scheduled_date ? (
                   <div>
                     <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                      Agendado del {new Date(selectedOrder.scheduled_date).toLocaleString()} al {new Date(selectedOrder.due_date!).toLocaleString()}
+                      Agendado del {formatDateTime(selectedOrder.scheduled_date)} al {formatDateTime(selectedOrder.due_date!)}
                     </p>
                     <button 
                       onClick={() => {

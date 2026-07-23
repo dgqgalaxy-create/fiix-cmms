@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { User } from '../api/users';
 import { Pencil, Shield, Wrench, User as UserIcon, ChevronUp, ChevronDown } from 'lucide-react';
+import { formatDate } from '../utils/dateUtils';
 
 interface Props {
   users: User[];
@@ -130,7 +131,7 @@ export const UsersTable = ({ users, onRowClick }: Props) => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm hidden md:table-cell">
-                    {new Date(user.created_at).toLocaleDateString()}
+                    {formatDate(user.created_at)}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button className="text-slate-400 hover:text-emerald-800 dark:text-emerald-300 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors">

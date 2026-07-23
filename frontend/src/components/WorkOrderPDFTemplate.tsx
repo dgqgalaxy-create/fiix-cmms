@@ -2,6 +2,7 @@ import { forwardRef } from 'react';
 import type { WorkOrder } from '../api/workOrders';
 import { BACKEND_URL } from '../api/axios';
 import { formatWorkOrderFolio } from '../utils/folio';
+import { formatDate, formatDateTime } from '../utils/dateUtils';
 
 interface Props {
   workOrder: WorkOrder;
@@ -29,7 +30,7 @@ export const WorkOrderPDFTemplate = forwardRef<HTMLDivElement, Props>(({ workOrd
           <p className="text-slate-600 mt-1 font-medium text-lg">Folio: {formatWorkOrderFolio(workOrder.folio)}</p>
         </div>
         <div className="text-right text-sm text-slate-500 font-medium">
-          <p>Generado el: {new Date().toLocaleDateString()}</p>
+          <p>Generado el: {formatDate(new Date())}</p>
           <p>Estado Final: <span className="text-emerald-700 font-bold uppercase">{workOrder.status}</span></p>
         </div>
       </div>
@@ -111,8 +112,8 @@ export const WorkOrderPDFTemplate = forwardRef<HTMLDivElement, Props>(({ workOrd
         <div>
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Registro de Tiempos</p>
           <div className="text-sm text-slate-700">
-            <p><b>Inicio:</b> {workOrder.started_at ? new Date(workOrder.started_at).toLocaleString() : 'N/A'}</p>
-            <p><b>Fin:</b> {workOrder.completed_at ? new Date(workOrder.completed_at).toLocaleString() : 'N/A'}</p>
+            <p><b>Inicio:</b> {workOrder.started_at ? formatDateTime(workOrder.started_at) : 'N/A'}</p>
+            <p><b>Fin:</b> {workOrder.completed_at ? formatDateTime(workOrder.completed_at) : 'N/A'}</p>
           </div>
         </div>
       </div>

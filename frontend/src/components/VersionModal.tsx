@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.35.1";
+export const APP_VERSION = "1.35.4";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "22 de Julio, 2026";
+  const updateDate = "23 de Julio, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -28,6 +28,10 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: El PDF/impresión del listado de Órdenes de Trabajo es más compacto (A4 horizontal): tabla densa en lugar de tarjetas, encabezado fino y ~10–15 filas por hoja.",
+    "Corrección: El PDF/impresión de Órdenes de Compra ya no deja ~3 páginas en blanco al final; solo genera las hojas que ocupa el contenido (A4 vertical).",
+    "Corrección: Fechas de calendario (fecha esperada de OC, turnos/roster) ya no se guardan como medianoche UTC (que en México mostraba el día anterior). Listados, PDF y CSV usan formato México (dd/mm) de forma uniforme.",
+    "Corrección: Las fechas de movimientos (e órdenes) del CSV Fiix se interpretan como día/mes/año (ej. 05/07/2026 = 5 de julio, no 7 de mayo) y se muestran en formato México sin correr el día por UTC.",
     "Corrección: El PDF/impresión de Órdenes de Compra ya no duplica el contenido (antes salían ~4 hojas idénticas en OC recibidas) y fuerza A4 vertical (retrato).",
     "Nuevo: En Opciones de Desarrollador → Limpiar fotos huérfanas (escanea uploads/ vs BD y borra archivos no referenciados; confirma con LIMPIAR). Vaciar BD también puede borrar uploads/ (checkbox activado por defecto).",
     "Corrección: Movimientos de recepción de OC usan la fecha/hora exacta del momento de recibir (aunque llegue antes de lo pactado) y el listado ya no corta a 1000 (el CSV con fechas futuras los ocultaba). PDF de OC en vertical.",

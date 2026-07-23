@@ -7,7 +7,27 @@
  * formatear con la hora local del navegador (ej. México, UTC-6) el resultado
  * se recorre un día hacia atrás.
  */
-export function parseDateOnly(dateOnlyString: string): Date {
-  const utcDate = new Date(dateOnlyString);
+export function parseDateOnly(dateOnlyString: string | Date): Date {
+  const utcDate = typeof dateOnlyString === 'string'
+    ? new Date(dateOnlyString)
+    : dateOnlyString;
   return new Date(utcDate.getUTCFullYear(), utcDate.getUTCMonth(), utcDate.getUTCDate());
+}
+
+/** Fecha/hora de movimientos y registros (locale México, evita mm/dd en navegadores US). */
+export function formatDateTime(iso: string | Date): string {
+  return new Date(iso).toLocaleString('es-MX');
+}
+
+/** Solo fecha (created_at, etc.) en formato México dd/mm/aaaa. */
+export function formatDate(iso: string | Date): string {
+  return new Date(iso).toLocaleDateString('es-MX');
+}
+
+/**
+ * Fecha de calendario (expected_date, next_due, @db.Date) sin correr el día
+ * cuando viene como medianoche UTC.
+ */
+export function formatDateOnly(iso: string | Date): string {
+  return parseDateOnly(iso).toLocaleDateString('es-MX');
 }

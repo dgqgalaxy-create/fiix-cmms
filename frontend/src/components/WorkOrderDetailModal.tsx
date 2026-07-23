@@ -18,6 +18,7 @@ import { formatWorkOrderFolio } from '../utils/folio';
 import { useWorkOrderPresence } from '../hooks/useWorkOrderPresence';
 import { socket } from '../api/socket';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { formatDate, formatDateTime } from '../utils/dateUtils';
 
 const STATUS_LABELS: Record<string, string> = {
   PENDIENTE: 'Pendiente',
@@ -514,7 +515,7 @@ export const WorkOrderDetailModal = ({
               <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 break-words min-w-0">{workOrder.title}</h2>
             </div>
             <div className="flex flex-wrap gap-2 sm:gap-4 items-center mt-1.5">
-              <p className="text-sm text-slate-500 dark:text-slate-400">Orden Creada el {new Date(workOrder.created_at).toLocaleDateString()}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Orden Creada el {formatDate(workOrder.created_at)}</p>
               {workOrder.status === 'FINALIZADO' && getDuration() && (
                 <div className="flex items-center gap-1 text-sm text-emerald-800 dark:text-emerald-300 bg-blue-50 px-2 py-0.5 rounded-md font-medium border border-blue-100">
                   <Clock size={14} />
@@ -600,11 +601,11 @@ export const WorkOrderDetailModal = ({
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="text-slate-500 dark:text-slate-400 block text-xs">Inicio:</span>
-                    <span className="font-medium text-slate-800 dark:text-slate-100">{new Date(workOrder.started_at).toLocaleString()}</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-100">{formatDateTime(workOrder.started_at)}</span>
                   </div>
                   <div>
                     <span className="text-slate-500 dark:text-slate-400 block text-xs">Fin:</span>
-                    <span className="font-medium text-slate-800 dark:text-slate-100">{new Date(workOrder.completed_at).toLocaleString()}</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-100">{formatDateTime(workOrder.completed_at)}</span>
                   </div>
                   <div className="col-span-2 mt-1">
                     <span className="text-slate-500 dark:text-slate-400 block text-xs">Tiempo Neto Trabajado:</span>

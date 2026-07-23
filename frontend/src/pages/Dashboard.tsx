@@ -11,6 +11,7 @@ import { useSearchParams } from 'react-router-dom';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
+import { formatDate, formatDateTime } from '../utils/dateUtils';
 
 export const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -175,7 +176,7 @@ export const Dashboard = () => {
       const zone = `"${wo.zone?.name?.replace(/"/g, '""') || ''}"`;
       const priority = wo.priority || '';
       const status = wo.status || '';
-      const date = new Date(wo.created_at).toLocaleDateString();
+      const date = formatDate(wo.created_at);
       return [folio, title, asset, zone, priority, status, date].join(',');
     });
     
@@ -184,7 +185,7 @@ export const Dashboard = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `ordenes_trabajo_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `ordenes_trabajo_${excelDateStamp()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -200,7 +201,7 @@ export const Dashboard = () => {
       Prioridad: wo.priority || '',
       Estado: wo.status || '',
       Técnicos: wo.assigned_technicians?.map((t) => t.name).join(', ') || '',
-      'Fecha creación': new Date(wo.created_at).toLocaleString('es-MX'),
+      'Fecha creación': formatDateTime(wo.created_at),
     }));
     downloadWorkbook(`ordenes_${excelDateStamp()}.xlsx`, [{ name: 'Ordenes', rows }]);
   };
@@ -360,16 +361,13 @@ export const Dashboard = () => {
 
   return (
     <>
-      {/* Encabezado exclusivo para impresión */}
-      <div className="hidden print:flex justify-between items-end border-b-2 border-slate-800 pb-4 mb-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Reporte de Órdenes de Trabajo</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">LPET CMMS - Listado de Órdenes</p>
+      {/* Encabezado exclusivo para impresión (compacto: no restar filas al listado) */}
+      <div className="hidden print:flex justify-between items-baseline border-b border-slate-800 pb-1 mb-2">
+        <div className="flex items-baseline gap-2">
+          <h1 className="text-sm font-bold text-slate-900 tracking-tight">Órdenes de Trabajo</h1>
+          <p className="text-[10px] text-slate-500">LPET CMMS</p>
         </div>
-        <div className="text-right">
-          <p className="text-sm font-bold text-slate-700">Fecha de Generación:</p>
-          <p className="text-slate-500 text-sm">{new Date().toLocaleDateString()}</p>
-        </div>
+        <p className="text-[10px] text-slate-600">{formatDate(new Date())} · {filteredList.length} OT</p>
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 print:hidden">

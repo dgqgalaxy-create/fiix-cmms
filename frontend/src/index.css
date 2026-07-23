@@ -100,7 +100,7 @@ body {
 @media print {
   @page {
     size: A4 landscape;
-    margin: 10mm;
+    margin: 6mm;
   }
   body {
     -webkit-print-color-adjust: exact;
@@ -109,37 +109,61 @@ body {
   }
 
   /*
-   * Órdenes de Compra: solo una hoja de contenido (evita duplicar modal + hoja de impresión).
-   * El tamaño A4 portrait se fuerza con un <style> temporal al imprimir (ver PODetailModal).
-   * visibility + absolute top evita páginas en blanco por el resto del layout oculto.
+   * Órdenes de Compra: .po-print-sheet vive en document.body (portal).
+   * display:none en hermanos — no visibility — para que el layout oculto no genere
+   * páginas en blanco. A4 portrait se fuerza con <style> temporal (PODetailModal).
    */
-  body.po-printing * {
-    visibility: hidden !important;
+  body.po-printing {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
   }
-  body.po-printing .po-print-sheet,
-  body.po-printing .po-print-sheet * {
-    visibility: visible !important;
+  html:has(body.po-printing) {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  body.po-printing > *:not(.po-print-sheet) {
+    display: none !important;
   }
   body.po-printing .po-print-sheet {
     display: block !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    right: auto !important;
-    bottom: auto !important;
+    position: static !important;
     width: 100% !important;
+    max-width: none !important;
     height: auto !important;
+    min-height: 0 !important;
     max-height: none !important;
     margin: 0 !important;
     padding: 0 !important;
     background: white !important;
     color: black !important;
     overflow: visible !important;
-    z-index: 1 !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
-  body.po-printing {
-    background: white !important;
+
+  /* Listado OT: sin fondos fotográficos; filas densas (~10–15 / hoja A4 landscape). */
+  .wo-print-list .wo-print-cards {
+    display: none !important;
   }
+  .wo-print-list .wo-print-table {
+    display: block !important;
+  }
+  .wo-print-list .wo-photo-row {
+    background-image: none !important;
+  }
+  .wo-print-list table {
+    font-size: 9px !important;
+  }
+  .wo-print-list th,
+  .wo-print-list td {
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+  }
+
   .rbc-btn-group {
     display: none !important;
   }

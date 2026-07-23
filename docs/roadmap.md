@@ -1,9 +1,12 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
-*(Última actualización: 22 de Julio de 2026)*
+*(Última actualización: 23 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.34.2 (Actualización: 22 de Julio de 2026)
+## 🚀 Versión Actual: v1.35.2 (Actualización: 23 de Julio de 2026)
+
+### Novedades en v1.35.2 (fechas CSV inventario)
+- **Corrección:** Importación CSV de movimientos/OT interpreta fechas Fiix como **día/mes/año** (no mm/dd US) y las muestra en locale México.
 
 ### Novedades en v1.34.2 (movimientos OC + PDF vertical)
 - **Corrección:** Movimientos de recepción de OC con **fecha = instante de recepción** (válido si el material llega antes de lo pactado). El listado de movimientos ya no corta a 1000. PDF de OC en **vertical**.

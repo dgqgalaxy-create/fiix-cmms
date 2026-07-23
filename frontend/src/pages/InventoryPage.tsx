@@ -13,6 +13,7 @@ import { TransactionModal } from '../components/inventory/TransactionModal';
 import { TransactionDetailModal } from '../components/inventory/TransactionDetailModal';
 import { CatalogModal } from '../components/inventory/CatalogModal';
 import { QRDisplayModal } from '../components/common/QRDisplayModal';
+import { formatDateTime } from '../utils/dateUtils';
 import { QRScannerModal } from '../components/common/QRScannerModal';
 import { BulkQRPrintModal } from '../components/common/BulkQRPrintModal';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
@@ -904,7 +905,7 @@ export const InventoryPage = () => {
                       className="hover:bg-slate-50/50 transition-colors cursor-pointer"
                       onClick={() => handleOpenTransactionDetail(tx)}
                     >
-                      <td className="px-6 py-4">{new Date(tx.created_at).toLocaleString()}</td>
+                      <td className="px-6 py-4">{formatDateTime(tx.created_at)}</td>
                       <td className="px-6 py-4 font-medium text-slate-900">{tx.item?.name}</td>
                       <td className="px-6 py-4">{tx.user?.name}</td>
                       <td className="px-6 py-4 text-right">

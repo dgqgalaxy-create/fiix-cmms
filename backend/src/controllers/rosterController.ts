@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { emitRefresh } from '../utils/socket';
+import { parseDateInput } from '../utils/parseDateInput';
 
 export const getRoster = async (req: Request, res: Response) => {
   try {
@@ -12,11 +13,14 @@ export const getRoster = async (req: Request, res: Response) => {
       }
     });
 
+    const rangeStart = start ? parseDateInput(start as string) ?? undefined : undefined;
+    const rangeEnd = end ? parseDateInput(end as string) ?? undefined : undefined;
+
     const exceptions = await prisma.technicianException.findMany({
       where: {
         date: {
-          gte: start ? new Date(start as string) : undefined,
-          lte: end ? new Date(end as string) : undefined,
+          gte: rangeStart,
+          lte: rangeEnd,
         }
       },
       include: {
@@ -32,8 +36,8 @@ export const getRoster = async (req: Request, res: Response) => {
     const holidays = await prisma.holiday.findMany({
       where: {
         date: {
-          gte: start ? new Date(start as string) : undefined,
-          lte: end ? new Date(end as string) : undefined,
+          gte: rangeStart,
+          lte: rangeEnd,
         },
       }
     });
@@ -49,10 +53,16 @@ export const assignPattern = async (req: Request, res: Response) => {
   try {
     const { user_id, pattern_type, start_date } = req.body;
     
+    const start = parseDateInput(start_date);
+    if (!start) {
+      res.status(400).json({ error: 'Fecha de inicio inválida' });
+      return;
+    }
+
     const pattern = await prisma.technicianPattern.upsert({
       where: { user_id },
-      update: { pattern_type, start_date: new Date(start_date) },
-      create: { user_id, pattern_type, start_date: new Date(start_date) }
+      update: { pattern_type, start_date: start },
+      create: { user_id, pattern_type, start_date: start }
     });
     
     emitRefresh('refresh_roster');
@@ -67,10 +77,16 @@ export const addException = async (req: Request, res: Response) => {
   try {
     const { user_id, date, exception_type, notes } = req.body;
     
+    const day = parseDateInput(date);
+    if (!day) {
+      res.status(400).json({ error: 'Fecha inválida' });
+      return;
+    }
+
     const exception = await prisma.technicianException.create({
       data: {
         user_id,
-        date: new Date(date),
+        date: day,
         exception_type,
         notes
       }

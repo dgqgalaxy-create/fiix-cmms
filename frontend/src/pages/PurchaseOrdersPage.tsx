@@ -5,6 +5,7 @@ import { CreatePOModal } from '../components/CreatePOModal';
 import { PODetailModal } from '../components/PODetailModal';
 import { useAuth } from '../context/AuthContext';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import { formatDate } from '../utils/dateUtils';
 
 export const PurchaseOrdersPage = () => {
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
@@ -205,7 +206,7 @@ export const PurchaseOrdersPage = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-slate-600 text-sm">
                         <Calendar size={14} />
-                        {new Date(order.created_at).toLocaleDateString()}
+                        {formatDate(order.created_at)}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">

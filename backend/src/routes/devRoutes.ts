@@ -22,6 +22,7 @@ import {
   cleanupOrphanUploads,
   emptyUploadsDirectory,
 } from '../utils/uploadsCleanup';
+import { parseCsvDate } from '../utils/parseCsvDate';
 
 const router = express.Router();
 
@@ -420,22 +421,8 @@ router.post(
   ];
 
   try {
-    const parseSafeDate = (dString: string) => {
-       if (!dString) return null;
-       let d = new Date(dString);
-       if (!isNaN(d.getTime())) return d;
-       const parts = dString.split(' ');
-       if (parts.length === 2) {
-          const dateParts = parts[0].split('/');
-          if (dateParts.length === 3) {
-             let timeStr = parts[1];
-             if (timeStr.length === 7 || timeStr.length === 4) timeStr = '0' + timeStr;
-             d = new Date(`${dateParts[2]}-${dateParts[1].padStart(2,'0')}-${dateParts[0].padStart(2,'0')}T${timeStr}Z`);
-             if (!isNaN(d.getTime())) return d;
-          }
-       }
-       return null;
-    };
+    // Fechas Fiix CSV: dd/mm/yyyy (ver parseCsvDate). No usar new Date('05/07/…') (mm/dd US).
+    const parseSafeDate = parseCsvDate;
 
     // Parseo robusto de números que pueden venir con coma como separador de miles
     // (ej. "2,140.22" -> 2140.22). Sin esto parseFloat corta en la coma y devuelve 2.

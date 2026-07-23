@@ -6,6 +6,7 @@ import type { UnitOfMeasure } from '../../api/settings';
 import { ImageSearchModal } from '../inventory/ImageSearchModal';
 import type { Item, ItemCategory, ItemLocation, Vendor, InventoryTransaction } from '../../api/inventory';
 import { BACKEND_URL } from '../../api/axios';
+import { formatDateTime } from '../../utils/dateUtils';
 
 interface Props {
   isOpen: boolean;
@@ -518,7 +519,7 @@ export const ItemModal = ({
                     <tbody className="divide-y divide-slate-100">
                       {filteredTransactions.map(tx => (
                         <tr key={tx.id} className="hover:bg-slate-100 dark:hover:bg-slate-800/50 dark:bg-slate-800/50 transition-colors">
-                          <td className="px-4 py-3 whitespace-nowrap">{new Date(tx.created_at).toLocaleString()}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">{formatDateTime(tx.created_at)}</td>
                           <td className="px-4 py-3">{tx.user?.name}</td>
                           <td className="px-4 py-3 text-right">
                             <span className={`inline-flex items-center px-2 py-1 rounded font-bold text-xs ${tx.amount > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
