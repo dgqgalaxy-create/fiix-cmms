@@ -154,11 +154,17 @@ Panel de indicadores de mantenimiento:
 - **Acciones principales:** los botones importantes usan verde emerald en todos los módulos.
 - **Diseño unificado:** títulos, tarjetas, tablas y ventanas emergentes siguen el mismo patrón industrial en Inicio, Órdenes, Inventario, Activos, KPIs, Compras y demás módulos.
 
-## 9. Módulo de Activos: Código Interno Automático e Inmutable
+## 9. Módulo de Activos: Código Interno Automático (MTTO)
 
-- **Autoasignación:** Al registrar un nuevo activo (máquina, equipo), ya no se escribe el "Código Interno" manualmente. El sistema lo genera solo, de forma incremental, con el formato **ACT-0001, ACT-0002, ACT-0003...**
-- **Inmutable:** Una vez creado el activo, ese código ya no puede editarse ni desde el formulario de edición ni por ningún otro medio. Esto garantiza que la numeración de la planta sea siempre única y trazable, evitando duplicados o cambios accidentales.
-- **Migraciones de datos:** Cualquier importación o migración masiva de activos (histórica o futura) asigna este mismo formato de código automáticamente.
+- **Autoasignación:** Al registrar un nuevo activo (máquina, equipo), el código interno se genera solo con el formato **`MTTO-{NNNN}-{S}-{DDD}-{T}`** (ej. `MTTO-0052-B-001-F`):
+  - **NNNN:** número de 4 dígitos compartido por todos los activos con el mismo nombre de equipo (sin importar la zona).
+  - **S:** sección A–E si la zona es L1–L5; en otras zonas es **X**.
+  - **DDD:** índice de duplicado (001, 002…) para el mismo nombre + misma zona (la sección no reinicia la secuencia). Si solo cambias S o T al editar, se conservan NNNN y DDD.
+  - **T:** **F** = Activo fijo, **C** = Controlable.
+- **Tipo de activo (obligatorio):** Al crear o editar debes elegir **Activo fijo** o **Controlable**. Ese dato también forma parte del código.
+- **Regeneración al editar:** Si cambias nombre, zona, sección o tipo (fijo/controlable), el código se recalcula. Si solo cambias otros campos (marca, precio, etc.), el código se conserva. Los activos antiguos con formato `ACT-XXXX` se mantienen hasta que una edición regenere el código al esquema MTTO.
+- **Migraciones de datos:** La importación CSV de órdenes genera códigos MTTO cuando crea activos nuevos; si el CSV trae un código propio, se respeta.
+- **Sección (L1–L5):** Si la zona del activo es exactamente **L1, L2, L3, L4 o L5**, aparece el campo obligatorio **Sección** con valores **A, B, C, D o E** (cada línea se divide en cinco tramos). En cualquier otra zona el campo se oculta y la sección queda vacía. En el listado puedes filtrar por zona y, si eliges una línea Lx, también por sección.
 
 ## 9.1 SLA (Acuerdo de Nivel de Servicio) y Escalamiento de Órdenes
 

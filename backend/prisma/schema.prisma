@@ -19,6 +19,21 @@ enum AssetStatus {
   FUERA_DE_SERVICIO
 }
 
+/// Sección A–E dentro de líneas L1–L5 (solo aplica a esas zonas).
+enum AssetSection {
+  A
+  B
+  C
+  D
+  E
+}
+
+/// Clasificación patrimonial del activo (letra F/C en el código MTTO).
+enum AssetKind {
+  FIJO
+  CONTROLABLE
+}
+
 enum WorkOrderStatus {
   PENDIENTE
   EN_PROCESO
@@ -132,6 +147,10 @@ model Asset {
   serial_number   String?
   description     String?
   status          AssetStatus
+  /// Solo aplica cuando la zona es L1–L5; en el resto queda null.
+  section         AssetSection?
+  /// Activo fijo (F) o controlable (C); entra en el código MTTO-…-F/C.
+  asset_kind      AssetKind   @default(FIJO)
 
   image_url       String?
   document_url    String?

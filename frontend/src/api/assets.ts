@@ -9,6 +9,10 @@ export interface Asset {
   serial_number?: string;
   description?: string;
   status: 'OPERATIVO' | 'EN_MANTENIMIENTO' | 'FUERA_DE_SERVICIO';
+  /** Sección A–E; solo aplica a zonas L1–L5. */
+  section?: 'A' | 'B' | 'C' | 'D' | 'E' | null;
+  /** Activo fijo (F) o controlable (C). */
+  asset_kind: 'FIJO' | 'CONTROLABLE';
   zone_id: string;
   image_url?: string;
   document_url?: string;

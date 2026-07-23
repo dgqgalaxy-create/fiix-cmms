@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Plus, RefreshCw, Search, QrCode, Printer } from 'lucide-react';
@@ -11,6 +11,7 @@ import { BulkQRPrintModal } from '../components/common/BulkQRPrintModal';
 import { getAssets, createAsset, deleteAsset, updateAsset } from '../api/assets';
 import type { Asset } from '../api/assets';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import { ASSET_SECTIONS, isSectionZoneName } from '../utils/assetSection';
 
 export const AssetsPage = () => {
   const { hasPermission } = useAuth();
@@ -22,6 +23,8 @@ export const AssetsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterZoneId, setFilterZoneId] = useState('');
+  const [filterSection, setFilterSection] = useState('');
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [detailAsset, setDetailAsset] = useState<Asset | null>(null);
   const [qrAsset, setQrAsset] = useState<Asset | null>(null);
@@ -66,10 +69,32 @@ export const AssetsPage = () => {
     setSearchParams(next, { replace: true });
   }, [searchParams, assets, isLoading, setSearchParams]);
 
-  const filteredAssets = assets.filter(a => 
-    a.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    a.internal_code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const zoneOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const a of assets) {
+      if (a.zone_id && a.zone?.name) map.set(a.zone_id, a.zone.name);
+    }
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  }, [assets]);
+
+  const selectedFilterZoneName = zoneOptions.find((z) => z.id === filterZoneId)?.name;
+  const showSectionFilter = isSectionZoneName(selectedFilterZoneName);
+
+  useEffect(() => {
+    if (!showSectionFilter) setFilterSection('');
+  }, [showSectionFilter]);
+
+  const filteredAssets = assets.filter((a) => {
+    const term = searchTerm.toLowerCase();
+    const matchesSearch =
+      a.name.toLowerCase().includes(term) ||
+      a.internal_code.toLowerCase().includes(term);
+    const matchesZone = !filterZoneId || a.zone_id === filterZoneId;
+    const matchesSection = !filterSection || a.section === filterSection;
+    return matchesSearch && matchesZone && matchesSection;
+  });
 
   const handleScan = (scanned: string) => {
     const scannedId = scanned.replace(/^FIIX-(ASSET|ITEM|LOCATION):/, '').trim();
@@ -195,25 +220,51 @@ export const AssetsPage = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex-1 bg-white dark:bg-slate-900 p-2 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center mb-6">
-            <div className="pl-3 pr-2 text-slate-400">
-              <Search size={20} />
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            <div className="flex-1 bg-white dark:bg-slate-900 p-2 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center">
+              <div className="pl-3 pr-2 text-slate-400">
+                <Search size={20} />
+              </div>
+              <input
+                type="text"
+                placeholder="Buscar activos por nombre o código..."
+                className="w-full bg-transparent border-none focus:ring-0 text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 px-2 py-1.5 outline-none"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {canUseScanner && (
+                <button
+                  onClick={() => setIsScannerOpen(true)}
+                  className="p-1.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-xl transition-colors"
+                  title="Escanear QR del activo"
+                >
+                  <QrCode size={20} />
+                </button>
+              )}
             </div>
-            <input
-              type="text"
-              placeholder="Buscar activos por nombre o código..."
-              className="w-full bg-transparent border-none focus:ring-0 text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 px-2 py-1.5 outline-none"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            {canUseScanner && (
-              <button
-                onClick={() => setIsScannerOpen(true)}
-                className="p-1.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-xl transition-colors"
-                title="Escanear QR del activo"
+            <select
+              className="sm:w-40 px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm text-slate-700 dark:text-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-emerald-600"
+              value={filterZoneId}
+              onChange={(e) => setFilterZoneId(e.target.value)}
+              title="Filtrar por zona"
+            >
+              <option value="">Todas las zonas</option>
+              {zoneOptions.map((z) => (
+                <option key={z.id} value={z.id}>{z.name}</option>
+              ))}
+            </select>
+            {showSectionFilter && (
+              <select
+                className="sm:w-36 px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm text-slate-700 dark:text-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-emerald-600"
+                value={filterSection}
+                onChange={(e) => setFilterSection(e.target.value)}
+                title="Filtrar por sección"
               >
-                <QrCode size={20} />
-              </button>
+                <option value="">Todas las secciones</option>
+                {ASSET_SECTIONS.map((s) => (
+                  <option key={s} value={s}>Sección {s}</option>
+                ))}
+              </select>
             )}
           </div>
           <AssetsTable 

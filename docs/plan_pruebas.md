@@ -48,7 +48,7 @@ Marca cada casilla al completar. Anota folio, código o captura si falla un **P0
 | `/dashboard` | Auth | Órdenes de trabajo |
 | `/calendar` | Auth | Calendario de OT |
 | `/roster` | Auth | Horarios / turnos |
-| `/assets` | Auth | Activos (`ACT-####`) |
+| `/assets` | Auth | Activos (`MTTO-NNNN-S-DDD-T`; legacy `ACT-####`) |
 | `/inventory` | Auth | Inventario (`MTTO-####`) |
 | `/maintenance-plans` | Auth + permiso | Planes preventivos |
 | `/purchase-orders` | Auth + permiso | Órdenes de compra |
@@ -120,7 +120,7 @@ Marca cada casilla al completar. Anota folio, código o captura si falla un **P0
 ### Activos
 
 - [ ] **P0** Lista carga; abrir activo → pestaña «De un vistazo».
-- [ ] **P1** Crear activo → código `ACT-####` automático; campo código no editable.
+- [ ] **P1** Crear activo → código `MTTO-NNNN-S-DDD-T` automático; campo Fijo/Controlable obligatorio; código no editable a mano.
 
 ### Portal `/request`
 
@@ -277,7 +277,7 @@ Marca cada casilla al completar. Anota folio, código o captura si falla un **P0
 - [ ] **P1** **Crear respaldo** → `fiix_*.sql.gz` no vacío (+ tar de uploads si aplica).
 - [ ] **P2** Listar respaldos; archivos `[VACÍO]` no restaurables.
 - [ ] **P1** (Staging) **Restaurar** escribiendo `RESTAURAR` → éxito cierra sesión; fallo muestra error **sin** cerrar sesión.
-- [ ] **P1** Import de 7 CSV juntos → datos coherentes; folios `FOL-####`; activos `ACT-####`.
+- [ ] **P1** Import de 7 CSV juntos → datos coherentes; folios `FOL-####`; activos nuevos sin código → `MTTO-…`.
 - [ ] **P2** Zip fotos repuestos (`Items_Images`) → «Fotos asignadas: N».
 - [ ] **P2** Zip + CSV solicitudes → Antes/Después por FOLIO; o tarjeta «Solo fotos de órdenes».
 - [ ] **P2** Telegram token/chat ID en UI → prueba con OT nueva.

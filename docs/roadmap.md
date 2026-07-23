@@ -3,7 +3,15 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 23 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.35.2 (Actualización: 23 de Julio de 2026)
+## 🚀 Versión Actual: v1.37.0 (Actualización: 23 de Julio de 2026)
+
+### Novedades en v1.37.0 (código MTTO + fijo/controlable)
+- **Nuevo:** Formato de código de activos **`MTTO-NNNN-S-DDD-T`** en altas nuevas (reemplaza `ACT-XXXX`). NNNN por nombre de equipo; S = sección A–E o X; DDD = duplicado en la misma zona (mismo nombre); T = F/C.
+- **Nuevo:** Campo obligatorio **Tipo de activo** (`asset_kind`: Activo fijo / Controlable). El código se regenera al editar nombre, zona, sección o tipo.
+- Los activos con código `ACT-####` existentes se conservan hasta una edición que regenere el código.
+
+### Novedades en v1.36.0 (sección de activos L1–L5)
+- **Nuevo:** Campo **Sección** (A–E) en activos cuya zona es exactamente L1–L5. Obligatorio al crear/editar en esas líneas; oculto y nulo en el resto. Visible en detalle/listado; filtro por sección al filtrar una zona Lx.
 
 ### Novedades en v1.35.2 (fechas CSV inventario)
 - **Corrección:** Importación CSV de movimientos/OT interpreta fechas Fiix como **día/mes/año** (no mm/dd US) y las muestra en locale México.

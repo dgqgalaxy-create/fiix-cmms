@@ -193,7 +193,7 @@ export const GlobalSearchModal = () => {
             <div className="max-h-[50vh] overflow-y-auto">
               {!query.trim() && (
                 <p className="px-4 py-8 text-center text-sm text-slate-400">
-                  Escribe un código, nombre o folio (ej. ACT-0001, FOL-0042, MTTO-0001…)
+                  Escribe un código, nombre o folio (ej. MTTO-0001-A-001-F, FOL-0042, ACT-0001…)
                 </p>
               )}
               {query.trim() && !loading && flatResults.length === 0 && (

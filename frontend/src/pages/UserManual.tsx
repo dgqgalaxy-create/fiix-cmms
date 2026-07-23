@@ -433,9 +433,10 @@ export const UserManual = () => {
                   <div className="space-y-4">
                     <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200">Campos Obligatorios</h3>
                     <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
-                      <li><strong>Código Interno:</strong> Se autoasigna al guardar con formato incremental <strong>ACT-0001, ACT-0002...</strong> No se escribe manualmente y, una vez creado, no puede modificarse.</li>
+                      <li><strong>Código Interno:</strong> Se autoasigna al guardar con formato <strong>MTTO-NNNN-S-DDD-T</strong> (ej. <code className="text-xs">MTTO-0052-B-001-F</code>). No se escribe manualmente; se regenera si cambias nombre, zona, sección o tipo fijo/controlable.</li>
+                      <li><strong>Tipo de activo:</strong> Obligatorio — <strong>Activo fijo (F)</strong> o <strong>Controlable (C)</strong>.</li>
                       <li><strong>Nombre:</strong> Descripción clara de la máquina.</li>
-                      <li><strong>Zona:</strong> Área de la planta donde está ubicada (Ej. Producción Línea 1, Empaque).</li>
+                      <li><strong>Zona:</strong> Área de la planta donde está ubicada (Ej. L3, Empaque). En L1–L5 también pides <strong>Sección A–E</strong>.</li>
                     </ul>
                   </div>
 
@@ -451,13 +452,13 @@ export const UserManual = () => {
 
                 <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 p-5 rounded-2xl mt-6">
                   <h3 className="font-bold text-amber-900 dark:text-amber-300 mb-2 flex items-center gap-2">
-                    <Shield size={18} /> Código Interno Inmutable
+                    <Shield size={18} /> Código Interno Automático (MTTO)
                   </h3>
                   <p className="text-amber-800 dark:text-amber-400/90 text-sm">
-                    Desde esta versión, el Código Interno del activo (ACT-0001, ACT-0002...) se genera automáticamente al crear el equipo y el campo queda bloqueado permanentemente, incluso al editar el activo después. Esto evita duplicados y asegura que la numeración de la planta sea siempre consistente y trazable.
-                  </p>
-                  <p className="text-amber-800 dark:text-amber-400/90 text-sm mt-3">
-                    Si aún existen códigos antiguos (por ejemplo <code className="text-xs bg-amber-100 dark:bg-amber-950 px-1 rounded">EQ-28754</code>), un administrador puede migrarlos al formato ACT desde <em>Opciones de Desarrollador → Herramientas locales</em>. La vista previa muestra el mapa antiguo→nuevo y, al aplicar, descarga el JSON de equivalencias. Los QR impresos no se invalidan.
+                    El código se genera al guardar con formato <code className="text-xs bg-amber-100 dark:bg-amber-950 px-1 rounded">MTTO-NNNN-S-DDD-T</code>
+                    (NNNN por nombre de equipo, S = sección A–E o X, DDD = duplicado en la misma zona con el mismo nombre, T = F fijo / C controlable).
+                    No se escribe a mano. Si editas nombre, zona, sección o tipo, el sistema lo regenera; si solo cambias otros campos, se conserva.
+                    Los códigos antiguos <code className="text-xs bg-amber-100 dark:bg-amber-950 px-1 rounded">ACT-XXXX</code> se mantienen hasta una edición que regenere.
                   </p>
                 </div>
               </div>

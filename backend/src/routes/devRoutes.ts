@@ -5,9 +5,9 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { parse } from 'csv-parse/sync';
-import { Role, AssetStatus, WorkOrderStatus, Priority, MaintenanceType, ProductionGroup } from '@prisma/client';
+import { Role, AssetStatus, AssetKind, WorkOrderStatus, Priority, MaintenanceType, ProductionGroup } from '@prisma/client';
 import bcrypt from 'bcrypt';
-import { generateInventoryCode } from '../utils/codeGenerator';
+import { generateAssetInternalCode } from '../utils/assetCodeGenerator';
 import { parseWorkOrderFolio } from '../utils/folio';
 import { runBackup, listBackups, runRestore } from '../utils/backupService';
 import { assignItemImagesFromZip } from '../utils/itemImageImport';
@@ -743,13 +743,20 @@ router.post(
             if(assetName === 'N/A' || !assetName) assetName = 'Sin Equipo';
             let asset = await prisma.asset.findFirst({ where: { name: assetName } });
             if (!asset) {
+               // Sin código en el CSV de OT → esquema MTTO; si hubiera código importado se conservaría.
                asset = await prisma.asset.create({
                   data: {
-                     internal_code: await generateInventoryCode('Asset', 'ACT-', 4),
+                     internal_code: await generateAssetInternalCode({
+                       name: assetName,
+                       zoneId: zone.id,
+                       section: null,
+                       assetKind: AssetKind.FIJO,
+                     }),
                      name: assetName,
                      brand: 'N/A',
                      model: 'N/A',
                      status: AssetStatus.OPERATIVO,
+                     asset_kind: AssetKind.FIJO,
                      zone_id: zone.id
                   }
                });

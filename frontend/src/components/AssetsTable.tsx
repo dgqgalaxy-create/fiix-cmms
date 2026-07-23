@@ -3,7 +3,7 @@ import type { Asset } from '../api/assets';
 import { Activity, Ban, Settings, Trash2, Edit, Database, QrCode, Image as ImageIcon, ChevronUp, ChevronDown } from 'lucide-react';
 import { BACKEND_URL } from '../api/axios';
 
-type SortField = 'zone' | 'vendor' | 'status' | 'name' | 'internal_code' | 'brand_model' | null;
+type SortField = 'zone' | 'section' | 'vendor' | 'status' | 'name' | 'internal_code' | 'brand_model' | null;
 type SortDirection = 'asc' | 'desc';
 
 interface Props {
@@ -87,6 +87,10 @@ export const AssetsTable = ({
         valA = a.zone?.name || '';
         valB = b.zone?.name || '';
         break;
+      case 'section':
+        valA = a.section || '';
+        valB = b.section || '';
+        break;
       case 'vendor':
         valA = a.vendor?.name || '';
         valB = b.vendor?.name || '';
@@ -140,6 +144,11 @@ export const AssetsTable = ({
                 <span className="font-mono text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                   {asset.internal_code}
                 </span>
+                {asset.asset_kind && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                    {asset.asset_kind === 'CONTROLABLE' ? 'C' : 'F'}
+                  </span>
+                )}
               </div>
               <div className="flex-shrink-0">
                 {getStatusBadge(asset.status)}
@@ -171,6 +180,9 @@ export const AssetsTable = ({
             <div className="flex justify-between items-center text-[11px] border-t border-slate-100 dark:border-slate-800 pt-2.5 mt-2">
               <div className="text-slate-500 dark:text-slate-400">
                 Zona: <span className="font-semibold text-slate-700 dark:text-slate-200">{asset.zone?.name || 'Sin Zona'}</span>
+                {asset.section && (
+                  <span className="ml-2">· Sec: <span className="font-semibold text-slate-700 dark:text-slate-200">{asset.section}</span></span>
+                )}
               </div>
 
               {canManage && (
@@ -223,6 +235,9 @@ export const AssetsTable = ({
                 <th className="px-6 py-4 hidden sm:table-cell cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 transition-colors group" onClick={() => handleSort('zone')}>
                   <div className="flex items-center gap-1.5">Zona {sortField === 'zone' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
                 </th>
+                <th className="px-4 py-4 hidden md:table-cell cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 transition-colors group" onClick={() => handleSort('section')}>
+                  <div className="flex items-center gap-1.5">Sec. {sortField === 'section' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                </th>
                 <th className="px-6 py-4 hidden lg:table-cell cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 transition-colors group" onClick={() => handleSort('vendor')}>
                   <div className="flex items-center gap-1.5">Proveedor {sortField === 'vendor' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
                 </th>
@@ -255,7 +270,17 @@ export const AssetsTable = ({
                     </td>
                   )}
                   <td className="px-6 py-4 font-mono text-sm text-slate-500 dark:text-slate-400 hidden sm:table-cell">
-                    {asset.internal_code}
+                    <div className="flex items-center gap-1.5">
+                      <span>{asset.internal_code}</span>
+                      {asset.asset_kind && (
+                        <span
+                          className="text-[10px] font-bold text-slate-400"
+                          title={asset.asset_kind === 'CONTROLABLE' ? 'Controlable' : 'Activo fijo'}
+                        >
+                          {asset.asset_kind === 'CONTROLABLE' ? 'C' : 'F'}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -278,6 +303,9 @@ export const AssetsTable = ({
                   </td>
                   <td className="px-6 py-4 text-slate-700 dark:text-slate-200 hidden sm:table-cell">
                     {asset.zone?.name || <span className="text-slate-400 italic">Sin Zona</span>}
+                  </td>
+                  <td className="px-4 py-4 text-slate-700 dark:text-slate-200 hidden md:table-cell font-medium">
+                    {asset.section || <span className="text-slate-400 italic">—</span>}
                   </td>
                   <td className="px-6 py-4 text-slate-700 dark:text-slate-200 hidden lg:table-cell">
                     {asset.vendor?.name || <span className="text-slate-400 italic">-</span>}

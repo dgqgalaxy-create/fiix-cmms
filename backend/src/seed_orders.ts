@@ -3,7 +3,8 @@ import path from 'path';
 import { parse } from 'csv-parse';
 import prisma from './config/prisma';
 import bcrypt from 'bcrypt';
-import { generateInventoryCode } from './utils/codeGenerator';
+import { generateAssetInternalCode } from './utils/assetCodeGenerator';
+import { AssetKind } from '@prisma/client';
 
 import { parseCsvDate } from './utils/parseCsvDate';
 
@@ -80,9 +81,13 @@ async function seedOrders() {
       if (!assetId) {
         let asset = await prisma.asset.findFirst({ where: { name: assetName } });
         if (!asset) {
-          // El código interno de los Activos es inmutable y sigue el formato
-          // incremental ACT-0001, ACT-0002, ... asignado automáticamente.
-          const internal_code = await generateInventoryCode('Asset', 'ACT-', 4);
+          // Código MTTO-NNNN-S-DDD-T (sin código importado → se genera).
+          const internal_code = await generateAssetInternalCode({
+            name: assetName,
+            zoneId,
+            section: null,
+            assetKind: AssetKind.FIJO,
+          });
           asset = await prisma.asset.create({ 
             data: { 
               name: assetName,
@@ -90,6 +95,7 @@ async function seedOrders() {
               brand: 'Desconocida',
               model: 'Desconocido',
               status: 'OPERATIVO',
+              asset_kind: AssetKind.FIJO,
               zone_id: zoneId
             } 
           });

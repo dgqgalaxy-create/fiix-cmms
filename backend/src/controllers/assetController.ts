@@ -1,7 +1,13 @@
 import { Request, Response } from 'express';
+import { AssetKind, Prisma } from '@prisma/client';
 import prisma from '../config/prisma';
-import { generateInventoryCode } from '../utils/codeGenerator';
 import { emitRefresh } from '../utils/socket';
+import { resolveAssetSection } from '../utils/assetSection';
+import {
+  generateAssetInternalCode,
+  normalizeAssetKind,
+  normalizeEquipmentName,
+} from '../utils/assetCodeGenerator';
 
 export const getAssetMetrics = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -246,38 +252,27 @@ export const getAssetById = async (req: Request, res: Response): Promise<void> =
   }
 };
 
+const MAX_CODE_RETRIES = 5;
+
 export const createAsset = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { zone_id, vendor_id, price, name, brand, model, serial_number, description, status } = req.body;
-
-    // El código interno es inmutable y autogenerado (ACT-0001, ACT-0002, ...).
-    // Se ignora cualquier valor enviado desde el cliente.
-    const internal_code = await generateInventoryCode('Asset', 'ACT-', 4);
-
-    const assetData: any = {
-      internal_code,
+    const {
+      zone_id,
+      vendor_id,
+      price,
       name,
       brand,
       model,
-      serial_number: serial_number || null,
-      description: description || null,
+      serial_number,
+      description,
       status,
-      price: price ? parseFloat(price) : null,
-    };
+      section,
+      asset_kind,
+    } = req.body;
 
-    // Prisma no permite mezclar el estilo de relación (connect) con la escritura
-    // directa del scalar de otra relación en la misma llamada; por eso "vendor"
-    // también se asigna con connect en vez de "vendor_id" plano.
-    if (vendor_id) {
-      assetData.vendor = { connect: { id: vendor_id } };
-    }
-
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-    if (files?.['image']) {
-      assetData.image_url = `/uploads/assets/${files['image'][0].filename}`;
-    }
-    if (files?.['document']) {
-      assetData.document_url = `/uploads/assets/${files['document'][0].filename}`;
+    if (!name || !String(name).trim()) {
+      res.status(400).json({ error: 'El nombre del equipo es obligatorio' });
+      return;
     }
 
     if (!zone_id) {
@@ -285,9 +280,91 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    assetData.zone = { connect: { id: zone_id } };
+    const kind = normalizeAssetKind(asset_kind);
+    if (kind === undefined || kind === null) {
+      res.status(400).json({ error: 'Debes indicar si es Activo fijo o Controlable' });
+      return;
+    }
 
-    const newAsset = await prisma.asset.create({ data: assetData });
+    const zone = await prisma.zone.findUnique({ where: { id: zone_id } });
+    if (!zone) {
+      res.status(400).json({ error: 'La zona indicada no existe' });
+      return;
+    }
+
+    const sectionResult = resolveAssetSection({
+      zoneName: zone.name,
+      sectionInput: section,
+    });
+    if ('error' in sectionResult) {
+      res.status(400).json({ error: sectionResult.error });
+      return;
+    }
+
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const image_url = files?.['image']
+      ? `/uploads/assets/${files['image'][0].filename}`
+      : undefined;
+    const document_url = files?.['document']
+      ? `/uploads/assets/${files['document'][0].filename}`
+      : undefined;
+
+    let newAsset = null;
+    let lastError: unknown = null;
+
+    for (let attempt = 0; attempt < MAX_CODE_RETRIES; attempt++) {
+      try {
+        newAsset = await prisma.$transaction(
+          async (tx) => {
+            const internal_code = await generateAssetInternalCode({
+              name: String(name),
+              zoneId: zone_id,
+              section: sectionResult.section,
+              assetKind: kind,
+              tx,
+            });
+
+            const assetData: Prisma.AssetCreateInput = {
+              internal_code,
+              name: String(name).trim(),
+              brand,
+              model,
+              serial_number: serial_number || null,
+              description: description || null,
+              status,
+              price: price ? parseFloat(price) : null,
+              section: sectionResult.section,
+              asset_kind: kind,
+              zone: { connect: { id: zone_id } },
+            };
+
+            if (vendor_id) {
+              assetData.vendor = { connect: { id: vendor_id } };
+            }
+            if (image_url) assetData.image_url = image_url;
+            if (document_url) assetData.document_url = document_url;
+
+            return tx.asset.create({
+              data: assetData,
+              include: { zone: true, vendor: true },
+            });
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+        );
+        break;
+      } catch (err: any) {
+        lastError = err;
+        if (err?.code === 'P2002') continue;
+        throw err;
+      }
+    }
+
+    if (!newAsset) {
+      console.error('Create Asset Error (code collision):', lastError);
+      res.status(400).json({ error: 'El código interno ya existe; reintenta' });
+      return;
+    }
+
     emitRefresh('refresh_assets');
     res.status(201).json(newAsset);
   } catch (error: any) {
@@ -303,37 +380,151 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
 export const updateAsset = async (req: Request, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    // internal_code es inmutable una vez creado: se ignora deliberadamente
-    // cualquier valor recibido para este campo en la actualización.
-    const { zone_id, vendor_id, price, name, brand, model, serial_number, description, status } = req.body;
+    const {
+      zone_id,
+      vendor_id,
+      price,
+      name,
+      brand,
+      model,
+      serial_number,
+      description,
+      status,
+      section,
+      asset_kind,
+    } = req.body;
 
-    const assetData: any = {};
-    if (name) assetData.name = name;
-    if (brand) assetData.brand = brand;
-    if (model) assetData.model = model;
-    if (serial_number !== undefined) assetData.serial_number = serial_number || null;
-    if (description !== undefined) assetData.description = description || null;
-    if (status) assetData.status = status;
-    if (price !== undefined) assetData.price = price ? parseFloat(price) : null;
-    if (zone_id) assetData.zone = { connect: { id: zone_id } };
-    // "vendor" se asigna con connect/disconnect en vez del scalar "vendor_id"
-    // directo, ya que Prisma no permite mezclar ambos estilos en la misma llamada.
-    if (vendor_id !== undefined) {
-      assetData.vendor = vendor_id ? { connect: { id: vendor_id } } : { disconnect: true };
+    const existing = await prisma.asset.findUnique({
+      where: { id },
+      include: { zone: true },
+    });
+    if (!existing) {
+      res.status(404).json({ error: 'Activo no encontrado' });
+      return;
     }
+
+    let nextZoneId = existing.zone_id;
+    let zoneName = existing.zone?.name ?? null;
+    if (zone_id) {
+      const zone = await prisma.zone.findUnique({ where: { id: zone_id } });
+      if (!zone) {
+        res.status(400).json({ error: 'La zona indicada no existe' });
+        return;
+      }
+      nextZoneId = zone.id;
+      zoneName = zone.name;
+    }
+
+    if (!nextZoneId) {
+      res.status(400).json({ error: 'La zona (zone_id) es obligatoria' });
+      return;
+    }
+
+    const sectionResult = resolveAssetSection({
+      zoneName,
+      sectionInput: section,
+      existingSection: existing.section,
+      isUpdate: true,
+    });
+    if ('error' in sectionResult) {
+      res.status(400).json({ error: sectionResult.error });
+      return;
+    }
+
+    let nextKind: AssetKind = existing.asset_kind;
+    if (asset_kind !== undefined) {
+      const kind = normalizeAssetKind(asset_kind);
+      if (kind === null || kind === undefined) {
+        res.status(400).json({ error: 'Debes indicar si es Activo fijo o Controlable' });
+        return;
+      }
+      nextKind = kind;
+    }
+
+    const nextName = name !== undefined ? String(name).trim() : existing.name;
+    if (!nextName) {
+      res.status(400).json({ error: 'El nombre del equipo es obligatorio' });
+      return;
+    }
+
+    const nameChanged =
+      normalizeEquipmentName(nextName) !== normalizeEquipmentName(existing.name);
+    const zoneChanged = nextZoneId !== existing.zone_id;
+    const sectionChanged = sectionResult.section !== existing.section;
+    const kindChanged = nextKind !== existing.asset_kind;
+    const shouldRegenerateCode =
+      nameChanged || zoneChanged || sectionChanged || kindChanged;
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-    if (files?.['image']) {
-      assetData.image_url = `/uploads/assets/${files['image'][0].filename}`;
-    }
-    if (files?.['document']) {
-      assetData.document_url = `/uploads/assets/${files['document'][0].filename}`;
+
+    let updatedAsset = null;
+    let lastError: unknown = null;
+    const attempts = shouldRegenerateCode ? MAX_CODE_RETRIES : 1;
+
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      try {
+        updatedAsset = await prisma.$transaction(
+          async (tx) => {
+            const assetData: Prisma.AssetUpdateInput = {
+              section: sectionResult.section,
+              asset_kind: nextKind,
+              name: nextName,
+            };
+            if (brand) assetData.brand = brand;
+            if (model) assetData.model = model;
+            if (serial_number !== undefined) assetData.serial_number = serial_number || null;
+            if (description !== undefined) assetData.description = description || null;
+            if (status) assetData.status = status;
+            if (price !== undefined) assetData.price = price ? parseFloat(price) : null;
+            if (zone_id) assetData.zone = { connect: { id: zone_id } };
+            if (vendor_id !== undefined) {
+              assetData.vendor = vendor_id
+                ? { connect: { id: vendor_id } }
+                : { disconnect: true };
+            }
+            if (files?.['image']) {
+              assetData.image_url = `/uploads/assets/${files['image'][0].filename}`;
+            }
+            if (files?.['document']) {
+              assetData.document_url = `/uploads/assets/${files['document'][0].filename}`;
+            }
+
+            if (shouldRegenerateCode) {
+              assetData.internal_code = await generateAssetInternalCode({
+                name: nextName,
+                zoneId: nextZoneId!,
+                section: sectionResult.section,
+                assetKind: nextKind,
+                excludeAssetId: id,
+                previousCode: existing.internal_code,
+                previousName: existing.name,
+                previousZoneId: existing.zone_id,
+                tx,
+              });
+            }
+
+            return tx.asset.update({
+              where: { id },
+              data: assetData,
+              include: { zone: true, vendor: true },
+            });
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+        );
+        break;
+      } catch (err: any) {
+        lastError = err;
+        if (shouldRegenerateCode && err?.code === 'P2002') continue;
+        throw err;
+      }
     }
 
-    const updatedAsset = await prisma.asset.update({
-      where: { id },
-      data: assetData
-    });
+    if (!updatedAsset) {
+      console.error('Update Asset Error (code collision):', lastError);
+      res.status(400).json({ error: 'El código interno ya existe; reintenta' });
+      return;
+    }
+
     emitRefresh('refresh_assets');
     res.json(updatedAsset);
   } catch (error) {

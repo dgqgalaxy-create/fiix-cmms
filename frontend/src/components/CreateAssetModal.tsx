@@ -1,10 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import type { Asset } from '../api/assets';
 import { getZones } from '../api/zones';
 import type { Zone } from '../api/zones';
 import { getVendors } from '../api/inventory';
 import type { Vendor } from '../api/inventory';
+import {
+  ASSET_SECTIONS,
+  ASSET_KIND_LABELS,
+  assetKindLetter,
+  isSectionZoneName,
+  sectionCodeLetter,
+  type AssetKindValue,
+} from '../utils/assetSection';
 
 interface Props {
   isOpen: boolean;
@@ -22,6 +30,8 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'OPERATIVO' | 'EN_MANTENIMIENTO' | 'FUERA_DE_SERVICIO'>('OPERATIVO');
   const [zoneId, setZoneId] = useState('');
+  const [section, setSection] = useState('');
+  const [assetKind, setAssetKind] = useState<AssetKindValue | ''>('');
   const [vendorId, setVendorId] = useState('');
   const [price, setPrice] = useState('');
   
@@ -35,6 +45,26 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
 
+  const selectedZone = zones.find((z) => z.id === zoneId);
+  const showSection = isSectionZoneName(selectedZone?.name);
+
+  const codePreview = useMemo(() => {
+    const s = showSection && section ? section : sectionCodeLetter(null, selectedZone?.name);
+    const t = assetKind ? assetKindLetter(assetKind) : '?';
+    return `MTTO-····-${s}-···-${t}`;
+  }, [showSection, section, assetKind, selectedZone?.name]);
+
+  const willRegenerateOnEdit = useMemo(() => {
+    if (!initialData) return false;
+    const nameChanged = name.trim().toLowerCase().replace(/\s+/g, ' ') !==
+      initialData.name.trim().toLowerCase().replace(/\s+/g, ' ');
+    const zoneChanged = zoneId !== (initialData.zone_id || '');
+    const nextSection = showSection ? section || null : null;
+    const sectionChanged = (nextSection || null) !== (initialData.section || null);
+    const kindChanged = assetKind !== (initialData.asset_kind || '');
+    return nameChanged || zoneChanged || sectionChanged || kindChanged;
+  }, [initialData, name, zoneId, showSection, section, assetKind]);
+
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
@@ -46,6 +76,8 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
         setDescription(initialData.description || '');
         setStatus(initialData.status);
         setZoneId(initialData.zone_id || '');
+        setSection(initialData.section || '');
+        setAssetKind(initialData.asset_kind || '');
         setVendorId(initialData.vendor_id || '');
         setPrice(initialData.price?.toString() || '');
       } else {
@@ -57,6 +89,8 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
         setDescription('');
         setStatus('OPERATIVO');
         setZoneId('');
+        setSection('');
+        setAssetKind('');
         setVendorId('');
         setPrice('');
       }
@@ -84,6 +118,14 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
     }
   }, [isOpen, initialData]);
 
+  const handleZoneChange = (nextZoneId: string) => {
+    setZoneId(nextZoneId);
+    const nextZone = zones.find((z) => z.id === nextZoneId);
+    if (!isSectionZoneName(nextZone?.name)) {
+      setSection('');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -91,12 +133,19 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
         setError('Debes seleccionar una zona');
         return;
       }
+      if (showSection && !section) {
+        setError('Debes seleccionar la sección (A–E) para zonas L1–L5');
+        return;
+      }
+      if (!assetKind) {
+        setError('Debes indicar si es Activo fijo o Controlable');
+        return;
+      }
       setIsSubmitting(true);
       setError('');
       
       const submitData = new FormData();
-      // internal_code es inmutable y autogenerado por el servidor (formato ACT-0001);
-      // no se envía desde el cliente ni en creación ni en edición.
+      // Código autogenerado en servidor (MTTO-NNNN-S-DDD-T); no se envía desde el cliente.
       submitData.append('name', name);
       submitData.append('brand', brand);
       submitData.append('model', model);
@@ -106,12 +155,13 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
       submitData.append('zone_id', zoneId);
       submitData.append('vendor_id', vendorId);
       submitData.append('price', price);
+      submitData.append('section', showSection ? section : '');
+      submitData.append('asset_kind', assetKind);
       
       if (imageFile) submitData.append('image', imageFile);
       if (documentFile) submitData.append('document', documentFile);
 
       await onSubmit(submitData as any);
-      // Reset state handled by useEffect on next open
       onClose();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al guardar el activo');
@@ -149,9 +199,21 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
                   type="text"
                   disabled
                   className="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-sm cursor-not-allowed"
-                  value={initialData ? internalCode : 'Se genera automáticamente al guardar (ACT-0001...)'}
+                  value={
+                    initialData
+                      ? willRegenerateOnEdit
+                        ? `Se regenerará → ${codePreview}`
+                        : internalCode
+                      : codePreview
+                  }
                 />
-                <p className="text-xs text-slate-400 mt-1">Este código es permanente y no se puede modificar una vez asignado.</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  {initialData
+                    ? willRegenerateOnEdit
+                      ? 'Al cambiar nombre, zona, sección o tipo (fijo/controlable), el código se regenera automáticamente.'
+                      : 'El código se mantiene si no cambias nombre, zona, sección ni tipo.'
+                    : 'Formato MTTO-NNNN-S-DDD-T. NNNN y DDD se asignan al guardar.'}
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Estado *</label>
@@ -173,13 +235,49 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
                 {isLoadingZones ? (
                   <div className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400">Cargando...</div>
                 ) : (
-                  <select required className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" value={zoneId} onChange={(e) => setZoneId(e.target.value)}>
+                  <select required className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" value={zoneId} onChange={(e) => handleZoneChange(e.target.value)}>
                     <option value="" disabled>Selecciona una zona</option>
                     {zones.map(z => (
                       <option key={z.id} value={z.id}>{z.name}</option>
                     ))}
                   </select>
                 )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {showSection ? (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Sección *</label>
+                  <select
+                    required
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all"
+                    value={section}
+                    onChange={(e) => setSection(e.target.value)}
+                  >
+                    <option value="" disabled>Selecciona sección (A–E)</option>
+                    {ASSET_SECTIONS.map((s) => (
+                      <option key={s} value={s}>Sección {s}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-400 mt-1">Las líneas L1–L5 se dividen en cinco secciones (A a E).</p>
+                </div>
+              ) : (
+                <div className="hidden sm:block" />
+              )}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Tipo de activo *</label>
+                <select
+                  required
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all"
+                  value={assetKind}
+                  onChange={(e) => setAssetKind(e.target.value as AssetKindValue)}
+                >
+                  <option value="" disabled>Selecciona tipo</option>
+                  <option value="FIJO">{ASSET_KIND_LABELS.FIJO} (F)</option>
+                  <option value="CONTROLABLE">{ASSET_KIND_LABELS.CONTROLABLE} (C)</option>
+                </select>
+                <p className="text-xs text-slate-400 mt-1">Define la letra final del código (F o C).</p>
               </div>
             </div>
 

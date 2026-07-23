@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import prisma from '../src/config/prisma';
-import { Role, AssetStatus, Priority, MaintenanceType, ProductionGroup, WorkOrderStatus } from '@prisma/client';
-import { generateInventoryCode } from '../src/utils/codeGenerator';
+import { Role, AssetStatus, AssetKind, Priority, MaintenanceType, ProductionGroup, WorkOrderStatus } from '@prisma/client';
+import { generateAssetInternalCode } from '../src/utils/assetCodeGenerator';
 
 async function main() {
   console.log('🔄 Iniciando la generación de datos de prueba aleatorios...');
@@ -124,19 +124,24 @@ async function main() {
     const rand = Math.random();
     const status = rand < 0.75 ? AssetStatus.OPERATIVO : rand < 0.90 ? AssetStatus.EN_MANTENIMIENTO : AssetStatus.FUERA_DE_SERVICIO;
 
-    // El código interno de los Activos es inmutable y sigue el formato
-    // incremental ACT-0001, ACT-0002, ... asignado automáticamente.
-    const internal_code = await generateInventoryCode('Asset', 'ACT-', 4);
+    const assetName = `${template.name} ${i + 1}`;
+    const internal_code = await generateAssetInternalCode({
+      name: assetName,
+      zoneId: zone.id,
+      section: null,
+      assetKind: AssetKind.FIJO,
+    });
 
     const asset = await prisma.asset.create({
       data: {
         internal_code,
-        name: `${template.name} ${i + 1}`,
+        name: assetName,
         brand,
         model,
         serial_number: serial,
         description: `Activo crítico en la sección de producción de ${zone.name}`,
         status,
+        asset_kind: AssetKind.FIJO,
         zone_id: zone.id,
       },
     });

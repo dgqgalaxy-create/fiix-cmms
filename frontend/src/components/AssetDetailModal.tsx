@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck, AlertTriangle, Clock, Wrench, Package, CalendarClock, HelpCircle } from 'lucide-react';
+import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck, AlertTriangle, Clock, Wrench, Package, CalendarClock, HelpCircle, Layers } from 'lucide-react';
 import type { Asset } from '../api/assets';
 import { BACKEND_URL } from '../api/axios';
 import { getAssetMetrics } from '../api/assets';
@@ -7,6 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatWorkOrderFolio } from '../utils/folio';
+import { ASSET_KIND_LABELS } from '../utils/assetSection';
 
 interface Props {
   asset: Asset | null;
@@ -319,6 +320,28 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                     <span className="text-xs font-bold uppercase tracking-wider">Zona asignada</span>
                   </div>
                   <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{asset.zone?.name || 'Sin Zona'}</div>
+                </div>
+
+                {asset.section && (
+                  <div className="bg-white dark:bg-slate-900 shadow-sm p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
+                      <MapPin size={16} />
+                      <span className="text-xs font-bold uppercase tracking-wider">Sección</span>
+                    </div>
+                    <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{asset.section}</div>
+                  </div>
+                )}
+
+                <div className="bg-white dark:bg-slate-900 shadow-sm p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
+                    <Layers size={16} />
+                    <span className="text-xs font-bold uppercase tracking-wider">Tipo de activo</span>
+                  </div>
+                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                    {asset.asset_kind
+                      ? ASSET_KIND_LABELS[asset.asset_kind]
+                      : 'No especificado'}
+                  </div>
                 </div>
 
                 <div className="bg-white dark:bg-slate-900 shadow-sm p-4 rounded-2xl border border-slate-100 dark:border-slate-800">

@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.35.4";
+export const APP_VERSION = "1.37.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,9 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Código de activos MTTO-NNNN-S-DDD-T (reemplaza ACT-XXXX en altas nuevas). NNNN por nombre de equipo, S = sección A–E o X, DDD = duplicado en la misma zona (mismo nombre), T = F (fijo) / C (controlable). Se regenera al editar nombre, zona, sección o tipo.",
+    "Nuevo: Campo obligatorio Tipo de activo — Activo fijo (F) o Controlable (C) — en alta/edición; visible en detalle y listado.",
+    "Nuevo: Campo Sección (A–E) en activos de zonas L1–L5. Obligatorio al crear/editar en esas líneas; se oculta y limpia en otras zonas. Visible en detalle y listado, con filtro por sección cuando filtras una zona Lx.",
     "Mejora: El PDF/impresión del listado de Órdenes de Trabajo es más compacto (A4 horizontal): tabla densa en lugar de tarjetas, encabezado fino y ~10–15 filas por hoja.",
     "Corrección: El PDF/impresión de Órdenes de Compra ya no deja ~3 páginas en blanco al final; solo genera las hojas que ocupa el contenido (A4 vertical).",
     "Corrección: Fechas de calendario (fecha esperada de OC, turnos/roster) ya no se guardan como medianoche UTC (que en México mostraba el día anterior). Listados, PDF y CSV usan formato México (dd/mm) de forma uniforme.",

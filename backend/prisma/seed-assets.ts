@@ -1,9 +1,8 @@
 import prisma from '../src/config/prisma';
-import { generateInventoryCode } from '../src/utils/codeGenerator';
+import { generateAssetInternalCode } from '../src/utils/assetCodeGenerator';
+import { AssetKind } from '@prisma/client';
 
-// El código interno de los Activos es inmutable y sigue el formato incremental
-// ACT-0001, ACT-0002, ... Cualquier migración/seed de datos debe generarlo con
-// generateInventoryCode() en vez de asignar códigos manuales (ej. "BMB-001").
+// Código interno: MTTO-NNNN-S-DDD-T (generado automáticamente).
 async function upsertAssetByName(data: {
   name: string;
   brand: string;
@@ -14,8 +13,26 @@ async function upsertAssetByName(data: {
   const existing = await prisma.asset.findFirst({ where: { name: data.name } });
   if (existing) return existing;
 
-  const internal_code = await generateInventoryCode('Asset', 'ACT-', 4);
-  return prisma.asset.create({ data: { ...data, internal_code } });
+  // Seed sin zona: usa una zona placeholder o la primera disponible.
+  let zone = await prisma.zone.findFirst({ orderBy: { name: 'asc' } });
+  if (!zone) {
+    zone = await prisma.zone.create({ data: { name: 'SIN ZONA' } });
+  }
+
+  const internal_code = await generateAssetInternalCode({
+    name: data.name,
+    zoneId: zone.id,
+    section: null,
+    assetKind: AssetKind.FIJO,
+  });
+  return prisma.asset.create({
+    data: {
+      ...data,
+      internal_code,
+      asset_kind: AssetKind.FIJO,
+      zone_id: zone.id,
+    },
+  });
 }
 
 async function main() {
