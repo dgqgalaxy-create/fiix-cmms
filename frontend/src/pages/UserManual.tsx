@@ -584,7 +584,7 @@ export const UserManual = () => {
                       <CheckCircle2 className="text-emerald-500" size={20} /> Evaluaciones Rápidas
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                      La interfaz es un formulario masivo donde puedes marcar rápidamente si sistemas como Lubricación, Neumática, y Eléctrica están <strong className="text-green-600">OK</strong>, <strong className="text-red-500">NOK (Falla)</strong> o N/A. Si marcas algo como NOK, tienes un campo de texto obligatorio para describir el problema detectado. Algunas tareas piden un <strong>número</strong> (temperaturas) o un <strong>texto</strong> (lecturas de agua) en lugar del check.
+                      La interfaz es un formulario masivo donde puedes marcar rápidamente si sistemas como Lubricación, Neumática, y Eléctrica están <strong className="text-green-600">OK</strong>, <strong className="text-red-500">NOK (Falla)</strong> o N/A. Algunas tareas piden un <strong>número</strong> (temperaturas) o un <strong>texto</strong> (lecturas de agua) en lugar del check. <strong>Antes de firmar y enviar</strong> deben estar completos todos los checks y lecturas; si falta alguno, verás un <strong>diálogo en la app</strong> con la lista y las celdas resaltadas. Las observaciones vacías se guardan automáticamente como <strong>N/A</strong>. Si el checklist del día no se envía, el sistema puede avisar por <strong>Telegram</strong> en horario laboral.
                     </p>
                   </div>
 

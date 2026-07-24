@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.37.0";
+export const APP_VERSION = "1.38.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "23 de Julio, 2026";
+  const updateDate = "24 de Julio, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -28,6 +28,9 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Al firmar un checklist incompleto aparece un diálogo en la app (con lista de celdas faltantes), banner ámbar y resaltado en rojo de los campos por completar — ya no depende del alert() del navegador.",
+    "Nuevo: El checklist diario no se puede enviar incompleto: checks y lecturas (número/texto) son obligatorios; las observaciones vacías se guardan como N/A. Validación en pantalla y en el servidor (también al sincronizar offline).",
+    "Nuevo: Recordatorio por Telegram si el checklist del día no está enviado (por defecto a las 10:00, 14:00 y 16:00 hora México). Configurable con CHECKLIST_REMINDER_HOURS.",
     "Nuevo: Código de activos MTTO-NNNN-S-DDD-T (reemplaza ACT-XXXX en altas nuevas). NNNN por nombre de equipo, S = sección A–E o X, DDD = duplicado en la misma zona (mismo nombre), T = F (fijo) / C (controlable). Se regenera al editar nombre, zona, sección o tipo.",
     "Nuevo: Campo obligatorio Tipo de activo — Activo fijo (F) o Controlable (C) — en alta/edición; visible en detalle y listado.",
     "Nuevo: Campo Sección (A–E) en activos de zonas L1–L5. Obligatorio al crear/editar en esas líneas; se oculta y limpia en otras zonas. Visible en detalle y listado, con filtro por sección cuando filtras una zona Lx.",

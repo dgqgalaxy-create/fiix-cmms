@@ -4,13 +4,14 @@ import { evaluateOpenWorkOrders, silentBackfillSlaEvents } from '../services/Sla
 import { emitRefresh } from './socket';
 import { runBackup } from './backupService';
 import { runDbSelfCheck } from './dbHealthCheck';
+import { CHECKLIST_TZ, runChecklistReminderCheck } from './checklistReminder';
 
 // This cron job will run every day at 00:01
 export const initCronJobs = () => {
   cron.schedule('1 0 * * *', async () => {
     console.log('Running daily preventative maintenance check...');
     await checkAndGenerateMaintenanceOrders();
-  });
+  }, { timezone: CHECKLIST_TZ });
 
   // Respaldo automático diario (BD + uploads) a las 2:15 AM; conserva los últimos 14 días.
   cron.schedule('15 2 * * *', async () => {
@@ -21,7 +22,7 @@ export const initCronJobs = () => {
     } catch (error) {
       console.error('Error running scheduled backup:', error);
     }
-  });
+  }, { timezone: CHECKLIST_TZ });
 
   // Autocomprobación de Postgres cada 5 min (Node vivo, BD caída → Telegram con debounce)
   cron.schedule('*/5 * * * *', async () => {
@@ -31,6 +32,15 @@ export const initCronJobs = () => {
       console.error('Error in DB self-check:', error);
     }
   });
+
+  // Recordatorio Telegram: checklist del día no enviado (horas en CHECKLIST_REMINDER_HOURS, default 10,14,16 MX)
+  cron.schedule('0 * * * *', async () => {
+    try {
+      await runChecklistReminderCheck();
+    } catch (error) {
+      console.error('Error in checklist reminder:', error);
+    }
+  }, { timezone: CHECKLIST_TZ });
 
   // SLA reminders / escalations every 15 minutes (con digest si hay muchos)
   cron.schedule('*/15 * * * *', async () => {

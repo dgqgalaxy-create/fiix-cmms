@@ -1,9 +1,13 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
-*(Última actualización: 23 de Julio de 2026)*
+*(Última actualización: 24 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.37.0 (Actualización: 23 de Julio de 2026)
+## 🚀 Versión Actual: v1.38.0 (Actualización: 24 de Julio de 2026)
+
+### Novedades en v1.38.0 (checklist completo + recordatorio Telegram)
+- **Nuevo:** No se puede enviar el checklist diario incompleto (checks y lecturas obligatorios); observaciones vacías → **N/A**. Validación en UI y API.
+- **Nuevo:** Recordatorio Telegram si el checklist del día no está enviado (default 10/14/16 hora México; `CHECKLIST_REMINDER_HOURS`).
 
 ### Novedades en v1.37.0 (código MTTO + fijo/controlable)
 - **Nuevo:** Formato de código de activos **`MTTO-NNNN-S-DDD-T`** en altas nuevas (reemplaza `ACT-XXXX`). NNNN por nombre de equipo; S = sección A–E o X; DDD = duplicado en la misma zona (mismo nombre); T = F/C.

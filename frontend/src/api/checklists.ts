@@ -133,8 +133,10 @@ export const restoreDefaultChecklistActivities = async () => {
 export const getRowLineStatus = (row: ChecklistRow, line: number): string => {
   const key = String(line);
   if (row.line_statuses && key in row.line_statuses) {
-    return row.line_statuses[key] || '';
+    const value = row.line_statuses[key];
+    // null/undefined = celda vacía (p. ej. ciclo OK→FAIL→NA→vacío); no debe pasar validación
+    return value == null ? '' : String(value);
   }
   const legacy = (row as any)[`L${line}_status`];
-  return legacy || '';
+  return legacy == null ? '' : String(legacy);
 };

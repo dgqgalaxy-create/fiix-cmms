@@ -1,5 +1,5 @@
 # Manual de Usuario - FIIX CMMS (LPET)
-*(Versión 1.35.3 - 23 de Julio, 2026)*
+*(Versión 1.38.1 - 24 de Julio, 2026)*
 
 FIIX CMMS (despliegue LPET) centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 
@@ -32,6 +32,8 @@ Las actividades del Checklist ahora son más flexibles:
 - **Columnas / máquinas:** En el mismo catálogo, el campo **Columnas** define cuántas líneas (L1, L2…) tendrá el formulario (1 a 12). Si agregas una máquina, aumenta el número; el siguiente checklist diario ya mostrará la columna nueva. Los checklists ya creados conservan el número con el que se generaron.
 - **Campos Mixtos:** Además de los clásicos checks (✔️/❌), algunas actividades específicas (como temperatura o lecturas de agua) mostrarán un pequeño campo de texto.
 - **Uso:** Simplemente haz clic en la línea correspondiente y teclea el valor numérico (ej. 45.5) o un texto corto. El sistema guardará la información tal como si fuese un check tradicional.
+- **Envío completo obligatorio:** No puedes firmar y enviar si falta algún check o lectura (número/texto) en alguna línea. Aparece un **diálogo en la app** con la lista de filas/columnas faltantes, un aviso ámbar junto al formulario y las celdas incompletas resaltadas en rojo. Las **observaciones** pueden quedar vacías: al enviar se rellenan solas con **N/A**.
+- **Recordatorio Telegram:** Si el checklist del día no se crea o no se envía, el sistema avisa por Telegram en horario laboral (por defecto 10:00, 14:00 y 16:00, hora México). Así no se olvida: los días pasados ya no se pueden llenar.
 - **Configuración:** Para restaurar el listado estándar (con temperaturas en Número y lecturas de agua en Texto), ve a Configuración → Catálogo de Checklist y pulsa **"Restaurar por Defecto"**.
 
 ## 2. Módulo Inventario: Mejoras y Restricciones

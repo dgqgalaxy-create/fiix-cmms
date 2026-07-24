@@ -1,22 +1,41 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ArrowLeft, Save, Check, X as XIcon, Minus, PenTool, CheckCircle, Printer } from 'lucide-react';
+import {
+  ArrowLeft,
+  Save,
+  Check,
+  X as XIcon,
+  Minus,
+  PenTool,
+  CheckCircle,
+  Printer,
+  AlertTriangle,
+} from 'lucide-react';
 import { getChecklistById, updateChecklistRow, submitChecklist, reviewChecklist, getRowLineStatus } from '../api/checklists';
 import type { DailyChecklist, ChecklistRow } from '../api/checklists';
 import { useAuth } from '../context/AuthContext';
 import { parseDateOnly } from '../utils/dateUtils';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import {
+  validateChecklistForSubmit,
+  missingCellKeySet,
+  cellKey,
+  type ChecklistMissingItem,
+} from '../utils/checklistValidation';
 
 export default function ChecklistFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, hasPermission } = useAuth();
-  
+  const { hasPermission } = useAuth();
+
   const [checklist, setChecklist] = useState<DailyChecklist | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [incompleteMissing, setIncompleteMissing] = useState<ChecklistMissingItem[]>([]);
+  const [showIncompleteFeedback, setShowIncompleteFeedback] = useState(false);
+  const [isIncompleteModalOpen, setIsIncompleteModalOpen] = useState(false);
 
   const fetchChecklist = async (checklistId: string, background = false) => {
     try {
@@ -48,12 +67,23 @@ export default function ChecklistFormPage() {
     if (id) void fetchChecklist(id, true);
   });
 
+  const applyIncompleteFeedback = (rows: ChecklistRow[], columnCount: number) => {
+    const validation = validateChecklistForSubmit(rows, columnCount);
+    if (validation.ok) {
+      setIncompleteMissing([]);
+      setShowIncompleteFeedback(false);
+      return;
+    }
+    setIncompleteMissing(validation.missing);
+    setShowIncompleteFeedback(true);
+  };
+
   const handleStatusChange = async (rowId: string, line: number, status: string | null) => {
     if (!checklist || checklist.status !== 'DRAFT') return; // Solo editable en DRAFT
     const key = String(line);
 
-    // Update local state for immediate feedback
-    const updatedRows = checklist.rows?.map(row => {
+    // Update local state for immediate feedback (null = celda vacía otra vez)
+    const updatedRows = checklist.rows?.map((row) => {
       if (row.id === rowId) {
         return {
           ...row,
@@ -65,7 +95,12 @@ export default function ChecklistFormPage() {
       }
       return row;
     });
-    setChecklist({ ...checklist, rows: updatedRows });
+    const nextChecklist = { ...checklist, rows: updatedRows };
+    setChecklist(nextChecklist);
+
+    if (showIncompleteFeedback) {
+      applyIncompleteFeedback(updatedRows || [], checklist.column_count || 5);
+    }
 
     // Save to server (o cola offline)
     try {
@@ -81,8 +116,8 @@ export default function ChecklistFormPage() {
 
   const handleObservationChange = async (rowId: string, obs: string) => {
     if (!checklist || checklist.status !== 'DRAFT') return;
-    
-    const updatedRows = checklist.rows?.map(row => {
+
+    const updatedRows = checklist.rows?.map((row) => {
       if (row.id === rowId) {
         return { ...row, observations: obs };
       }
@@ -101,8 +136,26 @@ export default function ChecklistFormPage() {
   };
 
   const handleSubmit = async () => {
-    if (!id || !window.confirm('¿Estás seguro de enviar este checklist? Ya no podrás editarlo.')) return;
-    
+    if (!id || !checklist) return;
+
+    const validation = validateChecklistForSubmit(
+      checklist.rows || [],
+      checklist.column_count || 5
+    );
+    if (!validation.ok) {
+      setIncompleteMissing(validation.missing);
+      setShowIncompleteFeedback(true);
+      setIsIncompleteModalOpen(true);
+      return;
+    }
+
+    setIncompleteMissing([]);
+    setShowIncompleteFeedback(false);
+
+    if (!window.confirm('¿Estás seguro de enviar este checklist? Ya no podrás editarlo. Las observaciones vacías se guardarán como N/A.')) {
+      return;
+    }
+
     try {
       setIsSaving(true);
       const result = await submitChecklist(id);
@@ -110,6 +163,7 @@ export default function ChecklistFormPage() {
         alert(
           'Sin conexión: el envío del checklist se guardó en el dispositivo y se completará al recuperar señal.'
         );
+        // Marcar localmente como enviado (optimistic) no aplica: el backend validará al sync.
         return;
       }
       await fetchChecklist(id); // Reload to get updated status and signatures
@@ -129,7 +183,7 @@ export default function ChecklistFormPage() {
 
   const handleReview = async () => {
     if (!id || !window.confirm('¿Aprobar este checklist?')) return;
-    
+
     try {
       setIsSaving(true);
       await reviewChecklist(id);
@@ -142,10 +196,19 @@ export default function ChecklistFormPage() {
     }
   };
 
+  const highlightedCells = useMemo(
+    () => (showIncompleteFeedback ? missingCellKeySet(incompleteMissing) : new Set<string>()),
+    [showIncompleteFeedback, incompleteMissing]
+  );
+
   const renderStatusButton = (row: ChecklistRow, line: number) => {
     const currentValue = getRowLineStatus(row, line);
     const isEditable = checklist?.status === 'DRAFT';
     const fieldType = row.field_type || 'CHECKBOX';
+    const isIncomplete = highlightedCells.has(cellKey(row.id, line));
+    const incompleteRing = isIncomplete
+      ? 'ring-2 ring-rose-500 border-rose-400 dark:border-rose-500'
+      : '';
 
     if (fieldType === 'NUMBER' || fieldType === 'TEXT') {
       return (
@@ -155,7 +218,8 @@ export default function ChecklistFormPage() {
           value={currentValue}
           onChange={(e) => handleStatusChange(row.id, line, e.target.value)}
           placeholder="-"
-          className="w-16 h-10 px-2 text-center rounded-lg border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:text-slate-500"
+          aria-invalid={isIncomplete || undefined}
+          className={`w-16 h-10 px-2 text-center rounded-lg border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:text-slate-500 ${incompleteRing}`}
         />
       );
     }
@@ -167,6 +231,7 @@ export default function ChecklistFormPage() {
       return 'bg-white dark:bg-slate-900 text-slate-300 dark:text-slate-600 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600';
     };
 
+    // Ciclo: vacío → OK → FAIL → NA → vacío (null). Vacío debe fallar validación al enviar.
     const nextStatus = (current: string | null) => {
       if (current === 'OK') return 'FAIL';
       if (current === 'FAIL') return 'NA';
@@ -176,9 +241,11 @@ export default function ChecklistFormPage() {
 
     return (
       <button
+        type="button"
         disabled={!isEditable}
         onClick={() => handleStatusChange(row.id, line, nextStatus(currentValue || null))}
-        className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-all ${getColors(currentValue)} ${!isEditable && 'opacity-80 cursor-not-allowed'}`}
+        aria-invalid={isIncomplete || undefined}
+        className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-all ${getColors(currentValue)} ${incompleteRing} ${!isEditable && 'opacity-80 cursor-not-allowed'}`}
       >
         {currentValue === 'OK' && <Check size={18} strokeWidth={3} />}
         {currentValue === 'FAIL' && <XIcon size={18} strokeWidth={3} />}
@@ -196,13 +263,14 @@ export default function ChecklistFormPage() {
   const canReview = isPendingReview && hasPermission('APPROVE_CHECKLIST');
   const columnCount = Math.max(1, checklist.column_count || 5);
   const lineNumbers = Array.from({ length: columnCount }, (_, i) => i + 1);
+  const missingCellCount = incompleteMissing.reduce((n, m) => n + m.missingLines.length, 0);
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300 print:p-0 print:m-0 print:w-full print:max-w-none">
       {/* Encabezado */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 print:flex-row print:mb-4">
         <div className="flex items-center gap-4">
-          <button 
+          <button
             onClick={() => navigate('/checklists')}
             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 transition-colors print:hidden"
           >
@@ -235,7 +303,7 @@ export default function ChecklistFormPage() {
               {isSaving ? 'Guardando...' : 'Firmar y Enviar'}
             </button>
           )}
-          
+
           {canReview && (
             <button
               onClick={handleReview}
@@ -249,14 +317,43 @@ export default function ChecklistFormPage() {
         </div>
       </div>
 
+      {/* Banner sticky tras intento de envío incompleto */}
+      {isDraft && showIncompleteFeedback && incompleteMissing.length > 0 && (
+        <div
+          role="alert"
+          className="sticky top-2 z-20 print:hidden flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900 shadow-sm dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200"
+        >
+          <AlertTriangle className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" size={20} />
+          <div className="min-w-0 flex-1 text-sm">
+            <p className="font-semibold">
+              Checklist incompleto — faltan {missingCellCount}{' '}
+              {missingCellCount === 1 ? 'celda' : 'celdas'}
+            </p>
+            <p className="mt-0.5 text-amber-800/90 dark:text-amber-300/90">
+              Completa las celdas marcadas en rojo (o revisa el detalle) antes de firmar y enviar.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsIncompleteModalOpen(true)}
+            className="shrink-0 rounded-lg border border-amber-400/70 bg-white/70 px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-white dark:border-amber-600 dark:bg-amber-900/40 dark:text-amber-100 dark:hover:bg-amber-900/70"
+          >
+            Ver detalle
+          </button>
+        </div>
+      )}
+
       {/* Instrucciones */}
       <div className="bg-sky-50 dark:bg-sky-950/30 text-sky-800 dark:text-sky-300 p-4 rounded-xl mb-6 flex gap-3 text-sm print:hidden border border-sky-100 dark:border-sky-900/50">
         <CheckCircle className="shrink-0 mt-0.5" size={18} />
         <div>
-          <strong>Instrucciones:</strong> Toca los recuadros para alternar entre los estados: 
+          <strong>Instrucciones:</strong> Toca los recuadros para alternar entre los estados:
           <span className="inline-flex items-center mx-2 text-emerald-700"><Check size={14} className="mr-1"/> Bien</span>
           <span className="inline-flex items-center mx-2 text-rose-700"><XIcon size={14} className="mr-1"/> Anomalía</span>
           <span className="inline-flex items-center mx-2 text-slate-600"><Minus size={14} className="mr-1"/> N/A</span>
+          <span className="block mt-1 text-sky-700 dark:text-sky-400">
+            Antes de enviar debes completar todos los checks y lecturas numéricas/texto. Las observaciones vacías se guardan automáticamente como N/A.
+          </span>
         </div>
       </div>
 
@@ -320,7 +417,7 @@ export default function ChecklistFormPage() {
             <div className="text-slate-300 italic border-b-2 border-slate-200 pb-2 px-8 print:text-black print:border-black">Pendiente de firma</div>
           )}
         </div>
-        
+
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center print:border-none print:p-2">
           <div className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-4 uppercase tracking-wider print:text-black">Nombre y Firma Líder Mantenimiento</div>
           {checklist.leader ? (
@@ -332,6 +429,91 @@ export default function ChecklistFormPage() {
           )}
         </div>
       </div>
+
+      {/* Modal: checklist incompleto */}
+      {isIncompleteModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="incomplete-checklist-title"
+        >
+          <div
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            onClick={() => setIsIncompleteModalOpen(false)}
+          />
+          <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex items-start gap-3 border-b border-slate-100 px-6 py-5 dark:border-slate-800">
+              <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
+                <AlertTriangle size={22} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3
+                  id="incomplete-checklist-title"
+                  className="text-xl font-bold text-slate-900 dark:text-slate-100"
+                >
+                  Checklist incompleto
+                </h3>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                  Completa todos los checks y lecturas antes de firmar y enviar. Las observaciones vacías se guardarán como N/A.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsIncompleteModalOpen(false)}
+                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                aria-label="Cerrar"
+              >
+                <XIcon size={20} />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto px-6 py-4">
+              {incompleteMissing.length === 0 ? (
+                <p className="text-sm text-slate-500">No hay campos pendientes.</p>
+              ) : (
+                <ul className="space-y-2.5">
+                  {incompleteMissing.map((item) => {
+                    const shortName =
+                      item.activity_name.length > 60
+                        ? `${item.activity_name.slice(0, 57)}…`
+                        : item.activity_name;
+                    const cells = item.missingLines.map((l) => `L${l}`).join(', ');
+                    const kind =
+                      item.field_type === 'NUMBER'
+                        ? 'número'
+                        : item.field_type === 'TEXT'
+                          ? 'texto'
+                          : 'check';
+                    return (
+                      <li
+                        key={`${item.rowId}-${item.missingLines.join('-')}`}
+                        className="flex gap-2 rounded-xl border border-rose-100 bg-rose-50/80 px-3 py-2.5 text-sm text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200"
+                      >
+                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />
+                        <span>
+                          <strong>Fila {item.rowIndex}</strong> «{shortName}»: faltan{' '}
+                          <strong>{cells}</strong> ({kind})
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+
+            <div className="border-t border-slate-100 px-6 py-4 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsIncompleteModalOpen(false)}
+                className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 transition-colors"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import prisma from '../config/prisma';
 import { emitRefresh } from '../utils/socket';
+import { validateChecklistForSubmit } from '../utils/checklistValidation';
+import { getMexicoCityNow } from '../utils/checklistReminder';
 
 const emitChecklists = () => emitRefresh('refresh_checklists');
 
@@ -29,10 +31,14 @@ async function getConfiguredColumnCount(): Promise<number> {
   return normalizeChecklistColumnCount(settings?.checklist_column_count ?? DEFAULT_CHECKLIST_COLUMNS);
 }
 
+/** Día civil del checklist en horario México (alineado con recordatorios Telegram). */
+function getChecklistTodayDate(): Date {
+  return getMexicoCityNow().asDate;
+}
+
 export const getTodayChecklist = async (req: AuthRequest, res: Response) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = getChecklistTodayDate();
 
     const checklist = await prisma.dailyChecklist.findFirst({
       where: {
@@ -56,8 +62,7 @@ export const getTodayChecklist = async (req: AuthRequest, res: Response) => {
 
 export const createTodayChecklist = async (req: AuthRequest, res: Response) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = getChecklistTodayDate();
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -183,12 +188,53 @@ export const submitChecklist = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const checklist = await prisma.dailyChecklist.update({
+    const existing = await prisma.dailyChecklist.findUnique({
       where: { id },
-      data: { 
-        status: 'COMPLETED',
-        technician_id: userId // ensure the person submitting is recorded
+      include: { rows: { orderBy: { order: 'asc' } } },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Checklist no encontrado' });
+    }
+
+    if (existing.status !== 'DRAFT') {
+      return res.status(400).json({ error: 'El checklist ya fue enviado o revisado' });
+    }
+
+    const validation = validateChecklistForSubmit(
+      existing.rows,
+      existing.column_count ?? DEFAULT_CHECKLIST_COLUMNS
+    );
+
+    if (!validation.ok) {
+      return res.status(400).json({
+        error: validation.errorMessage,
+        missing: validation.missing,
+      });
+    }
+
+    const checklist = await prisma.$transaction(async (tx) => {
+      for (const row of existing.rows) {
+        if (row.observations == null || String(row.observations).trim() === '') {
+          await tx.dailyChecklistRow.update({
+            where: { id: row.id },
+            data: { observations: 'N/A' },
+          });
+        }
       }
+
+      return tx.dailyChecklist.update({
+        where: { id },
+        data: {
+          status: 'COMPLETED',
+          technician_id: userId,
+        },
+        include: {
+          rows: { orderBy: { order: 'asc' } },
+          technician: { select: { name: true } },
+          leader: { select: { name: true } },
+        },
+      });
     });
 
     emitChecklists();
