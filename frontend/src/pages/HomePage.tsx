@@ -409,11 +409,12 @@ export const HomePage = () => {
                       `${value} orden${Number(value) === 1 ? '' : 'es'}`,
                       item.payload.name,
                     ]}
+                    wrapperStyle={{ zIndex: 20 }}
                     contentStyle={{ borderRadius: '12px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-fg)', boxShadow: '0 8px 20px rgb(15 23 42 / 0.12)' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+              <div className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-center">
                 <span className="text-3xl font-black leading-none text-slate-800 dark:text-white">{maintenanceTotal}</span>
                 <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Órdenes</span>
               </div>

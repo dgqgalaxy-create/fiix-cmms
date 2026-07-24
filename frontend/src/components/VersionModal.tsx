@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.38.1";
+export const APP_VERSION = "1.38.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: En la gráfica de dona del Inicio, la etiqueta emergente de Preventivo/Correctivo/Servicio ahora aparece siempre por encima del total central, sin textos encimados.",
     "Mejora: Al firmar un checklist incompleto aparece un diálogo en la app (con lista de celdas faltantes), banner ámbar y resaltado en rojo de los campos por completar — ya no depende del alert() del navegador.",
     "Nuevo: El checklist diario no se puede enviar incompleto: checks y lecturas (número/texto) son obligatorios; las observaciones vacías se guardan como N/A. Validación en pantalla y en el servidor (también al sincronizar offline).",
     "Nuevo: Recordatorio por Telegram si el checklist del día no está enviado (por defecto a las 10:00, 14:00 y 16:00 hora México). Configurable con CHECKLIST_REMINDER_HOURS.",
