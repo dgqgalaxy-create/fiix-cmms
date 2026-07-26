@@ -1121,16 +1121,16 @@ export const InventoryPage = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Inventario</h1>
             {!isLoading && items.length > 0 && (
-              <div className="flex gap-2 mt-1 sm:mt-0">
-                <span className="bg-blue-50 text-blue-700 text-xs sm:text-sm font-semibold px-2.5 py-1 rounded-full border border-blue-100 flex items-center gap-1.5 shadow-sm">
+              <div className="flex flex-wrap gap-2 mt-1 sm:mt-0">
+                <span className="bg-blue-50 text-blue-700 text-xs sm:text-sm font-semibold px-2.5 py-1 rounded-full border border-blue-100 flex items-center gap-1.5 shadow-sm dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900">
                   <Package size={14} /> {items.length} Únicos
                 </span>
-                <span className="bg-emerald-50 text-emerald-700 text-xs sm:text-sm font-semibold px-2.5 py-1 rounded-full border border-emerald-100 flex items-center gap-1.5 shadow-sm">
+                <span className="bg-emerald-50 text-emerald-700 text-xs sm:text-sm font-semibold px-2.5 py-1 rounded-full border border-emerald-100 flex items-center gap-1.5 shadow-sm dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   {items.reduce((acc, i) => acc + (i.stock || 0), 0)} Unidades Totales
                 </span>
@@ -1140,64 +1140,24 @@ export const InventoryPage = () => {
           <p className="text-slate-500 dark:text-slate-300 mt-2">Gestiona repuestos, movimientos y catálogos.</p>
         </div>
 
-        {/* Stock Crítico Alert — solo en Repuestos */}
-        {!isLoading && activeTab === 'items' && criticalItems.length > 0 && (
-          <div 
-            onClick={filterCriticalStock}
-            className="cursor-pointer transition-all bg-white dark:bg-slate-800 px-4 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 shadow-sm hover:shadow-md flex items-center gap-3 group"
-          >
-            <div className="p-2 bg-rose-50 dark:bg-rose-900/30 rounded-lg shrink-0">
-              <AlertCircle className="w-5 h-5 text-rose-500" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <span className="text-rose-600 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
-                Stock Crítico
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
-                </span>
-              </span>
-              <span className="text-[11px] text-rose-500/70 font-medium leading-tight">
-                Clic para filtrar · Artículos al mínimo o inferior
-                {criticalWithoutVendor.length > 0 && (
-                  <>
-                    {' · '}
-                    <button
-                      type="button"
-                      onClick={filterCriticalWithoutVendor}
-                      className="text-amber-700 dark:text-amber-400 font-semibold underline decoration-amber-400/60 underline-offset-2 hover:text-amber-900"
-                      title="Ver solo críticos sin proveedor"
-                    >
-                      {criticalWithoutVendor.length} sin proveedor
-                    </button>
-                  </>
-                )}
-              </span>
-            </div>
-            <div className="text-xl font-black text-rose-600 leading-none">{criticalItems.length}</div>
-            {canManagePurchases && (
-              <button
-                type="button"
-                disabled={isCreatingDrafts}
-                onClick={handleCreateDraftPurchaseOrders}
-                className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white shadow-sm"
-                title="Crear borradores de Orden de Compra con estos ítems"
-              >
-                {isCreatingDrafts ? <Loader2 size={14} className="animate-spin" /> : <ShoppingCart size={14} />}
-                <span className="hidden sm:inline">Generar borrador OC</span>
-                <span className="sm:hidden">OC</span>
-              </button>
-            )}
-          </div>
-        )}
-
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div
+          className={
+            activeTab === 'items'
+              ? `grid gap-2 w-full sm:w-auto sm:flex sm:items-stretch ${canManage ? 'grid-cols-3' : 'grid-cols-2'}`
+              : 'flex items-center gap-2 w-full sm:w-auto'
+          }
+        >
           {activeTab === 'items' && canManage && (
-            <button 
+            <button
+              type="button"
               onClick={() => handleOpenItemModal()}
-              className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors w-full md:w-auto shadow-sm shadow-emerald-600/20"
+              className="inline-flex h-11 w-full sm:w-auto sm:min-w-[10.5rem] items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-3 text-sm font-semibold text-white shadow-sm shadow-emerald-600/20 transition-colors hover:bg-emerald-700"
             >
-              <Plus size={18} /> Nuevo Repuesto
+              <Plus size={16} className="shrink-0" />
+              <span className="truncate">
+                <span className="sm:hidden">Nuevo</span>
+                <span className="hidden sm:inline">Nuevo Repuesto</span>
+              </span>
             </button>
           )}
           {activeTab === 'items' && (
@@ -1205,29 +1165,95 @@ export const InventoryPage = () => {
               <button
                 type="button"
                 onClick={handleExportItemsExcel}
-                className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 px-5 py-2.5 rounded-xl font-medium transition-colors w-full md:w-auto shadow-sm"
+                className="inline-flex h-11 w-full sm:w-auto sm:min-w-[10.5rem] items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                 title="Exportar repuestos filtrados a Excel"
               >
-                <Download size={18} /> Excel
+                <Download size={16} className="shrink-0" />
+                Excel
               </button>
-              <button 
+              <button
+                type="button"
                 onClick={() => handleOpenTransactionModal()}
-                className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors w-full md:w-auto shadow-sm shadow-blue-600/20"
+                className="inline-flex h-11 w-full sm:w-auto sm:min-w-[10.5rem] items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition-colors hover:bg-blue-700"
               >
-                <ArrowRightLeft size={18} /> Registrar Movimiento
+                <ArrowRightLeft size={16} className="shrink-0" />
+                <span className="truncate">
+                  <span className="sm:hidden">Movimiento</span>
+                  <span className="hidden sm:inline">Registrar Movimiento</span>
+                </span>
               </button>
             </>
           )}
           {(activeTab === 'categories' || activeTab === 'locations' || activeTab === 'vendors') && canManage && (
-            <button 
+            <button
+              type="button"
               onClick={() => handleOpenCatalogModal(activeTab === 'categories' ? 'category' : activeTab === 'vendors' ? 'vendor' : 'location')}
-              className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors w-full md:w-auto shadow-sm shadow-emerald-600/20"
+              className="inline-flex h-11 w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm shadow-emerald-600/20 transition-colors hover:bg-emerald-700"
             >
-              <Plus size={18} /> Nueva {activeTab === 'vendors' ? 'Proveedor' : activeTab === 'categories' ? 'Categoría' : 'Ubicación'}
+              <Plus size={16} className="shrink-0" /> Nueva {activeTab === 'vendors' ? 'Proveedor' : activeTab === 'categories' ? 'Categoría' : 'Ubicación'}
             </button>
           )}
         </div>
       </div>
+
+      {/* Stock crítico: franja propia debajo del encabezado (no pelea con los botones) */}
+      {!isLoading && activeTab === 'items' && criticalItems.length > 0 && (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50/80 dark:border-rose-900/60 dark:bg-rose-950/30">
+          <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:gap-3 sm:px-4 sm:py-3">
+            <button
+              type="button"
+              onClick={filterCriticalStock}
+              className="flex min-w-0 flex-1 items-center gap-3 text-left rounded-xl px-1 py-0.5 -mx-1 hover:bg-rose-100/70 dark:hover:bg-rose-900/30 transition-colors"
+              title="Filtrar artículos en stock crítico"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800 shadow-sm">
+                <AlertCircle className="h-5 w-5 text-rose-500" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="text-sm font-bold text-rose-700 dark:text-rose-300">Stock crítico</span>
+                  <span className="inline-flex items-center rounded-full bg-rose-600 px-2 py-0.5 text-xs font-black text-white tabular-nums">
+                    {criticalItems.length}
+                  </span>
+                  <span className="relative flex h-2 w-2 shrink-0" aria-hidden>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-rose-600/80 dark:text-rose-300/80 leading-snug">
+                  Toca para filtrar · Artículos al mínimo o inferior
+                </p>
+              </div>
+            </button>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:shrink-0">
+              {criticalWithoutVendor.length > 0 && (
+                <button
+                  type="button"
+                  onClick={filterCriticalWithoutVendor}
+                  className="inline-flex h-10 w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 text-sm font-semibold text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200"
+                  title="Ver solo críticos sin proveedor"
+                >
+                  {criticalWithoutVendor.length} sin proveedor
+                </button>
+              )}
+              {canManagePurchases && (
+                <button
+                  type="button"
+                  disabled={isCreatingDrafts}
+                  onClick={handleCreateDraftPurchaseOrders}
+                  className="inline-flex h-10 w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-rose-700 disabled:opacity-60"
+                  title="Crear borradores de Orden de Compra con estos ítems"
+                >
+                  {isCreatingDrafts ? <Loader2 size={16} className="animate-spin" /> : <ShoppingCart size={16} />}
+                  <span className="sm:hidden">Generar OC</span>
+                  <span className="hidden sm:inline">Generar borrador OC</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="w-full lg:w-64 flex-shrink-0">

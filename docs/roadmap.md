@@ -1,11 +1,15 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
-*(Última actualización: 24 de Julio de 2026)*
+*(Última actualización: 26 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.38.0 (Actualización: 24 de Julio de 2026)
+## 🚀 Versión Actual: v1.38.3 (Actualización: 26 de Julio de 2026)
 
-### Novedades en v1.38.0 (checklist completo + recordatorio Telegram)
+### Novedades en v1.38.3 (botones Inventario + stock crítico)
+- **Mejora:** Botones **Nuevo Repuesto**, **Excel** y **Registrar Movimiento** con misma altura/ancho (rejilla en celular; tamaño uniforme en escritorio).
+- **Mejora:** La alerta **Stock crítico** ya no se aprieta en el encabezado: franja ancha debajo del título, con acciones claras (filtrar / sin proveedor / borrador OC).
+
+### Novedades Anteriores (v1.38.0 - checklist completo + recordatorio Telegram)
 - **Nuevo:** No se puede enviar el checklist diario incompleto (checks y lecturas obligatorios); observaciones vacías → **N/A**. Validación en UI y API.
 - **Nuevo:** Recordatorio Telegram si el checklist del día no está enviado (default 10/14/16 hora México; `CHECKLIST_REMINDER_HOURS`).
 
