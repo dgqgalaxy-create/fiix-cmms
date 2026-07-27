@@ -1,5 +1,5 @@
 # Manual de Usuario - FIIX CMMS (LPET)
-*(Versión 1.41.1 - 27 de Julio, 2026)*
+*(Versión 1.43.3 - 27 de Julio, 2026)*
 
 FIIX CMMS (despliegue LPET) centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 
@@ -26,7 +26,7 @@ En celular, el temario del manual aparece como una barra horizontal deslizable. 
 - **Historial del activo de un vistazo:** Al abrir un activo (o escanear su QR) la pestaña **De un vistazo** muestra últimas OTs, fallas RCA frecuentes, PMs próximos/vencidos, stock crítico de repuestos del plan y costo acumulado (valor del activo + refacciones). Pasa el puntero sobre las etiquetas (icono ?) para ver la definición de RCA, PM y stock crítico.
 - **Búsqueda global (Ctrl/Cmd+K):** Desde cualquier pantalla abre el buscador único para activos, repuestos, ubicaciones y folios FOL (p. ej. `FOL-0001`). En celular usa el icono de lupa en la barra superior.
 - **Impresión masiva de QR:** En **Activos**, Inventario → **Repuestos** o Inventario → **Ubicaciones**, usa **QR masivo**, selecciona registros (incluidos todos los filtrados) e imprime una hoja con las etiquetas.
-- **Detalle compacto de OT:** La ventana de detalle aprovecha mejor el ancho de pantalla, muestra campos en columnas, permite que nombres y textos largos ocupen varias líneas y presenta las fotografías completas sin recortarlas.
+- **Listas en celular:** Checklist diario, Órdenes de Compra y **Planes Preventivos** usan encabezado compacto y filas densas (menos scroll); en PC se mantiene la tabla.
 - **Borrador de compra desde Stock Crítico:** En Inventario, la franja **Stock crítico** (debajo del encabezado) muestra cuántos ítems están bajo mínimo. Un toque filtra la lista; **sin proveedor** aísla los que faltan de proveedor; con permiso de compras, **Generar borrador OC** crea Órdenes de Compra en estado Borrador (una por proveedor, cantidad = lo faltante para llegar al mínimo). Revisa y avanza el flujo en **Órdenes de Compra**.
 - **Recepción parcial:** En una OC **Enviada**, **Recibir…** pide la cantidad real por línea (puede ser menos, igual o más que lo pedido). Solo lo recibido entra al inventario como movimiento de entrada con **fecha = momento en que confirmas la recepción** (aunque el material llegue antes de la fecha pactada). Motivo `Recepción de Orden de Compra PO-…`. La OC se cierra como Recibida con histórico pedido vs recibido y dos totales (pedido / recibido). En **Inventario → Movimientos** busca `PO-` o `Recepción` si el listado está mezclado con fechas del CSV histórico.
 - **Nueva OC:** Al elegir un **proveedor**, se abre el catálogo de sus refacciones sin tener que escribir. También puedes buscar por **nombre o código** sin elegir proveedor; al tocar el ítem se asigna su proveedor a la orden.
