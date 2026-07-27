@@ -6,8 +6,11 @@ import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import zlib from 'zlib';
 
-// Carpeta de respaldos: BACKUP_DIR del .env, o ~/fiix-backups por defecto (cross-platform).
-export const BACKUP_DIR = process.env.BACKUP_DIR || path.join(os.homedir(), 'fiix-backups');
+// Carpeta de respaldos: BACKUP_DIR del .env, o ~/fiix-backups del usuario del proceso
+// (con PM2 suele ser el home de quien arrancó el proceso — no siempre /home/usuario).
+export const BACKUP_DIR = path.resolve(
+  process.env.BACKUP_DIR || path.join(os.homedir(), 'fiix-backups')
+);
 const RETENTION_DAYS = 14;
 const UPLOADS_DIR = path.join(__dirname, '../../uploads');
 const IS_WIN = process.platform === 'win32';
@@ -60,10 +63,12 @@ export function sanitizeDatabaseUrlForPgClients(raw: string): string {
   }
 }
 
-/** Busca un binario de cliente PostgreSQL (pg_dump / psql) en PATH y rutas típicas de Windows. */
+/** Busca un binario de cliente PostgreSQL (pg_dump / psql) en PATH y rutas típicas. */
 function findPgBinary(binName: 'pg_dump' | 'psql'): string | null {
   const exeName = IS_WIN ? `${binName}.exe` : binName;
   const whichCmd = IS_WIN ? 'where' : 'which';
+  const candidates: string[] = [];
+
   try {
     const found = execFileSync(whichCmd, [binName], {
       encoding: 'utf8',
@@ -73,8 +78,8 @@ function findPgBinary(binName: 'pg_dump' | 'psql'): string | null {
       .trim()
       .split(/\r?\n/)
       .map((line) => line.trim())
-      .find((line) => line && !line.toLowerCase().includes('info:') && fs.existsSync(line));
-    if (found) return found;
+      .filter((line) => line && !line.toLowerCase().includes('info:') && fs.existsSync(line));
+    candidates.push(...found);
   } catch {
     // no está en PATH
   }
@@ -98,12 +103,53 @@ function findPgBinary(binName: 'pg_dump' | 'psql'): string | null {
       }
       for (const version of versions) {
         const candidate = path.join(pgRoot, version, 'bin', exeName);
-        if (fs.existsSync(candidate)) return candidate;
+        if (fs.existsSync(candidate)) candidates.push(candidate);
+      }
+    }
+  } else {
+    // Ubuntu/Debian: preferir /usr/lib/postgresql/<mayor>/bin/pg_dump (la más alta).
+    // El pg_dump del PATH suele ser el metapaquete (p. ej. 16) aunque exista el cliente 17.
+    const pgLib = '/usr/lib/postgresql';
+    if (fs.existsSync(pgLib)) {
+      try {
+        const versions = fs
+          .readdirSync(pgLib)
+          .filter((v) => /^\d+(\.\d+)?$/.test(v))
+          .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+        for (const version of versions) {
+          const candidate = path.join(pgLib, version, 'bin', binName);
+          if (fs.existsSync(candidate)) candidates.push(candidate);
+        }
+      } catch {
+        // ignore
       }
     }
   }
 
-  return null;
+  const unique = [...new Set(candidates)];
+  if (unique.length === 0) return null;
+  if (unique.length === 1) return unique[0];
+
+  // Elegir la versión mayor reportada por --version (pg_dump debe ser >= servidor).
+  let best: string | null = null;
+  let bestMajor = -1;
+  for (const candidate of unique) {
+    try {
+      const out = execFileSync(candidate, ['--version'], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      });
+      const m = out.match(/(\d+)\.\d+/);
+      const major = m ? Number(m[1]) : -1;
+      if (major > bestMajor) {
+        bestMajor = major;
+        best = candidate;
+      }
+    } catch {
+      if (!best) best = candidate;
+    }
+  }
+  return best;
 }
 
 function findPgDump(): string | null {
@@ -499,6 +545,49 @@ export const runRestore = async (
   return { success: restoredDb, message, restoredDb, restoredUploads };
 };
 
+export interface BackupProgress {
+  phase: 'idle' | 'prepare' | 'database' | 'uploads' | 'cleanup' | 'done' | 'error';
+  step: number;
+  totalSteps: number;
+  percent: number;
+  message: string;
+  running: boolean;
+  updatedAt: string;
+}
+
+const TOTAL_BACKUP_STEPS = 4;
+
+let backupProgress: BackupProgress = {
+  phase: 'idle',
+  step: 0,
+  totalSteps: TOTAL_BACKUP_STEPS,
+  percent: 0,
+  message: '',
+  running: false,
+  updatedAt: new Date().toISOString(),
+};
+
+function setBackupProgress(
+  phase: BackupProgress['phase'],
+  step: number,
+  percent: number,
+  message: string,
+  running = true
+) {
+  backupProgress = {
+    phase,
+    step,
+    totalSteps: TOTAL_BACKUP_STEPS,
+    percent: Math.max(0, Math.min(100, Math.round(percent))),
+    message,
+    running,
+    updatedAt: new Date().toISOString(),
+  };
+  console.log(`[Backup] ${percent}% · ${message}`);
+}
+
+export const getBackupProgress = (): BackupProgress => ({ ...backupProgress });
+
 /**
  * Respalda la base de datos (pg_dump + gzip en Node) y la carpeta backend/uploads a
  * BACKUP_DIR, y elimina respaldos con más de RETENTION_DAYS días.
@@ -509,16 +598,21 @@ export const runRestore = async (
 export const runBackup = async (): Promise<BackupResult> => {
   const files: string[] = [];
   const errors: string[] = [];
+  const started = Date.now();
+  setBackupProgress('prepare', 1, 5, 'Preparando carpeta de respaldos…');
+  console.log(`[Backup] Inicio → carpeta ${BACKUP_DIR} (home proceso: ${os.homedir()})`);
 
   try {
     fs.mkdirSync(BACKUP_DIR, { recursive: true });
   } catch (error: any) {
-    return { success: false, message: `No se pudo crear la carpeta de respaldos: ${error.message}`, files: [] };
+    setBackupProgress('error', 1, 0, `No se pudo crear la carpeta: ${error.message}`, false);
+    return { success: false, message: `No se pudo crear la carpeta de respaldos (${BACKUP_DIR}): ${error.message}`, files: [] };
   }
 
   const stamp = timestamp();
 
   // --- Base de datos ---
+  setBackupProgress('database', 2, 25, 'Respaldando base de datos (pg_dump)…');
   const databaseUrl = process.env.DATABASE_URL || '';
   if (!databaseUrl) {
     errors.push('DATABASE_URL no está definido; se omitió el respaldo de la base de datos.');
@@ -529,33 +623,46 @@ export const runBackup = async (): Promise<BackupResult> => {
     } else {
       const dbFile = path.join(BACKUP_DIR, `fiix_${stamp}.sql.gz`);
       try {
+        console.log(`[Backup] pg_dump → ${path.basename(dbFile)} (${pgDumpPath})`);
         await dumpDatabase(pgDumpPath, databaseUrl, dbFile);
         files.push(dbFile);
+        console.log(`[Backup] BD OK (${fs.statSync(dbFile).size} bytes)`);
+        setBackupProgress('database', 2, 45, 'Base de datos respaldada…');
       } catch (error: any) {
         errors.push(`Base de datos: ${error.message || error} (¿pg_dump instalado y DATABASE_URL correcto?)`);
       }
     }
   }
 
-  // --- Uploads (fotos, firmas, evidencias) ---
+  // --- Uploads (fotos, firmas, evidencias) — puede tardar varios minutos si hay muchas fotos ---
   if (fs.existsSync(UPLOADS_DIR)) {
     const uploadsFile = path.join(BACKUP_DIR, `uploads_${stamp}.tar.gz`);
     try {
+      setBackupProgress('uploads', 3, 55, 'Empaquetando fotos (uploads/)… esto puede tardar varios minutos');
+      console.log(`[Backup] tar uploads/ → ${path.basename(uploadsFile)} (puede tardar si hay muchas fotos)`);
       await archiveUploads(uploadsFile);
       files.push(uploadsFile);
+      console.log(`[Backup] Uploads OK (${fs.statSync(uploadsFile).size} bytes)`);
+      setBackupProgress('uploads', 3, 85, 'Fotos empaquetadas…');
     } catch (error: any) {
       errors.push(`Uploads: ${error.message || error}`);
     }
+  } else {
+    setBackupProgress('uploads', 3, 85, 'Sin carpeta uploads; se omite empaquetado de fotos…');
   }
 
+  setBackupProgress('cleanup', 4, 92, 'Limpiando respaldos antiguos…');
   cleanupOldBackups();
 
   const success = files.length > 0;
   const fileNames = files.map((f) => path.basename(f)).join(', ');
+  const elapsedSec = Math.round((Date.now() - started) / 1000);
   const message = success
-    ? `Respaldo creado en ${BACKUP_DIR}: ${fileNames}${errors.length ? ` (avisos: ${errors.join(' | ')})` : ''}`
-    : `No se pudo crear ningún respaldo. ${errors.join(' | ') || 'Revisa permisos y herramientas instaladas (pg_dump, tar).'}`;
+    ? `Respaldo creado en ${BACKUP_DIR}: ${fileNames} (${elapsedSec}s)${errors.length ? ` (avisos: ${errors.join(' | ')})` : ''}`
+    : `No se pudo crear ningún respaldo en ${BACKUP_DIR}. ${errors.join(' | ') || 'Revisa permisos y herramientas instaladas (pg_dump, tar).'}`;
 
+  console.log(`[Backup] Fin (${elapsedSec}s): ${message}`);
+  setBackupProgress(success ? 'done' : 'error', 4, 100, message, false);
   return { success, message, files };
 };
 

@@ -117,11 +117,12 @@ const mergePolicy = (raw: unknown): SlaPolicy => {
 };
 
 export const SettingsPage = () => {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user, updateUserPreferences, setTechnicianMobileUiFlag } = useAuth();
   const [settings, setSettings] = useState({
     telegram_enabled: false,
     email_enabled: false,
     sla_enabled: true,
+    technician_mobile_ui: true,
   });
   const [slaPolicy, setSlaPolicy] = useState<SlaPolicy>(DEFAULT_SLA_POLICY);
   const [isLoading, setIsLoading] = useState(true);
@@ -139,6 +140,7 @@ export const SettingsPage = () => {
           telegram_enabled: res.data.telegram_enabled,
           email_enabled: res.data.email_enabled,
           sla_enabled: res.data.sla_enabled ?? true,
+          technician_mobile_ui: res.data.technician_mobile_ui !== false,
         });
         setSlaPolicy(mergePolicy(res.data.sla_policy));
       }
@@ -155,7 +157,7 @@ export const SettingsPage = () => {
 
   useSocketRefresh('refresh_settings', () => { void fetchSettings(); });
 
-  const handleToggle = async (key: 'telegram_enabled' | 'email_enabled' | 'sla_enabled') => {
+  const handleToggle = async (key: 'telegram_enabled' | 'email_enabled' | 'sla_enabled' | 'technician_mobile_ui') => {
     try {
       setIsSaving(true);
       const newValue = !settings[key];
@@ -169,9 +171,33 @@ export const SettingsPage = () => {
         setSettings({
           telegram_enabled: res.data.telegram_enabled,
           email_enabled: res.data.email_enabled,
-          sla_enabled: res.data.sla_enabled ?? newValue,
+          sla_enabled: res.data.sla_enabled ?? settings.sla_enabled,
+          technician_mobile_ui: res.data.technician_mobile_ui !== false,
         });
+        if (key === 'technician_mobile_ui') {
+          setTechnicianMobileUiFlag(res.data.technician_mobile_ui !== false);
+        }
       }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePersonalTechUiToggle = async () => {
+    if (!user || user.role !== 'TECNICO') return;
+    const current = user.preferences?.use_technician_mobile_ui !== false;
+    const next = !current;
+    const newPreferences = {
+      ...(user.preferences || {}),
+      use_technician_mobile_ui: next,
+    };
+    try {
+      setIsSaving(true);
+      const { updateMyPreferences } = await import('../api/users');
+      await updateMyPreferences(newPreferences);
+      updateUserPreferences(newPreferences);
     } catch (err) {
       console.error(err);
     } finally {
@@ -481,6 +507,50 @@ export const SettingsPage = () => {
                     <span className="font-bold text-slate-800 dark:text-slate-200">Sistema</span>
                   </button>
                 </div>
+
+                <div className="mt-8 h-px bg-slate-100 dark:bg-slate-800 w-full" />
+
+                <div className="mt-6 flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="font-semibold text-slate-800 dark:text-slate-200">Interfaz móvil de técnico</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
+                      Cuando está activa, los usuarios con rol <strong>Técnico</strong> en celular ven la barra inferior (Mis OT, Escanear, Inventario, Inicio) y botones grandes Aceptar/Pausar/Finalizar.
+                      Si la desactivas, usan la misma interfaz completa que Gestionador/Administrador.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleToggle('technician_mobile_ui')}
+                    disabled={isSaving}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 ${settings.technician_mobile_ui ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'} ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings.technician_mobile_ui ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+
+                {user?.role === 'TECNICO' && (
+                  <div className="mt-6 flex items-start justify-between gap-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 p-4">
+                    <div>
+                      <h3 className="font-semibold text-slate-800 dark:text-slate-200">Mi preferencia (solo este usuario)</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                        Puedes usar la interfaz completa en tu cuenta aunque la opción global esté activa.
+                        {settings.technician_mobile_ui === false && (
+                          <span className="block mt-1 text-amber-700 dark:text-amber-400">
+                            La opción global está desactivada: verás la interfaz completa.
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handlePersonalTechUiToggle()}
+                      disabled={isSaving || settings.technician_mobile_ui === false}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 ${(user.preferences?.use_technician_mobile_ui !== false) && settings.technician_mobile_ui ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'} ${isSaving || settings.technician_mobile_ui === false ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${(user.preferences?.use_technician_mobile_ui !== false) && settings.technician_mobile_ui ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -63,6 +63,14 @@ export const DeveloperOptions = () => {
   const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
+  const [backupDirHint, setBackupDirHint] = useState<string | null>(null);
+  const [backupProgress, setBackupProgress] = useState<{
+    percent: number;
+    message: string;
+    step: number;
+    totalSteps: number;
+    phase: string;
+  } | null>(null);
   const [serverBackups, setServerBackups] = useState<
     Array<{
       file: string;
@@ -211,24 +219,72 @@ export const DeveloperOptions = () => {
   const handleBackupNow = async () => {
     setIsBackingUp(true);
     setError(null);
+    setBackupProgress({
+      percent: 5,
+      message: 'Iniciando respaldo…',
+      step: 1,
+      totalSteps: 4,
+      phase: 'prepare',
+    });
+
+    const pollId = window.setInterval(async () => {
+      try {
+        const prog = await axios.get('/dev/backup/progress', {
+          headers: { 'x-dev-password': password },
+          timeout: 8000,
+        });
+        if (prog.data && typeof prog.data.percent === 'number') {
+          setBackupProgress({
+            percent: prog.data.percent,
+            message: prog.data.message || '',
+            step: prog.data.step || 0,
+            totalSteps: prog.data.totalSteps || 4,
+            phase: prog.data.phase || '',
+          });
+        }
+      } catch {
+        // El POST principal sigue; el poll es solo visual.
+      }
+    }, 700);
+
     try {
+      // pg_dump es rápido; el tar de uploads/ con muchas fotos puede tardar varios minutos.
       const res = await axios.post('/dev/backup', {}, {
-        headers: { 'x-dev-password': password }
+        headers: { 'x-dev-password': password },
+        timeout: 15 * 60 * 1000,
       });
+      if (typeof res.data?.backupDir === 'string' && res.data.backupDir) {
+        setBackupDirHint(res.data.backupDir);
+      }
+      if (res.data?.progress && typeof res.data.progress.percent === 'number') {
+        setBackupProgress({
+          percent: res.data.progress.percent,
+          message: res.data.progress.message || res.data.message || '',
+          step: res.data.progress.step || 4,
+          totalSteps: res.data.progress.totalSteps || 4,
+          phase: res.data.progress.phase || 'done',
+        });
+      }
       if (res.data?.success) {
         setSuccessMsg(res.data.message || 'Respaldo creado con éxito.');
         await loadServerBackups();
       } else {
         setError(res.data?.message || 'No se pudo crear el respaldo.');
       }
-      setTimeout(() => { setSuccessMsg(null); }, 8000);
+      setTimeout(() => { setSuccessMsg(null); }, 12000);
     } catch (err: unknown) {
       const detail = axios.isAxiosError(err)
-        ? err.response?.data?.message || err.message
+        ? (err.code === 'ECONNABORTED'
+          ? 'Tiempo de espera agotado (el tar de fotos puede tardar mucho). Revisa en el servidor: pm2 logs fiix-backend --lines 50 y la carpeta de respaldos.'
+          : err.response?.data?.message || err.message)
         : err instanceof Error ? err.message : 'Error desconocido';
       setError(`Fallo al crear el respaldo: ${detail}`);
+      setBackupProgress(null);
     } finally {
+      window.clearInterval(pollId);
       setIsBackingUp(false);
+      // Dejar la barra un momento en 100% si terminó bien; si no, limpiar a los 8s.
+      window.setTimeout(() => setBackupProgress(null), 8000);
     }
   };
 
@@ -241,6 +297,9 @@ export const DeveloperOptions = () => {
         headers: { 'x-dev-password': password }
       });
       const list = res.data?.backups || [];
+      if (typeof res.data?.backupDir === 'string' && res.data.backupDir) {
+        setBackupDirHint(res.data.backupDir);
+      }
       setServerBackups(list);
       const usableList = list.filter((b: { usable?: boolean }) => b.usable !== false);
       if (usableList.length > 0) {
@@ -910,6 +969,11 @@ export const DeveloperOptions = () => {
                     <h3 className="font-black text-slate-900 dark:text-white">Respaldo del servidor</h3>
                     <p className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">
                       Crea o restaura un dump de PostgreSQL (<code>pg_dump</code>) y una copia de <code>uploads/</code> en el servidor (se conservan los últimos 14 días). También corre automáticamente cada madrugada.
+                      {backupDirHint && (
+                        <>
+                          {' '}Carpeta actual: <code className="break-all text-xs">{backupDirHint}</code>
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -918,8 +982,31 @@ export const DeveloperOptions = () => {
                   disabled={isBackingUp || isLoading}
                   className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-amber-700 disabled:opacity-50"
                 >
-                  <Save size={16} /> {isBackingUp ? 'Creando respaldo...' : 'Crear respaldo'}
+                  <Save size={16} /> {isBackingUp ? 'Creando respaldo…' : 'Crear respaldo'}
                 </button>
+                {(isBackingUp || backupProgress) && backupProgress && (
+                  <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3 dark:border-amber-900/50 dark:bg-amber-950/30">
+                    <div className="mb-1.5 flex items-center justify-between gap-2 text-xs font-bold text-amber-900 dark:text-amber-200">
+                      <span className="min-w-0 truncate">
+                        {backupProgress.step > 0
+                          ? `${backupProgress.step}/${backupProgress.totalSteps} · ${backupProgress.message}`
+                          : backupProgress.message}
+                      </span>
+                      <span className="shrink-0 tabular-nums">{backupProgress.percent}%</span>
+                    </div>
+                    <div className="h-2.5 overflow-hidden rounded-full bg-amber-200/80 dark:bg-amber-900/60">
+                      <div
+                        className="h-full rounded-full bg-amber-600 transition-[width] duration-500 ease-out dark:bg-amber-400"
+                        style={{ width: `${Math.max(4, backupProgress.percent)}%` }}
+                      />
+                    </div>
+                    {isBackingUp && backupProgress.phase === 'uploads' && (
+                      <p className="mt-2 text-[11px] leading-4 text-amber-800/80 dark:text-amber-300/80">
+                        Empaquetar muchas fotos puede tardar varios minutos; no cierres esta pestaña.
+                      </p>
+                    )}
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -927,7 +1014,7 @@ export const DeveloperOptions = () => {
                     setRestoreModalError(null);
                     void loadServerBackups();
                   }}
-                  disabled={isLoading || isRestoring}
+                  disabled={isLoading || isRestoring || isBackingUp}
                   className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800 transition hover:bg-amber-100 disabled:opacity-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
                 >
                   <HardDrive size={16} /> Restaurar respaldo

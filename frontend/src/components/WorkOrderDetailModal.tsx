@@ -17,7 +17,7 @@ import { SlaBadge } from './SlaBadge';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { useWorkOrderPresence } from '../hooks/useWorkOrderPresence';
 import { socket } from '../api/socket';
-import { useIsMobile } from '../hooks/useIsMobile';
+import { useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
 import { formatDate, formatDateTime } from '../utils/dateUtils';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -83,7 +83,7 @@ export const WorkOrderDetailModal = ({
 }: Props) => {
   const { user, hasPermission } = useAuth();
   const { canEdit, remoteEditorName } = useWorkOrderPresence(workOrder?.id, isOpen);
-  const isMobile = useIsMobile();
+  const isTechMobileShell = useTechnicianMobileShell();
   const evidenceRef = useRef<HTMLDivElement>(null);
 
   const [liveWorkOrder, setLiveWorkOrder] = useState<WorkOrder | null>(workOrder);
@@ -1198,7 +1198,7 @@ export const WorkOrderDetailModal = ({
           </form>
         </div>
 
-        {isMobile && user?.role === 'TECNICO' && !isReadOnly && !isClosed && (
+        {isTechMobileShell && !isReadOnly && !isClosed && (
           <div className="px-3 pt-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 px-1">Acción rápida</p>
             <div className="grid grid-cols-2 gap-2">

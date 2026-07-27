@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -271,7 +271,7 @@ export const HomePage = () => {
               className="rounded-xl border border-rose-200 bg-white p-3 text-left shadow-sm transition hover:border-rose-400 dark:border-rose-900 dark:bg-slate-900"
             >
               <p className="text-[11px] font-semibold uppercase text-rose-600">Urgentes abiertas</p>
-              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{controlCounts.urgentOpen}</p>
+              <PulsingValue value={controlCounts.urgentOpen} className="mt-1 text-2xl font-black text-slate-900 dark:text-white" />
             </button>
             <button
               type="button"
@@ -281,7 +281,7 @@ export const HomePage = () => {
               <p className="text-[11px] font-semibold uppercase text-amber-700 flex items-center gap-1">
                 <UserX size={12} /> Sin asignar
               </p>
-              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{controlCounts.unassigned}</p>
+              <PulsingValue value={controlCounts.unassigned} className="mt-1 text-2xl font-black text-slate-900 dark:text-white" />
             </button>
             <button
               type="button"
@@ -291,7 +291,7 @@ export const HomePage = () => {
               <p className="text-[11px] font-semibold uppercase text-orange-700 flex items-center gap-1">
                 <ShieldAlert size={12} /> SLA en riesgo
               </p>
-              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{controlCounts.slaRisk}</p>
+              <PulsingValue value={controlCounts.slaRisk} className="mt-1 text-2xl font-black text-slate-900 dark:text-white" />
             </button>
             <button
               type="button"
@@ -299,7 +299,7 @@ export const HomePage = () => {
               className="rounded-xl border border-rose-300 bg-white p-3 text-left shadow-sm transition hover:border-rose-500 dark:border-rose-800 dark:bg-slate-900"
             >
               <p className="text-[11px] font-semibold uppercase text-rose-800">SLA vencido</p>
-              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{controlCounts.slaBreached}</p>
+              <PulsingValue value={controlCounts.slaBreached} className="mt-1 text-2xl font-black text-slate-900 dark:text-white" />
             </button>
           </div>
         </section>
@@ -550,6 +550,32 @@ const cardColors: Record<string, string> = {
   gray: 'bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-200',
 };
 
+/** One gentle scale pulse when a numeric value changes (skips first mount). */
+const PulsingValue = ({ value, className }: { value: number; className?: string }) => {
+  const [pulse, setPulse] = useState(false);
+  const mountedRef = useRef(false);
+  const prevRef = useRef(value);
+
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      prevRef.current = value;
+      return;
+    }
+    if (prevRef.current === value) return;
+    prevRef.current = value;
+    setPulse(true);
+    const t = window.setTimeout(() => setPulse(false), 500);
+    return () => window.clearTimeout(t);
+  }, [value]);
+
+  return (
+    <span className={`inline-block origin-left ${className || ''} ${pulse ? 'animate-value-heartbeat' : ''}`}>
+      {value}
+    </span>
+  );
+};
+
 const SummaryCard = ({ title, value, icon, color, onClick, detail, emphasized = false }: {
   title: string;
   value: number;
@@ -565,7 +591,10 @@ const SummaryCard = ({ title, value, icon, color, onClick, detail, emphasized = 
     <div className="absolute -right-2 -top-2 opacity-20 group-hover:scale-110 transition-transform [&>svg]:w-20 [&>svg]:h-20">{icon}</div>
     <div className="relative z-10 h-full flex flex-col">
       <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider leading-tight h-8">{title}</span>
-      <div className={`${emphasized ? 'text-3xl sm:text-[2.75rem]' : 'text-2xl sm:text-4xl'} font-black ${color === 'slate' || color === 'amber' ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>{value}</div>
+      <PulsingValue
+        value={value}
+        className={`${emphasized ? 'text-3xl sm:text-[2.75rem]' : 'text-2xl sm:text-4xl'} font-black ${color === 'slate' || color === 'amber' ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}
+      />
       {detail && <div className="mt-auto pt-2 text-[10px] font-semibold leading-tight line-clamp-2">{detail}</div>}
     </div>
     </>

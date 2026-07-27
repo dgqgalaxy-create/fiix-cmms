@@ -9,34 +9,32 @@ import { VersionModal, APP_VERSION } from './VersionModal';
 import { OfflineBanner } from './OfflineBanner';
 import { GlobalSearchModal, GlobalSearchTrigger } from './GlobalSearchModal';
 import { TechnicianBottomNav } from './TechnicianBottomNav';
-import { useAuth } from '../context/AuthContext';
-import { useIsMobile } from '../hooks/useIsMobile';
+import { useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
-  const { user } = useAuth();
-  const isMobile = useIsMobile();
+  const isTechMobileShell = useTechnicianMobileShell();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
   const isWidePage = location.pathname.startsWith('/calendar') || location.pathname.startsWith('/roster');
-  const isTechMobileShell = isMobile && user?.role === 'TECNICO';
 
   useEffect(() => {
-    if (navigator.onLine) {
-      sendHeartbeat().catch(console.error);
-    }
-
-    const interval = setInterval(() => {
+    const beat = () => {
       if (navigator.onLine) {
-        sendHeartbeat().catch(console.error);
+        sendHeartbeat(location.pathname).catch(console.error);
       }
-    }, 2 * 60 * 1000);
+    };
+
+    beat();
+
+    const interval = setInterval(beat, 2 * 60 * 1000);
 
     const handleOnline = () => {
       setIsOnline(true);
       setIsSyncing(true);
+      beat();
       setTimeout(() => setIsSyncing(false), 3000);
     };
     const handleOffline = () => setIsOnline(false);
@@ -49,7 +47,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [location.pathname]);
 
   return (
     <div className="flex min-h-screen bg-surface-muted text-fg transition-colors duration-200">

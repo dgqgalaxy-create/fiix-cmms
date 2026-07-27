@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.38.3";
+export const APP_VERSION = "1.39.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "26 de Julio, 2026";
+  const updateDate = "27 de Julio, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -28,6 +28,15 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Configuración → Apariencia — interruptor «Interfaz móvil de técnico» (global). Desactivada = los técnicos ven la interfaz completa. Los técnicos pueden además desactivarla solo en su cuenta.",
+    "Mejora: Nueva Orden de Compra — al elegir proveedor se listan de inmediato sus refacciones; también puedes buscar por nombre/código sin saber el proveedor (al elegir el ítem se toma su proveedor).",
+    "Nuevo: Usuarios en línea muestra el módulo actual (ruta → etiqueta amigable: Órdenes, Inventario, Calendario, etc.).",
+    "Mejora: En Inicio, las cifras de las tarjetas (resumen y Sala de control) latean suavemente al cambiar el valor.",
+    "Corrección: En tablet/celular, arrastrar una OT pendiente al Calendario ya asigna la fecha al soltar (HTML5 DnD no funciona con touch).",
+    "Nuevo: Al crear un respaldo, Opciones de Desarrollador muestra barra de progreso y el paso actual (preparar → BD → fotos → limpieza).",
+    "Corrección: Respaldos con Postgres 17 (CasaOS/Docker) ya no fallan por pg_dump 16: se usa el cliente de mayor versión en /usr/lib/postgresql/N/bin y update.sh puede instalar postgresql-client-17 (repo PGDG).",
+    "Mejora: install.sh / update.sh instalan o reparan postgresql-client (pg_dump/psql) para que Crear respaldo no falle solo con fotos y sin dump de BD.",
+    "Mejora: Crear respaldo muestra la carpeta real del servidor, avisa que el tar de fotos puede tardar varios minutos y no se queda colgado sin error (timeout 15 min + logs PM2).",
     "Mejora: En Inventario, los botones Nuevo Repuesto, Excel y Registrar Movimiento tienen la misma altura y ancho; la alerta de Stock crítico pasa a una franja propia debajo del encabezado (celular y escritorio).",
     "Corrección: En la gráfica de dona del Inicio, la etiqueta emergente de Preventivo/Correctivo/Servicio ahora aparece siempre por encima del total central, sin textos encimados.",
     "Mejora: Al firmar un checklist incompleto aparece un diálogo en la app (con lista de celdas faltantes), banner ámbar y resaltado en rojo de los campos por completar — ya no depende del alert() del navegador.",

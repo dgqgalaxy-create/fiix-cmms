@@ -84,6 +84,7 @@ model User {
   is_active            Boolean     @default(true)
   must_change_password Boolean     @default(false)
   last_active          DateTime?
+  current_path         String?
   created_at           DateTime    @default(now())
   updated_at           DateTime    @updatedAt
 
@@ -448,6 +449,9 @@ model SystemSettings {
   email_enabled      Boolean  @default(false)
   sla_enabled        Boolean  @default(true)
   sla_policy         Json?
+  /// Si es true, los técnicos en celular usan barra inferior + acciones rápidas (interfaz app).
+  /// Si es false, ven la misma interfaz completa que gestionador/administrador.
+  technician_mobile_ui Boolean @default(true)
   checklist_column_count Int  @default(5)
   updated_at       DateTime @updatedAt
 }

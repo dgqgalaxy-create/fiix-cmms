@@ -339,7 +339,7 @@ Las evidencias y fotos viven en **`backend/uploads/`** (disco del servidor), no 
 | GitHub | Cuenta/token de Git — **no** es la contraseña de Postgres |
 
 ### Respaldos y restauración (verificar una vez)
-Los respaldos diarios (y el botón **Crear respaldo**) guardan `fiix_*.sql.gz` y `uploads_*.tar.gz` en `~/fiix-backups` (o `BACKUP_DIR`).
+Los respaldos diarios (y el botón **Crear respaldo**) guardan `fiix_*.sql.gz` (BD) y `uploads_*.tar.gz` (fotos) en `~/fiix-backups` (o `BACKUP_DIR`). Requieren **`pg_dump`/`psql`** con versión **≥** la del servidor (p. ej. Postgres 17 → `postgresql-client-17`). `install.sh` / `update.sh` (v1.38.5+) ayudan a instalar el cliente; la UI muestra progreso por fases.
 
 Para comprobar que un respaldo sirve:
 

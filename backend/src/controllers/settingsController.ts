@@ -28,7 +28,7 @@ export const getSettings = async (req: Request, res: Response): Promise<void> =>
 
 export const updateSettings = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { telegram_enabled, email_enabled, sla_enabled, sla_policy, checklist_column_count } = req.body;
+    const { telegram_enabled, email_enabled, sla_enabled, sla_policy, checklist_column_count, technician_mobile_ui } = req.body;
     let settings = await prisma.systemSettings.findFirst();
 
     const nextPolicy =
@@ -46,6 +46,7 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
           email_enabled: email_enabled ?? false,
           sla_enabled: sla_enabled ?? true,
           sla_policy: nextPolicy ?? DEFAULT_SLA_POLICY,
+          technician_mobile_ui: technician_mobile_ui ?? true,
           ...(nextColumnCount !== undefined ? { checklist_column_count: nextColumnCount } : {}),
         },
       });
@@ -56,6 +57,7 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
           telegram_enabled: telegram_enabled ?? settings.telegram_enabled,
           email_enabled: email_enabled ?? settings.email_enabled,
           sla_enabled: sla_enabled ?? settings.sla_enabled,
+          ...(technician_mobile_ui !== undefined ? { technician_mobile_ui: Boolean(technician_mobile_ui) } : {}),
           ...(nextPolicy ? { sla_policy: nextPolicy } : {}),
           ...(nextColumnCount !== undefined ? { checklist_column_count: nextColumnCount } : {}),
         },

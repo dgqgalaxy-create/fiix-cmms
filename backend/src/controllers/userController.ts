@@ -114,9 +114,21 @@ export const heartbeat = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    const rawPath = typeof req.body?.path === 'string'
+      ? req.body.path
+      : typeof req.body?.module === 'string'
+        ? req.body.module
+        : undefined;
+    const current_path = typeof rawPath === 'string' && rawPath.trim()
+      ? rawPath.trim().slice(0, 200)
+      : undefined;
+
     await prisma.user.update({
       where: { id: userId },
-      data: { last_active: new Date() }
+      data: {
+        last_active: new Date(),
+        ...(current_path !== undefined ? { current_path } : {})
+      }
     });
 
     res.json({ message: 'Heartbeat registrado' });
@@ -141,7 +153,8 @@ export const getOnlineUsers = async (req: Request, res: Response): Promise<void>
         id: true,
         name: true,
         role: true,
-        last_active: true
+        last_active: true,
+        current_path: true
       },
       orderBy: {
         last_active: 'desc'
@@ -202,7 +215,14 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    res.json(user);
+    const settings = await prisma.systemSettings.findFirst({
+      select: { technician_mobile_ui: true },
+    });
+
+    res.json({
+      ...user,
+      technician_mobile_ui: settings?.technician_mobile_ui ?? true,
+    });
   } catch (error) {
     console.error('Error fetching me:', error);
     res.status(500).json({ error: 'Error al obtener datos del usuario' });

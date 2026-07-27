@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Calendar as BigCalendar, dateFnsLocalizer, Views } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import es from 'date-fns/locale/es';
@@ -6,12 +6,13 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import withDragAndDropRaw from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useAuth } from '../context/AuthContext';
-import { Calendar, LayoutList, CheckCircle2, ArrowRight, X } from 'lucide-react';
+import { Calendar, LayoutList, CheckCircle2, X } from 'lucide-react';
 import { getWorkOrders, updateWorkOrder, joinWorkOrder, deleteWorkOrder } from '../api/workOrders';
 import type { WorkOrder } from '../api/workOrders';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatDateTime } from '../utils/dateUtils';
+import { resolveCalendarDropDate } from '../utils/calendarDropDate';
 
 const withDragAndDrop = (withDragAndDropRaw as any).default || withDragAndDropRaw;
 const DnDCalendar = withDragAndDrop(BigCalendar);
@@ -25,11 +26,21 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
+const ACTIVATION_DISTANCE_PX = 10;
+
 interface CustomEvent {
   title: string;
   start: Date;
   end: Date;
   order: WorkOrder;
+}
+
+interface PointerDragState {
+  order: WorkOrder;
+  startX: number;
+  startY: number;
+  activated: boolean;
+  pointerId: number;
 }
 
 export const CalendarPage = () => {
@@ -41,12 +52,13 @@ export const CalendarPage = () => {
   const [loading, setLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [draggedOrder, setDraggedOrder] = useState<WorkOrder | null>(null);
-  
-  // Calendar State
+  const [touchGhost, setTouchGhost] = useState<{ order: WorkOrder; x: number; y: number } | null>(null);
+  const pointerDragRef = useRef<PointerDragState | null>(null);
+  const suppressClickRef = useRef(false);
+
   const [currentView, setCurrentView] = useState<any>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<WorkOrder | null>(null);
@@ -55,7 +67,7 @@ export const CalendarPage = () => {
     try {
       const data = await getWorkOrders();
       setWorkOrders(data);
-      
+
       const newEvents: CustomEvent[] = [];
       const newUnscheduled: WorkOrder[] = [];
 
@@ -72,7 +84,6 @@ export const CalendarPage = () => {
         }
       });
 
-      // Sort unscheduled orders: Priority (Urgente > Alta > Media > Baja) then Folio (descending = most recent first)
       const priorityWeights: Record<string, number> = {
         'URGENTE': 1,
         'ALTA': 2,
@@ -83,11 +94,10 @@ export const CalendarPage = () => {
       newUnscheduled.sort((a, b) => {
         const pA = priorityWeights[a.priority] || 99;
         const pB = priorityWeights[b.priority] || 99;
-        
+
         if (pA !== pB) {
           return pA - pB;
         }
-        // If same priority, sort by most recent (higher folio first)
         return b.folio - a.folio;
       });
 
@@ -115,9 +125,8 @@ export const CalendarPage = () => {
     try {
       setIsUpdating(true);
       const scheduled_date = start.toISOString();
-      // Default to 1 hour if end date is not provided
       const due_date = (end || new Date(start.getTime() + 60 * 60 * 1000)).toISOString();
-      
+
       await updateWorkOrder(orderId, { scheduled_date, due_date });
       await fetchOrders();
     } catch (error) {
@@ -165,6 +174,77 @@ export const CalendarPage = () => {
     }
   };
 
+  const clearPointerDrag = () => {
+    pointerDragRef.current = null;
+    setTouchGhost(null);
+    setDraggedOrder(null);
+  };
+
+  const handlePendingPointerDown = (e: React.PointerEvent, order: WorkOrder) => {
+    // Mouse/desktop keeps HTML5 DnD; touch/pen use pointer path (HTML5 drop fails on most mobiles).
+    if (e.pointerType === 'mouse' || e.button !== 0 || !canManageCalendar) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    pointerDragRef.current = {
+      order,
+      startX: e.clientX,
+      startY: e.clientY,
+      activated: false,
+      pointerId: e.pointerId,
+    };
+  };
+
+  const handlePendingPointerMove = (e: React.PointerEvent) => {
+    const state = pointerDragRef.current;
+    if (!state || state.pointerId !== e.pointerId) return;
+
+    const dist = Math.hypot(e.clientX - state.startX, e.clientY - state.startY);
+    if (!state.activated) {
+      if (dist < ACTIVATION_DISTANCE_PX) return;
+      state.activated = true;
+      suppressClickRef.current = true;
+      setDraggedOrder(state.order);
+      setTouchGhost({ order: state.order, x: e.clientX, y: e.clientY });
+    } else {
+      setTouchGhost({ order: state.order, x: e.clientX, y: e.clientY });
+      e.preventDefault();
+    }
+  };
+
+  const handlePendingPointerUp = (e: React.PointerEvent) => {
+    const state = pointerDragRef.current;
+    if (!state || state.pointerId !== e.pointerId) return;
+
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* already released */
+    }
+
+    if (!state.activated) {
+      clearPointerDrag();
+      return;
+    }
+
+    const { clientX, clientY } = e;
+    const order = state.order;
+    setTouchGhost(null);
+    pointerDragRef.current = null;
+    setDraggedOrder(null);
+
+    requestAnimationFrame(() => {
+      const dropDate = resolveCalendarDropDate(clientX, clientY, currentDate, currentView);
+      if (dropDate) {
+        void handleSchedule(order.id, dropDate, null);
+      }
+    });
+  };
+
+  const handlePendingPointerCancel = (e: React.PointerEvent) => {
+    const state = pointerDragRef.current;
+    if (!state || state.pointerId !== e.pointerId) return;
+    clearPointerDrag();
+  };
+
   return (
     <div className="h-full flex flex-col space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -178,8 +258,7 @@ export const CalendarPage = () => {
       </div>
 
       <div className="w-full min-h-[480px] h-[calc(100dvh-14rem)] md:h-[calc(100vh-160px)] bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row gap-4 md:gap-6">
-        
-        {/* Main Calendar Area */}
+
         <div className="flex-1 min-h-[420px] md:min-h-0 md:h-full overflow-x-auto overflow-y-hidden">
           <div className="h-full min-w-[280px] md:min-w-0">
           {loading ? (
@@ -216,19 +295,16 @@ export const CalendarPage = () => {
               className={`dark:text-slate-200 ${isUpdating ? 'opacity-50 pointer-events-none' : ''}`}
               eventPropGetter={(event) => {
                 const e = event as CustomEvent;
-                // Por defecto: Amarillo (Normales)
-                let bg = '#eab308'; 
-                
-                // Si es Preventivo: Verde
+                let bg = '#eab308';
+
                 if (e.order.maintenance_type === 'PREVENTIVO') {
-                  bg = '#22c55e'; 
+                  bg = '#22c55e';
                 }
-                
-                // Si es Urgente/Alta: Rojo (Sobrescribe a los demás por ser crítico)
+
                 if (e.order.priority === 'ALTA' || e.order.priority === 'URGENTE') {
-                  bg = '#ef4444'; 
+                  bg = '#ef4444';
                 }
-                
+
                 return {
                   style: {
                     backgroundColor: bg,
@@ -243,6 +319,15 @@ export const CalendarPage = () => {
                 };
               }}
               draggableAccessor={() => canManageCalendar}
+              dragFromOutsideItem={() =>
+                draggedOrder
+                  ? {
+                      title: `#${draggedOrder.folio} - ${draggedOrder.title}`,
+                      start: new Date(),
+                      end: new Date(Date.now() + 60 * 60 * 1000),
+                    }
+                  : null
+              }
               onEventDrop={({ event, start, end }) => {
                 if (!canManageCalendar) return;
                 handleSchedule((event as CustomEvent).order.id, new Date(start), new Date(end));
@@ -263,7 +348,6 @@ export const CalendarPage = () => {
           </div>
         </div>
 
-        {/* Sidebar for Unscheduled */}
         {canManageCalendar && (
           <div className="w-full md:w-80 flex flex-col gap-4 max-h-64 md:max-h-none md:h-full shrink-0">
             <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700 h-full flex flex-col overflow-hidden">
@@ -276,7 +360,7 @@ export const CalendarPage = () => {
                   {unscheduled.length}
                 </span>
               </h3>
-              
+
               <div className="flex-1 overflow-y-auto pr-2 -mr-2">
                 {unscheduled.length === 0 ? (
                   <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
@@ -286,13 +370,24 @@ export const CalendarPage = () => {
                 ) : (
                   <div className={`space-y-3 ${isUpdating ? 'opacity-50 pointer-events-none' : ''}`}>
                     {unscheduled.map(order => (
-                      <div 
-                        key={order.id} 
+                      <div
+                        key={order.id}
                         draggable
                         onDragStart={() => setDraggedOrder(order)}
                         onDragEnd={() => setDraggedOrder(null)}
-                        className="bg-white dark:bg-slate-900 p-3 rounded shadow-sm border border-slate-200 dark:border-slate-700 text-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition-colors" 
-                        onClick={() => { setSelectedOrder(order); setIsModalOpen(true); }}
+                        onPointerDown={(e) => handlePendingPointerDown(e, order)}
+                        onPointerMove={handlePendingPointerMove}
+                        onPointerUp={handlePendingPointerUp}
+                        onPointerCancel={handlePendingPointerCancel}
+                        className="bg-white dark:bg-slate-900 p-3 rounded shadow-sm border border-slate-200 dark:border-slate-700 text-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition-colors select-none"
+                        onClick={() => {
+                          if (suppressClickRef.current) {
+                            suppressClickRef.current = false;
+                            return;
+                          }
+                          setSelectedOrder(order);
+                          setIsModalOpen(true);
+                        }}
                       >
                         <div className="font-bold text-slate-800 dark:text-slate-200">#{order.folio}</div>
                         <div className="text-slate-600 dark:text-slate-400 line-clamp-2 mt-1">{order.title}</div>
@@ -315,11 +410,24 @@ export const CalendarPage = () => {
         )}
       </div>
 
+      {touchGhost && (
+        <div
+          className="pointer-events-none fixed z-[80] w-56 rounded-lg border border-blue-400 bg-white/95 p-3 text-sm shadow-xl dark:bg-slate-900/95"
+          style={{
+            left: touchGhost.x + 12,
+            top: touchGhost.y + 12,
+          }}
+        >
+          <div className="font-bold text-slate-800 dark:text-slate-200">#{touchGhost.order.folio}</div>
+          <div className="mt-1 line-clamp-2 text-slate-600 dark:text-slate-400">{touchGhost.order.title}</div>
+        </div>
+      )}
+
       {isModalOpen && selectedOrder && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl max-w-md w-full p-6 shadow-2xl">
             <div className="flex justify-between items-start mb-4">
-              <h2 
+              <h2
                 className="text-xl font-bold text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
                 onClick={() => setIsDetailModalOpen(true)}
               >
@@ -341,7 +449,6 @@ export const CalendarPage = () => {
               </div>
             </div>
 
-            {/* Schedule Section */}
             {canManageCalendar && (
               <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg mb-6 border border-slate-200 dark:border-slate-700">
                 <h3 className="font-semibold text-slate-800 dark:text-slate-200 mb-2">Programación</h3>
@@ -350,7 +457,7 @@ export const CalendarPage = () => {
                     <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
                       Agendado del {formatDateTime(selectedOrder.scheduled_date)} al {formatDateTime(selectedOrder.due_date!)}
                     </p>
-                    <button 
+                    <button
                       onClick={() => {
                         handleUnschedule(selectedOrder.id);
                         setIsModalOpen(false);
@@ -362,7 +469,7 @@ export const CalendarPage = () => {
                     </button>
                   </div>
                 ) : (
-                  <form 
+                  <form
                     onSubmit={(e) => {
                       e.preventDefault();
                       const formData = new FormData(e.currentTarget);

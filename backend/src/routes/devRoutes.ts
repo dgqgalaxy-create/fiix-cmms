@@ -9,7 +9,7 @@ import { Role, AssetStatus, AssetKind, WorkOrderStatus, Priority, MaintenanceTyp
 import bcrypt from 'bcrypt';
 import { generateAssetInternalCode } from '../utils/assetCodeGenerator';
 import { parseWorkOrderFolio } from '../utils/folio';
-import { runBackup, listBackups, runRestore } from '../utils/backupService';
+import { runBackup, listBackups, runRestore, BACKUP_DIR, getBackupProgress } from '../utils/backupService';
 import { assignItemImagesFromZip } from '../utils/itemImageImport';
 import {
   assignWorkOrderImagesFromZip,
@@ -273,18 +273,24 @@ router.post('/change-password', verifyDevPassword, async (req: Request, res: Res
 router.post('/backup', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
   try {
     const result = await runBackup();
-    res.json(result);
+    res.json({ ...result, backupDir: BACKUP_DIR, progress: getBackupProgress() });
   } catch (error: any) {
     console.error('Error running manual backup:', error);
     res.status(500).json({ success: false, message: 'Error al generar el respaldo.', error: error.message });
   }
 });
 
+// Progreso del respaldo en curso (para barra en Opciones de Desarrollador).
+router.get('/backup/progress', verifyDevPassword, (_req: Request, res: Response): void => {
+  res.json(getBackupProgress());
+});
+
 // Lista respaldos recientes en BACKUP_DIR (fiix_*.sql.gz).
 router.get('/backups', verifyDevPassword, async (_req: Request, res: Response): Promise<void> => {
   try {
     const backups = listBackups();
-    res.json({ backups, backupDir: process.env.BACKUP_DIR || undefined });
+    // Siempre devolver la ruta real (puede no ser ~/usuario si PM2 usa otro home).
+    res.json({ backups, backupDir: BACKUP_DIR });
   } catch (error: any) {
     console.error('Error listing backups:', error);
     res.status(500).json({ message: 'Error al listar respaldos.', error: error.message });

@@ -80,6 +80,69 @@ fi
 
 ok "Node $(node -v) · npm $(npm -v) · pm2 $(pm2 -v 2>/dev/null || echo '?')"
 
+# Respaldos/restore necesitan pg_dump/psql con versión >= la del servidor (en CasaOS suele ser PG 17).
+ensure_pg_client() {
+  local major="${1:-}"
+  if need_cmd apt-get; then
+    sudo DEBIAN_FRONTEND=noninteractive apt-get update -y >/dev/null 2>&1 || true
+    if [ -n "$major" ]; then
+      # Repo oficial PGDG (Ubuntu LTS no trae client-17 por defecto).
+      if ! apt-cache show "postgresql-client-${major}" >/dev/null 2>&1; then
+        info "Añadiendo repo apt.postgresql.org para cliente ${major}..."
+        sudo apt-get install -y curl ca-certificates >/dev/null 2>&1 || true
+        sudo install -d /usr/share/postgresql-common/pgdg
+        sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+          https://www.postgresql.org/media/keys/ACCC4CF8.asc || true
+        . /etc/os-release
+        echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+          | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+        sudo apt-get update -y >/dev/null 2>&1 || true
+      fi
+      if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "postgresql-client-${major}"; then
+        ok "postgresql-client-${major} instalado"
+        return 0
+      fi
+    fi
+    if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-client; then
+      ok "postgresql-client instalado ($(pg_dump --version 2>/dev/null | head -n1 || echo OK))"
+      return 0
+    fi
+  fi
+  return 1
+}
+
+# Detectar major del servidor vía DATABASE_URL (si existe .env).
+detect_pg_server_major() {
+  local env_file="${APP_DIR}/backend/.env"
+  [ -f "$env_file" ] || return 1
+  local url
+  url="$(grep -E '^DATABASE_URL=' "$env_file" | tail -n 1 | cut -d '=' -f2- | sed -e 's/^"//' -e 's/"$//' -e 's/?schema=public//' -e 's/[?&]schema=[^&]*//g')"
+  [ -n "$url" ] || return 1
+  if need_cmd psql; then
+    psql "$url" -tAc "SHOW server_version_num" 2>/dev/null | head -n1 | awk '{ print int($1/10000) }'
+  fi
+}
+
+if ! need_cmd pg_dump || ! need_cmd psql; then
+  echo ">>> Cliente PostgreSQL (pg_dump/psql) ausente — instalando..."
+  PG_MAJOR="$(detect_pg_server_major || true)"
+  if ! ensure_pg_client "${PG_MAJOR}"; then
+    echo "  [AVISO] Instala a mano un cliente >= tu servidor, p. ej. postgresql-client-17"
+  fi
+else
+  ok "pg_dump en PATH: $(pg_dump --version | head -n1)"
+  # Si el major del PATH es menor que el del servidor, instalar client coincidente.
+  PG_MAJOR="$(detect_pg_server_major || true)"
+  DUMP_MAJOR="$(pg_dump --version 2>/dev/null | grep -oE '[0-9]+' | head -n1 || true)"
+  if [ -n "${PG_MAJOR:-}" ] && [ -n "${DUMP_MAJOR:-}" ] && [ "$DUMP_MAJOR" -lt "$PG_MAJOR" ] 2>/dev/null; then
+    echo ">>> pg_dump ${DUMP_MAJOR} < servidor ${PG_MAJOR} — instalando postgresql-client-${PG_MAJOR}..."
+    ensure_pg_client "$PG_MAJOR" || echo "  [AVISO] Instala: sudo apt install -y postgresql-client-${PG_MAJOR}"
+  fi
+  if [ -x "/usr/lib/postgresql/${PG_MAJOR:-17}/bin/pg_dump" ]; then
+    ok "pg_dump ${PG_MAJOR:-17} en /usr/lib/postgresql/${PG_MAJOR:-17}/bin/pg_dump"
+  fi
+fi
+
 [ -d "${APP_DIR}/.git" ] || die "No existe el repo en ${APP_DIR}. Corre primero ./install.sh"
 [ -f "${APP_DIR}/backend/.env" ] || die "Falta ${APP_DIR}/backend/.env — no se puede actualizar sin credenciales."
 

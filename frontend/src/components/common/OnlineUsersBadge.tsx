@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users } from 'lucide-react';
 import { getOnlineUsers } from '../../api/users';
 import type { User } from '../../api/users';
+import { pathToModuleLabel } from '../../utils/moduleLabels';
 
 export const OnlineUsersBadge = () => {
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
@@ -54,7 +55,8 @@ export const OnlineUsersBadge = () => {
                 <div key={u.id} className="flex items-center justify-between px-3 py-2 hover:bg-slate-700/50 rounded-lg transition-colors">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-slate-200 font-medium truncate">{u.name}</p>
-                    <p className="text-[10px] text-slate-400 uppercase truncate">{u.role}</p>
+                    <p className="text-[10px] text-emerald-400/90 truncate">{pathToModuleLabel(u.current_path)}</p>
+                    <p className="text-[10px] text-slate-500 uppercase truncate">{u.role}</p>
                   </div>
                   <div className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0 ml-2"></div>
                 </div>

@@ -1,9 +1,23 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
-*(Última actualización: 26 de Julio de 2026)*
+*(Última actualización: 27 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.38.3 (Actualización: 26 de Julio de 2026)
+## 🚀 Versión Actual: v1.39.0 (Actualización: 27 de Julio de 2026)
+
+### Novedades en v1.39.0 (interfaz móvil de técnico configurable)
+- **Nuevo:** En **Configuración → Apariencia**, interruptor global **Interfaz móvil de técnico**. Off = técnicos ven la UI completa. Los técnicos pueden desactivarla solo en su cuenta si la global está on.
+
+### Novedades en v1.38.9 (Nueva OC: catálogo por proveedor + búsqueda)
+- **Mejora:** Al elegir proveedor en **Nueva Orden de Compra** se listan de inmediato sus refacciones. También puedes buscar por nombre/código sin proveedor; al agregar el ítem se toma su proveedor.
+
+### Novedades en v1.38.8 (módulo en línea + pulso + calendario touch)
+- **Nuevo:** Usuarios en línea muestran el módulo actual (ruta → etiqueta amigable).
+- **Mejora:** Las cifras de Inicio (resumen y Sala de control) latean suavemente al cambiar.
+- **Corrección:** Arrastrar pendientes al Calendario funciona en tablet/celular (pointer drop; HTML5 DnD no sirve con touch).
+
+### Novedades en v1.38.7 (progreso al crear respaldo)
+- **Nuevo:** Barra de progreso en Opciones de Desarrollador al crear respaldo (pasos: preparar → BD → fotos → limpieza).
 
 ### Novedades en v1.38.3 (botones Inventario + stock crítico)
 - **Mejora:** Botones **Nuevo Repuesto**, **Excel** y **Registrar Movimiento** con misma altura/ancho (rejilla en celular; tamaño uniforme en escritorio).

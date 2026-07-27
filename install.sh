@@ -71,13 +71,20 @@ chmod +x "${APP_DIR}/update.sh" "${APP_DIR}/install.sh" "${APP_DIR}/scripts/back
 echo "  [OK] Código local listo (clone/SSH se hace ANTES, ver README)."
 
 # --- 1. Paquetes del sistema ---
-echo ">>> [1/8] Paquetes base (git, curl, build-essential, postgresql)..."
+echo ">>> [1/8] Paquetes base (git, curl, build-essential, postgresql + cliente)..."
 if need_cmd apt-get; then
   sudo apt-get update -y
+  # postgresql = servidor; postgresql-client = pg_dump/psql (respaldos/restore).
+  # En CasaOS a veces solo hay Postgres por Docker: el cliente en el host sigue haciendo falta.
   sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
     git curl ca-certificates build-essential unzip \
-    postgresql postgresql-contrib
+    postgresql postgresql-contrib postgresql-client
   sudo systemctl enable --now postgresql
+  if command -v pg_dump >/dev/null 2>&1; then
+    echo "  [OK] pg_dump: $(pg_dump --version | head -n1)"
+  else
+    echo "  [AVISO] postgresql-client instalado pero pg_dump no está en PATH; revisa el PATH del usuario."
+  fi
 else
   die "Este script está pensado para Ubuntu/Debian (apt)."
 fi

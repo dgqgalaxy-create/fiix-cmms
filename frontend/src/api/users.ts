@@ -8,12 +8,13 @@ export interface User {
   is_active: boolean;
   created_at: string;
   last_active?: string;
+  current_path?: string | null;
   preferences?: any;
   must_change_password?: boolean;
 }
 
-export const sendHeartbeat = async (): Promise<void> => {
-  await api.post('/users/heartbeat');
+export const sendHeartbeat = async (path?: string): Promise<void> => {
+  await api.post('/users/heartbeat', path ? { path } : {});
 };
 
 export const getOnlineUsers = async (): Promise<User[]> => {
