@@ -86,6 +86,8 @@ export const WorkOrderDetailModal = ({
   const { canEdit, remoteEditorName } = useWorkOrderPresence(workOrder?.id, isOpen);
   const isTechMobileShell = useTechnicianMobileShell();
   const evidenceRef = useRef<HTMLDivElement>(null);
+  const holdReasonRef = useRef<HTMLInputElement>(null);
+  const pendingAutoSaveRef = useRef(false);
 
   const [liveWorkOrder, setLiveWorkOrder] = useState<WorkOrder | null>(workOrder);
   const [status, setStatus] = useState<string>('');
@@ -169,7 +171,10 @@ export const WorkOrderDetailModal = ({
   }, [isOpen, canNavigate, goPrev, goNext]);
 
   useEffect(() => {
-    if (!isOpen) setZoomSrc(null);
+    if (!isOpen) {
+      pendingAutoSaveRef.current = false;
+      setZoomSrc(null);
+    }
   }, [isOpen, workOrder?.id]);
 
   // Al cambiar de OT (← →), limpia borradores locales de fotos/repuestos.
@@ -265,11 +270,37 @@ export const WorkOrderDetailModal = ({
     }
   }, [isOpen, user]);
 
+  useEffect(() => {
+    if (!isOpen || !workOrder || !pendingAutoSaveRef.current || isSubmitting || !canEdit) return;
+    if (status !== 'EN_PROCESO') return;
+    if (!workOrder.before_image_url && !beforeImage) return;
+    if (status === workOrder.status) return;
+
+    pendingAutoSaveRef.current = false;
+    const timer = window.setTimeout(() => {
+      const form = document.getElementById('update-wo-form') as HTMLFormElement | null;
+      form?.requestSubmit();
+    }, 60);
+    return () => window.clearTimeout(timer);
+  }, [isOpen, workOrder, status, beforeImage, isSubmitting, canEdit]);
+
   if (!isOpen || !workOrder) return null;
 
   const displayWO = liveWorkOrder || workOrder;
   const isClosed = displayWO.status === 'FINALIZADO' || displayWO.status === 'ANULADO';
   const isReadOnly = isClosed || !canEdit;
+  const myUserId = (user as any)?.userId || (user as any)?.id || '';
+  const isAssignedToMe = !!workOrder.assigned_technicians?.some((t) => t.id === myUserId);
+  /** En proceso/espera sin estar asignado: no pausar/finalizar/reanudar; primero Colaborar. */
+  const needsJoinToOperate =
+    !isClosed &&
+    !isAssignedToMe &&
+    (workOrder.status === 'EN_PROCESO' || workOrder.status === 'EN_ESPERA');
+  const canShowJoin =
+    !!onJoin &&
+    !isClosed &&
+    !isAssignedToMe &&
+    (workOrder.status === 'PENDIENTE' || workOrder.status === 'EN_PROCESO' || workOrder.status === 'EN_ESPERA');
 
   const canDownloadPDF = workOrder.status === 'FINALIZADO' && (
     user?.role === 'ADMINISTRADOR' ||
@@ -347,6 +378,9 @@ export const WorkOrderDetailModal = ({
     (user?.role !== 'TECNICO' && JSON.stringify([...assignedTechniciansIds].sort()) !== JSON.stringify([...(workOrder.assigned_technicians?.map(t => t.id) || [])].sort()));
 
   let canSave = isDirty && canEdit;
+  if (canSave && needsJoinToOperate && status !== workOrder.status) {
+    canSave = false;
+  }
   if (canSave) {
     if (finalStatus === 'EN_PROCESO') {
       if (!beforeImage && !workOrder.before_image_url) canSave = false;
@@ -354,11 +388,28 @@ export const WorkOrderDetailModal = ({
       if (!resolutionNotes?.trim()) canSave = false;
       if (!afterImage && !workOrder.after_image_url) canSave = false;
       if (sigCleanAreaEmpty || sigDeliveryEmpty) canSave = false;
-      if (workOrder.maintenance_type === 'CORRECTIVO' && (!failureProblemId || !failureCauseId || !failureRemedyId)) canSave = false;
     } else if (finalStatus === 'EN_ESPERA') {
       if (!holdReason?.trim()) canSave = false;
     }
   }
+
+  const quickActionNextStep = (() => {
+    if (status === workOrder.status) return null;
+    if (status === 'EN_PROCESO') {
+      if (beforeImage || workOrder.before_image_url) {
+        return 'Siguiente paso: pulsa Guardar para confirmar (aceptar o reanudar).';
+      }
+      return 'Siguiente paso: sube la foto Antes y pulsa Guardar.';
+    }
+    if (status === 'EN_ESPERA') {
+      if (holdReason?.trim()) return 'Siguiente paso: pulsa Guardar para pausar la orden.';
+      return 'Siguiente paso: escribe el motivo de espera y pulsa Guardar.';
+    }
+    if (status === 'FINALIZADO') {
+      return 'Siguiente paso: completa notas, foto Después y firmas; luego pulsa Guardar.';
+    }
+    return `Estado listo: ${statusLabel(status)}. Completa lo requerido y pulsa Guardar.`;
+  })();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -488,9 +539,10 @@ export const WorkOrderDetailModal = ({
   const handleJoin = async () => {
     if (!onJoin) return;
     setIsSubmitting(true);
+    setError(null);
     try {
       await onJoin(workOrder.id);
-      onClose();
+      // El padre refresca la OT abierta; no cerramos para que pueda operar de inmediato.
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al unirse a la orden');
     } finally {
@@ -751,9 +803,14 @@ export const WorkOrderDetailModal = ({
                     isClosed ? 'text-slate-500 dark:text-slate-400' : 'text-emerald-900 dark:text-emerald-200'
                   }`}>
                     Estado de la Orden
-                    {!isReadOnly && (
+                    {!isReadOnly && !needsJoinToOperate && (
                       <span className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider animate-pulse flex items-center gap-1 font-bold">
                         👉 Haz clic para cambiar
+                      </span>
+                    )}
+                    {needsJoinToOperate && (
+                      <span className="bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-bold">
+                        Requiere colaborar
                       </span>
                     )}
                   </div>
@@ -769,12 +826,33 @@ export const WorkOrderDetailModal = ({
                         : <Ban size={17} />}
                       {statusLabel(workOrder.status)}
                     </div>
+                  ) : needsJoinToOperate ? (
+                    <div className="space-y-3">
+                      <div className="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-slate-900 px-3 py-2 text-sm font-bold text-emerald-900 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800">
+                        {statusLabel(workOrder.status)}
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-snug">
+                        Esta orden ya está en curso y no estás asignado. Únete para pausar, reanudar o finalizar.
+                      </p>
+                      {canShowJoin && (
+                        <button
+                          type="button"
+                          onClick={handleJoin}
+                          disabled={isSubmitting || isReadOnly}
+                          className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-sky-700 disabled:opacity-60"
+                        >
+                          <Users size={18} />
+                          {isSubmitting ? 'Uniéndote…' : 'Unirme / Colaborar'}
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <div className="relative">
                       <select
                         className="w-full px-4 py-3.5 border rounded-xl outline-none transition-all appearance-none font-bold text-base shadow-sm bg-white dark:bg-slate-900 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 cursor-pointer hover:border-emerald-400 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500"
                         value={status}
                         onChange={(e) => setStatus(e.target.value)}
+                        disabled={isReadOnly}
                       >
                         <option value={workOrder.status}>{statusLabel(workOrder.status)}</option>
 
@@ -782,14 +860,14 @@ export const WorkOrderDetailModal = ({
                           <option value="EN_PROCESO">Aceptar orden</option>
                         )}
 
-                        {workOrder.status === 'EN_PROCESO' && (
+                        {workOrder.status === 'EN_PROCESO' && isAssignedToMe && (
                           <>
                             <option value="EN_ESPERA">Pausar</option>
                             <option value="FINALIZADO">Finalizar</option>
                           </>
                         )}
 
-                        {workOrder.status === 'EN_ESPERA' && (
+                        {workOrder.status === 'EN_ESPERA' && isAssignedToMe && (
                           <option value="EN_PROCESO">Reanudar</option>
                         )}
                       </select>
@@ -826,6 +904,17 @@ export const WorkOrderDetailModal = ({
                         ))
                       )}
                     </div>
+                    {canShowJoin && needsJoinToOperate && (
+                      <button
+                        type="button"
+                        onClick={handleJoin}
+                        disabled={isSubmitting}
+                        className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-sky-100 text-sky-900 hover:bg-sky-200 border border-sky-200 rounded-xl font-semibold transition-colors text-sm"
+                      >
+                        <Users size={16} />
+                        Unirme / Colaborar en esta orden
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="animate-in fade-in slide-in-from-top-2 duration-300">
@@ -843,14 +932,15 @@ export const WorkOrderDetailModal = ({
                         <span className="text-sm text-slate-500 dark:text-slate-400 italic">Nadie asignado</span>
                       )}
                     </div>
-                    {!isReadOnly && workOrder.assigned_technicians && workOrder.assigned_technicians.length > 0 && !workOrder.assigned_technicians.some(t => t.id === (user as any).userId || t.id === (user as any).id) && (workOrder.status === 'EN_PROCESO' || workOrder.status === 'PENDIENTE') && (
+                    {canShowJoin && (
                       <button
                         type="button"
                         onClick={handleJoin}
-                        disabled={isSubmitting}
-                        className="mt-3 w-full px-4 py-2 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-200 rounded-xl font-medium transition-colors text-sm"
+                        disabled={isSubmitting || isReadOnly}
+                        className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-sky-100 text-sky-900 hover:bg-sky-200 border border-sky-200 rounded-xl font-semibold transition-colors text-sm disabled:opacity-60"
                       >
-                        Unirme a esta orden
+                        <Users size={16} />
+                        Unirme / Colaborar en esta orden
                       </button>
                     )}
                   </div>
@@ -860,6 +950,7 @@ export const WorkOrderDetailModal = ({
                   <div className="animate-in fade-in slide-in-from-top-2 duration-300 lg:col-span-2">
                     <label className="block text-sm font-medium text-red-600 mb-1">Motivo de Espera *</label>
                     <input
+                      ref={holdReasonRef}
                       type="text"
                       required
                       placeholder="Ej: Faltan refacciones..."
@@ -1202,24 +1293,59 @@ export const WorkOrderDetailModal = ({
         {isTechMobileShell && !isReadOnly && !isClosed && (
           <div className="px-3 pt-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 px-1">Acción rápida</p>
+            {needsJoinToOperate ? (
+              <div className="space-y-2">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 px-1">
+                  No estás en el equipo de esta orden. Únete para pausar, reanudar o finalizar.
+                </p>
+                {canShowJoin && (
+                  <button
+                    type="button"
+                    onClick={handleJoin}
+                    disabled={isSubmitting}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-sm font-bold text-white shadow-sm active:scale-[0.98] disabled:opacity-60"
+                  >
+                    <Users size={18} />
+                    Unirme / Colaborar
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
             <div className="grid grid-cols-2 gap-2">
               {workOrder.status === 'PENDIENTE' && (
                 <button
                   type="button"
                   onClick={() => {
                     setStatus('EN_PROCESO');
-                    setTimeout(() => evidenceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+                    if (workOrder.before_image_url) {
+                      pendingAutoSaveRef.current = true;
+                    } else {
+                      setTimeout(() => evidenceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+                    }
                   }}
                   className="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-sm font-bold text-white shadow-sm active:scale-[0.98]"
                 >
                   <PlayCircle size={18} /> Aceptar orden
                 </button>
               )}
-              {workOrder.status === 'EN_PROCESO' && (
+              {workOrder.status === 'EN_PROCESO' && isAssignedToMe && (
                 <>
                   <button
                     type="button"
-                    onClick={() => setStatus('EN_ESPERA')}
+                    onClick={() => {
+                      setStatus('EN_ESPERA');
+                      setTimeout(() => {
+                        const empty = !(holdReasonRef.current?.value || '').trim() && !holdReason.trim();
+                        if (!empty) return;
+                        if (holdReasonRef.current) {
+                          holdReasonRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          holdReasonRef.current.focus();
+                        } else {
+                          setHoldReason('Esperando refacciones / material');
+                        }
+                      }, 100);
+                    }}
                     className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-3 py-3 text-sm font-bold text-white shadow-sm active:scale-[0.98]"
                   >
                     <PauseCircle size={18} /> Pausar
@@ -1233,20 +1359,29 @@ export const WorkOrderDetailModal = ({
                   </button>
                 </>
               )}
-              {workOrder.status === 'EN_ESPERA' && (
+              {workOrder.status === 'EN_ESPERA' && isAssignedToMe && (
                 <button
                   type="button"
-                  onClick={() => setStatus('EN_PROCESO')}
+                  onClick={() => {
+                    setStatus('EN_PROCESO');
+                    if (workOrder.before_image_url) {
+                      pendingAutoSaveRef.current = true;
+                    } else {
+                      setTimeout(() => evidenceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+                    }
+                  }}
                   className="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-sm font-bold text-white shadow-sm active:scale-[0.98]"
                 >
                   <PlayCircle size={18} /> Reanudar
                 </button>
               )}
             </div>
-            {status !== workOrder.status && (
-              <p className="mt-2 text-center text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                Estado listo: {statusLabel(status)}. Completa lo requerido y pulsa Guardar.
+            {quickActionNextStep && (
+              <p className="mt-2 text-center text-[11px] font-medium text-sky-700 dark:text-sky-300">
+                {quickActionNextStep}
               </p>
+            )}
+              </>
             )}
           </div>
         )}
@@ -1282,7 +1417,16 @@ export const WorkOrderDetailModal = ({
               Cerrar
             </button>
             {!isReadOnly && canSave && (
-              <button type="submit" form="update-wo-form" disabled={isSubmitting} className="px-4 sm:px-6 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-emerald-950 disabled:opacity-70 rounded-xl shadow-sm shadow-emerald-700/20 transition-colors animate-in fade-in zoom-in-95 duration-200">
+              <button
+                type="submit"
+                form="update-wo-form"
+                disabled={isSubmitting}
+                className={`px-4 sm:px-6 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-emerald-950 disabled:opacity-70 rounded-xl shadow-md shadow-emerald-700/25 transition-colors animate-in fade-in zoom-in-95 duration-200 ${
+                  isTechMobileShell
+                    ? 'min-h-12 py-3 ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-900 animate-pulse'
+                    : 'py-2.5 font-medium'
+                }`}
+              >
                 {isSubmitting ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />}
                 Guardar
               </button>

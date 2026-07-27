@@ -3,7 +3,16 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 27 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.39.0 (Actualización: 27 de Julio de 2026)
+## 🚀 Versión Actual: v1.41.0 (Actualización: 27 de Julio de 2026)
+
+### Novedades en v1.41.0 (UX operativa: turno, KPIs, auditoría, táctil)
+- **Nuevo:** InfoTip ⓘ en Inventario (Stock crítico / Excel / filtros) y áreas táctiles más grandes en escaneo y acciones de fila.
+- **Nuevo:** Entradas de inventario (IN) offline, igual que OUT.
+- **Nuevo:** Asignación masiva de técnicos a varias OT (`Asignar…`).
+- **Nuevo:** Panel **Turno actual** en Inicio (conteos por técnico + SLA).
+- **Nuevo:** KPIs: periodo **Semana pasada** y comparación Esta semana vs semana anterior.
+- **Nuevo:** Bitácora de auditoría (Admin) en Opciones de Desarrollador.
+- **Mejora:** Acciones rápidas del técnico móvil (siguiente paso, Guardar destacado, auto-guardar al aceptar/reanudar con foto Antes).
 
 ### Novedades en v1.39.0 (interfaz móvil de técnico configurable)
 - **Nuevo:** En **Configuración → Apariencia**, interruptor global **Interfaz móvil de técnico**. Off = técnicos ven la UI completa. Los técnicos pueden desactivarla solo en su cuenta si la global está on.

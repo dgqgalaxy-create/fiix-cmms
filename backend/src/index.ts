@@ -41,6 +41,7 @@ import notificationRoutes from './routes/notificationRoutes';
 import requesterRoutes from './routes/requesterRoutes';
 import rosterRoutes from './routes/rosterRoutes';
 import searchRoutes from './routes/searchRoutes';
+import auditRoutes from './routes/auditRoutes';
 import { initCronJobs } from './utils/cronJobs';
 import { pingDatabase } from './utils/dbHealthCheck';
 
@@ -84,6 +85,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/requesters', requesterRoutes);
 app.use('/api/roster', rosterRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/audit', auditRoutes);
 
 // Producción: Express sirve el frontend ya compilado (frontend/dist) en el mismo
 // puerto que la API, para no depender de un segundo proceso Vite en :5173.

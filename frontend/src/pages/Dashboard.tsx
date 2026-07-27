@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, RefreshCw, Search, Download, XCircle } from 'lucide-react';
+import { Plus, RefreshCw, Search, Download, XCircle, Users } from 'lucide-react';
 import { WorkOrdersTable } from '../components/WorkOrdersTable';
 import { CreateWorkOrderModal } from '../components/CreateWorkOrderModal';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { InfoTip } from '../components/common/InfoTip';
+import { BulkAssignModal } from '../components/BulkAssignModal';
 import { getWorkOrders, getWorkOrderById, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder } from '../api/workOrders';
 import type { WorkOrder } from '../api/workOrders';
 import { useSearchParams } from 'react-router-dom';
@@ -21,6 +22,7 @@ export const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
   
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -250,7 +252,12 @@ export const Dashboard = () => {
 
   const handleJoinWorkOrder = async (id: string) => {
     await joinWorkOrder(id);
-    handleCloseDetail();
+    try {
+      const updated = await getWorkOrderById(id);
+      setSelectedWorkOrder(updated);
+    } catch {
+      /* keep open with previous data until list refresh */
+    }
     await fetchWorkOrders();
   };
 
@@ -268,6 +275,7 @@ export const Dashboard = () => {
   };
 
   const canCreate = hasPermission('CREATE_WORK_ORDERS');
+  const canBulkAssign = hasPermission('EDIT_WORK_ORDERS') && user?.role !== 'TECNICO';
 
   const getFilteredWorkOrders = () => {
     let list = workOrders;
@@ -461,11 +469,21 @@ export const Dashboard = () => {
                   className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
+                {canBulkAssign && (
+                  <button
+                    type="button"
+                    onClick={() => setIsBulkAssignOpen(true)}
+                    className="flex min-h-11 items-center justify-center gap-2 px-3 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-sm text-sm font-medium"
+                  >
+                    <Users size={16} />
+                    Asignar…
+                  </button>
+                )}
                 <button
                   onClick={handleExportExcel}
                   title="Exportar a Excel (.xlsx)"
-                  className="flex items-center justify-center gap-2 px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50 transition-colors shadow-sm text-sm font-medium"
+                  className="flex min-h-11 items-center justify-center gap-2 px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50 transition-colors shadow-sm text-sm font-medium"
                 >
                   <Download size={16} />
                   Excel
@@ -473,7 +491,7 @@ export const Dashboard = () => {
                 <button
                   onClick={handleExportCSV}
                   title="Exportar a CSV"
-                  className="flex items-center justify-center gap-2 px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50 transition-colors shadow-sm text-sm font-medium"
+                  className="flex min-h-11 items-center justify-center gap-2 px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50 transition-colors shadow-sm text-sm font-medium"
                 >
                   <Download size={16} />
                   CSV
@@ -481,7 +499,7 @@ export const Dashboard = () => {
                 <button
                   onClick={handleExportPDF}
                   title="Exportar a PDF"
-                  className="flex items-center justify-center gap-2 px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors shadow-sm text-sm font-medium"
+                  className="flex min-h-11 items-center justify-center gap-2 px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors shadow-sm text-sm font-medium"
                 >
                   <Download size={16} />
                   PDF
@@ -587,6 +605,13 @@ export const Dashboard = () => {
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
         onSubmit={handleCreateWorkOrder} 
+      />
+
+      <BulkAssignModal
+        isOpen={isBulkAssignOpen}
+        onClose={() => setIsBulkAssignOpen(false)}
+        candidates={filteredList}
+        onDone={() => { void fetchWorkOrders(); }}
       />
 
       {selectedWorkOrder && (

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -11,6 +11,7 @@ import {
   RefreshCw,
   ShieldAlert,
   Siren,
+  Users,
   UserX,
   Volume2,
   VolumeX,
@@ -225,6 +226,58 @@ export const HomePage = () => {
   const formatWeekDate = (date: Date) =>
     date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
 
+  type ShiftTechRow = {
+    id: string;
+    name: string;
+    pendientes: number;
+    enProceso: number;
+    enEspera: number;
+    slaRisk: number;
+    slaBreached: number;
+    total: number;
+  };
+
+  const shiftByTech = useMemo(() => {
+    const map = new Map<string, ShiftTechRow>();
+    for (const wo of workOrders) {
+      if (!isOpenWo(wo)) continue;
+      const techs = wo.assigned_technicians || [];
+      if (techs.length === 0) continue;
+      for (const tech of techs) {
+        const key = tech.id || tech.name;
+        let row = map.get(key);
+        if (!row) {
+          row = {
+            id: tech.id,
+            name: tech.name,
+            pendientes: 0,
+            enProceso: 0,
+            enEspera: 0,
+            slaRisk: 0,
+            slaBreached: 0,
+            total: 0,
+          };
+          map.set(key, row);
+        }
+        row.total += 1;
+        if (wo.status === 'PENDIENTE') row.pendientes += 1;
+        else if (wo.status === 'EN_PROCESO') row.enProceso += 1;
+        else if (wo.status === 'EN_ESPERA') row.enEspera += 1;
+        if (wo.sla?.overall === 'RISK') row.slaRisk += 1;
+        if (wo.sla?.overall === 'BREACHED') row.slaBreached += 1;
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'es'));
+  }, [workOrders]);
+
+  const goToShiftRow = () => {
+    if (user?.role === 'TECNICO') {
+      navigate('/dashboard?tab=mine');
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
   return (
     <>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
@@ -301,6 +354,74 @@ export const HomePage = () => {
               <p className="text-[11px] font-semibold uppercase text-rose-800">SLA vencido</p>
               <PulsingValue value={controlCounts.slaBreached} className="mt-1 text-2xl font-black text-slate-900 dark:text-white" />
             </button>
+          </div>
+        </section>
+      )}
+
+      {shiftByTech.length > 0 && (
+        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+              <Users size={14} className="text-sky-600" />
+              Turno actual
+            </div>
+            <span className="text-[11px] font-medium text-slate-400">
+              {shiftByTech.length} técnico{shiftByTech.length !== 1 ? 's' : ''} con OT abiertas
+            </span>
+          </div>
+          <div className="overflow-x-auto -mx-1 px-1">
+            <table className="w-full min-w-[28rem] text-left text-sm">
+              <thead>
+                <tr className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
+                  <th className="pb-2 pr-2 font-semibold">Técnico</th>
+                  <th className="pb-2 px-1 font-semibold text-center">Pend.</th>
+                  <th className="pb-2 px-1 font-semibold text-center">Proc.</th>
+                  <th className="pb-2 px-1 font-semibold text-center">Esp.</th>
+                  <th className="pb-2 pl-1 font-semibold text-right">SLA</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shiftByTech.map((row) => (
+                  <tr
+                    key={row.id || row.name}
+                    onClick={goToShiftRow}
+                    className="cursor-pointer border-b border-slate-50 last:border-0 hover:bg-sky-50/70 dark:border-slate-800 dark:hover:bg-sky-950/30 transition-colors"
+                  >
+                    <td className="py-2 pr-2">
+                      <span className="font-semibold text-slate-800 dark:text-slate-100">{row.name}</span>
+                      <span className="ml-1.5 text-[10px] font-medium text-slate-400">{row.total} OT</span>
+                    </td>
+                    <td className="py-2 px-1 text-center tabular-nums">
+                      <span className={row.pendientes ? 'font-bold text-amber-600' : 'text-slate-300'}>{row.pendientes}</span>
+                    </td>
+                    <td className="py-2 px-1 text-center tabular-nums">
+                      <span className={row.enProceso ? 'font-bold text-sky-600' : 'text-slate-300'}>{row.enProceso}</span>
+                    </td>
+                    <td className="py-2 px-1 text-center tabular-nums">
+                      <span className={row.enEspera ? 'font-bold text-violet-600' : 'text-slate-300'}>{row.enEspera}</span>
+                    </td>
+                    <td className="py-2 pl-1 text-right">
+                      {(row.slaRisk > 0 || row.slaBreached > 0) ? (
+                        <span className="inline-flex flex-wrap justify-end gap-1">
+                          {row.slaRisk > 0 && (
+                            <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 dark:bg-orange-950/50 dark:text-orange-300">
+                              {row.slaRisk} riesgo
+                            </span>
+                          )}
+                          {row.slaBreached > 0 && (
+                            <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
+                              {row.slaBreached} venc.
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-300">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
       )}

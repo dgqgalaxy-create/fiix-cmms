@@ -16,6 +16,8 @@ import {
   ShieldCheck,
   Save,
   ImageOff,
+  ScrollText,
+  ChevronDown,
 } from 'lucide-react';
 import axios from '../api/axios';
 import { isAxiosError } from 'axios';
@@ -31,10 +33,20 @@ import {
   saveDevOptionsSession,
   touchDevOptionsSession,
 } from '../utils/devOptionsSession';
+import { formatDateTime } from '../utils/dateUtils';
+
+type AuditLogRow = {
+  id: string;
+  created_at: string;
+  user_name?: string | null;
+  action: string;
+  summary: string;
+};
 
 export const DeveloperOptions = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const isAdmin = user?.role === 'ADMINISTRADOR';
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,9 +106,32 @@ export const DeveloperOptions = () => {
   const [woPhotosOnlyZip, setWoPhotosOnlyZip] = useState<File | null>(null);
   const [woPhotosOnlyCsv, setWoPhotosOnlyCsv] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<AuditLogRow[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState<string | null>(null);
 
   /** Límite alineado con multer / nginx (500 MB). */
   const ZIP_MAX_BYTES = 500 * 1024 * 1024;
+
+  const fetchAuditLogs = async () => {
+    if (!isAdmin) return;
+    setAuditLoading(true);
+    setAuditError(null);
+    try {
+      const res = await axios.get('/audit', { params: { limit: 50 } });
+      setAuditLogs(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error(err);
+      const msg = isAxiosError(err)
+        ? (err.response?.data as { error?: string } | undefined)?.error || err.message
+        : 'No se pudo cargar la bitácora';
+      setAuditError(msg);
+      setAuditLogs([]);
+    } finally {
+      setAuditLoading(false);
+    }
+  };
 
   useEffect(() => {
     const session = getValidDevOptionsSession();
@@ -1189,6 +1224,97 @@ export const DeveloperOptions = () => {
             </div>
           </form>
         </section>
+
+        {isAdmin && (
+          <section className="rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => {
+                const next = !auditOpen;
+                setAuditOpen(next);
+                if (next && auditLogs.length === 0 && !auditLoading) {
+                  void fetchAuditLogs();
+                }
+              }}
+              className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left sm:px-6"
+            >
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  <ScrollText size={21} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Auditoría</p>
+                  <h2 className="mt-0.5 text-lg font-black text-slate-900 dark:text-white">Bitácora de auditoría</h2>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    Últimos 50 eventos (OT, inventario, permisos). Solo administradores.
+                  </p>
+                </div>
+              </div>
+              <ChevronDown
+                size={20}
+                className={`shrink-0 text-slate-400 transition-transform ${auditOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+            {auditOpen && (
+              <div className="border-t border-slate-100 px-4 pb-5 pt-3 dark:border-slate-800 sm:px-6">
+                <div className="mb-3 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => void fetchAuditLogs()}
+                    disabled={auditLoading}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    <RefreshCw size={14} className={auditLoading ? 'animate-spin' : ''} />
+                    Actualizar
+                  </button>
+                </div>
+                {auditError && (
+                  <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+                    {auditError}
+                  </p>
+                )}
+                {auditLoading && auditLogs.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-slate-400">Cargando bitácora…</p>
+                ) : auditLogs.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-slate-400">Sin eventos registrados.</p>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                    <table className="w-full min-w-[36rem] text-left text-sm">
+                      <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                        <tr>
+                          <th className="px-3 py-2 font-semibold">Fecha</th>
+                          <th className="px-3 py-2 font-semibold">Usuario</th>
+                          <th className="px-3 py-2 font-semibold">Acción</th>
+                          <th className="px-3 py-2 font-semibold">Resumen</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {auditLogs.map((row) => (
+                          <tr key={row.id} className="border-t border-slate-100 dark:border-slate-800">
+                            <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums text-slate-600 dark:text-slate-300">
+                              {formatDateTime(row.created_at)}
+                            </td>
+                            <td className="px-3 py-2 text-xs font-medium text-slate-800 dark:text-slate-100">
+                              {row.user_name || '—'}
+                            </td>
+                            <td className="px-3 py-2">
+                              <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                {row.action}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-xs text-slate-600 dark:text-slate-300 max-w-xs truncate" title={row.summary}>
+                              {row.summary}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="rounded-3xl border border-red-200 bg-red-50/70 p-5 dark:border-red-900/50 dark:bg-red-950/20 sm:p-6">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">

@@ -58,30 +58,22 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
         return;
       }
 
-      // Entradas (IN) requieren conexión; salidas (OUT) pueden encolarse offline.
-      if (formData.type === 'IN' && typeof navigator !== 'undefined' && !navigator.onLine) {
-        setError('Las entradas de inventario requieren conexión. Intenta de nuevo cuando haya señal.');
-        setIsSubmitting(false);
-        return;
-      }
-
+      // Entradas y salidas pueden encolarse offline (idempotencia por client_request_id).
       const clientRequestId =
-        formData.type === 'OUT'
-          ? typeof crypto !== 'undefined' && crypto.randomUUID
-            ? crypto.randomUUID()
-            : `out-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-          : undefined;
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `inv-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
       const result = await createTransaction({
         item_id: formData.item_id,
         amount: amountValue,
         reason: formData.reason,
-        ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
+        client_request_id: clientRequestId,
       });
 
       if ((result as { offline?: boolean })?.offline) {
         alert(
-          'Sin conexión: la salida de inventario se guardó en el dispositivo y se aplicará al recuperar señal.'
+          `Sin conexión: la ${formData.type === 'IN' ? 'entrada' : 'salida'} de inventario se guardó en el dispositivo y se aplicará al recuperar señal.`
         );
       }
 
@@ -93,7 +85,7 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
     } catch (err: any) {
       if (err?.isOfflineHandled || err?.response?.data?.offline) {
         alert(
-          'Sin conexión: la salida de inventario se guardó en el dispositivo y se aplicará al recuperar señal.'
+          `Sin conexión: el movimiento se guardó en el dispositivo y se aplicará al recuperar señal.`
         );
         onSaved();
         onClose();

@@ -19,6 +19,7 @@ import { BulkQRPrintModal } from '../components/common/BulkQRPrintModal';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { parseFiixQr } from '../utils/fiixQr';
 import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
+import { InfoTip } from '../components/common/InfoTip';
 
 export const InventoryPage = () => {
   const navigate = useNavigate();
@@ -727,7 +728,7 @@ export const InventoryPage = () => {
                           <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                             <button 
                               onClick={(e) => { e.stopPropagation(); handleOpenTransactionModal(item.id); }}
-                              className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-100"
+                              className="inline-flex min-h-11 min-w-11 items-center justify-center p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-100"
                               title="Realizar Movimiento"
                             >
                               <ArrowRightLeft size={18} />
@@ -736,14 +737,14 @@ export const InventoryPage = () => {
                               <>
                                 <button 
                                   onClick={() => setQrItem(item)}
-                                  className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-100"
+                                  className="inline-flex min-h-11 min-w-11 items-center justify-center p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-100"
                                   title="Imprimir QR"
                                 >
                                   <QrCode size={18} />
                                 </button>
                                 <button 
                                   onClick={() => handleOpenItemModal(item)}
-                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                                  className="inline-flex min-h-11 min-w-11 items-center justify-center p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
                                   title="Editar"
                                 >
                                   <Edit2 size={18} />
@@ -1162,15 +1163,19 @@ export const InventoryPage = () => {
           )}
           {activeTab === 'items' && (
             <>
-              <button
-                type="button"
-                onClick={handleExportItemsExcel}
-                className="inline-flex h-11 w-full sm:w-auto sm:min-w-[10.5rem] items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                title="Exportar repuestos filtrados a Excel"
-              >
-                <Download size={16} className="shrink-0" />
-                Excel
-              </button>
+              <div className="relative inline-flex h-11 w-full sm:w-auto sm:min-w-[10.5rem] items-center">
+                <button
+                  type="button"
+                  onClick={handleExportItemsExcel}
+                  className="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                >
+                  <Download size={16} className="shrink-0" />
+                  Excel
+                </button>
+                <span className="absolute -right-1 -top-1 z-10">
+                  <InfoTip text="Exporta a Excel (.xlsx) los repuestos según el filtro y orden actuales." label="Ayuda: Excel" />
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => handleOpenTransactionModal()}
@@ -1200,55 +1205,64 @@ export const InventoryPage = () => {
       {!isLoading && activeTab === 'items' && criticalItems.length > 0 && (
         <div className="rounded-2xl border border-rose-200 bg-rose-50/80 dark:border-rose-900/60 dark:bg-rose-950/30">
           <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:gap-3 sm:px-4 sm:py-3">
-            <button
-              type="button"
-              onClick={filterCriticalStock}
-              className="flex min-w-0 flex-1 items-center gap-3 text-left rounded-xl px-1 py-0.5 -mx-1 hover:bg-rose-100/70 dark:hover:bg-rose-900/30 transition-colors"
-              title="Filtrar artículos en stock crítico"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800 shadow-sm">
-                <AlertCircle className="h-5 w-5 text-rose-500" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="text-sm font-bold text-rose-700 dark:text-rose-300">Stock crítico</span>
-                  <span className="inline-flex items-center rounded-full bg-rose-600 px-2 py-0.5 text-xs font-black text-white tabular-nums">
-                    {criticalItems.length}
-                  </span>
-                  <span className="relative flex h-2 w-2 shrink-0" aria-hidden>
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
-                  </span>
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <button
+                type="button"
+                onClick={filterCriticalStock}
+                className="flex min-w-0 flex-1 items-center gap-3 text-left rounded-xl px-1 py-0.5 -mx-1 hover:bg-rose-100/70 dark:hover:bg-rose-900/30 transition-colors"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800 shadow-sm">
+                  <AlertCircle className="h-5 w-5 text-rose-500" />
                 </div>
-                <p className="mt-0.5 text-xs text-rose-600/80 dark:text-rose-300/80 leading-snug">
-                  Toca para filtrar · Artículos al mínimo o inferior
-                </p>
-              </div>
-            </button>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-sm font-bold text-rose-700 dark:text-rose-300">Stock crítico</span>
+                    <span className="inline-flex items-center rounded-full bg-rose-600 px-2 py-0.5 text-xs font-black text-white tabular-nums">
+                      {criticalItems.length}
+                    </span>
+                    <span className="relative flex h-2 w-2 shrink-0" aria-hidden>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-rose-600/80 dark:text-rose-300/80 leading-snug">
+                    Toca para filtrar · Artículos al mínimo o inferior
+                  </p>
+                </div>
+              </button>
+              <InfoTip
+                text="Artículos con stock al mínimo o inferior. Toca la franja para filtrar la lista."
+                label="Ayuda: Stock crítico"
+              />
+            </div>
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:shrink-0">
               {criticalWithoutVendor.length > 0 && (
-                <button
-                  type="button"
-                  onClick={filterCriticalWithoutVendor}
-                  className="inline-flex h-10 w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 text-sm font-semibold text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200"
-                  title="Ver solo críticos sin proveedor"
-                >
-                  {criticalWithoutVendor.length} sin proveedor
-                </button>
+                <div className="inline-flex w-full sm:w-auto items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={filterCriticalWithoutVendor}
+                    className="inline-flex h-10 w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 text-sm font-semibold text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200"
+                  >
+                    {criticalWithoutVendor.length} sin proveedor
+                  </button>
+                  <InfoTip text="Muestra solo ítems en stock crítico que aún no tienen proveedor asignado." label="Ayuda: sin proveedor" />
+                </div>
               )}
               {canManagePurchases && (
-                <button
-                  type="button"
-                  disabled={isCreatingDrafts}
-                  onClick={handleCreateDraftPurchaseOrders}
-                  className="inline-flex h-10 w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-rose-700 disabled:opacity-60"
-                  title="Crear borradores de Orden de Compra con estos ítems"
-                >
-                  {isCreatingDrafts ? <Loader2 size={16} className="animate-spin" /> : <ShoppingCart size={16} />}
-                  <span className="sm:hidden">Generar OC</span>
-                  <span className="hidden sm:inline">Generar borrador OC</span>
-                </button>
+                <div className="inline-flex w-full sm:w-auto items-center gap-1">
+                  <button
+                    type="button"
+                    disabled={isCreatingDrafts}
+                    onClick={handleCreateDraftPurchaseOrders}
+                    className="inline-flex h-10 w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-rose-700 disabled:opacity-60"
+                  >
+                    {isCreatingDrafts ? <Loader2 size={16} className="animate-spin" /> : <ShoppingCart size={16} />}
+                    <span className="sm:hidden">Generar OC</span>
+                    <span className="hidden sm:inline">Generar borrador OC</span>
+                  </button>
+                  <InfoTip text="Crea borradores de Orden de Compra (uno por proveedor) con la cantidad faltante para llegar al mínimo." label="Ayuda: borrador OC" />
+                </div>
               )}
             </div>
           </div>
@@ -1295,7 +1309,7 @@ export const InventoryPage = () => {
                   {canUseScanner && (
                     <button
                       onClick={() => setIsScannerOpen(true)}
-                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                      className="inline-flex min-h-11 min-w-11 items-center justify-center p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
                       title="Escanear QR para buscar"
                     >
                       <QrCode size={20} />
@@ -1387,7 +1401,7 @@ export const InventoryPage = () => {
               {canUseScanner && (
                 <button
                   onClick={() => setIsScannerOpen(true)}
-                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
                   title="Escanear QR de una ubicación"
                 >
                   <QrCode size={20} />

@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { Role } from '@prisma/client';
 import { emitRefresh } from '../utils/socket';
+import { writeAuditLog } from '../utils/auditLog';
+import type { AuthRequest } from '../middlewares/authMiddleware';
 
 const defaultPermissions: Record<Role, any> = {
   ADMINISTRADOR: {
@@ -142,7 +144,7 @@ export const getMyPermissions = async (req: Request, res: Response): Promise<voi
   }
 };
 
-export const updateRolePermissions = async (req: Request, res: Response): Promise<void> => {
+export const updateRolePermissions = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const role = req.params.role as Role;
     const permissions = req.body.permissions;
@@ -161,6 +163,20 @@ export const updateRolePermissions = async (req: Request, res: Response): Promis
       where: { role },
       update: { permissions },
       create: { role, permissions },
+    });
+
+    const actorId = req.user?.userId;
+    const actor = actorId
+      ? await prisma.user.findUnique({ where: { id: actorId }, select: { name: true } })
+      : null;
+    await writeAuditLog({
+      userId: actorId,
+      userName: actor?.name,
+      action: 'UPDATE_PERMISSIONS',
+      entity: 'permissions',
+      entityId: role,
+      summary: `Permisos del rol ${role} actualizados`,
+      meta: { permissions },
     });
 
     emitRefresh('refresh_permissions');

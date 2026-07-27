@@ -6,6 +6,7 @@ import { triggerNewWorkOrderNotification } from '../services/NotificationService
 import { computeWorkOrderSla, getSlaSettings } from '../services/SlaService';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { parseDateInput } from '../utils/parseDateInput';
+import { writeAuditLog } from '../utils/auditLog';
 
 export const getRequesters = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -357,6 +358,21 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
         });
         return;
       }
+
+      // Pausar / finalizar / reanudar: el usuario debe estar asignado (usar Unirme/Colaborar).
+      // Aceptar PENDIENTE → EN_PROCESO sí auto-asigna más abajo.
+      const isAssigned = currentWorkOrder.assigned_technicians.some((t) => t.id === userId);
+      if (
+        userId &&
+        !isAssigned &&
+        (from === 'EN_PROCESO' || from === 'EN_ESPERA') &&
+        status !== 'ANULADO'
+      ) {
+        res.status(403).json({
+          error: 'Debes unirte a la orden (Colaborar) antes de pausar, reanudar o finalizar.',
+        });
+        return;
+      }
     }
 
     // Multer inyecta los archivos aquí
@@ -508,6 +524,33 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
 
       emitWorkOrderUpdated(id);
       if (didConsumeInventory) emitRefresh('refresh_inventory');
+
+      const actorName = userId
+        ? (await prisma.user.findUnique({ where: { id: userId }, select: { name: true } }))?.name
+        : null;
+      const folioLabel = formatWorkOrderFolio(currentWorkOrder.folio);
+      const statusPart =
+        status && status !== currentWorkOrder.status
+          ? `${currentWorkOrder.status} → ${status}`
+          : 'datos actualizados';
+      const assignPart =
+        userRole !== 'TECNICO' && assigned_technicians_ids !== undefined
+          ? `; técnicos: ${assigned_technicians_ids.length}`
+          : '';
+      await writeAuditLog({
+        userId,
+        userName: actorName,
+        action: status && status !== currentWorkOrder.status ? 'UPDATE_WO_STATUS' : 'UPDATE_WORK_ORDER',
+        entity: 'work_order',
+        entityId: id,
+        summary: `${folioLabel}: ${statusPart}${assignPart}`,
+        meta: {
+          from_status: currentWorkOrder.status,
+          to_status: status || currentWorkOrder.status,
+          assigned_technicians_ids: assigned_technicians_ids ?? null,
+        },
+      });
+
       res.json(updated);
     } catch (txError: any) {
       if (txError?.code === 'NOT_FOUND') {

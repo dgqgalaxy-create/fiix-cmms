@@ -60,6 +60,7 @@ type MetricStatus = 'good' | 'warn' | 'bad' | 'neutral';
 
 const PERIOD_OPTIONS = [
   { value: 'THIS_WEEK', label: 'Esta semana' },
+  { value: 'LAST_WEEK', label: 'Semana pasada' },
   { value: 'THIS_MONTH', label: 'Este mes' },
   { value: 'LAST_MONTH', label: 'Mes pasado' },
   { value: 'THIS_YEAR', label: 'Este año' },
@@ -143,6 +144,7 @@ export const KPIPage = () => {
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
   const [data, setData] = useState<KPIResponse | null>(null);
+  const [compareData, setCompareData] = useState<KPIResponse | null>(null);
   const [charts, setCharts] = useState<ChartData[]>([]);
   const [assetCosts, setAssetCosts] = useState<AssetCostData[]>([]);
   const [topFailingAssets, setTopFailingAssets] = useState<TopFailingAsset[]>([]);
@@ -173,6 +175,17 @@ export const KPIPage = () => {
         getTechnicianPerformance(period).catch(() => []),
       ]);
       setData(kpiData);
+
+      if (period === 'THIS_WEEK') {
+        try {
+          setCompareData(await getKPIs('LAST_WEEK', reworkDays));
+        } catch {
+          setCompareData(null);
+        }
+      } else {
+        setCompareData(null);
+      }
+
       if (kpiData.reworkWindowDays) {
         setReworkDays(kpiData.reworkWindowDays);
         setReworkDaysInput(String(kpiData.reworkWindowDays));
@@ -192,6 +205,7 @@ export const KPIPage = () => {
       if (!background) {
         setLoadError(true);
         setData(null);
+        setCompareData(null);
       }
     } finally {
       if (!background) setIsLoading(false);
@@ -462,6 +476,93 @@ export const KPIPage = () => {
           )}
         </div>
       </div>
+
+      {period === 'THIS_WEEK' && data && compareData && (
+        <div className="rounded-2xl border border-sky-200/80 bg-sky-50/40 p-3 dark:border-sky-900/50 dark:bg-sky-950/20 print:hidden">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300">
+            Esta semana vs semana pasada
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            {([
+              {
+                key: 'orders',
+                label: 'Órdenes',
+                current: data.totalOrders,
+                previous: compareData.totalOrders,
+                format: (v: number) => String(v),
+                invert: false,
+              },
+              {
+                key: 'completed',
+                label: 'Finalizadas',
+                current: data.metrics.COMPLETED_MONTHLY.value,
+                previous: compareData.metrics.COMPLETED_MONTHLY.value,
+                format: (v: number) => String(Math.round(v)),
+                invert: false,
+              },
+              {
+                key: 'mttr',
+                label: 'MTTR',
+                current: data.metrics.MTTR.value,
+                previous: compareData.metrics.MTTR.value,
+                format: (v: number) => formatHours(v),
+                invert: true,
+              },
+              {
+                key: 'sla',
+                label: 'SLA',
+                current: data.metrics.SLA.value,
+                previous: compareData.metrics.SLA.value,
+                format: (v: number) => `${v.toLocaleString('es-MX', { maximumFractionDigits: 1 })}%`,
+                invert: false,
+              },
+              {
+                key: 'backlog',
+                label: 'Backlog',
+                current: data.metrics.BACKLOG.value,
+                previous: compareData.metrics.BACKLOG.value,
+                format: (v: number) => String(Math.round(v)),
+                invert: true,
+              },
+            ] as const).map((item) => {
+              const delta = item.current - item.previous;
+              const better = item.invert ? delta < 0 : delta > 0;
+              const worse = item.invert ? delta > 0 : delta < 0;
+              const deltaAbs = Math.abs(delta);
+              const deltaLabel =
+                item.key === 'mttr'
+                  ? formatHours(deltaAbs)
+                  : item.key === 'sla'
+                    ? `${deltaAbs.toLocaleString('es-MX', { maximumFractionDigits: 1 })} pp`
+                    : String(Math.round(deltaAbs));
+              return (
+                <div
+                  key={item.key}
+                  className="rounded-xl border border-white/80 bg-white px-3 py-2 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{item.label}</p>
+                  <p className="mt-0.5 text-base font-black tabular-nums text-slate-800 dark:text-slate-100">
+                    {item.format(item.current)}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-slate-400">
+                    ant. {item.format(item.previous)}
+                    {delta !== 0 && (
+                      <span
+                        className={`ml-1.5 font-bold ${
+                          better ? 'text-emerald-600' : worse ? 'text-rose-600' : 'text-slate-500'
+                        }`}
+                      >
+                        {delta > 0 ? '↑' : '↓'} {deltaLabel}
+                      </span>
+                    )}
+                    {delta === 0 && <span className="ml-1.5 font-medium text-slate-400">=</span>}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {loadError && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 p-6 text-center">

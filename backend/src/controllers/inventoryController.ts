@@ -4,6 +4,7 @@ import { generateInventoryCode } from '../utils/codeGenerator';
 import { imageSearch } from '@mudbill/duckduckgo-images-api';
 import axios from 'axios';
 import { emitRefresh } from '../utils/socket';
+import { writeAuditLog } from '../utils/auditLog';
 
 // ==========================================
 // ITEM CATEGORY
@@ -407,6 +408,16 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
     });
 
     emitRefresh('refresh_inventory');
+    const actor = await prisma.user.findUnique({ where: { id: user_id }, select: { name: true } });
+    await writeAuditLog({
+      userId: user_id,
+      userName: actor?.name,
+      action: transactionAmount >= 0 ? 'INVENTORY_IN' : 'INVENTORY_OUT',
+      entity: 'inventory',
+      entityId: item_id,
+      summary: `${transactionAmount >= 0 ? 'Entrada' : 'Salida'} ${Math.abs(transactionAmount)} · ${item.name || item_id}: ${reason}`,
+      meta: { amount: transactionAmount, reason, client_request_id: requestId },
+    });
     res.status(201).json({ transaction, stock_actual: item.stock });
   } catch (error: any) {
     if (error.message === 'INSUFFICIENT_STOCK') {

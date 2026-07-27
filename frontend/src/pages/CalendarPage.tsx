@@ -7,7 +7,7 @@ import withDragAndDropRaw from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useAuth } from '../context/AuthContext';
 import { Calendar, LayoutList, CheckCircle2, X, GripVertical } from 'lucide-react';
-import { getWorkOrders, updateWorkOrder, joinWorkOrder, deleteWorkOrder } from '../api/workOrders';
+import { getWorkOrders, getWorkOrderById, updateWorkOrder, joinWorkOrder, deleteWorkOrder } from '../api/workOrders';
 import type { WorkOrder } from '../api/workOrders';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
@@ -184,7 +184,13 @@ export const CalendarPage = () => {
 
   const handleJoinWorkOrder = async (id: string) => {
     await joinWorkOrder(id);
-    setIsDetailModalOpen(false);
+    try {
+      const updated = await getWorkOrderById(id);
+      setSelectedOrder(updated);
+      setIsDetailModalOpen(true);
+    } catch {
+      /* ignore */
+    }
     await fetchOrders();
   };
 

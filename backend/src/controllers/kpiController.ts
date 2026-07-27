@@ -41,6 +41,15 @@ const getDateRange = (period: string | undefined): { start: Date; end: Date; eff
     end = new Date(start);
     end.setDate(end.getDate() + 6);
     end.setHours(23, 59, 59, 999);
+  } else if (period === 'LAST_WEEK') {
+    start = new Date(now);
+    const day = start.getDay();
+    const diff = start.getDate() - day + (day === 0 ? -6 : 1) - 7;
+    start.setDate(diff);
+    start.setHours(0, 0, 0, 0);
+    end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
   } else if (period === 'THIS_MONTH') {
     start = new Date(now.getFullYear(), now.getMonth(), 1);
     end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);

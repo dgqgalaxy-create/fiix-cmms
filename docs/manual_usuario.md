@@ -1,5 +1,5 @@
 # Manual de Usuario - FIIX CMMS (LPET)
-*(Versión 1.38.8 - 27 de Julio, 2026)*
+*(Versión 1.41.1 - 27 de Julio, 2026)*
 
 FIIX CMMS (despliegue LPET) centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 
@@ -12,6 +12,12 @@ Sus pilares son **Rapidez** (menos formatos y pasos), **Trazabilidad** (responsa
 En celular, el temario del manual aparece como una barra horizontal deslizable. Toca un tema para mostrarlo debajo con una transición de entrada de derecha a izquierda. El encabezado, el temario y el botón **Volver** permanecen fijos; únicamente se desplaza la información del tema hasta el borde inferior, con un degradado superior que aparece progresivamente.
 
 ## 0. Operación diaria
+- **Colaborar en OT en curso:** Si una orden ya está **En proceso** o **En espera** y tú no estás en la lista de asignados, no verás Pausar / Finalizar / Reanudar. Usa **Unirme / Colaborar**; al unirte aparecen esas acciones. Aceptar una pendiente sí te asigna automáticamente.
+- **Ayudas ⓘ (InfoTip):** En pantallas táctiles (y también en PC) el icono ⓘ abre una explicación breve (pestañas de Órdenes, folio, Stock crítico, KPIs, SLA, etc.).
+- **Asignación masiva:** En Órdenes de Trabajo, **Asignar…** permite elegir varias OT abiertas y asignarles técnicos de una sola vez.
+- **Turno actual (Inicio):** Panel con conteo por técnico de OT abiertas (pendientes / en proceso / en espera y avisos SLA). Un toque lleva a Órdenes.
+- **KPIs — comparar semanas:** Periodo **Semana pasada** y, al ver **Esta semana**, franja de comparación vs la semana anterior.
+- **Bitácora de auditoría:** Solo **Administrador**, en Opciones de Desarrollador: últimos eventos de cambios en OT, inventario y permisos.
 - **Tiempo real:** Los listados y catálogos se actualizan casi al momento cuando otro usuario crea, edita o elimina datos (órdenes, inventario, activos, compras, checklist, turnos, RCA, zonas, usuarios, etc.). No hace falta pulsar F5.
 - **Edición concurrente de OT:** Si abres una orden de trabajo, eres el editor. Quien abra la misma orden después la verá en **solo lectura** con el mensaje «En edición por {nombre}». Al cerrar el detalle (o si se pierde la conexión ~40 s), otro puede tomarla. Si dos intentan aceptar la misma orden a la vez, el segundo recibe un aviso de conflicto y debe recargar.
 - **Folios FOL-####:** Cada orden recibe un folio automático e inmutable (`FOL-0001`, `FOL-0002`…). No se edita. En importación CSV se usa la columna `FOLIO` (acepta `FOL-####` o el número).
@@ -44,7 +50,8 @@ Se han mejorado las reglas del almacén para prevenir errores y mejorar la fluid
 - **Guardado Silencioso:** Los registros de movimientos, así como las creaciones de repuestos, ahora se sincronizan en segundo plano sin mostrar pantallas de carga molestas.
 - **Validación de Stock Mínimo:** El sistema ya no permite configurar un stock mínimo igual a 0.
 - **Bloqueo de Inventario Negativo:** Si intentas sacar más piezas de las que existen actualmente, el sistema bloqueará la operación con una alerta.
-- **Salidas sin conexión:** Puedes registrar una **salida (OUT)** sin señal; se guarda en el dispositivo y se aplica al recuperar conexión (sin duplicar el mismo movimiento). Las **entradas (IN)** requieren estar en línea.
+- **Movimientos sin conexión:** Puedes registrar **salidas (OUT)** y **entradas (IN)** sin señal; se guardan en el dispositivo y se aplican al recuperar conexión (sin duplicar el mismo movimiento).
+- **Área táctil:** En Inventario, los botones de escaneo QR y las acciones de cada fila (movimiento / QR / editar) tienen un área mínima amplia para dedo.
 - **Ubicación Automática:** Si creas un nuevo repuesto o importas un CSV sin definir lugar, el sistema lo agrupará bajo la ubicación "Sin Asignación".
 - **Ver Detalle desde Categorías, Ubicaciones y Proveedores:** Al abrir el detalle de una Categoría, Ubicación o Proveedor, la lista de "Repuestos Asociados" ahora es clickeable: selecciona cualquier repuesto de esa lista para abrir su ficha completa de detalle, igual que si lo hubieras abierto desde la pestaña de "Repuestos".
 - **Navegar entre repuestos:** Con la ficha de un repuesto abierta (desde la lista de Inventario), usa las flechas ← → del teclado o los botones del encabezado para pasar al anterior/siguiente según el filtro y orden actuales. Mientras editas un campo de texto las flechas no cambian de ítem.
@@ -59,6 +66,7 @@ Se han mejorado las reglas del almacén para prevenir errores y mejorar la fluid
 
 Pantalla de resumen operativo (antes mezclada con el listado de órdenes). Es la pantalla de entrada al abrir el sistema en una sesión nueva.
 - **Sala de control (Administrador / Gestionador):** Franja superior con conteos de **Urgentes abiertas**, **Sin asignar**, **SLA en riesgo** y **SLA vencido**. Cada tarjeta abre **Órdenes de Trabajo** ya filtrada. El título de la pestaña del navegador muestra `(N) FIIX CMMS` cuando hay críticas, y puedes activar/desactivar **Sonido al llegar OT críticas** (por defecto encendido; se guarda en el navegador).
+- **Turno actual:** Debajo de Sala de control (o al inicio del resumen), lista compacta por técnico con pendientes / en proceso / en espera y avisos SLA. Toca una fila para ir a Órdenes.
 - **Pulso al actualizar cifras:** Cuando cambia un número de las tarjetas del resumen o de Sala de control (p. ej. por una OT nueva en tiempo real), la cifra late una vez de forma suave; no anima toda la tarjeta.
 - **Pareto de problemas frecuentes** (correctivo) y distribución visual de mantenimiento. La gráfica de dona muestra el total en el centro y desglosa cada tipo con cantidad, porcentaje y barra comparativa; al pasar el cursor, la etiqueta del segmento se muestra al frente sin encimarse con el total central.
 - **Filtro de fechas** para el resumen superior (o modo histórico si no hay rango). El selector, las tarjetas y la distribución de mantenimiento están dentro del marco **Resumen por periodo**, indicando claramente qué elementos afecta.
@@ -137,6 +145,7 @@ Para los administradores, modificar lo que puede hacer cada usuario es ahora má
 ## 8. Módulo KPIs y Metas
 
 Panel de indicadores de mantenimiento:
+- **Periodos:** incluye **Esta semana**, **Semana pasada**, mes, año, últimos 12 meses e histórico. Al elegir **Esta semana**, aparece una franja de comparación vs la semana anterior (órdenes, finalizadas, MTTR, SLA, backlog).
 - **Salud de planta:** Disponibilidad, MTTR (solo correctivas, en horas) y Backlog (órdenes abiertas ahora).
 - **Ejecución:** OT finalizadas del periodo, tiempo de respuesta, cumplimiento de meta MTTR y retrabajo.
 - **Ventana de retrabajo:** puedes elegir 3, 7, 14 o 30 días, o escribir un valor personalizado (1–90). Cuenta como retrabajo una correctiva finalizada si el mismo equipo tuvo otra correctiva cerrada dentro de esa ventana.

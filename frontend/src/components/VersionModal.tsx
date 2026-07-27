@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.40.0";
+export const APP_VERSION = "1.41.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,15 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Al finalizar una OT correctiva, el Árbol de Fallas (RCA) ya no bloquea Guardar si se deja vacío — sigue siendo opcional como indica la pantalla.",
+    "Corrección: En OT ya En proceso o En espera, administradores y gestionadores (y quien no esté asignado) ya no ven Pausar/Finalizar/Reanudar; deben usar Unirme / Colaborar y luego sí operan.",
+    "Nuevo: Inventario — ayudas ⓘ en Stock crítico / Excel / filtros; botones de escaneo y acciones de fila con área táctil más grande.",
+    "Nuevo: Entradas de inventario (IN) también funcionan sin conexión (igual que las salidas OUT); se sincronizan al recuperar señal.",
+    "Nuevo: En Órdenes, Asignar… permite asignar técnicos a varias OT abiertas de una sola vez.",
+    "Nuevo: En Inicio, panel Turno actual con conteo por técnico (pendientes / en proceso / en espera y SLA).",
+    "Nuevo: En KPIs, periodo Semana pasada y franja de comparación Esta semana vs semana pasada (órdenes, finalizadas, MTTR, SLA, backlog).",
+    "Nuevo: Bitácora de auditoría (solo Admin) en Opciones de Desarrollador: últimos eventos de OT, inventario y permisos.",
+    "Mejora: Interfaz móvil de técnico — textos de siguiente paso más claros, Guardar más visible y auto-guardar al aceptar/reanudar si ya hay foto Antes.",
     "Nuevo: Ayudas con icono ⓘ (información): en tablet/celular toca el ⓘ para leer la explicación (en PC también funciona al hacer clic). Incluido en Órdenes (pestañas y folio), Activos, KPIs, Calendario, SLA y Checklist.",
     "Corrección: En Calendario (tablet/celular), agendar pendientes se hace arrastrando el asa ≡ (el menú Descargar/Compartir del navegador ya no interfiere); la lista sigue deslizándose con normalidad.",
     "Corrección: En Calendario (tablet/celular), la lista de Pendientes vuelve a deslizarse con normalidad; para agendar hay que mantener pulsada la tarjeta ~0,4 s y luego arrastrarla al día.",
