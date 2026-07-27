@@ -1,5 +1,6 @@
 import { Badge } from './ui/Badge';
 import type { BadgeTone } from './ui/statusTone';
+import { InfoTip } from './common/InfoTip';
 
 export type SlaLevel = 'OK' | 'RISK' | 'BREACHED' | 'N/A';
 
@@ -41,12 +42,16 @@ export const SlaBadge = ({
   if (compact && level === 'N/A') return null;
 
   return (
-    <Badge
-      tone={TONES[level]}
-      className={compact ? 'text-[10px] px-2 py-0.5' : ''}
-      title="SLA = Acuerdo de Nivel de Servicio"
-    >
-      {LABELS[level]}
-    </Badge>
+    <span className="inline-flex items-center gap-1">
+      <Badge
+        tone={TONES[level]}
+        className={compact ? 'text-[10px] px-2 py-0.5' : ''}
+      >
+        {LABELS[level]}
+      </Badge>
+      {!compact && (
+        <InfoTip text="SLA = Acuerdo de Nivel de Servicio" label="Ayuda: SLA" size={12} />
+      )}
+    </span>
   );
 };

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck, AlertTriangle, Clock, Wrench, Package, CalendarClock, HelpCircle, Layers } from 'lucide-react';
+import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck, AlertTriangle, Clock, Wrench, Package, CalendarClock, Layers } from 'lucide-react';
 import type { Asset } from '../api/assets';
 import { BACKEND_URL } from '../api/axios';
 import { getAssetMetrics } from '../api/assets';
@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { ASSET_KIND_LABELS } from '../utils/assetSection';
+import { InfoTip } from './common/InfoTip';
 
 interface Props {
   asset: Asset | null;
@@ -187,12 +188,9 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                     </div>
 
                     <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                      <h3
-                        className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2"
-                        title="Análisis de Causa Raíz (RCA): problemas y causas más frecuentes registrados en el Árbol de Fallas de las órdenes correctivas de este activo."
-                      >
+                      <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2">
                         <AlertTriangle size={16} className="text-orange-500" /> Fallas RCA frecuentes
-                        <HelpCircle size={14} className="text-slate-400" />
+                        <InfoTip text="Análisis de Causa Raíz (RCA): problemas y causas más frecuentes registrados en el Árbol de Fallas de las órdenes correctivas de este activo." label="Ayuda: Fallas RCA" />
                       </h3>
                       {overview?.top_failures?.length ? (
                         <ul className="space-y-2">
@@ -212,12 +210,9 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                     </div>
 
                     <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                      <h3
-                        className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2"
-                        title="Mantenimientos Preventivos (PM): planes activos de este equipo cuya próxima fecha de vencimiento ya pasó o cae en los próximos 60 días."
-                      >
+                      <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2">
                         <CalendarClock size={16} className="text-violet-500" /> PMs próximos / vencidos
-                        <HelpCircle size={14} className="text-slate-400" />
+                        <InfoTip text="Mantenimientos Preventivos (PM): planes activos de este equipo cuya próxima fecha de vencimiento ya pasó o cae en los próximos 60 días." label="Ayuda: PMs" />
                       </h3>
                       {overview?.upcoming_pms?.length ? (
                         <ul className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -240,12 +235,9 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                     </div>
 
                     <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                      <h3
-                        className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2"
-                        title="Repuestos ligados a los planes preventivos de este activo cuyo stock actual es igual o menor al mínimo configurado."
-                      >
+                      <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2">
                         <Package size={16} className="text-red-500" /> Stock crítico relacionado
-                        <HelpCircle size={14} className="text-slate-400" />
+                        <InfoTip text="Repuestos ligados a los planes preventivos de este activo cuyo stock actual es igual o menor al mínimo configurado." label="Ayuda: Stock crítico" />
                       </h3>
                       {overview?.critical_stock?.length ? (
                         <ul className="space-y-2">

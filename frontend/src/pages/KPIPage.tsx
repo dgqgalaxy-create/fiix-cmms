@@ -54,6 +54,7 @@ import {
 } from 'recharts';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
+import { InfoTip } from '../components/common/InfoTip';
 
 type MetricStatus = 'good' | 'warn' | 'bad' | 'neutral';
 
@@ -837,14 +838,30 @@ export const KPIPage = () => {
                       <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
                         <tr>
                           <th className="text-left px-3 py-2 font-bold">Técnico</th>
-                          <th className="text-right px-2 py-2 font-bold" title="Carga del día">Hoy</th>
-                          <th className="text-right px-2 py-2 font-bold" title="En espera">Paus.</th>
-                          <th className="text-right px-2 py-2 font-bold" title="Tiempo en espera">Esp.</th>
-                          <th className="text-right px-2 py-2 font-bold" title="Finalizadas esta semana">Sem.</th>
-                          <th className="text-right px-2 py-2 font-bold" title="Horas de labor esta semana">Lab.</th>
-                          <th className="text-right px-2 py-2 font-bold" title="Finalizadas en el periodo">Fin.</th>
-                          <th className="text-right px-2 py-2 font-bold" title="En proceso">Proc.</th>
-                          <th className="text-right px-2 py-2 font-bold" title="Pendientes">Pend.</th>
+                          <th className="text-right px-2 py-2 font-bold">
+                            <span className="inline-flex items-center justify-end gap-0.5">Hoy <InfoTip text="Carga del día" size={11} /></span>
+                          </th>
+                          <th className="text-right px-2 py-2 font-bold">
+                            <span className="inline-flex items-center justify-end gap-0.5">Paus. <InfoTip text="En espera" size={11} /></span>
+                          </th>
+                          <th className="text-right px-2 py-2 font-bold">
+                            <span className="inline-flex items-center justify-end gap-0.5">Esp. <InfoTip text="Tiempo en espera" size={11} /></span>
+                          </th>
+                          <th className="text-right px-2 py-2 font-bold">
+                            <span className="inline-flex items-center justify-end gap-0.5">Sem. <InfoTip text="Finalizadas esta semana" size={11} /></span>
+                          </th>
+                          <th className="text-right px-2 py-2 font-bold">
+                            <span className="inline-flex items-center justify-end gap-0.5">Lab. <InfoTip text="Horas de labor esta semana" size={11} /></span>
+                          </th>
+                          <th className="text-right px-2 py-2 font-bold">
+                            <span className="inline-flex items-center justify-end gap-0.5">Fin. <InfoTip text="Finalizadas en el periodo" size={11} /></span>
+                          </th>
+                          <th className="text-right px-2 py-2 font-bold">
+                            <span className="inline-flex items-center justify-end gap-0.5">Proc. <InfoTip text="En proceso" size={11} /></span>
+                          </th>
+                          <th className="text-right px-2 py-2 font-bold">
+                            <span className="inline-flex items-center justify-end gap-0.5">Pend. <InfoTip text="Pendientes" size={11} /></span>
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">

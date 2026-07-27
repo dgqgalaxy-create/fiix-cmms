@@ -12,6 +12,7 @@ import {
 } from '../api/checklists';
 import type { ChecklistActivity, ChecklistFieldType } from '../api/checklists';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import { InfoTip } from './common/InfoTip';
 
 const FIELD_TYPE_OPTIONS: { value: ChecklistFieldType; label: string; hint: string; icon: typeof CheckSquare }[] = [
   { value: 'CHECKBOX', label: 'Check', hint: 'OK / Falla / N/A', icon: CheckSquare },
@@ -356,7 +357,6 @@ export const ChecklistCatalogue = () => {
                         disabled={updatingTypeId === act.id || isSaving}
                         onChange={(e) => handleFieldTypeChange(act.id, e.target.value as ChecklistFieldType)}
                         className="appearance-none pl-2.5 pr-7 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 cursor-pointer"
-                        title="Tipo de respuesta en el checklist diario"
                       >
                         {FIELD_TYPE_OPTIONS.map((opt) => (
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -365,6 +365,7 @@ export const ChecklistCatalogue = () => {
                       {updatingTypeId === act.id && (
                         <Loader2 size={14} className="absolute right-2 animate-spin text-indigo-500 pointer-events-none" />
                       )}
+                      <InfoTip text="Tipo de respuesta en el checklist diario: Check (OK/Falla/N/A), Número o Texto." label="Ayuda: tipo de campo" />
                     </div>
 
                     <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">

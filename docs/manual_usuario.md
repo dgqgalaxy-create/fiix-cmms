@@ -158,6 +158,7 @@ Panel de indicadores de mantenimiento:
 - **Tema:** en Configuración → Apariencia puedes elegir Modo Claro, Oscuro o Sistema. Ambos temas usan la misma estructura de pantallas.
 - **Acciones principales:** los botones importantes usan verde emerald en todos los módulos.
 - **Diseño unificado:** títulos, tarjetas, tablas y ventanas emergentes siguen el mismo patrón industrial en Inicio, Órdenes, Inventario, Activos, KPIs, Compras y demás módulos.
+- **Ayudas ⓘ:** donde veas un icono de información al lado de un título o etiqueta, tócalo (tablet/celular) o haz clic (PC) para leer la explicación. Sustituye a los mensajes que en escritorio solo salían al pasar el cursor.
 
 ## 9. Módulo de Activos: Código Interno Automático (MTTO)
 

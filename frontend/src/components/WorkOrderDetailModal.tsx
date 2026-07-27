@@ -19,6 +19,7 @@ import { useWorkOrderPresence } from '../hooks/useWorkOrderPresence';
 import { socket } from '../api/socket';
 import { useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
 import { formatDate, formatDateTime } from '../utils/dateUtils';
+import { InfoTip } from './common/InfoTip';
 
 const STATUS_LABELS: Record<string, string> = {
   PENDIENTE: 'Pendiente',
@@ -506,11 +507,11 @@ export const WorkOrderDetailModal = ({
         <div className="px-4 py-3 sm:px-5 sm:py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-start gap-3 bg-slate-50/50 dark:bg-slate-900/50">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span
-                className="bg-slate-200 text-slate-700 dark:text-slate-200 px-2.5 py-1 rounded-lg text-sm font-bold border border-slate-300 font-mono"
-                title="Folio inmutable (FOL-####). Se asigna al crear la orden y no se puede editar."
-              >
-                {formatWorkOrderFolio(workOrder.folio)}
+              <span className="inline-flex items-center gap-1">
+                <span className="bg-slate-200 text-slate-700 dark:text-slate-200 px-2.5 py-1 rounded-lg text-sm font-bold border border-slate-300 font-mono">
+                  {formatWorkOrderFolio(workOrder.folio)}
+                </span>
+                <InfoTip text="Folio inmutable (FOL-####). Se asigna al crear la orden y no se puede editar." label="Ayuda: Folio" />
               </span>
               <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 break-words min-w-0">{workOrder.title}</h2>
             </div>
@@ -636,7 +637,7 @@ export const WorkOrderDetailModal = ({
               }`}>{workOrder.priority}</div>
             </div>
             <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1" title="Acuerdo de Nivel de Servicio">SLA</span>
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">SLA</span>
               <div className="mt-0.5">
                 <SlaBadge sla={workOrder.sla} />
               </div>

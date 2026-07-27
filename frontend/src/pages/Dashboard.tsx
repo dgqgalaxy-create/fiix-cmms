@@ -5,6 +5,7 @@ import { WorkOrdersTable } from '../components/WorkOrdersTable';
 import { CreateWorkOrderModal } from '../components/CreateWorkOrderModal';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { InfoTip } from '../components/common/InfoTip';
 import { getWorkOrders, getWorkOrderById, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder } from '../api/workOrders';
 import type { WorkOrder } from '../api/workOrders';
 import { useSearchParams } from 'react-router-dom';
@@ -415,10 +416,10 @@ export const Dashboard = () => {
                     next.set('tab', 'all');
                     setSearchParams(next, { replace: true });
                   }}
-                  className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === 'ACTIVAS' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
-                  title="Muestra todas las órdenes de trabajo activas y pendientes de toda la planta."
+                  className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-1 ${activeTab === 'ACTIVAS' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
                 >
                   Vista General
+                  <InfoTip text="Muestra todas las órdenes de trabajo activas y pendientes de toda la planta." label="Ayuda: Vista General" />
                 </button>
               )}
               <button 
@@ -429,10 +430,10 @@ export const Dashboard = () => {
                   next.set('tab', 'mine');
                   setSearchParams(next, { replace: true });
                 }}
-                className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === 'MIS_ORDENES' ? 'bg-amber-100 text-amber-800 shadow-sm border border-amber-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
-                title="Muestra únicamente las órdenes de trabajo activas que te han sido asignadas."
+                className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-1 ${activeTab === 'MIS_ORDENES' ? 'bg-amber-100 text-amber-800 shadow-sm border border-amber-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
               >
                 Mis Órdenes
+                <InfoTip text="Muestra únicamente las órdenes de trabajo activas que te han sido asignadas." label="Ayuda: Mis Órdenes" />
               </button>
               <button 
                 onClick={() => {
@@ -442,10 +443,10 @@ export const Dashboard = () => {
                   next.set('tab', 'history');
                   setSearchParams(next, { replace: true });
                 }}
-                className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${activeTab === 'HISTORIAL' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
-                title="Archivo histórico: muestra exclusivamente órdenes ya finalizadas o anuladas."
+                className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-1 ${activeTab === 'HISTORIAL' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
               >
                 Historial
+                <InfoTip text="Archivo histórico: muestra exclusivamente órdenes ya finalizadas o anuladas." label="Ayuda: Historial" />
               </button>
             </div>
             

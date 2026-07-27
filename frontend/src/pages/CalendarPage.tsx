@@ -13,6 +13,7 @@ import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatDateTime } from '../utils/dateUtils';
 import { resolveCalendarDropDate } from '../utils/calendarDropDate';
+import { InfoTip } from '../components/common/InfoTip';
 
 const withDragAndDrop = (withDragAndDropRaw as any).default || withDragAndDropRaw;
 const DnDCalendar = withDragAndDrop(BigCalendar);
@@ -442,6 +443,14 @@ export const CalendarPage = () => {
                 <div className="flex items-center gap-2">
                   <LayoutList size={18} />
                   Pendientes
+                  <InfoTip
+                    text={
+                      useHtml5OutsideDrag
+                        ? 'Arrastra una orden con el ratón hacia un día o franja del calendario para programarla.'
+                        : 'Desliza la lista con el dedo. Para agendar, arrastra desde el icono ≡ hacia el día del calendario. Toca el texto para abrir la orden.'
+                    }
+                    label="Ayuda: Pendientes del calendario"
+                  />
                 </div>
                 <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 py-0.5 px-2 rounded-full text-xs">
                   {unscheduled.length}
