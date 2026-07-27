@@ -159,6 +159,7 @@ chmod +x \
   "${APP_DIR}/scripts/backup.sh" \
   "${APP_DIR}/scripts/restore.sh" \
   "${APP_DIR}/scripts/healthcheck.sh" \
+  "${APP_DIR}/scripts/ensure-vapid-env.sh" \
   2>/dev/null || true
 git status --short || true
 
@@ -176,6 +177,7 @@ chmod +x \
   "${APP_DIR}/scripts/backup.sh" \
   "${APP_DIR}/scripts/restore.sh" \
   "${APP_DIR}/scripts/healthcheck.sh" \
+  "${APP_DIR}/scripts/ensure-vapid-env.sh" \
   2>/dev/null || true
 
 AFTER_SHA="$(git rev-parse --short HEAD)"
@@ -192,6 +194,9 @@ mkdir -p uploads
 # Si NODE_ENV=production está en el entorno, forzar include=dev para herramientas de build (tsc/prisma CLI).
 unset NODE_ENV || true
 npm ci --include=dev
+# Web Push: si faltan VAPID_* en .env, generarlas (no sobrescribe las existentes).
+chmod +x "${APP_DIR}/scripts/ensure-vapid-env.sh" 2>/dev/null || true
+"${APP_DIR}/scripts/ensure-vapid-env.sh" "${APP_DIR}/backend/.env" || true
 npx prisma generate
 # --accept-data-loss: cambios de schema (p. ej. unique nuevo) no deben abortar el deploy.
 npx prisma db push --accept-data-loss

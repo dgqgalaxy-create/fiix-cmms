@@ -3,7 +3,10 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 27 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.43.0 (Actualización: 27 de Julio de 2026)
+## 🚀 Versión Actual: v1.43.1 (Actualización: 27 de Julio de 2026)
+
+### Novedades en v1.43.1 (install: VAPID automático)
+- **Mejora:** `install.sh` / `update.sh` generan claves VAPID en `backend/.env` si faltan (`scripts/ensure-vapid-env.sh`); no pisan claves ya configuradas.
 
 ### Novedades en v1.43.0 (Web Push / notificaciones del dispositivo)
 - **Nuevo:** Canal Web Push (PWA/navegador) opt-in: campana o Configuración → Apariencia. Dispara en nuevas OT y avisos SLA (mismo alcance que campana/Telegram para esos eventos).

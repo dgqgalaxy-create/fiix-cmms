@@ -224,7 +224,7 @@ Ajusta `server_name` en el conf si tu hostname no es `lpet-cmms`. Al final de `u
 - **Requisito:** Telegram debe estar configurado (Opciones de Desarrollador o `TELEGRAM_*` en `backend/.env`). Sin eso, el healthcheck corre pero no puede notificar.
 
 ### Web Push (notificaciones del dispositivo)
-Opcional. Una sola vez en el servidor: `cd backend && npx web-push generate-vapid-keys`, copia las claves a `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` en `backend/.env` y reinicia el backend. Los usuarios activan el interruptor en la campana o en Configuración → Apariencia.
+En **install.sh** / **update.sh**, si faltan `VAPID_*` en `backend/.env`, el script `scripts/ensure-vapid-env.sh` las genera y las escribe (no sobrescribe claves ya existentes). También puedes hacerlo a mano: `cd backend && npx web-push generate-vapid-keys` y pegar `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT`. Los usuarios activan el interruptor en la campana o en Configuración → Apariencia.
 - `/api/health` responde `{ status, db: "ok"|"error", message }` (503 si la BD no responde).
 
 ---

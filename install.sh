@@ -67,7 +67,7 @@ echo ">>> [0/8] Verificar repositorio local..."
 [ -f "${APP_DIR}/install.sh" ] || die "No se encontró install.sh. Ejecuta este script desde dentro del repo clonado."
 [ -d "${APP_DIR}/backend" ] && [ -d "${APP_DIR}/frontend" ] || die "Faltan carpetas backend/ o frontend/. ¿Clonaste el repo completo?"
 [ -f "${APP_DIR}/backend/package.json" ] || die "Falta backend/package.json."
-chmod +x "${APP_DIR}/update.sh" "${APP_DIR}/install.sh" "${APP_DIR}/scripts/backup.sh" "${APP_DIR}/scripts/healthcheck.sh" 2>/dev/null || true
+chmod +x "${APP_DIR}/update.sh" "${APP_DIR}/install.sh" "${APP_DIR}/scripts/backup.sh" "${APP_DIR}/scripts/healthcheck.sh" "${APP_DIR}/scripts/ensure-vapid-env.sh" 2>/dev/null || true
 echo "  [OK] Código local listo (clone/SSH se hace ANTES, ver README)."
 
 # --- 1. Paquetes del sistema ---
@@ -146,6 +146,9 @@ fi
 cd "${APP_DIR}/backend"
 unset NODE_ENV || true
 npm install --include=dev
+# Web Push: generar VAPID si faltan (también si .env ya existía sin ellas)
+chmod +x "${APP_DIR}/scripts/ensure-vapid-env.sh" 2>/dev/null || true
+"${APP_DIR}/scripts/ensure-vapid-env.sh" "${ENV_FILE}" || true
 npx prisma generate
 npx prisma db push --accept-data-loss
 echo "  --> Compilando backend (dist/)..."
@@ -346,6 +349,7 @@ chmod +x \
   "${APP_DIR}/scripts/backup.sh" \
   "${APP_DIR}/scripts/restore.sh" \
   "${APP_DIR}/scripts/healthcheck.sh" \
+  "${APP_DIR}/scripts/ensure-vapid-env.sh" \
   2>/dev/null || true
 
 http_code() {
