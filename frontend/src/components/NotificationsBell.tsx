@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Bell } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { socket } from '../api/socket';
 import { BACKEND_URL } from '../api/axios';
 import { parseWorkOrderFolio } from '../utils/folio';
 import { formatDateTime } from '../utils/dateUtils';
+import { DevicePushToggle } from './DevicePushToggle';
 
 export const NotificationsBell = () => {
   const navigate = useNavigate();
@@ -127,7 +128,7 @@ export const NotificationsBell = () => {
               </button>
             )}
           </div>
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="p-4 text-center text-sm text-slate-500 dark:text-slate-400">
                 No tienes notificaciones
@@ -150,6 +151,16 @@ export const NotificationsBell = () => {
                 </button>
               ))
             )}
+          </div>
+          <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+            <DevicePushToggle compact />
+            <Link
+              to="/settings"
+              onClick={() => setIsOpen(false)}
+              className="mt-2 block text-center text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline"
+            >
+              Más en Configuración → Apariencia
+            </Link>
           </div>
         </div>
       )}

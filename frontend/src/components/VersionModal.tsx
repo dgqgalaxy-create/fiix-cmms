@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.42.1";
+export const APP_VERSION = "1.43.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Notificaciones del dispositivo (Web Push / PWA) — opt-in en la campana o Configuración → Apariencia; avisos de nuevas OT y SLA aunque la pestaña esté en segundo plano (HTTPS; iOS: app en Inicio).",
     "Mejora: En Configuración, el menú lateral usa la misma tipografía, tamaño de icono y estilo activo en todas las opciones.",
     "Nuevo: En Checklist diario, si marcas una cruz (falla) en una fila, la observación de esa fila es obligatoria para enviar; con palomita o N/A sigue siendo opcional (se guarda N/A).",
     "Mejora: Checklist diario y Compras en celular usan encabezado compacto y lista en tarjetas densas (menos scroll; en PC se mantiene la tabla).",

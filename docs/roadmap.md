@@ -3,7 +3,11 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 27 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.41.0 (Actualización: 27 de Julio de 2026)
+## 🚀 Versión Actual: v1.43.0 (Actualización: 27 de Julio de 2026)
+
+### Novedades en v1.43.0 (Web Push / notificaciones del dispositivo)
+- **Nuevo:** Canal Web Push (PWA/navegador) opt-in: campana o Configuración → Apariencia. Dispara en nuevas OT y avisos SLA (mismo alcance que campana/Telegram para esos eventos).
+- **Deploy:** generar VAPID una vez (`npx web-push generate-vapid-keys`) y poner `VAPID_*` en `backend/.env`. Requiere HTTPS (o localhost); en iOS, app instalada en Inicio.
 
 ### Novedades en v1.41.0 (UX operativa: turno, KPIs, auditoría, táctil)
 - **Nuevo:** InfoTip ⓘ en Inventario (Stock crítico / Excel / filtros) y áreas táctiles más grandes en escaneo y acciones de fila.

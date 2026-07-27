@@ -2,6 +2,7 @@ import { Priority, SlaEventType, WorkOrderStatus } from '@prisma/client';
 import prisma from '../config/prisma';
 import { getIO } from '../utils/socket';
 import { sendTelegramAlert } from './TelegramService';
+import { sendWebPushToUsers } from '../utils/webPush';
 import { formatWorkOrderFolio } from '../utils/folio';
 
 export type SlaPriorityPolicy = {
@@ -209,12 +210,14 @@ async function notifyInApp(
   const unique = [...new Set(userIds)];
   if (unique.length === 0) return;
 
+  const link = workOrderId ? `/dashboard?wo=${workOrderId}` : '/dashboard';
+
   await prisma.appNotification.createMany({
     data: unique.map((user_id) => ({
       user_id,
       title,
       message,
-      link: workOrderId ? `/dashboard?wo=${workOrderId}` : '/dashboard',
+      link,
     })),
   });
   try {
@@ -222,6 +225,8 @@ async function notifyInApp(
   } catch {
     // socket may not be ready in CLI tests
   }
+
+  await sendWebPushToUsers(unique, { title, body: message, url: link });
 }
 
 async function recordEvent(workOrderId: string, eventType: SlaEventType): Promise<boolean> {

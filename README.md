@@ -1,7 +1,7 @@
 # FIIX CMMS
 *(Última actualización: 22 de Julio de 2026 — v1.35.0)*
 
-Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, activos, inventario, preventivos, checklist, KPIs, compras, RCA, roster y notificaciones (Telegram).
+Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, activos, inventario, preventivos, checklist, KPIs, compras, RCA, roster y notificaciones (Telegram + Web Push PWA).
 
 **Stack:** PostgreSQL · Prisma · Node.js 22+ / Express · React/Vite · Tailwind v4 · Socket.IO · PM2 (servidor)
 
@@ -222,6 +222,9 @@ Ajusta `server_name` en el conf si tu hostname no es `lpet-cmms`. Al final de `u
 - **Externo (cron):** `scripts/healthcheck.sh` hace `curl` a `http://127.0.0.1:3000/api/health` y comprueba Postgres. Si falla, envía a Telegram *«FIIX: servidor caído / API no responde»* o *«Postgres no responde»*. Solo avisa al pasar de sano→caído (y un recordatorio cada 6 h mientras siga caído). Estado en `/tmp/fiix-health-state`.
 - **Interno (backend):** cada 5 min el propio Node hace `SELECT 1` vía Prisma; si la BD cae pero PM2 sigue vivo, también avisa por Telegram (mismo debounce).
 - **Requisito:** Telegram debe estar configurado (Opciones de Desarrollador o `TELEGRAM_*` en `backend/.env`). Sin eso, el healthcheck corre pero no puede notificar.
+
+### Web Push (notificaciones del dispositivo)
+Opcional. Una sola vez en el servidor: `cd backend && npx web-push generate-vapid-keys`, copia las claves a `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` en `backend/.env` y reinicia el backend. Los usuarios activan el interruptor en la campana o en Configuración → Apariencia.
 - `/api/health` responde `{ status, db: "ok"|"error", message }` (503 si la BD no responde).
 
 ---
@@ -336,6 +339,7 @@ Las evidencias y fotos viven en **`backend/uploads/`** (disco del servidor), no 
 | Postgres + JWT + clave menú dev | `backend/.env` (solo en el servidor/PC) |
 | Login de la aplicación | Usuarios en la BD (seed: `admin@fiix.com` / `password123` — al entrar te pedirá cambiarla) |
 | Telegram | Opciones de desarrollador en la app, o variables en `.env` |
+| Web Push (PWA) | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` en `backend/.env` (generar con `npx web-push generate-vapid-keys` una sola vez) |
 | GitHub | Cuenta/token de Git — **no** es la contraseña de Postgres |
 
 ### Respaldos y restauración (verificar una vez)

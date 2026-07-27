@@ -93,6 +93,7 @@ model User {
   inventory_transactions InventoryTransaction[]
   created_purchase_orders PurchaseOrder[] @relation("CreatedPurchaseOrders")
   notifications   AppNotification[]
+  push_subscriptions PushSubscription[]
   checklist_technician DailyChecklist[] @relation("ChecklistTechnician")
   checklist_leader DailyChecklist[] @relation("ChecklistLeader")
 
@@ -485,6 +486,21 @@ model AppNotification {
   link       String?
   is_read    Boolean  @default(false)
   created_at DateTime @default(now())
+}
+
+/// Suscripción Web Push del navegador/PWA por usuario (opt-in).
+model PushSubscription {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  user_agent String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([user_id])
 }
 
 enum ChecklistStatus {

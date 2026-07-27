@@ -76,6 +76,13 @@ Pantalla de resumen operativo (antes mezclada con el listado de órdenes). Es la
 ### Notificaciones (campana)
 Al seleccionar una notificación de nueva solicitud, el sistema abre directamente el detalle de esa orden en **Órdenes de Trabajo**.
 
+### Notificaciones del dispositivo (Web Push / PWA)
+Avisos del sistema operativo aunque la pestaña esté en segundo plano (nuevas OT y recordatorios/escalamientos SLA). **No sustituyen** la campana ni Telegram: son un canal extra.
+
+- **Cómo activar:** campana (interruptor abajo) o **Configuración → Apariencia → Notificaciones del dispositivo**. El navegador pedirá permiso; hay que **aceptar**.
+- **Requisitos:** sitio en **HTTPS** (o localhost). En **iPhone/iPad**: instala la app en Inicio (Compartir → Añadir a pantalla de inicio) e iOS **16.4+**; en Safari sin instalar no hay push.
+- **Desactivar:** el mismo interruptor quita la suscripción de ese dispositivo. Sin opt-in no recibirás push.
+
 ## 5. Módulo de Órdenes de Trabajo
 
 Gestión de solicitudes (listado), sin el resumen gráfico:
@@ -125,7 +132,7 @@ La sección de "Usuarios" se dividió para mayor control:
 
 El menú **Configuración** aparece si el rol tiene el permiso **Ver Configuración**:
 - **Administrador:** ve todas las secciones (Notificaciones, SLA, Apariencia, Desarrollador, catálogo/UOM y Roles y Permisos según otros permisos).
-- **Gestionador** y **Técnico:** solo ven **Apariencia** (tema e interfaz móvil de su cuenta).
+- **Gestionador** y **Técnico:** solo ven **Apariencia** (tema, notificaciones del dispositivo e interfaz móvil de su cuenta).
 
 Para los administradores, modificar lo que puede hacer cada rol:
 - Entra a **Configuración → Roles y Permisos**.
@@ -167,6 +174,7 @@ Panel de indicadores de mantenimiento:
 ## 8.1 Apariencia y consistencia visual
 
 - **Tema:** en Configuración → Apariencia puedes elegir Modo Claro, Oscuro o Sistema. Ambos temas usan la misma estructura de pantallas.
+- **Notificaciones del dispositivo:** en la misma sección puedes activar avisos push del navegador/PWA (nuevas OT y SLA). Detalle en la sección de Inicio → Notificaciones del dispositivo.
 - **Acciones principales:** los botones importantes usan verde emerald en todos los módulos.
 - **Diseño unificado:** títulos, tarjetas, tablas y ventanas emergentes siguen el mismo patrón industrial en Inicio, Órdenes, Inventario, Activos, KPIs, Compras y demás módulos.
 - **Ayudas ⓘ:** donde veas un icono de información al lado de un título o etiqueta, tócalo (tablet/celular) o haz clic (PC) para leer la explicación. Sustituye a los mensajes que en escritorio solo salían al pasar el cursor.
@@ -189,7 +197,7 @@ Panel de indicadores de mantenimiento:
   - **Respuesta:** tiempo en estado Pendiente hasta que alguien acepta la orden.
   - **Detenida:** tiempo en En Espera (desde que se pausa).
   - **Resolución:** tiempo desde la creación hasta el cierre.
-- **Automatización:** cada 15 minutos el sistema revisa órdenes abiertas. Si se cruza el umbral de recordatorio o de escalamiento, envía aviso a Telegram (mismo grupo) y notificaciones in-app. El escalamiento va a roles **Gestionador** y **Administrador**.
+- **Automatización:** cada 15 minutos el sistema revisa órdenes abiertas. Si se cruza el umbral de recordatorio o de escalamiento, envía aviso a Telegram (mismo grupo), notificaciones in-app y, si el destinatario activó push, notificación del dispositivo. El escalamiento va a roles **Gestionador** y **Administrador**.
 - **Sin spam:** cada tipo de aviso (recordatorio/escalamiento × reloj) se envía **una sola vez** por orden. Al arrancar el servidor, el rezago histórico se marca en silencio (sin Telegram). Si en un ciclo aparecen más de 5 avisos nuevos, se envía **un solo resumen** al grupo en lugar de saturar con mensajes individuales.
 - **Configuración:** en *Configuración → SLA (Acuerdo de Nivel de Servicio)* puedes activar/desactivar el seguimiento y editar con un formulario (por prioridad Urgente / Normal / Bajo) las horas de recordatorio, máximo y escalamiento. En el listado y detalle de la OT verás el badge **Dentro de SLA / En riesgo / Vencido**.
 
