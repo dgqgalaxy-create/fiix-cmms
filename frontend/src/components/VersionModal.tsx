@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.41.3";
+export const APP_VERSION = "1.41.8";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Cambio: Con permiso Ver Configuración, Técnico y Gestionador solo ven Apariencia; Administrador ve todas las secciones (Notificaciones, SLA, Desarrollador, etc.).",
+    "Cambio: El interruptor Interfaz móvil del menú lateral también está disponible para Gestionador y Administrador (opt-in). En Técnico sigue activa por defecto.",
+    "Cambio: «Interfaz móvil de técnico» deja de ser configuración global: cada técnico la activa/desactiva en su menú lateral (preferencia de su cuenta).",
+    "Corrección: El diálogo del ⓘ (Más información) se muestra por encima de todo (portal) y se reubica si se sale de la pantalla (arriba/abajo y dentro del viewport).",
+    "Corrección: Al finalizar una OT correctiva, el Árbol de Fallas (RCA) vuelve a mostrarse de forma clara (sigue siendo opcional para guardar) y la vista hace scroll a notas/RCA; en órdenes ya cerradas se ve el RCA registrado o «Sin RCA».",
     "Corrección: Si no estás asignado a una OT En proceso/En espera, solo ves Unirme / Colaborar (sin desplegable de estado ni Pausar/Finalizar). En móvil técnico, las acciones rápidas sustituyen al desplegable para no duplicar opciones.",
     "Corrección: Al finalizar una OT correctiva, el Árbol de Fallas (RCA) ya no bloquea Guardar si se deja vacío — sigue siendo opcional como indica la pantalla.",
     "Corrección: En OT ya En proceso o En espera, administradores y gestionadores (y quien no esté asignado) ya no ven Pausar/Finalizar/Reanudar; deben usar Unirme / Colaborar y luego sí operan.",
@@ -42,7 +47,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Corrección: En Calendario (tablet/celular), agendar pendientes se hace arrastrando el asa ≡ (el menú Descargar/Compartir del navegador ya no interfiere); la lista sigue deslizándose con normalidad.",
     "Corrección: En Calendario (tablet/celular), la lista de Pendientes vuelve a deslizarse con normalidad; para agendar hay que mantener pulsada la tarjeta ~0,4 s y luego arrastrarla al día.",
     "Corrección: En Calendario, arrastrar OT pendientes ya no tumba la app en PC (error maintenance_type) y en tablet/celular el soltar sobre el día asigna la fecha con más fiabilidad.",
-    "Nuevo: Configuración → Apariencia — interruptor «Interfaz móvil de técnico» (global). Desactivada = los técnicos ven la interfaz completa. Los técnicos pueden además desactivarla solo en su cuenta.",
+    "Nuevo: Preferencia por usuario «Interfaz móvil de técnico» (menú lateral). Desactivada = el técnico ve la interfaz completa.",
     "Mejora: Nueva Orden de Compra — al elegir proveedor se listan de inmediato sus refacciones; también puedes buscar por nombre/código sin saber el proveedor (al elegir el ítem se toma su proveedor).",
     "Nuevo: Usuarios en línea muestra el módulo actual (ruta → etiqueta amigable: Órdenes, Inventario, Calendario, etc.).",
     "Mejora: En Inicio, las cifras de las tarjetas (resumen y Sala de control) latean suavemente al cambiar el valor.",

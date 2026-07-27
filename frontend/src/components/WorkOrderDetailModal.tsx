@@ -87,6 +87,7 @@ export const WorkOrderDetailModal = ({
   const isTechMobileShell = useTechnicianMobileShell();
   const evidenceRef = useRef<HTMLDivElement>(null);
   const holdReasonRef = useRef<HTMLInputElement>(null);
+  const finalizeSectionRef = useRef<HTMLDivElement>(null);
   const pendingAutoSaveRef = useRef(false);
 
   const [liveWorkOrder, setLiveWorkOrder] = useState<WorkOrder | null>(workOrder);
@@ -304,6 +305,15 @@ export const WorkOrderDetailModal = ({
     (displayWO.status === 'PENDIENTE' || displayWO.status === 'EN_PROCESO' || displayWO.status === 'EN_ESPERA');
   /** En móvil técnico las acciones van en botones grandes: no duplicar con el desplegable. */
   const showStatusSelect = !isClosed && !needsJoinToOperate && !isTechMobileShell;
+  const isCorrective =
+    displayWO.maintenance_type === 'CORRECTIVO' || workOrder.maintenance_type === 'CORRECTIVO';
+  const showRcaSection = status === 'FINALIZADO' && isCorrective;
+
+  const scrollToFinalizeSection = () => {
+    window.setTimeout(() => {
+      finalizeSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
 
   const canDownloadPDF = workOrder.status === 'FINALIZADO' && (
     user?.role === 'ADMINISTRADOR' ||
@@ -862,7 +872,11 @@ export const WorkOrderDetailModal = ({
                       <select
                         className="w-full px-4 py-3.5 border rounded-xl outline-none transition-all appearance-none font-bold text-base shadow-sm bg-white dark:bg-slate-900 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 cursor-pointer hover:border-emerald-400 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500"
                         value={status}
-                        onChange={(e) => setStatus(e.target.value)}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          setStatus(next);
+                          if (next === 'FINALIZADO') scrollToFinalizeSection();
+                        }}
                         disabled={isReadOnly}
                       >
                         <option value={workOrder.status}>{statusLabel(workOrder.status)}</option>
@@ -980,7 +994,7 @@ export const WorkOrderDetailModal = ({
                 )}
 
                 {(status === 'FINALIZADO' || status === 'ANULADO') && (
-                  <div className="animate-in fade-in slide-in-from-top-2 duration-300 lg:col-span-2">
+                  <div ref={finalizeSectionRef} className="animate-in fade-in slide-in-from-top-2 duration-300 lg:col-span-2">
                     <label className={`block text-sm font-medium mb-1 ${status === 'ANULADO' ? 'text-red-700' : 'text-emerald-700'}`}>
                       {status === 'ANULADO' ? 'Motivo de Anulación' : 'Notas de Resolución'} *
                     </label>
@@ -996,19 +1010,21 @@ export const WorkOrderDetailModal = ({
                       disabled={isReadOnly}
                     />
 
-                    {!isReadOnly && status === 'FINALIZADO' && workOrder.maintenance_type === 'CORRECTIVO' && (
-                      <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
-                        <label className="block text-sm font-bold text-orange-800 mb-1 flex items-center gap-2">
+                    {showRcaSection && (
+                      <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900 rounded-xl">
+                        <label className="block text-sm font-bold text-orange-800 dark:text-orange-200 mb-1 flex items-center gap-2">
                           <GitBranch size={16} /> Árbol de Fallas (RCA) — opcional
                         </label>
-                        <p className="text-xs text-orange-700/80 mb-3">
-                          Úsalo solo si el problema/causa/solución ya existen en el catálogo. Si no está, deja vacío y reporta el caso para ampliar el árbol.
+                        {!isReadOnly ? (
+                          <>
+                        <p className="text-xs text-orange-700/80 dark:text-orange-300/80 mb-3">
+                          Puedes dejarlo vacío y guardar igual. Úsalo solo si el problema/causa/solución ya existen en el catálogo.
                         </p>
                         <div className="space-y-3">
                           <div>
-                            <span className="text-xs font-semibold text-orange-700 block mb-1">Problema Encontrado</span>
+                            <span className="text-xs font-semibold text-orange-700 dark:text-orange-300 block mb-1">Problema Encontrado</span>
                             <select
-                              className="w-full px-3 py-2 border border-orange-200 rounded-lg text-sm bg-white dark:bg-slate-900"
+                              className="w-full px-3 py-2 border border-orange-200 dark:border-orange-800 rounded-lg text-sm bg-white dark:bg-slate-900"
                               value={failureProblemId}
                               onChange={(e) => {
                                 setFailureProblemId(e.target.value);
@@ -1016,7 +1032,7 @@ export const WorkOrderDetailModal = ({
                                 setFailureRemedyId('');
                               }}
                             >
-                              <option value="">Selecciona el Problema...</option>
+                              <option value="">Sin registrar / no aplica...</option>
                               {rcaTree.map(p => (
                                 <option key={p.id} value={p.id}>{p.name}</option>
                               ))}
@@ -1025,9 +1041,9 @@ export const WorkOrderDetailModal = ({
 
                           {failureProblemId && (
                             <div className="animate-in fade-in duration-200">
-                              <span className="text-xs font-semibold text-orange-700 block mb-1">Causa Raíz</span>
+                              <span className="text-xs font-semibold text-orange-700 dark:text-orange-300 block mb-1">Causa Raíz</span>
                               <select
-                                className="w-full px-3 py-2 border border-orange-200 rounded-lg text-sm bg-white dark:bg-slate-900"
+                                className="w-full px-3 py-2 border border-orange-200 dark:border-orange-800 rounded-lg text-sm bg-white dark:bg-slate-900"
                                 value={failureCauseId}
                                 onChange={(e) => {
                                   setFailureCauseId(e.target.value);
@@ -1046,7 +1062,7 @@ export const WorkOrderDetailModal = ({
                             <div className="animate-in fade-in duration-200">
                               <span className="text-xs font-semibold text-orange-700 dark:text-orange-300 block mb-1">Solución / Acción Tomada</span>
                               <select
-                                className="w-full px-3 py-2 border border-orange-200 rounded-lg text-sm bg-white dark:bg-slate-900"
+                                className="w-full px-3 py-2 border border-orange-200 dark:border-orange-800 rounded-lg text-sm bg-white dark:bg-slate-900"
                                 value={failureRemedyId}
                                 onChange={(e) => setFailureRemedyId(e.target.value)}
                               >
@@ -1060,6 +1076,20 @@ export const WorkOrderDetailModal = ({
                             </div>
                           )}
                         </div>
+                          </>
+                        ) : (
+                          <div className="mt-2 space-y-1.5 text-sm text-orange-900 dark:text-orange-100">
+                            {(displayWO as any).failure_problem || (displayWO as any).failure_cause || (displayWO as any).failure_remedy ? (
+                              <>
+                                <p><span className="font-semibold">Problema:</span> {(displayWO as any).failure_problem?.name || '—'}</p>
+                                <p><span className="font-semibold">Causa:</span> {(displayWO as any).failure_cause?.name || '—'}</p>
+                                <p><span className="font-semibold">Solución:</span> {(displayWO as any).failure_remedy?.name || '—'}</p>
+                              </>
+                            ) : (
+                              <p className="text-orange-700/80 dark:text-orange-300/80 italic">Sin RCA registrado (opcional).</p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1369,7 +1399,10 @@ export const WorkOrderDetailModal = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setStatus('FINALIZADO')}
+                    onClick={() => {
+                      setStatus('FINALIZADO');
+                      scrollToFinalizeSection();
+                    }}
                     className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-3 text-sm font-bold text-white shadow-sm active:scale-[0.98]"
                   >
                     <CheckCircle2 size={18} /> Finalizar

@@ -10,9 +10,8 @@ const tabClass = (active: boolean) =>
   }`;
 
 /**
- * Barra inferior móvil exclusiva para rol TECNICO.
- * Admin/Gestionador no la ven: conservan la UX completa.
- * «Mis OT» = todas las OT abiertas asignadas al técnico.
+ * Barra inferior móvil de la interfaz compacta
+ * (Técnico / Gestionador / Administrador con la preferencia activa).
  */
 export const TechnicianBottomNav = () => {
   const navigate = useNavigate();

@@ -92,7 +92,7 @@ Gestión de solicitudes (listado), sin el resumen gráfico:
 - **Órdenes finalizadas:** No se pueden eliminar ni anular. En el detalle, el estado aparece como etiqueta informativa y los técnicos se muestran como lista de quienes intervinieron (sin checkboxes).
 - **Asignación opcional al aceptar:** Los Administradores y Gestionadores conservan visible la sección **Técnicos Asignados** mientras la orden está abierta. Pueden seleccionar uno o varios técnicos antes de guardar; si dejan la lista vacía, se aplica la autoasignación descrita arriba.
 - **Vista para Técnicos:** Los técnicos pueden atender las órdenes que tengan asignadas, pero no pueden modificar la asignación de personal.
-- **Capa móvil de técnico:** En celular, el rol Técnico puede usar una barra inferior con **Mis OT**, Escanear QR, Inventario e Inicio y botones grandes Aceptar / Pausar / Finalizar / Reanudar. Se activa o desactiva en **Configuración → Apariencia → Interfaz móvil de técnico** (global). Cada técnico puede desactivarla solo en su cuenta. Si está off, ven la misma interfaz completa que administradores/gestionadores.
+- **Interfaz móvil:** Preferencia de cada usuario (Técnico, Gestionador o Administrador) en el menú lateral → **Interfaz móvil**. En celular activa barra inferior (Mis OT, Escanear, Inventario, Inicio) y botones grandes en órdenes. En técnicos está on por defecto; en admin/gestionador hay que activarla.
 - **Funciona sin conexión:** Aceptar, pausar, finalizar o reanudar una orden se guarda en el dispositivo aunque no haya señal (Wi-Fi/datos) y se sincroniza solo en cuanto vuelve la conexión. También puedes **editar y enviar el checklist diario** sin señal (crear el checklist del día sí requiere conexión la primera vez). En Inventario, las **salidas (OUT)** se encolan sin señal; las **entradas (IN)** requieren conexión. Al sincronizar bien verás un aviso verde breve («Sincronización completa (N cambios)»); si algo falla, el aviso indica cuántos fallaron y un motivo corto (p. ej. 401, 409, red) con **Reintentar** o **Descartar**. Si el aviso se queda atascado, usa **Descartar** en el propio aviso o **Configuración → Opciones de Desarrollador → Descartar cola offline** (también limpia fotos pendientes en el dispositivo). Las listas (GET) siguen cargando aunque haya cola pendiente. Si finalizas subiendo fotos sin conexión, el estado, las notas y las **fotos** se guardan en el dispositivo y se suben solas al recuperar la señal.
 - **Escanear QR en celular:** si entras por `http://IP` (sin HTTPS), el navegador bloquea la cámara en vivo; usa **Elegir foto / galería**. Con HTTPS o localhost la cámara en vivo sí funciona. Al escanear una **ubicación** (p. ej. `E2-0`) o un repuesto, la app abre el detalle correspondiente en Inventario (con los repuestos de esa ubicación). En desarrollo, Vite admite el hostname local `lpet-cmms` y nombres Tailscale `*.ts.net`.
 - **Servidor Ubuntu:** checklist en el README («Servidor nuevo»). Primero SSH + `git clone`; luego `./install.sh` (recomienda **S** a PM2 al reiniciar y **nginx + healthcheck**; ufw/Telegram/Tailscale opcionales). En producción UI+API en **:3000** (`node dist/index.js` vía PM2); con nginx, **puerto 80**. Actualizaciones: `./update.sh` (conserva `.env` y `uploads/`; pregunta nginx solo en modo interactivo).
@@ -123,9 +123,11 @@ La sección de "Usuarios" se dividió para mayor control:
 
 ## 7. Configuración de Roles y Permisos
 
-El módulo **Configuración** está disponible para **Administrador** y **Gestionador**. Los Técnicos no lo ven en el menú.
+El menú **Configuración** aparece si el rol tiene el permiso **Ver Configuración**:
+- **Administrador:** ve todas las secciones (Notificaciones, SLA, Apariencia, Desarrollador, catálogo/UOM y Roles y Permisos según otros permisos).
+- **Gestionador** y **Técnico:** solo ven **Apariencia** (tema e interfaz móvil de su cuenta).
 
-Para los administradores, modificar lo que puede hacer cada usuario es ahora más simple:
+Para los administradores, modificar lo que puede hacer cada rol:
 - Entra a **Configuración → Roles y Permisos**.
 - Enciende o apaga los interruptores según necesites.
 - **¡No hay botón de guardar!** El sistema implementa un auto-guardado automático. Un pequeño icono de carga confirmará instantáneamente que los datos se han grabado en el servidor de forma segura.
@@ -133,7 +135,7 @@ Para los administradores, modificar lo que puede hacer cada usuario es ahora má
 **Permisos nuevos relevantes:**
 - **Ver Árbol de Fallas:** disponible para todos los roles (consulta).
 - **Editar Árbol de Fallas:** solo Administrador y Gestionador pueden agregar o activar/desactivar elementos.
-- **Ver Configuración:** disponible para Administrador y Gestionador.
+- **Ver Configuración:** controla el acceso al módulo; el alcance de pestañas depende del rol (ver arriba).
 
 ### Árbol de Fallas (RCA)
 - Su jerarquía es **Problema → Causa → Solución**.

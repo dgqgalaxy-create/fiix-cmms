@@ -15,7 +15,7 @@ Este documento contiene la lista de módulos y características pendientes de de
 - **Mejora:** Acciones rápidas del técnico móvil (siguiente paso, Guardar destacado, auto-guardar al aceptar/reanudar con foto Antes).
 
 ### Novedades en v1.39.0 (interfaz móvil de técnico configurable)
-- **Nuevo:** En **Configuración → Apariencia**, interruptor global **Interfaz móvil de técnico**. Off = técnicos ven la UI completa. Los técnicos pueden desactivarla solo en su cuenta si la global está on.
+- **Cambio:** Con permiso **Ver Configuración**, Técnico y Gestionador solo ven **Apariencia**; Administrador ve todas las secciones.
 
 ### Novedades en v1.38.9 (Nueva OC: catálogo por proveedor + búsqueda)
 - **Mejora:** Al elegir proveedor en **Nueva Orden de Compra** se listan de inmediato sus refacciones. También puedes buscar por nombre/código sin proveedor; al agregar el ítem se toma su proveedor.

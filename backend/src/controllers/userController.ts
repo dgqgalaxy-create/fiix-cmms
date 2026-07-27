@@ -215,14 +215,7 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const settings = await prisma.systemSettings.findFirst({
-      select: { technician_mobile_ui: true },
-    });
-
-    res.json({
-      ...user,
-      technician_mobile_ui: settings?.technician_mobile_ui ?? true,
-    });
+    res.json(user);
   } catch (error) {
     console.error('Error fetching me:', error);
     res.status(500).json({ error: 'Error al obtener datos del usuario' });

@@ -449,8 +449,8 @@ model SystemSettings {
   email_enabled      Boolean  @default(false)
   sla_enabled        Boolean  @default(true)
   sla_policy         Json?
-  /// Si es true, los técnicos en celular usan barra inferior + acciones rápidas (interfaz app).
-  /// Si es false, ven la misma interfaz completa que gestionador/administrador.
+  /// Obsoleto: la interfaz móvil de técnico es preferencia por usuario
+  /// (`User.preferences.use_technician_mobile_ui`). Se mantiene por compatibilidad de esquema.
   technician_mobile_ui Boolean @default(true)
   checklist_column_count Int  @default(5)
   updated_at       DateTime @updatedAt

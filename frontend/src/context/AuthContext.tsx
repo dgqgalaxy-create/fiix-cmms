@@ -13,8 +13,6 @@ interface User {
   preferences?: any;
   must_change_password?: boolean;
   id?: string;
-  /** Flag global de SystemSettings (viene de GET /users/me). */
-  technician_mobile_ui?: boolean;
 }
 
 interface AuthContextType {
@@ -26,7 +24,6 @@ interface AuthContextType {
   logout: () => void;
   hasPermission: (permission: string) => boolean;
   updateUserPreferences: (prefs: any) => void;
-  setTechnicianMobileUiFlag: (enabled: boolean) => void;
   clearMustChangePassword: () => void;
 }
 
@@ -76,7 +73,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             preferences: fullUser.preferences,
             must_change_password: (fullUser as any).must_change_password,
             id: fullUser.id,
-            technician_mobile_ui: (fullUser as any).technician_mobile_ui !== false,
           } : prev);
           if ((fullUser as any).must_change_password) {
             setMustChangePassword(true);
@@ -96,7 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!token) return;
-    const onSettingsRefresh = () => {
+    const onUserRefresh = () => {
       getMe()
         .then((fullUser) => {
           setUser((prev) =>
@@ -104,16 +100,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               ? {
                   ...prev,
                   preferences: fullUser.preferences,
-                  technician_mobile_ui: (fullUser as any).technician_mobile_ui !== false,
                 }
               : prev
           );
         })
         .catch(() => {});
     };
-    socket.on('refresh_settings', onSettingsRefresh);
+    socket.on('refresh_settings', onUserRefresh);
     return () => {
-      socket.off('refresh_settings', onSettingsRefresh);
+      socket.off('refresh_settings', onUserRefresh);
     };
   }, [token]);
 
@@ -158,10 +153,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(prev => prev ? { ...prev, preferences: prefs } : prev);
   };
 
-  const setTechnicianMobileUiFlag = (enabled: boolean) => {
-    setUser(prev => prev ? { ...prev, technician_mobile_ui: enabled } : prev);
-  };
-
   const clearMustChangePassword = () => {
     setMustChangePassword(false);
     setUser(prev => prev ? { ...prev, must_change_password: false } : prev);
@@ -178,7 +169,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logout,
         hasPermission,
         updateUserPreferences,
-        setTechnicianMobileUiFlag,
         clearMustChangePassword,
       }}
     >

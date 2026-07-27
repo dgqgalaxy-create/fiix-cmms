@@ -1,4 +1,5 @@
 import { useState, useEffect, type ReactNode } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw } from 'lucide-react';
 import { PermissionsPage } from './PermissionsPage';
@@ -9,6 +10,7 @@ import { ListChecks, Scale } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import { canUseTechnicianMobileUi, isTechnicianMobileUiPrefOn } from '../hooks/useTechnicianMobileShell';
 
 type SlaPriorityKey = 'URGENTE' | 'NORMAL' | 'BAJO';
 
@@ -117,22 +119,28 @@ const mergePolicy = (raw: unknown): SlaPolicy => {
 };
 
 export const SettingsPage = () => {
-  const { hasPermission, user, updateUserPreferences, setTechnicianMobileUiFlag } = useAuth();
+  const { hasPermission, user, updateUserPreferences } = useAuth();
+  const isAdmin = user?.role === 'ADMINISTRADOR';
+  /** Técnico y Gestionador con VIEW_SETTINGS solo ven Apariencia. */
+  const appearanceOnly = !isAdmin;
   const [settings, setSettings] = useState({
     telegram_enabled: false,
     email_enabled: false,
     sla_enabled: true,
-    technician_mobile_ui: true,
   });
   const [slaPolicy, setSlaPolicy] = useState<SlaPolicy>(DEFAULT_SLA_POLICY);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!appearanceOnly);
   const [isSaving, setIsSaving] = useState(false);
   const [slaSaveMsg, setSlaSaveMsg] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeTab, setActiveTab] = useState(appearanceOnly ? 'appearance' : 'general');
   const [slaPriorityTab, setSlaPriorityTab] = useState<SlaPriorityKey>('URGENTE');
   const { theme, setTheme } = useTheme();
 
   const fetchSettings = async () => {
+    if (!isAdmin) {
+      setIsLoading(false);
+      return;
+    }
     try {
       const res = await api.get('/settings');
       if (res.data) {
@@ -140,7 +148,6 @@ export const SettingsPage = () => {
           telegram_enabled: res.data.telegram_enabled,
           email_enabled: res.data.email_enabled,
           sla_enabled: res.data.sla_enabled ?? true,
-          technician_mobile_ui: res.data.technician_mobile_ui !== false,
         });
         setSlaPolicy(mergePolicy(res.data.sla_policy));
       }
@@ -153,11 +160,17 @@ export const SettingsPage = () => {
 
   useEffect(() => {
     fetchSettings();
-  }, []);
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (appearanceOnly && activeTab !== 'appearance') {
+      setActiveTab('appearance');
+    }
+  }, [appearanceOnly, activeTab]);
 
   useSocketRefresh('refresh_settings', () => { void fetchSettings(); });
 
-  const handleToggle = async (key: 'telegram_enabled' | 'email_enabled' | 'sla_enabled' | 'technician_mobile_ui') => {
+  const handleToggle = async (key: 'telegram_enabled' | 'email_enabled' | 'sla_enabled') => {
     try {
       setIsSaving(true);
       const newValue = !settings[key];
@@ -172,11 +185,7 @@ export const SettingsPage = () => {
           telegram_enabled: res.data.telegram_enabled,
           email_enabled: res.data.email_enabled,
           sla_enabled: res.data.sla_enabled ?? settings.sla_enabled,
-          technician_mobile_ui: res.data.technician_mobile_ui !== false,
         });
-        if (key === 'technician_mobile_ui') {
-          setTechnicianMobileUiFlag(res.data.technician_mobile_ui !== false);
-        }
       }
     } catch (err) {
       console.error(err);
@@ -186,11 +195,10 @@ export const SettingsPage = () => {
   };
 
   const handlePersonalTechUiToggle = async () => {
-    if (!user || user.role !== 'TECNICO') return;
-    const current = user.preferences?.use_technician_mobile_ui !== false;
-    const next = !current;
+    if (!canUseTechnicianMobileUi(user?.role)) return;
+    const next = !isTechnicianMobileUiPrefOn(user);
     const newPreferences = {
-      ...(user.preferences || {}),
+      ...(user?.preferences || {}),
       use_technician_mobile_ui: next,
     };
     try {
@@ -247,6 +255,10 @@ export const SettingsPage = () => {
     setSlaSaveMsg('Valores por defecto cargados. Pulsa Guardar para aplicarlos.');
   };
 
+  if (!hasPermission('VIEW_SETTINGS')) {
+    return <Navigate to="/home" replace />;
+  }
+
   if (isLoading) {
     return <div className="p-8">Cargando configuración...</div>;
   }
@@ -270,19 +282,23 @@ export const SettingsPage = () => {
       <div className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-3">
           <Settings className="text-emerald-600 dark:text-emerald-400" size={32} />
-          Configuración del Sistema
+          {appearanceOnly ? 'Configuración' : 'Configuración del Sistema'}
         </h1>
-        <p className="text-slate-500 dark:text-slate-300 mt-1">Administra las preferencias globales y la apariencia de LPET CMMS.</p>
+        <p className="text-slate-500 dark:text-slate-300 mt-1">
+          {appearanceOnly
+            ? 'Ajusta la apariencia y preferencias de tu cuenta.'
+            : 'Administra las preferencias globales y la apariencia de LPET CMMS.'}
+        </p>
       </div>
 
       <div className="flex flex-col md:flex-row gap-8">
         <div className="w-full md:w-64 shrink-0">
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-2 shadow-sm space-y-1">
-            {navBtn('general', 'Notificaciones', <Bell size={18} />)}
-            {navBtn('sla', 'SLA (Acuerdo de Nivel de Servicio)', <Timer size={18} />)}
+            {isAdmin && navBtn('general', 'Notificaciones', <Bell size={18} />)}
+            {isAdmin && navBtn('sla', 'SLA (Acuerdo de Nivel de Servicio)', <Timer size={18} />)}
             {navBtn('appearance', 'Apariencia', <Palette size={18} />)}
-            {navBtn('developer', 'Opciones de Desarrollador', <Code size={18} />)}
-            {hasPermission('MANAGE_CHECKLIST_CATALOG') && (
+            {isAdmin && navBtn('developer', 'Opciones de Desarrollador', <Code size={18} />)}
+            {isAdmin && hasPermission('MANAGE_CHECKLIST_CATALOG') && (
               <>
                 <button
                   onClick={() => setActiveTab('checklist_catalogue')}
@@ -308,13 +324,13 @@ export const SettingsPage = () => {
                 </button>
               </>
             )}
-            {hasPermission('MANAGE_PERMISSIONS') &&
+            {isAdmin && hasPermission('MANAGE_PERMISSIONS') &&
               navBtn('permissions', 'Roles y Permisos', <Shield size={18} />)}
           </div>
         </div>
 
         <div className="flex-1 space-y-6">
-          {activeTab === 'general' && (
+          {isAdmin && activeTab === 'general' && (
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
                 <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200">Notificaciones y Escalamiento</h2>
@@ -363,7 +379,7 @@ export const SettingsPage = () => {
             </div>
           )}
 
-          {activeTab === 'sla' && (
+          {isAdmin && activeTab === 'sla' && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -510,44 +526,25 @@ export const SettingsPage = () => {
 
                 <div className="mt-8 h-px bg-slate-100 dark:bg-slate-800 w-full" />
 
-                <div className="mt-6 flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="font-semibold text-slate-800 dark:text-slate-200">Interfaz móvil de técnico</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
-                      Cuando está activa, los usuarios con rol <strong>Técnico</strong> en celular ven la barra inferior (Mis OT, Escanear, Inventario, Inicio) y botones grandes Aceptar/Pausar/Finalizar.
-                      Si la desactivas, usan la misma interfaz completa que Gestionador/Administrador.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleToggle('technician_mobile_ui')}
-                    disabled={isSaving}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 ${settings.technician_mobile_ui ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'} ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings.technician_mobile_ui ? 'translate-x-5' : 'translate-x-0'}`} />
-                  </button>
-                </div>
-
-                {user?.role === 'TECNICO' && (
-                  <div className="mt-6 flex items-start justify-between gap-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 p-4">
+                {canUseTechnicianMobileUi(user?.role) && (
+                  <div className="mt-6 flex items-start justify-between gap-4">
                     <div>
-                      <h3 className="font-semibold text-slate-800 dark:text-slate-200">Mi preferencia (solo este usuario)</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                        Puedes usar la interfaz completa en tu cuenta aunque la opción global esté activa.
-                        {settings.technician_mobile_ui === false && (
-                          <span className="block mt-1 text-amber-700 dark:text-amber-400">
-                            La opción global está desactivada: verás la interfaz completa.
-                          </span>
-                        )}
+                      <h3 className="font-semibold text-slate-800 dark:text-slate-200">Interfaz móvil</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
+                        Preferencia de <strong>tu cuenta</strong>. En celular: barra inferior (Mis OT, Escanear, Inventario, Inicio) y botones grandes en órdenes.
+                        {user?.role === 'TECNICO'
+                          ? ' Por defecto está activa; puedes desactivarla para ver la interfaz completa.'
+                          : ' Por defecto está desactivada; actívala si quieres la vista compacta en el teléfono.'}
+                        {' '}También desde el menú lateral.
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => void handlePersonalTechUiToggle()}
-                      disabled={isSaving || settings.technician_mobile_ui === false}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 ${(user.preferences?.use_technician_mobile_ui !== false) && settings.technician_mobile_ui ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'} ${isSaving || settings.technician_mobile_ui === false ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={isSaving}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 ${isTechnicianMobileUiPrefOn(user) ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'} ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${(user.preferences?.use_technician_mobile_ui !== false) && settings.technician_mobile_ui ? 'translate-x-5' : 'translate-x-0'}`} />
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isTechnicianMobileUiPrefOn(user) ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
                   </div>
                 )}
@@ -555,10 +552,10 @@ export const SettingsPage = () => {
             </div>
           )}
 
-          {activeTab === 'developer' && <DeveloperOptions />}
-          {activeTab === 'checklist_catalogue' && <ChecklistCatalogue />}
-          {activeTab === 'uom' && <UomCatalogue />}
-          {activeTab === 'permissions' && <PermissionsPage />}
+          {isAdmin && activeTab === 'developer' && <DeveloperOptions />}
+          {isAdmin && activeTab === 'checklist_catalogue' && <ChecklistCatalogue />}
+          {isAdmin && activeTab === 'uom' && <UomCatalogue />}
+          {isAdmin && activeTab === 'permissions' && <PermissionsPage />}
         </div>
       </div>
     </div>

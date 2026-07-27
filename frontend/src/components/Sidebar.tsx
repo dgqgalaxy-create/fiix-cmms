@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home } from 'lucide-react';
+import { LayoutDashboard, Database, LogOut, Users, Activity, MapPin, Shield, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { VersionModal, APP_VERSION } from './VersionModal';
 import { OnlineUsersBadge } from './common/OnlineUsersBadge';
 import { updateMyPreferences } from '../api/users';
+import { canUseTechnicianMobileUi, isTechnicianMobileUiPrefOn } from '../hooks/useTechnicianMobileShell';
+import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import {
   DndContext,
   closestCenter,
@@ -178,6 +179,23 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     setIsEditMode(!isEditMode);
   };
 
+  const techMobileUiOn = isTechnicianMobileUiPrefOn(user);
+
+  const toggleTechnicianMobileUi = async () => {
+    if (!canUseTechnicianMobileUi(user?.role)) return;
+    const next = !techMobileUiOn;
+    const newPreferences = {
+      ...(user?.preferences || {}),
+      use_technician_mobile_ui: next,
+    };
+    try {
+      await updateMyPreferences(newPreferences);
+      updateUserPreferences(newPreferences);
+    } catch (e) {
+      console.error('Error saving mobile UI preference', e);
+    }
+  };
+
   return (
     <>
       <aside className={`print:hidden w-64 bg-slate-900 dark:bg-slate-950 text-slate-300 flex flex-col h-screen max-h-dvh fixed top-0 left-0 z-40 transition-transform duration-300 ease-in-out md:translate-x-0 border-r border-transparent dark:border-slate-800 overflow-y-auto ${
@@ -240,6 +258,36 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
           </div>
           
           <OnlineUsersBadge />
+
+          {canUseTechnicianMobileUi(user?.role) && (
+            <button
+              type="button"
+              onClick={() => void toggleTechnicianMobileUi()}
+              className={`mb-3 w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                techMobileUiOn
+                  ? 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25'
+                  : 'bg-slate-800/60 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+              }`}
+              title="Preferencia de tu cuenta: interfaz móvil en celular"
+            >
+              <span className="inline-flex items-center gap-2 min-w-0">
+                <Smartphone size={16} className="shrink-0" />
+                <span className="truncate text-left">Interfaz móvil</span>
+              </span>
+              <span
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
+                  techMobileUiOn ? 'bg-emerald-500' : 'bg-slate-600'
+                }`}
+                aria-hidden
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${
+                    techMobileUiOn ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </span>
+            </button>
+          )}
 
           <div className="flex gap-2 mb-4">
             <button
