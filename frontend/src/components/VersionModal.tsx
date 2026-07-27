@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.39.0";
+export const APP_VERSION = "1.39.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: En Calendario, arrastrar OT pendientes ya no tumba la app en PC (error maintenance_type) y en tablet/celular el soltar sobre el día asigna la fecha con más fiabilidad.",
     "Nuevo: Configuración → Apariencia — interruptor «Interfaz móvil de técnico» (global). Desactivada = los técnicos ven la interfaz completa. Los técnicos pueden además desactivarla solo en su cuenta.",
     "Mejora: Nueva Orden de Compra — al elegir proveedor se listan de inmediato sus refacciones; también puedes buscar por nombre/código sin saber el proveedor (al elegir el ítem se toma su proveedor).",
     "Nuevo: Usuarios en línea muestra el módulo actual (ruta → etiqueta amigable: Órdenes, Inventario, Calendario, etc.).",

@@ -43,6 +43,14 @@ interface PointerDragState {
   pointerId: number;
 }
 
+function prefersTouchScheduling(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.matchMedia('(pointer: coarse)').matches ||
+    window.matchMedia('(hover: none)').matches
+  );
+}
+
 export const CalendarPage = () => {
   const { token, hasPermission } = useAuth();
   const canManageCalendar = hasPermission('MANAGE_CALENDAR');
@@ -53,11 +61,27 @@ export const CalendarPage = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [draggedOrder, setDraggedOrder] = useState<WorkOrder | null>(null);
   const [touchGhost, setTouchGhost] = useState<{ order: WorkOrder; x: number; y: number } | null>(null);
+  const [useHtml5OutsideDrag, setUseHtml5OutsideDrag] = useState(true);
   const pointerDragRef = useRef<PointerDragState | null>(null);
   const suppressClickRef = useRef(false);
+  const pointerUnbindRef = useRef<(() => void) | null>(null);
+  const currentDateRef = useRef(new Date());
+  const currentViewRef = useRef<any>(Views.MONTH);
 
   const [currentView, setCurrentView] = useState<any>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  useEffect(() => {
+    setUseHtml5OutsideDrag(!prefersTouchScheduling());
+  }, []);
+
+  useEffect(() => {
+    currentDateRef.current = currentDate;
+  }, [currentDate]);
+
+  useEffect(() => {
+    currentViewRef.current = currentView;
+  }, [currentView]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -174,76 +198,80 @@ export const CalendarPage = () => {
     }
   };
 
-  const clearPointerDrag = () => {
-    pointerDragRef.current = null;
-    setTouchGhost(null);
-    setDraggedOrder(null);
-  };
-
   const handlePendingPointerDown = (e: React.PointerEvent, order: WorkOrder) => {
-    // Mouse/desktop keeps HTML5 DnD; touch/pen use pointer path (HTML5 drop fails on most mobiles).
-    if (e.pointerType === 'mouse' || e.button !== 0 || !canManageCalendar) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    pointerDragRef.current = {
+    if (!canManageCalendar || e.button !== 0) return;
+    // Mouse + escritorio: HTML5 DnD de RBC. Touch/tablet/pen: ruta pointer (HTML5 no suelta bien).
+    if (e.pointerType === 'mouse' && useHtml5OutsideDrag) return;
+
+    e.preventDefault();
+    pointerUnbindRef.current?.();
+
+    const state: PointerDragState = {
       order,
       startX: e.clientX,
       startY: e.clientY,
       activated: false,
       pointerId: e.pointerId,
     };
-  };
+    pointerDragRef.current = state;
 
-  const handlePendingPointerMove = (e: React.PointerEvent) => {
-    const state = pointerDragRef.current;
-    if (!state || state.pointerId !== e.pointerId) return;
-
-    const dist = Math.hypot(e.clientX - state.startX, e.clientY - state.startY);
-    if (!state.activated) {
-      if (dist < ACTIVATION_DISTANCE_PX) return;
-      state.activated = true;
-      suppressClickRef.current = true;
-      setDraggedOrder(state.order);
-      setTouchGhost({ order: state.order, x: e.clientX, y: e.clientY });
-    } else {
-      setTouchGhost({ order: state.order, x: e.clientX, y: e.clientY });
-      e.preventDefault();
-    }
-  };
-
-  const handlePendingPointerUp = (e: React.PointerEvent) => {
-    const state = pointerDragRef.current;
-    if (!state || state.pointerId !== e.pointerId) return;
-
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {
-      /* already released */
-    }
-
-    if (!state.activated) {
-      clearPointerDrag();
-      return;
-    }
-
-    const { clientX, clientY } = e;
-    const order = state.order;
-    setTouchGhost(null);
-    pointerDragRef.current = null;
-    setDraggedOrder(null);
-
-    requestAnimationFrame(() => {
-      const dropDate = resolveCalendarDropDate(clientX, clientY, currentDate, currentView);
-      if (dropDate) {
-        void handleSchedule(order.id, dropDate, null);
+    const onMove = (ev: PointerEvent) => {
+      if (ev.pointerId !== state.pointerId) return;
+      const dist = Math.hypot(ev.clientX - state.startX, ev.clientY - state.startY);
+      if (!state.activated) {
+        if (dist < ACTIVATION_DISTANCE_PX) return;
+        state.activated = true;
+        suppressClickRef.current = true;
+        setDraggedOrder(state.order);
+        setTouchGhost({ order: state.order, x: ev.clientX, y: ev.clientY });
+      } else {
+        ev.preventDefault();
+        setTouchGhost({ order: state.order, x: ev.clientX, y: ev.clientY });
       }
-    });
+    };
+
+    const finish = (ev: PointerEvent) => {
+      if (ev.pointerId !== state.pointerId) return;
+      pointerUnbindRef.current?.();
+      pointerUnbindRef.current = null;
+
+      if (!state.activated) {
+        pointerDragRef.current = null;
+        return;
+      }
+
+      const { clientX, clientY } = ev;
+      const dropped = state.order;
+      pointerDragRef.current = null;
+      setTouchGhost(null);
+      setDraggedOrder(null);
+
+      requestAnimationFrame(() => {
+        const dropDate = resolveCalendarDropDate(
+          clientX,
+          clientY,
+          currentDateRef.current,
+          currentViewRef.current
+        );
+        if (dropDate) {
+          void handleSchedule(dropped.id, dropDate, null);
+        }
+      });
+    };
+
+    document.addEventListener('pointermove', onMove, { passive: false });
+    document.addEventListener('pointerup', finish);
+    document.addEventListener('pointercancel', finish);
+    pointerUnbindRef.current = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', finish);
+      document.removeEventListener('pointercancel', finish);
+    };
   };
 
-  const handlePendingPointerCancel = (e: React.PointerEvent) => {
-    const state = pointerDragRef.current;
-    if (!state || state.pointerId !== e.pointerId) return;
-    clearPointerDrag();
-  };
+  useEffect(() => () => {
+    pointerUnbindRef.current?.();
+  }, []);
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -295,6 +323,19 @@ export const CalendarPage = () => {
               className={`dark:text-slate-200 ${isUpdating ? 'opacity-50 pointer-events-none' : ''}`}
               eventPropGetter={(event) => {
                 const e = event as CustomEvent;
+                // Preview de arrastre desde fuera no trae order completo a veces; no tumbar la página.
+                if (!e?.order) {
+                  return {
+                    style: {
+                      backgroundColor: '#3b82f6',
+                      borderRadius: '6px',
+                      border: 'none',
+                      color: 'white',
+                      opacity: 0.85,
+                    },
+                  };
+                }
+
                 let bg = '#eab308';
 
                 if (e.order.maintenance_type === 'PREVENTIVO') {
@@ -325,6 +366,7 @@ export const CalendarPage = () => {
                       title: `#${draggedOrder.folio} - ${draggedOrder.title}`,
                       start: new Date(),
                       end: new Date(Date.now() + 60 * 60 * 1000),
+                      order: draggedOrder,
                     }
                   : null
               }
@@ -372,14 +414,14 @@ export const CalendarPage = () => {
                     {unscheduled.map(order => (
                       <div
                         key={order.id}
-                        draggable
-                        onDragStart={() => setDraggedOrder(order)}
+                        draggable={useHtml5OutsideDrag}
+                        onDragStart={() => {
+                          if (!useHtml5OutsideDrag) return;
+                          setDraggedOrder(order);
+                        }}
                         onDragEnd={() => setDraggedOrder(null)}
                         onPointerDown={(e) => handlePendingPointerDown(e, order)}
-                        onPointerMove={handlePendingPointerMove}
-                        onPointerUp={handlePendingPointerUp}
-                        onPointerCancel={handlePendingPointerCancel}
-                        className="bg-white dark:bg-slate-900 p-3 rounded shadow-sm border border-slate-200 dark:border-slate-700 text-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition-colors select-none"
+                        className="bg-white dark:bg-slate-900 p-3 rounded shadow-sm border border-slate-200 dark:border-slate-700 text-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition-colors select-none touch-none"
                         onClick={() => {
                           if (suppressClickRef.current) {
                             suppressClickRef.current = false;
@@ -412,6 +454,7 @@ export const CalendarPage = () => {
 
       {touchGhost && (
         <div
+          data-calendar-drop-ignore="true"
           className="pointer-events-none fixed z-[80] w-56 rounded-lg border border-blue-400 bg-white/95 p-3 text-sm shadow-xl dark:bg-slate-900/95"
           style={{
             left: touchGhost.x + 12,
