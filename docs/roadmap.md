@@ -3,7 +3,10 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 27 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.43.2 (Actualización: 27 de Julio de 2026)
+## 🚀 Versión Actual: v1.43.3 (Actualización: 27 de Julio de 2026)
+
+### Novedades en v1.43.3 (Planes Preventivos móvil compacto)
+- **Mejora:** Planes Preventivos en celular: encabezado compacto + lista densa (mismo patrón que Checklist y Compras); en PC se mantiene la tabla.
 
 ### Novedades en v1.43.2 (Pendiente: solo Aceptar orden)
 - **Corrección:** En OT **Pendiente** no se muestra Unirme / Colaborar; solo **Aceptar orden**. Unirme / Colaborar queda para En proceso / En espera sin asignación.
