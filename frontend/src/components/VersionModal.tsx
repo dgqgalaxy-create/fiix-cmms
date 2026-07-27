@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.41.2";
+export const APP_VERSION = "1.41.3";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Si no estás asignado a una OT En proceso/En espera, solo ves Unirme / Colaborar (sin desplegable de estado ni Pausar/Finalizar). En móvil técnico, las acciones rápidas sustituyen al desplegable para no duplicar opciones.",
     "Corrección: Al finalizar una OT correctiva, el Árbol de Fallas (RCA) ya no bloquea Guardar si se deja vacío — sigue siendo opcional como indica la pantalla.",
     "Corrección: En OT ya En proceso o En espera, administradores y gestionadores (y quien no esté asignado) ya no ven Pausar/Finalizar/Reanudar; deben usar Unirme / Colaborar y luego sí operan.",
     "Nuevo: Inventario — ayudas ⓘ en Stock crítico / Excel / filtros; botones de escaneo y acciones de fila con área táctil más grande.",

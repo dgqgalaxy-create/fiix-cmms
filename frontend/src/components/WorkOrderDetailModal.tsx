@@ -290,17 +290,20 @@ export const WorkOrderDetailModal = ({
   const isClosed = displayWO.status === 'FINALIZADO' || displayWO.status === 'ANULADO';
   const isReadOnly = isClosed || !canEdit;
   const myUserId = (user as any)?.userId || (user as any)?.id || '';
-  const isAssignedToMe = !!workOrder.assigned_technicians?.some((t) => t.id === myUserId);
+  const assigneeList = displayWO.assigned_technicians || workOrder.assigned_technicians || [];
+  const isAssignedToMe = !!myUserId && assigneeList.some((t) => t.id === myUserId);
   /** En proceso/espera sin estar asignado: no pausar/finalizar/reanudar; primero Colaborar. */
   const needsJoinToOperate =
     !isClosed &&
     !isAssignedToMe &&
-    (workOrder.status === 'EN_PROCESO' || workOrder.status === 'EN_ESPERA');
+    (displayWO.status === 'EN_PROCESO' || displayWO.status === 'EN_ESPERA');
   const canShowJoin =
     !!onJoin &&
     !isClosed &&
     !isAssignedToMe &&
-    (workOrder.status === 'PENDIENTE' || workOrder.status === 'EN_PROCESO' || workOrder.status === 'EN_ESPERA');
+    (displayWO.status === 'PENDIENTE' || displayWO.status === 'EN_PROCESO' || displayWO.status === 'EN_ESPERA');
+  /** En móvil técnico las acciones van en botones grandes: no duplicar con el desplegable. */
+  const showStatusSelect = !isClosed && !needsJoinToOperate && !isTechMobileShell;
 
   const canDownloadPDF = workOrder.status === 'FINALIZADO' && (
     user?.role === 'ADMINISTRADOR' ||
@@ -794,23 +797,51 @@ export const WorkOrderDetailModal = ({
                 <div className={`p-4 rounded-2xl border relative overflow-hidden ${
                   isClosed
                     ? 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800'
-                    : 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-100 dark:border-emerald-900/50'
+                    : needsJoinToOperate
+                      ? 'bg-sky-50 dark:bg-sky-950/40 border-sky-200 dark:border-sky-900/50'
+                      : 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-100 dark:border-emerald-900/50'
                 }`}>
                   {/* Decorative background element */}
-                  {!isClosed && <div className="absolute -right-4 -top-4 w-16 h-16 bg-emerald-50 dark:bg-emerald-950/500/10 rounded-full blur-xl pointer-events-none"></div>}
+                  {!isClosed && !needsJoinToOperate && <div className="absolute -right-4 -top-4 w-16 h-16 bg-emerald-50 dark:bg-emerald-950/500/10 rounded-full blur-xl pointer-events-none"></div>}
 
+                  {needsJoinToOperate ? (
+                    <div className="space-y-3 relative">
+                      <div className="text-sm font-bold text-sky-900 dark:text-sky-200 flex items-center gap-2">
+                        <Users size={16} />
+                        Colaborar en esta orden
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-snug">
+                        Esta orden está <span className="font-semibold">{statusLabel(displayWO.status)}</span> y no estás asignado.
+                        Únete para poder pausar, reanudar o finalizar.
+                      </p>
+                      {/* En shell móvil el CTA vive en «Acción rápida» (abajo); aquí solo en escritorio. */}
+                      {!isTechMobileShell && (
+                        canShowJoin ? (
+                          <button
+                            type="button"
+                            onClick={handleJoin}
+                            disabled={isSubmitting || isReadOnly}
+                            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-sky-700 disabled:opacity-60"
+                          >
+                            <Users size={18} />
+                            {isSubmitting ? 'Uniéndote…' : 'Unirme / Colaborar'}
+                          </button>
+                        ) : (
+                          <p className="text-xs text-amber-700 dark:text-amber-300">
+                            No puedes unirte desde aquí. Pide a un administrador que te asigne.
+                          </p>
+                        )
+                      )}
+                    </div>
+                  ) : (
+                    <>
                   <div className={`flex items-center gap-2 text-sm font-bold mb-2 ${
                     isClosed ? 'text-slate-500 dark:text-slate-400' : 'text-emerald-900 dark:text-emerald-200'
                   }`}>
                     Estado de la Orden
-                    {!isReadOnly && !needsJoinToOperate && (
+                    {showStatusSelect && !isReadOnly && (
                       <span className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider animate-pulse flex items-center gap-1 font-bold">
                         👉 Haz clic para cambiar
-                      </span>
-                    )}
-                    {needsJoinToOperate && (
-                      <span className="bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-bold">
-                        Requiere colaborar
                       </span>
                     )}
                   </div>
@@ -826,27 +857,7 @@ export const WorkOrderDetailModal = ({
                         : <Ban size={17} />}
                       {statusLabel(workOrder.status)}
                     </div>
-                  ) : needsJoinToOperate ? (
-                    <div className="space-y-3">
-                      <div className="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-slate-900 px-3 py-2 text-sm font-bold text-emerald-900 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800">
-                        {statusLabel(workOrder.status)}
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-snug">
-                        Esta orden ya está en curso y no estás asignado. Únete para pausar, reanudar o finalizar.
-                      </p>
-                      {canShowJoin && (
-                        <button
-                          type="button"
-                          onClick={handleJoin}
-                          disabled={isSubmitting || isReadOnly}
-                          className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-sky-700 disabled:opacity-60"
-                        >
-                          <Users size={18} />
-                          {isSubmitting ? 'Uniéndote…' : 'Unirme / Colaborar'}
-                        </button>
-                      )}
-                    </div>
-                  ) : (
+                  ) : showStatusSelect ? (
                     <div className="relative">
                       <select
                         className="w-full px-4 py-3.5 border rounded-xl outline-none transition-all appearance-none font-bold text-base shadow-sm bg-white dark:bg-slate-900 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 cursor-pointer hover:border-emerald-400 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500"
@@ -875,6 +886,12 @@ export const WorkOrderDetailModal = ({
                         <ChevronDown size={20} />
                       </div>
                     </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-slate-900 px-3 py-2 text-sm font-bold text-emerald-900 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800">
+                      {statusLabel(status || workOrder.status)}
+                    </div>
+                  )}
+                    </>
                   )}
                 </div>
 
@@ -904,7 +921,7 @@ export const WorkOrderDetailModal = ({
                         ))
                       )}
                     </div>
-                    {canShowJoin && needsJoinToOperate && (
+                    {canShowJoin && !needsJoinToOperate && (
                       <button
                         type="button"
                         onClick={handleJoin}
@@ -932,7 +949,7 @@ export const WorkOrderDetailModal = ({
                         <span className="text-sm text-slate-500 dark:text-slate-400 italic">Nadie asignado</span>
                       )}
                     </div>
-                    {canShowJoin && (
+                    {canShowJoin && !needsJoinToOperate && (
                       <button
                         type="button"
                         onClick={handleJoin}
@@ -1290,7 +1307,7 @@ export const WorkOrderDetailModal = ({
           </form>
         </div>
 
-        {isTechMobileShell && !isReadOnly && !isClosed && (
+        {isTechMobileShell && !isClosed && (needsJoinToOperate || !isReadOnly) && (
           <div className="px-3 pt-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 px-1">Acción rápida</p>
             {needsJoinToOperate ? (
@@ -1306,7 +1323,7 @@ export const WorkOrderDetailModal = ({
                     className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-sm font-bold text-white shadow-sm active:scale-[0.98] disabled:opacity-60"
                   >
                     <Users size={18} />
-                    Unirme / Colaborar
+                    {isSubmitting ? 'Uniéndote…' : 'Unirme / Colaborar'}
                   </button>
                 )}
               </div>
