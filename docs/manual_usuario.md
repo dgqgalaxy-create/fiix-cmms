@@ -149,7 +149,7 @@ Panel de indicadores de mantenimiento:
   - **OTs pausadas** y **tiempo en espera** acumulado (reloj desde que se pausó la orden).
   - **Productividad semanal** (lunes–domingo): órdenes finalizadas y horas de labor registradas al cerrar.
   - Tabla por técnico (incluye también Fin./Proc./Pend. del periodo seleccionado) y gráfica top 8 de la semana.
-- **Calendario (pendientes):** la lista lateral de OT pendientes sin programar requiere el permiso **Administrar Calendario**. En **escritorio** arrastra con el ratón sobre el día/franja; en **tablet/celular** mantén pulsada la tarjeta, arrástrala hasta el día (o franja horaria) y suelta para asignar (en móvil la lista de pendientes está debajo del calendario: sube el dedo hacia el mes). El módulo usa la misma URL del API que el resto del sistema (host del servidor), no `localhost`.
+- **Calendario (pendientes):** la lista lateral de OT pendientes sin programar requiere el permiso **Administrar Calendario**. En **escritorio** arrastra con el ratón sobre el día/franja; en **tablet/celular** desliza la lista con normalidad, y para agendar **mantén pulsada** la tarjeta (~0,4 s) hasta que se resalte, luego arrástrala al día (o franja) y suelta. En móvil la lista está debajo del calendario. El módulo usa la misma URL del API que el resto del sistema (host del servidor), no `localhost`.
 - **Usuarios en línea:** en la barra lateral, el indicador muestra quién está activo y en qué módulo se encuentra (Inicio, Órdenes de Trabajo, Inventario, etc.).
 - **Nota:** el gráfico de costos representa **refacciones consumidas**, no el costo total de mantenimiento.
 

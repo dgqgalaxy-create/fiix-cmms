@@ -26,7 +26,8 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
-const ACTIVATION_DISTANCE_PX = 10;
+const LONG_PRESS_MS = 380;
+const SCROLL_CANCEL_PX = 12;
 
 interface CustomEvent {
   title: string;
@@ -40,7 +41,9 @@ interface PointerDragState {
   startX: number;
   startY: number;
   activated: boolean;
+  cancelled: boolean;
   pointerId: number;
+  holdTimer: ReturnType<typeof setTimeout> | null;
 }
 
 function prefersTouchScheduling(): boolean {
@@ -61,6 +64,7 @@ export const CalendarPage = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [draggedOrder, setDraggedOrder] = useState<WorkOrder | null>(null);
   const [touchGhost, setTouchGhost] = useState<{ order: WorkOrder; x: number; y: number } | null>(null);
+  const [holdingOrderId, setHoldingOrderId] = useState<string | null>(null);
   const [useHtml5OutsideDrag, setUseHtml5OutsideDrag] = useState(true);
   const pointerDragRef = useRef<PointerDragState | null>(null);
   const suppressClickRef = useRef(false);
@@ -203,7 +207,7 @@ export const CalendarPage = () => {
     // Mouse + escritorio: HTML5 DnD de RBC. Touch/tablet/pen: ruta pointer (HTML5 no suelta bien).
     if (e.pointerType === 'mouse' && useHtml5OutsideDrag) return;
 
-    e.preventDefault();
+    // No preventDefault aquí: el scroll de la lista de pendientes debe seguir funcionando.
     pointerUnbindRef.current?.();
 
     const state: PointerDragState = {
@@ -211,32 +215,76 @@ export const CalendarPage = () => {
       startX: e.clientX,
       startY: e.clientY,
       activated: false,
+      cancelled: false,
       pointerId: e.pointerId,
+      holdTimer: null,
     };
     pointerDragRef.current = state;
+    setHoldingOrderId(order.id);
+
+    const clearHoldVisual = () => setHoldingOrderId((id) => (id === order.id ? null : id));
+
+    const activateDrag = (x: number, y: number) => {
+      if (state.cancelled || state.activated) return;
+      state.activated = true;
+      suppressClickRef.current = true;
+      setDraggedOrder(state.order);
+      setTouchGhost({ order: state.order, x, y });
+      try {
+        navigator.vibrate?.(12);
+      } catch {
+        /* ignore */
+      }
+    };
+
+    state.holdTimer = setTimeout(() => {
+      state.holdTimer = null;
+      if (!state.cancelled && pointerDragRef.current === state) {
+        activateDrag(state.startX, state.startY);
+      }
+    }, LONG_PRESS_MS);
+
+    const abortPending = () => {
+      state.cancelled = true;
+      if (state.holdTimer != null) {
+        clearTimeout(state.holdTimer);
+        state.holdTimer = null;
+      }
+      clearHoldVisual();
+      pointerUnbindRef.current?.();
+      pointerUnbindRef.current = null;
+      if (pointerDragRef.current === state) pointerDragRef.current = null;
+    };
 
     const onMove = (ev: PointerEvent) => {
-      if (ev.pointerId !== state.pointerId) return;
-      const dist = Math.hypot(ev.clientX - state.startX, ev.clientY - state.startY);
+      if (ev.pointerId !== state.pointerId || state.cancelled) return;
+
       if (!state.activated) {
-        if (dist < ACTIVATION_DISTANCE_PX) return;
-        state.activated = true;
-        suppressClickRef.current = true;
-        setDraggedOrder(state.order);
-        setTouchGhost({ order: state.order, x: ev.clientX, y: ev.clientY });
-      } else {
-        ev.preventDefault();
-        setTouchGhost({ order: state.order, x: ev.clientX, y: ev.clientY });
+        const dist = Math.hypot(ev.clientX - state.startX, ev.clientY - state.startY);
+        // Movimiento = scroll de la lista; cancelar el hold para no “agarrar” la tarjeta.
+        if (dist > SCROLL_CANCEL_PX) {
+          abortPending();
+        }
+        return;
       }
+
+      ev.preventDefault();
+      setTouchGhost({ order: state.order, x: ev.clientX, y: ev.clientY });
     };
 
     const finish = (ev: PointerEvent) => {
       if (ev.pointerId !== state.pointerId) return;
+
+      if (state.holdTimer != null) {
+        clearTimeout(state.holdTimer);
+        state.holdTimer = null;
+      }
+      clearHoldVisual();
       pointerUnbindRef.current?.();
       pointerUnbindRef.current = null;
 
-      if (!state.activated) {
-        pointerDragRef.current = null;
+      if (state.cancelled || !state.activated) {
+        if (pointerDragRef.current === state) pointerDragRef.current = null;
         return;
       }
 
@@ -270,6 +318,8 @@ export const CalendarPage = () => {
   };
 
   useEffect(() => () => {
+    const state = pointerDragRef.current;
+    if (state?.holdTimer != null) clearTimeout(state.holdTimer);
     pointerUnbindRef.current?.();
   }, []);
 
@@ -402,8 +452,13 @@ export const CalendarPage = () => {
                   {unscheduled.length}
                 </span>
               </h3>
+              {!useHtml5OutsideDrag && unscheduled.length > 0 && (
+                <p className="mb-2 text-xs text-slate-500 dark:text-slate-400 shrink-0">
+                  Desliza para ver más · Mantén pulsado para agendar
+                </p>
+              )}
 
-              <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+              <div className="flex-1 overflow-y-auto pr-2 -mr-2 overscroll-contain">
                 {unscheduled.length === 0 ? (
                   <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
                     <CheckCircle2 size={16} className="text-emerald-500" />
@@ -421,7 +476,11 @@ export const CalendarPage = () => {
                         }}
                         onDragEnd={() => setDraggedOrder(null)}
                         onPointerDown={(e) => handlePendingPointerDown(e, order)}
-                        className="bg-white dark:bg-slate-900 p-3 rounded shadow-sm border border-slate-200 dark:border-slate-700 text-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition-colors select-none touch-none"
+                        className={`bg-white dark:bg-slate-900 p-3 rounded shadow-sm border text-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition-colors select-none ${
+                          holdingOrderId === order.id
+                            ? 'border-blue-500 ring-2 ring-blue-400/40 scale-[0.98]'
+                            : 'border-slate-200 dark:border-slate-700'
+                        }`}
                         onClick={() => {
                           if (suppressClickRef.current) {
                             suppressClickRef.current = false;
