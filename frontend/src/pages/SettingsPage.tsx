@@ -265,15 +265,16 @@ export const SettingsPage = () => {
 
   const navBtn = (id: string, label: string, icon: ReactNode) => (
     <button
+      type="button"
       onClick={() => setActiveTab(id)}
-      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
+      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium leading-snug transition-colors text-left ${
         activeTab === id
           ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
           : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
       }`}
     >
-      {icon}
-      {label}
+      <span className="shrink-0 inline-flex opacity-90">{icon}</span>
+      <span className="min-w-0">{label}</span>
     </button>
   );
 
@@ -295,33 +296,13 @@ export const SettingsPage = () => {
         <div className="w-full md:w-64 shrink-0">
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-2 shadow-sm space-y-1">
             {isAdmin && navBtn('general', 'Notificaciones', <Bell size={18} />)}
-            {isAdmin && navBtn('sla', 'SLA (Acuerdo de Nivel de Servicio)', <Timer size={18} />)}
+            {isAdmin && navBtn('sla', 'SLA', <Timer size={18} />)}
             {navBtn('appearance', 'Apariencia', <Palette size={18} />)}
             {isAdmin && navBtn('developer', 'Opciones de Desarrollador', <Code size={18} />)}
             {isAdmin && hasPermission('MANAGE_CHECKLIST_CATALOG') && (
               <>
-                <button
-                  onClick={() => setActiveTab('checklist_catalogue')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                    activeTab === 'checklist_catalogue'
-                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                  }`}
-                >
-                  <ListChecks size={20} />
-                  Catálogo de Checklist
-                </button>
-                <button
-                  onClick={() => setActiveTab('uom')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                    activeTab === 'uom'
-                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                  }`}
-                >
-                  <Scale size={20} />
-                  Unidades de Medida
-                </button>
+                {navBtn('checklist_catalogue', 'Catálogo de Checklist', <ListChecks size={18} />)}
+                {navBtn('uom', 'Unidades de Medida', <Scale size={18} />)}
               </>
             )}
             {isAdmin && hasPermission('MANAGE_PERMISSIONS') &&
