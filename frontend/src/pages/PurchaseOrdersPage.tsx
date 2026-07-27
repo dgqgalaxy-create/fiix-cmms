@@ -79,67 +79,71 @@ export const PurchaseOrdersPage = () => {
     });
   }, [filteredOrders, sortField, sortDirection]);
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, compact = false) => {
+    const pad = compact ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs';
     switch (status) {
-      case 'BORRADOR': return <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-bold border border-slate-200">BORRADOR</span>;
-      case 'APROBADA': return <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold border border-blue-200">APROBADA</span>;
-      case 'ENVIADA': return <span className="px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-bold border border-amber-200">ENVIADA</span>;
-      case 'RECIBIDA': return <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-200">RECIBIDA</span>;
-      case 'CANCELADA': return <span className="px-3 py-1 bg-red-50 text-red-700 rounded-full text-xs font-bold border border-red-200">CANCELADA</span>;
-      default: return <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-bold border border-slate-200">{status}</span>;
+      case 'BORRADOR': return <span className={`${pad} bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 rounded-full font-bold border border-slate-200 dark:border-slate-700`}>BORRADOR</span>;
+      case 'APROBADA': return <span className={`${pad} bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 rounded-full font-bold border border-blue-200 dark:border-blue-900`}>APROBADA</span>;
+      case 'ENVIADA': return <span className={`${pad} bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 rounded-full font-bold border border-amber-200 dark:border-amber-900`}>ENVIADA</span>;
+      case 'RECIBIDA': return <span className={`${pad} bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 rounded-full font-bold border border-emerald-200 dark:border-emerald-900`}>RECIBIDA</span>;
+      case 'CANCELADA': return <span className={`${pad} bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 rounded-full font-bold border border-red-200 dark:border-red-900`}>CANCELADA</span>;
+      default: return <span className={`${pad} bg-slate-100 text-slate-700 rounded-full font-bold border border-slate-200`}>{status}</span>;
     }
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-2">
-            <ShoppingCart className="text-emerald-600 dark:text-emerald-400" size={28} />
-            Órdenes de Compra
+    <div className="space-y-3 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-row md:flex-row justify-between items-center gap-2 sm:gap-4 bg-white dark:bg-slate-900 p-3 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-2">
+            <ShoppingCart className="text-emerald-600 dark:text-emerald-400 shrink-0" size={22} />
+            <span className="truncate">Órdenes de Compra</span>
           </h1>
-          <p className="text-slate-500 dark:text-slate-300 mt-1">Gestiona los pedidos de refacciones a proveedores</p>
+          <p className="hidden sm:block text-slate-500 dark:text-slate-300 mt-1 text-sm">Gestiona los pedidos de refacciones a proveedores</p>
         </div>
-        
-        <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3">
-          <a 
-            href="http://lpet.tscloud.mx" 
-            target="_blank" 
+
+        <div className="flex flex-row shrink-0 gap-1.5 sm:gap-3">
+          <a
+            href="http://lpet.tscloud.mx"
+            target="_blank"
             rel="noopener noreferrer"
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-sky-50 text-sky-700 border border-sky-200 rounded-xl hover:bg-sky-100 transition-all font-medium shadow-sm"
+            className="flex items-center justify-center gap-1.5 px-2.5 py-2 sm:px-5 sm:py-2.5 bg-sky-50 text-sky-700 border border-sky-200 rounded-lg sm:rounded-xl hover:bg-sky-100 transition-all text-sm font-medium shadow-sm"
+            title="Acceder a SAP"
           >
-            <ExternalLink size={18} />
-            Acceder a SAP
+            <ExternalLink size={16} />
+            <span className="hidden sm:inline">Acceder a SAP</span>
           </a>
-          <button 
+          <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all font-medium shadow-sm shadow-emerald-600/20 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="flex items-center justify-center gap-1.5 px-2.5 py-2 sm:px-5 sm:py-2.5 bg-emerald-600 text-white rounded-lg sm:rounded-xl hover:bg-emerald-700 transition-all text-sm font-medium shadow-sm shadow-emerald-600/20 focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
-            <Plus size={20} />
-            Nueva Orden
+            <Plus size={18} />
+            <span className="sm:hidden">Nueva</span>
+            <span className="hidden sm:inline">Nueva Orden</span>
           </button>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex flex-col md:flex-row justify-between gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-            <input 
-              type="text" 
-              placeholder="Buscar por folio, proveedor o estado..." 
+      <div className="bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div className="p-2.5 sm:p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex flex-row justify-between gap-2 sm:gap-4">
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input
+              type="text"
+              placeholder="Buscar folio, proveedor…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all shadow-sm"
+              className="w-full pl-8 pr-3 py-2 text-sm bg-white dark:bg-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all shadow-sm"
             />
           </div>
-          <div className="relative">
-            <button 
+          <div className="relative shrink-0">
+            <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium shadow-sm h-full"
+              className="flex items-center justify-center gap-1.5 px-2.5 sm:px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg sm:rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm font-medium shadow-sm h-full"
             >
-              <Filter size={18} />
-              Filtros {filterStatus !== 'TODOS' && <span className="w-2 h-2 rounded-full bg-emerald-600"></span>}
+              <Filter size={16} />
+              <span className="hidden sm:inline">Filtros</span>
+              {filterStatus !== 'TODOS' && <span className="w-2 h-2 rounded-full bg-emerald-600"></span>}
             </button>
             {isFilterOpen && (
               <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
@@ -160,82 +164,117 @@ export const PurchaseOrdersPage = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          {isLoading ? (
-            <div className="flex justify-center items-center py-20 text-slate-400">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+        {isLoading ? (
+          <div className="flex justify-center items-center py-12 sm:py-20 text-slate-400">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+          </div>
+        ) : filteredOrders.length > 0 ? (
+          <>
+            {/* Lista compacta móvil */}
+            <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+              {sortedOrders.map((order) => (
+                <button
+                  key={order.id}
+                  type="button"
+                  onClick={() => setSelectedOrder(order)}
+                  className="w-full text-left px-3 py-2.5 active:bg-slate-50 dark:active:bg-slate-800 flex items-center gap-2"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                        PO-{order.folio.toString().padStart(4, '0')}
+                      </span>
+                      {getStatusBadge(order.status, true)}
+                    </div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 truncate">
+                      {order.vendor?.name || 'Sin proveedor'}
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-500 mt-0.5 flex items-center gap-2">
+                      <span>${calculateTotal(order.items).toFixed(2)}</span>
+                      <span>·</span>
+                      <span>{order.items.length} ítem(s)</span>
+                      <span>·</span>
+                      <span>{formatDate(order.created_at)}</span>
+                    </div>
+                  </div>
+                  <ChevronRight size={18} className="text-slate-400 shrink-0" />
+                </button>
+              ))}
             </div>
-          ) : filteredOrders.length > 0 ? (
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold shadow-md shadow-[#739239]/40 dark:shadow-[#739239]/20 relative z-10">
-                <tr>
-                  <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('folio'); setSortDirection(sortField === 'folio' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                    <div className="flex items-center gap-1.5">Folio {sortField === 'folio' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
-                  </th>
-                  <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('vendor'); setSortDirection(sortField === 'vendor' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                    <div className="flex items-center gap-1.5">Proveedor {sortField === 'vendor' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
-                  </th>
-                  <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('status'); setSortDirection(sortField === 'status' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                    <div className="flex items-center gap-1.5">Estado {sortField === 'status' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
-                  </th>
-                  <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('total'); setSortDirection(sortField === 'total' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                    <div className="flex items-center gap-1.5">Total {sortField === 'total' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
-                  </th>
-                  <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('date'); setSortDirection(sortField === 'date' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                    <div className="flex items-center gap-1.5">Fecha Creada {sortField === 'date' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
-                  </th>
-                  <th className="px-6 py-4 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                {sortedOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-slate-800 dark:text-slate-100">PO-{order.folio.toString().padStart(4, '0')}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-slate-700 dark:text-slate-300">{order.vendor?.name}</div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400">{order.items.length} ítem(s)</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {getStatusBadge(order.status)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-slate-700">${calculateTotal(order.items).toFixed(2)}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-slate-600 text-sm">
-                        <Calendar size={14} />
-                        {formatDate(order.created_at)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button 
-                        onClick={() => setSelectedOrder(order)}
-                        className="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition-colors"
-                        title="Ver detalles"
-                      >
-                        <ChevronRight size={20} />
-                      </button>
-                    </td>
+
+            {/* Tabla escritorio */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold shadow-md shadow-[#739239]/40 dark:shadow-[#739239]/20 relative z-10">
+                  <tr>
+                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('folio'); setSortDirection(sortField === 'folio' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                      <div className="flex items-center gap-1.5">Folio {sortField === 'folio' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                    </th>
+                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('vendor'); setSortDirection(sortField === 'vendor' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                      <div className="flex items-center gap-1.5">Proveedor {sortField === 'vendor' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                    </th>
+                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('status'); setSortDirection(sortField === 'status' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                      <div className="flex items-center gap-1.5">Estado {sortField === 'status' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                    </th>
+                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('total'); setSortDirection(sortField === 'total' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                      <div className="flex items-center gap-1.5">Total {sortField === 'total' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                    </th>
+                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('date'); setSortDirection(sortField === 'date' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                      <div className="flex items-center gap-1.5">Fecha Creada {sortField === 'date' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
+                    </th>
+                    <th className="px-6 py-4 text-right">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="py-20 text-center px-4">
-              <PackageOpen className="mx-auto text-slate-300 mb-4" size={48} />
-              <h3 className="text-lg font-bold text-slate-700 dark:text-slate-200 mb-1">No hay órdenes de compra</h3>
-              <p className="text-slate-500 dark:text-slate-400">Crea una nueva orden para reabastecer tu inventario.</p>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                  {sortedOrders.map((order) => (
+                    <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-slate-800 dark:text-slate-100">PO-{order.folio.toString().padStart(4, '0')}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-slate-700 dark:text-slate-300">{order.vendor?.name}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">{order.items.length} ítem(s)</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {getStatusBadge(order.status)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-slate-700">${calculateTotal(order.items).toFixed(2)}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2 text-slate-600 text-sm">
+                          <Calendar size={14} />
+                          {formatDate(order.created_at)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => setSelectedOrder(order)}
+                          className="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition-colors"
+                          title="Ver detalles"
+                        >
+                          <ChevronRight size={20} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
+          </>
+        ) : (
+          <div className="py-12 sm:py-20 text-center px-4">
+            <PackageOpen className="mx-auto text-slate-300 mb-3 sm:mb-4" size={40} />
+            <h3 className="text-base sm:text-lg font-bold text-slate-700 dark:text-slate-200 mb-1">No hay órdenes de compra</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Crea una nueva orden para reabastecer tu inventario.</p>
+          </div>
+        )}
       </div>
 
       {isCreateModalOpen && (
-        <CreatePOModal 
-          isOpen={isCreateModalOpen} 
-          onClose={() => setIsCreateModalOpen(false)} 
+        <CreatePOModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
           onSuccess={() => {
             setIsCreateModalOpen(false);
             fetchOrders();
@@ -244,13 +283,12 @@ export const PurchaseOrdersPage = () => {
       )}
 
       {selectedOrder && (
-        <PODetailModal 
-          order={selectedOrder} 
-          isOpen={!!selectedOrder} 
-          onClose={() => setSelectedOrder(null)} 
+        <PODetailModal
+          order={selectedOrder}
+          isOpen={!!selectedOrder}
+          onClose={() => setSelectedOrder(null)}
           onUpdate={() => {
             fetchOrders();
-            // Refetch the selected order if needed, but since we close or list updates, it's fine
             setSelectedOrder(null);
           }}
         />

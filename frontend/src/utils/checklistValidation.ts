@@ -7,6 +7,9 @@ export type ChecklistMissingItem = {
   activity_name: string;
   field_type: string;
   missingLines: number[];
+  /** Alguna línea en FAIL (cruz) y observaciones vacías. */
+  missingObservation?: boolean;
+  failLines?: number[];
 };
 
 /** Keys `${rowId}:${line}` for highlighting incomplete cells after a failed submit. */
@@ -18,6 +21,14 @@ export function missingCellKeySet(missing: ChecklistMissingItem[]): Set<string> 
     }
   }
   return keys;
+}
+
+export function missingObservationRowIds(missing: ChecklistMissingItem[]): Set<string> {
+  const ids = new Set<string>();
+  for (const item of missing) {
+    if (item.missingObservation && item.rowId) ids.add(item.rowId);
+  }
+  return ids;
 }
 
 export function cellKey(rowId: string, line: number): string {
@@ -51,9 +62,24 @@ function fieldLabel(fieldType: string): string {
   return 'check';
 }
 
+function isFailStatus(value: string): boolean {
+  return value.trim().toUpperCase() === 'FAIL';
+}
+
+/** True si alguna línea CHECKBOX de la fila está marcada como falla (cruz). */
+export function rowHasFailAnomaly(row: ChecklistRow, columnCount: number): boolean {
+  const fieldType = String(row.field_type || 'CHECKBOX').toUpperCase();
+  if (fieldType !== 'CHECKBOX') return false;
+  const cols = Math.max(1, Math.min(12, Math.round(columnCount) || 5));
+  for (let line = 1; line <= cols; line++) {
+    if (isFailStatus(getRowLineStatus(row, line))) return true;
+  }
+  return false;
+}
+
 /**
- * Valida checks y lecturas numéricas/texto antes de enviar (u encolar offline).
- * Las observaciones pueden quedar vacías: el backend las completa con N/A.
+ * Valida checks/lecturas y exige observaciones si hay alguna cruz (FAIL) en la fila.
+ * Sin FAIL, las observaciones vacías se completan con N/A al enviar.
  */
 export function validateChecklistForSubmit(
   rows: ChecklistRow[],
@@ -65,6 +91,7 @@ export function validateChecklistForSubmit(
   rows.forEach((row, index) => {
     const fieldType = String(row.field_type || 'CHECKBOX').toUpperCase();
     const missingLines: number[] = [];
+    const failLines: number[] = [];
 
     for (let line = 1; line <= cols; line++) {
       const raw = getRowLineStatus(row, line);
@@ -74,16 +101,21 @@ export function validateChecklistForSubmit(
         if (isBlank(raw)) missingLines.push(line);
       } else {
         if (isBlank(raw) || !isValidCheckbox(raw)) missingLines.push(line);
+        else if (isFailStatus(raw)) failLines.push(line);
       }
     }
 
-    if (missingLines.length > 0) {
+    const missingObservation = failLines.length > 0 && isBlank(row.observations);
+
+    if (missingLines.length > 0 || missingObservation) {
       missing.push({
         rowId: row.id,
         rowIndex: index + 1,
         activity_name: row.activity_name,
         field_type: fieldType,
         missingLines,
+        missingObservation,
+        failLines: failLines.length > 0 ? failLines : undefined,
       });
     }
   });
@@ -95,14 +127,21 @@ export function validateChecklistForSubmit(
   const lines = missing.map((m) => {
     const shortName =
       m.activity_name.length > 60 ? `${m.activity_name.slice(0, 57)}…` : m.activity_name;
-    const cells = m.missingLines.map((l) => `L${l}`).join(', ');
-    return `• Fila ${m.rowIndex} «${shortName}»: faltan ${cells} (${fieldLabel(m.field_type)})`;
+    const parts: string[] = [];
+    if (m.missingLines.length > 0) {
+      parts.push(`faltan ${m.missingLines.map((l) => `L${l}`).join(', ')} (${fieldLabel(m.field_type)})`);
+    }
+    if (m.missingObservation) {
+      const fails = (m.failLines || []).map((l) => `L${l}`).join(', ');
+      parts.push(`observación obligatoria por falla (${fails || 'cruz'})`);
+    }
+    return `• Fila ${m.rowIndex} «${shortName}»: ${parts.join('; ')}`;
   });
 
   const errorMessage =
-    'No se puede enviar el checklist: faltan checks o lecturas obligatorias.\n\n' +
+    'No se puede enviar el checklist: faltan datos obligatorios.\n\n' +
     lines.join('\n') +
-    '\n\nCompleta todos los campos de verificación y número antes de firmar y enviar. Las observaciones vacías se guardarán como N/A.';
+    '\n\nSi marcas una cruz (falla), escribe qué ocurrió en Observaciones. Con palomita o N/A, la observación vacía se guarda como N/A.';
 
   return { ok: false, missing, errorMessage };
 }

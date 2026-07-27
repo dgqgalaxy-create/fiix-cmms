@@ -21,7 +21,9 @@ import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import {
   validateChecklistForSubmit,
   missingCellKeySet,
+  missingObservationRowIds,
   cellKey,
+  rowHasFailAnomaly,
   type ChecklistMissingItem,
 } from '../utils/checklistValidation';
 
@@ -124,12 +126,18 @@ export default function ChecklistFormPage() {
       return row;
     });
     setChecklist({ ...checklist, rows: updatedRows });
+    if (showIncompleteFeedback) {
+      applyIncompleteFeedback(updatedRows || [], checklist.column_count || 5);
+    }
   };
 
   const handleObservationBlur = async (rowId: string, obs: string) => {
     if (!checklist || checklist.status !== 'DRAFT') return;
     try {
       await updateChecklistRow(rowId, { observations: obs });
+      if (showIncompleteFeedback) {
+        applyIncompleteFeedback(checklist.rows || [], checklist.column_count || 5);
+      }
     } catch (error) {
       console.error('Error saving observation', error);
     }
@@ -152,7 +160,7 @@ export default function ChecklistFormPage() {
     setIncompleteMissing([]);
     setShowIncompleteFeedback(false);
 
-    if (!window.confirm('¿Estás seguro de enviar este checklist? Ya no podrás editarlo. Las observaciones vacías se guardarán como N/A.')) {
+    if (!window.confirm('¿Estás seguro de enviar este checklist? Ya no podrás editarlo. Las observaciones vacías (sin fallas) se guardarán como N/A; si hay una cruz, la observación ya debe estar escrita.')) {
       return;
     }
 
@@ -198,6 +206,10 @@ export default function ChecklistFormPage() {
 
   const highlightedCells = useMemo(
     () => (showIncompleteFeedback ? missingCellKeySet(incompleteMissing) : new Set<string>()),
+    [showIncompleteFeedback, incompleteMissing]
+  );
+  const highlightedObsRows = useMemo(
+    () => (showIncompleteFeedback ? missingObservationRowIds(incompleteMissing) : new Set<string>()),
     [showIncompleteFeedback, incompleteMissing]
   );
 
@@ -264,6 +276,7 @@ export default function ChecklistFormPage() {
   const columnCount = Math.max(1, checklist.column_count || 5);
   const lineNumbers = Array.from({ length: columnCount }, (_, i) => i + 1);
   const missingCellCount = incompleteMissing.reduce((n, m) => n + m.missingLines.length, 0);
+  const missingObsCount = incompleteMissing.filter((m) => m.missingObservation).length;
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300 print:p-0 print:m-0 print:w-full print:max-w-none">
@@ -326,11 +339,19 @@ export default function ChecklistFormPage() {
           <AlertTriangle className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" size={20} />
           <div className="min-w-0 flex-1 text-sm">
             <p className="font-semibold">
-              Checklist incompleto — faltan {missingCellCount}{' '}
-              {missingCellCount === 1 ? 'celda' : 'celdas'}
+              Checklist incompleto
+              {missingCellCount > 0 && (
+                <> — faltan {missingCellCount} {missingCellCount === 1 ? 'celda' : 'celdas'}</>
+              )}
+              {missingObsCount > 0 && (
+                <>
+                  {missingCellCount > 0 ? ' y ' : ' — '}
+                  {missingObsCount} {missingObsCount === 1 ? 'observación' : 'observaciones'} por falla
+                </>
+              )}
             </p>
             <p className="mt-0.5 text-amber-800/90 dark:text-amber-300/90">
-              Completa las celdas marcadas en rojo (o revisa el detalle) antes de firmar y enviar.
+              Completa las celdas en rojo. Si hay una cruz (falla), escribe la observación de esa fila.
             </p>
           </div>
           <button
@@ -352,7 +373,7 @@ export default function ChecklistFormPage() {
           <span className="inline-flex items-center mx-2 text-rose-700"><XIcon size={14} className="mr-1"/> Anomalía</span>
           <span className="inline-flex items-center mx-2 text-slate-600"><Minus size={14} className="mr-1"/> N/A</span>
           <span className="block mt-1 text-sky-700 dark:text-sky-400">
-            Antes de enviar debes completar todos los checks y lecturas numéricas/texto. Las observaciones vacías se guardan automáticamente como N/A.
+            Antes de enviar completa todos los checks y lecturas. Si marcas una <strong>cruz (falla)</strong>, la observación de esa fila es <strong>obligatoria</strong>. Con palomita o N/A, la observación vacía se guarda como N/A.
           </span>
         </div>
       </div>
@@ -370,11 +391,14 @@ export default function ChecklistFormPage() {
                     L{line}
                   </th>
                 ))}
-                <th className="px-4 py-4 min-w-[250px] print:min-w-0 print:w-auto print:py-2 print:px-2 border print:border-slate-800">OBSERVACIONES (Falla detectada)</th>
+                <th className="px-4 py-4 min-w-[250px] print:min-w-0 print:w-auto print:py-2 print:px-2 border print:border-slate-800">OBSERVACIONES (obligatorio si hay cruz)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 print:divide-slate-800">
-              {checklist.rows?.map((row, index) => (
+              {checklist.rows?.map((row, index) => {
+                const needsObs = rowHasFailAnomaly(row, columnCount);
+                const obsMissing = highlightedObsRows.has(row.id);
+                return (
                 <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group print:break-inside-avoid">
                   <td className="px-4 py-3 text-center text-slate-400 dark:text-slate-500 font-medium print:py-1 print:px-2 border print:border-slate-800 print:text-black">
                     {index + 1}
@@ -387,19 +411,34 @@ export default function ChecklistFormPage() {
                       {renderStatusButton(row, line)}
                     </td>
                   ))}
-                  <td className="px-4 py-3 print:py-1 print:px-2 border print:border-slate-800">
+                  <td className={`px-4 py-3 print:py-1 print:px-2 border print:border-slate-800 ${obsMissing ? 'bg-rose-50/80 dark:bg-rose-950/30' : needsObs ? 'bg-amber-50/50 dark:bg-amber-950/20' : ''}`}>
                     <input
                       type="text"
-                      className="w-full text-sm p-2 border-0 bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-emerald-500 rounded-lg transition-colors placeholder:text-slate-300 dark:placeholder:text-slate-600 text-slate-900 dark:text-slate-100 print:p-0 print:bg-transparent print:text-black"
-                      placeholder="Sin observaciones..."
+                      className={`w-full text-sm p-2 border rounded-lg transition-colors placeholder:text-slate-300 dark:placeholder:text-slate-600 text-slate-900 dark:text-slate-100 print:p-0 print:bg-transparent print:text-black print:border-0 ${
+                        obsMissing
+                          ? 'border-rose-400 ring-2 ring-rose-500 bg-white dark:bg-slate-900'
+                          : needsObs
+                            ? 'border-amber-300 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-amber-500'
+                            : 'border-0 bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-emerald-500'
+                      }`}
+                      placeholder={needsObs ? 'Describe la falla (obligatorio)…' : 'Sin observaciones…'}
                       value={row.observations || ''}
                       onChange={(e) => handleObservationChange(row.id, e.target.value)}
                       onBlur={(e) => handleObservationBlur(row.id, e.target.value)}
                       disabled={!isDraft}
+                      required={needsObs}
+                      aria-required={needsObs || undefined}
+                      aria-invalid={obsMissing || undefined}
                     />
+                    {needsObs && isDraft && (
+                      <p className={`mt-1 text-[11px] font-medium ${obsMissing ? 'text-rose-600 dark:text-rose-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                        Obligatorio: hay cruz (falla) en esta fila
+                      </p>
+                    )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -455,7 +494,7 @@ export default function ChecklistFormPage() {
                   Checklist incompleto
                 </h3>
                 <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                  Completa todos los checks y lecturas antes de firmar y enviar. Las observaciones vacías se guardarán como N/A.
+                  Completa checks/lecturas y, si marcaste una cruz (falla), escribe la observación de esa fila. Sin fallas, la observación vacía se guarda como N/A.
                 </p>
               </div>
               <button
@@ -485,15 +524,22 @@ export default function ChecklistFormPage() {
                         : item.field_type === 'TEXT'
                           ? 'texto'
                           : 'check';
+                    const parts: string[] = [];
+                    if (item.missingLines.length > 0) {
+                      parts.push(`faltan ${cells} (${kind})`);
+                    }
+                    if (item.missingObservation) {
+                      const fails = (item.failLines || []).map((l) => `L${l}`).join(', ');
+                      parts.push(`observación obligatoria por falla${fails ? ` (${fails})` : ''}`);
+                    }
                     return (
                       <li
-                        key={`${item.rowId}-${item.missingLines.join('-')}`}
+                        key={`${item.rowId}-${item.missingLines.join('-')}-${item.missingObservation ? 'obs' : ''}`}
                         className="flex gap-2 rounded-xl border border-rose-100 bg-rose-50/80 px-3 py-2.5 text-sm text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200"
                       >
                         <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />
                         <span>
-                          <strong>Fila {item.rowIndex}</strong> «{shortName}»: faltan{' '}
-                          <strong>{cells}</strong> ({kind})
+                          <strong>Fila {item.rowIndex}</strong> «{shortName}»: {parts.join('; ')}
                         </span>
                       </li>
                     );

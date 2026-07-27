@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import prisma from '../config/prisma';
 import { emitRefresh } from '../utils/socket';
-import { validateChecklistForSubmit } from '../utils/checklistValidation';
+import { validateChecklistForSubmit, rowHasFailAnomaly } from '../utils/checklistValidation';
 import { getMexicoCityNow } from '../utils/checklistReminder';
 
 const emitChecklists = () => emitRefresh('refresh_checklists');
@@ -214,7 +214,9 @@ export const submitChecklist = async (req: AuthRequest, res: Response) => {
     }
 
     const checklist = await prisma.$transaction(async (tx) => {
+      const cols = existing.column_count ?? DEFAULT_CHECKLIST_COLUMNS;
       for (const row of existing.rows) {
+        if (rowHasFailAnomaly(row, cols)) continue;
         if (row.observations == null || String(row.observations).trim() === '') {
           await tx.dailyChecklistRow.update({
             where: { id: row.id },
