@@ -6,7 +6,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import withDragAndDropRaw from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useAuth } from '../context/AuthContext';
-import { Calendar, LayoutList, CheckCircle2, X } from 'lucide-react';
+import { Calendar, LayoutList, CheckCircle2, X, GripVertical } from 'lucide-react';
 import { getWorkOrders, updateWorkOrder, joinWorkOrder, deleteWorkOrder } from '../api/workOrders';
 import type { WorkOrder } from '../api/workOrders';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
@@ -26,8 +26,7 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
-const LONG_PRESS_MS = 380;
-const SCROLL_CANCEL_PX = 12;
+const HANDLE_ACTIVATE_PX = 6;
 
 interface CustomEvent {
   title: string;
@@ -43,14 +42,15 @@ interface PointerDragState {
   activated: boolean;
   cancelled: boolean;
   pointerId: number;
-  holdTimer: ReturnType<typeof setTimeout> | null;
+  fromHandle: boolean;
 }
 
 function prefersTouchScheduling(): boolean {
   if (typeof window === 'undefined') return false;
   return (
     window.matchMedia('(pointer: coarse)').matches ||
-    window.matchMedia('(hover: none)').matches
+    window.matchMedia('(hover: none)').matches ||
+    (navigator.maxTouchPoints ?? 0) > 0
   );
 }
 
@@ -64,7 +64,6 @@ export const CalendarPage = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [draggedOrder, setDraggedOrder] = useState<WorkOrder | null>(null);
   const [touchGhost, setTouchGhost] = useState<{ order: WorkOrder; x: number; y: number } | null>(null);
-  const [holdingOrderId, setHoldingOrderId] = useState<string | null>(null);
   const [useHtml5OutsideDrag, setUseHtml5OutsideDrag] = useState(true);
   const pointerDragRef = useRef<PointerDragState | null>(null);
   const suppressClickRef = useRef(false);
@@ -202,13 +201,21 @@ export const CalendarPage = () => {
     }
   };
 
-  const handlePendingPointerDown = (e: React.PointerEvent, order: WorkOrder) => {
+  const handlePendingHandlePointerDown = (e: React.PointerEvent, order: WorkOrder) => {
     if (!canManageCalendar || e.button !== 0) return;
-    // Mouse + escritorio: HTML5 DnD de RBC. Touch/tablet/pen: ruta pointer (HTML5 no suelta bien).
+    // Solo ruta touch/pen (en PC el HTML5 arrastra la tarjeta completa).
     if (e.pointerType === 'mouse' && useHtml5OutsideDrag) return;
 
-    // No preventDefault aquí: el scroll de la lista de pendientes debe seguir funcionando.
+    e.preventDefault();
+    e.stopPropagation();
     pointerUnbindRef.current?.();
+
+    const target = e.currentTarget as HTMLElement;
+    try {
+      target.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
 
     const state: PointerDragState = {
       order,
@@ -217,12 +224,14 @@ export const CalendarPage = () => {
       activated: false,
       cancelled: false,
       pointerId: e.pointerId,
-      holdTimer: null,
+      fromHandle: true,
     };
     pointerDragRef.current = state;
-    setHoldingOrderId(order.id);
 
-    const clearHoldVisual = () => setHoldingOrderId((id) => (id === order.id ? null : id));
+    const blockContextMenu = (ev: Event) => {
+      ev.preventDefault();
+    };
+    document.addEventListener('contextmenu', blockContextMenu, true);
 
     const activateDrag = (x: number, y: number) => {
       if (state.cancelled || state.activated) return;
@@ -237,54 +246,41 @@ export const CalendarPage = () => {
       }
     };
 
-    state.holdTimer = setTimeout(() => {
-      state.holdTimer = null;
-      if (!state.cancelled && pointerDragRef.current === state) {
-        activateDrag(state.startX, state.startY);
-      }
-    }, LONG_PRESS_MS);
-
-    const abortPending = () => {
-      state.cancelled = true;
-      if (state.holdTimer != null) {
-        clearTimeout(state.holdTimer);
-        state.holdTimer = null;
-      }
-      clearHoldVisual();
-      pointerUnbindRef.current?.();
-      pointerUnbindRef.current = null;
-      if (pointerDragRef.current === state) pointerDragRef.current = null;
-    };
-
     const onMove = (ev: PointerEvent) => {
       if (ev.pointerId !== state.pointerId || state.cancelled) return;
 
       if (!state.activated) {
         const dist = Math.hypot(ev.clientX - state.startX, ev.clientY - state.startY);
-        // Movimiento = scroll de la lista; cancelar el hold para no “agarrar” la tarjeta.
-        if (dist > SCROLL_CANCEL_PX) {
-          abortPending();
-        }
-        return;
+        if (dist < HANDLE_ACTIVATE_PX) return;
+        activateDrag(ev.clientX, ev.clientY);
       }
 
-      ev.preventDefault();
-      setTouchGhost({ order: state.order, x: ev.clientX, y: ev.clientY });
+      if (state.activated) {
+        ev.preventDefault();
+        setTouchGhost({ order: state.order, x: ev.clientX, y: ev.clientY });
+      }
     };
 
     const finish = (ev: PointerEvent) => {
       if (ev.pointerId !== state.pointerId) return;
 
-      if (state.holdTimer != null) {
-        clearTimeout(state.holdTimer);
-        state.holdTimer = null;
-      }
-      clearHoldVisual();
-      pointerUnbindRef.current?.();
+      document.removeEventListener('contextmenu', blockContextMenu, true);
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', finish);
+      document.removeEventListener('pointercancel', finish);
       pointerUnbindRef.current = null;
+      try {
+        if (target.hasPointerCapture(ev.pointerId)) {
+          target.releasePointerCapture(ev.pointerId);
+        }
+      } catch {
+        /* ignore */
+      }
 
       if (state.cancelled || !state.activated) {
         if (pointerDragRef.current === state) pointerDragRef.current = null;
+        setTouchGhost(null);
+        setDraggedOrder(null);
         return;
       }
 
@@ -311,6 +307,7 @@ export const CalendarPage = () => {
     document.addEventListener('pointerup', finish);
     document.addEventListener('pointercancel', finish);
     pointerUnbindRef.current = () => {
+      document.removeEventListener('contextmenu', blockContextMenu, true);
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', finish);
       document.removeEventListener('pointercancel', finish);
@@ -318,8 +315,6 @@ export const CalendarPage = () => {
   };
 
   useEffect(() => () => {
-    const state = pointerDragRef.current;
-    if (state?.holdTimer != null) clearTimeout(state.holdTimer);
     pointerUnbindRef.current?.();
   }, []);
 
@@ -454,7 +449,7 @@ export const CalendarPage = () => {
               </h3>
               {!useHtml5OutsideDrag && unscheduled.length > 0 && (
                 <p className="mb-2 text-xs text-slate-500 dark:text-slate-400 shrink-0">
-                  Desliza para ver más · Mantén pulsado para agendar
+                  Desliza la lista · Arrastra desde ≡ hacia el calendario
                 </p>
               )}
 
@@ -475,31 +470,44 @@ export const CalendarPage = () => {
                           setDraggedOrder(order);
                         }}
                         onDragEnd={() => setDraggedOrder(null)}
-                        onPointerDown={(e) => handlePendingPointerDown(e, order)}
-                        className={`bg-white dark:bg-slate-900 p-3 rounded shadow-sm border text-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition-colors select-none ${
-                          holdingOrderId === order.id
-                            ? 'border-blue-500 ring-2 ring-blue-400/40 scale-[0.98]'
-                            : 'border-slate-200 dark:border-slate-700'
-                        }`}
-                        onClick={() => {
-                          if (suppressClickRef.current) {
-                            suppressClickRef.current = false;
-                            return;
-                          }
-                          setSelectedOrder(order);
-                          setIsModalOpen(true);
+                        onContextMenu={(e) => {
+                          if (!useHtml5OutsideDrag) e.preventDefault();
                         }}
+                        className="flex items-stretch gap-1 bg-white dark:bg-slate-900 rounded shadow-sm border border-slate-200 dark:border-slate-700 text-sm hover:border-blue-400 transition-colors select-none [-webkit-touch-callout:none]"
                       >
-                        <div className="font-bold text-slate-800 dark:text-slate-200">#{order.folio}</div>
-                        <div className="text-slate-600 dark:text-slate-400 line-clamp-2 mt-1">{order.title}</div>
-                        <div className="mt-2 flex items-center justify-between">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                            order.priority === 'ALTA' || order.priority === 'URGENTE' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                            order.priority === 'MEDIA' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                            'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                          }`}>
-                            {order.priority}
-                          </span>
+                        {!useHtml5OutsideDrag && (
+                          <button
+                            type="button"
+                            aria-label={`Arrastrar orden ${order.folio} al calendario`}
+                            onPointerDown={(e) => handlePendingHandlePointerDown(e, order)}
+                            onContextMenu={(e) => e.preventDefault()}
+                            className="touch-none shrink-0 flex items-center justify-center px-2 text-slate-400 active:text-blue-500 cursor-grab active:cursor-grabbing"
+                          >
+                            <GripVertical size={20} />
+                          </button>
+                        )}
+                        <div
+                          className={`min-w-0 flex-1 p-3 ${useHtml5OutsideDrag ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+                          onClick={() => {
+                            if (suppressClickRef.current) {
+                              suppressClickRef.current = false;
+                              return;
+                            }
+                            setSelectedOrder(order);
+                            setIsModalOpen(true);
+                          }}
+                        >
+                          <div className="font-bold text-slate-800 dark:text-slate-200">#{order.folio}</div>
+                          <div className="text-slate-600 dark:text-slate-400 line-clamp-2 mt-1">{order.title}</div>
+                          <div className="mt-2 flex items-center justify-between">
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              order.priority === 'ALTA' || order.priority === 'URGENTE' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                              order.priority === 'MEDIA' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                              'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                            }`}>
+                              {order.priority}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     ))}
