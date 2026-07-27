@@ -298,11 +298,12 @@ export const WorkOrderDetailModal = ({
     !isClosed &&
     !isAssignedToMe &&
     (displayWO.status === 'EN_PROCESO' || displayWO.status === 'EN_ESPERA');
+  /** Solo en En proceso / En espera (no en Pendiente: ahí solo «Aceptar orden»). */
   const canShowJoin =
     !!onJoin &&
     !isClosed &&
     !isAssignedToMe &&
-    (displayWO.status === 'PENDIENTE' || displayWO.status === 'EN_PROCESO' || displayWO.status === 'EN_ESPERA');
+    (displayWO.status === 'EN_PROCESO' || displayWO.status === 'EN_ESPERA');
   /** En móvil técnico las acciones van en botones grandes: no duplicar con el desplegable. */
   const showStatusSelect = !isClosed && !needsJoinToOperate && !isTechMobileShell;
   const isCorrective =

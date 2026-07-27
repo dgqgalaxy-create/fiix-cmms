@@ -12,7 +12,7 @@ Sus pilares son **Rapidez** (menos formatos y pasos), **Trazabilidad** (responsa
 En celular, el temario del manual aparece como una barra horizontal deslizable. Toca un tema para mostrarlo debajo con una transición de entrada de derecha a izquierda. El encabezado, el temario y el botón **Volver** permanecen fijos; únicamente se desplaza la información del tema hasta el borde inferior, con un degradado superior que aparece progresivamente.
 
 ## 0. Operación diaria
-- **Colaborar en OT en curso:** Si una orden ya está **En proceso** o **En espera** y tú no estás en la lista de asignados, no verás el desplegable de estado ni Pausar / Finalizar / Reanudar: solo **Unirme / Colaborar**. Al unirte aparecen las acciones. En la interfaz móvil de técnico las acciones van en botones grandes (sin duplicar el desplegable). Aceptar una pendiente sí te asigna automáticamente.
+- **Colaborar en OT en curso:** Si una orden ya está **En proceso** o **En espera** y tú no estás en la lista de asignados, no verás el desplegable de estado ni Pausar / Finalizar / Reanudar: solo **Unirme / Colaborar**. Al unirte aparecen las acciones. En **Pendiente** no aparece Unirme / Colaborar: solo **Aceptar orden** (te asigna al aceptar). En la interfaz móvil de técnico las acciones van en botones grandes (sin duplicar el desplegable).
 - **Ayudas ⓘ (InfoTip):** En pantallas táctiles (y también en PC) el icono ⓘ abre una explicación breve (pestañas de Órdenes, folio, Stock crítico, KPIs, SLA, etc.).
 - **Asignación masiva:** En Órdenes de Trabajo, **Asignar…** permite elegir varias OT abiertas y asignarles técnicos de una sola vez.
 - **Turno actual (Inicio):** Panel con conteo por técnico de OT abiertas (pendientes / en proceso / en espera y avisos SLA). Un toque lleva a Órdenes.
