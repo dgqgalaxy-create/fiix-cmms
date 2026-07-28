@@ -19,6 +19,7 @@ import { useWorkOrderPresence } from '../hooks/useWorkOrderPresence';
 import { socket } from '../api/socket';
 import { useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
 import { formatDate, formatDateTime } from '../utils/dateUtils';
+import { formatCurrency } from '../utils/currency';
 import { InfoTip } from './common/InfoTip';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -1102,7 +1103,7 @@ export const WorkOrderDetailModal = ({
                           </label>
                           <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
                             Costo OT:{' '}
-                            {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(partsCostTotal || 0)}
+                            {formatCurrency(partsCostTotal || 0)}
                           </span>
                         </div>
                         {consumedParts.length > 0 ? (
@@ -1119,7 +1120,7 @@ export const WorkOrderDetailModal = ({
                                   <div className="text-right shrink-0">
                                     <div className="text-slate-600 dark:text-slate-300">{qty} {tx.item.uom}</div>
                                     <div className="text-xs text-slate-400">
-                                      {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(qty * unit)}
+                                      {formatCurrency(qty * unit)}
                                     </div>
                                   </div>
                                 </li>

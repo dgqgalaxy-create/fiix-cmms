@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { ASSET_KIND_LABELS } from '../utils/assetSection';
+import { formatCurrency } from '../utils/currency';
 import { InfoTip } from './common/InfoTip';
 
 interface Props {
@@ -52,8 +53,6 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
   if (!isOpen || !asset) return null;
 
   const overview = metrics?.overview;
-  const formatMoney = (n: number) =>
-    new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n || 0);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -141,15 +140,15 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                       <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Costo refacciones</div>
-                      <div className="text-lg font-black text-slate-800 dark:text-slate-100">{formatMoney(overview?.parts_cost_total || 0)}</div>
+                      <div className="text-lg font-black text-slate-800 dark:text-slate-100">{formatCurrency(overview?.parts_cost_total || 0)}</div>
                     </div>
                     <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                       <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Valor activo</div>
-                      <div className="text-lg font-black text-slate-800 dark:text-slate-100">{formatMoney(overview?.asset_price || asset.price || 0)}</div>
+                      <div className="text-lg font-black text-slate-800 dark:text-slate-100">{formatCurrency(overview?.asset_price || asset.price || 0)}</div>
                     </div>
                     <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                       <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Costo acumulado</div>
-                      <div className="text-lg font-black text-emerald-700 dark:text-emerald-400">{formatMoney(overview?.total_cost || 0)}</div>
+                      <div className="text-lg font-black text-emerald-700 dark:text-emerald-400">{formatCurrency(overview?.total_cost || 0)}</div>
                     </div>
                     <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                       <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">MTTR / MTBF</div>
@@ -358,7 +357,7 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                     <span className="text-xs font-bold uppercase tracking-wider">Precio de Compra</span>
                   </div>
                   <div className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                    {asset.price !== undefined && asset.price !== null ? `$${asset.price.toFixed(2)}` : 'No especificado'}
+                    {asset.price !== undefined && asset.price !== null ? formatCurrency(asset.price) : 'No especificado'}
                   </div>
                 </div>
               </div>

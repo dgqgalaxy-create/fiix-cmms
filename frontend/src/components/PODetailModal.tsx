@@ -4,6 +4,7 @@ import { X, Calendar, Package, ArrowRight, Loader2, CheckCircle2, User, Building
 import { type PurchaseOrder, updatePurchaseOrderStatus } from '../api/purchaseOrders';
 import { useAuth } from '../context/AuthContext';
 import { formatDate, formatDateOnly } from '../utils/dateUtils';
+import { formatCurrency } from '../utils/currency';
 
 interface PODetailModalProps {
   order: PurchaseOrder;
@@ -234,12 +235,12 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                   {order.status === 'RECIBIDA' && (
                     <td className="px-3 py-2 text-center">{oi.received_quantity ?? '—'} {oi.item?.uom}</td>
                   )}
-                  <td className="px-3 py-2 text-right">${oi.unit_cost.toFixed(2)}</td>
-                  <td className="px-3 py-2 text-right font-bold">${(oi.quantity * oi.unit_cost).toFixed(2)}</td>
+                  <td className="px-3 py-2 text-right">{formatCurrency(oi.unit_cost)}</td>
+                  <td className="px-3 py-2 text-right font-bold">{formatCurrency(oi.quantity * oi.unit_cost)}</td>
                   {order.status === 'RECIBIDA' && (
                     <td className="px-3 py-2 text-right font-bold">
                       {oi.received_quantity != null
-                        ? `$${(oi.received_quantity * oi.unit_cost).toFixed(2)}`
+                        ? formatCurrency(oi.received_quantity * oi.unit_cost)
                         : '—'}
                     </td>
                   )}
@@ -251,12 +252,12 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
             <div className="w-1/2 bg-slate-50 p-3 rounded-xl border border-slate-200 text-right space-y-2">
               <div>
                 <span className="text-sm font-bold text-slate-500 mr-4">Total pedido:</span>
-                <span className="text-xl font-black text-slate-800">${totalOrdered.toFixed(2)}</span>
+                <span className="text-xl font-black text-slate-800">{formatCurrency(totalOrdered)}</span>
               </div>
               {order.status === 'RECIBIDA' && (
                 <div>
                   <span className="text-sm font-bold text-emerald-700 mr-4">Total recibido:</span>
-                  <span className="text-xl font-black text-emerald-700">${totalReceived.toFixed(2)}</span>
+                  <span className="text-xl font-black text-emerald-700">{formatCurrency(totalReceived)}</span>
                 </div>
               )}
             </div>
@@ -387,14 +388,14 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                           )}
                         </td>
                       )}
-                      <td className="px-4 py-3 text-right">${oi.unit_cost.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right">{formatCurrency(oi.unit_cost)}</td>
                       <td className="px-4 py-3 text-right font-medium text-slate-700 dark:text-slate-200">
-                        ${(oi.quantity * oi.unit_cost).toFixed(2)}
+                        {formatCurrency(oi.quantity * oi.unit_cost)}
                       </td>
                       {showReceivedCol && (
                         <td className="px-4 py-3 text-right font-medium text-emerald-800 dark:text-emerald-300">
                           {receivedDisplay != null
-                            ? `$${(receivedDisplay * oi.unit_cost).toFixed(2)}`
+                            ? formatCurrency(receivedDisplay * oi.unit_cost)
                             : '—'}
                         </td>
                       )}
@@ -411,7 +412,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                     Total pedido (orden original):
                   </td>
                   <td className="px-4 py-3 text-right font-black text-slate-800 dark:text-slate-100 text-lg">
-                    ${totalOrdered.toFixed(2)}
+                    {formatCurrency(totalOrdered)}
                   </td>
                 </tr>
                 {showReceivedTotals && (
@@ -423,7 +424,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                       Total recibido (inventario / costo real):
                     </td>
                     <td className="px-4 py-3 text-right font-black text-emerald-700 dark:text-emerald-400 text-lg">
-                      ${totalReceived.toFixed(2)}
+                      {formatCurrency(totalReceived)}
                     </td>
                   </tr>
                 )}

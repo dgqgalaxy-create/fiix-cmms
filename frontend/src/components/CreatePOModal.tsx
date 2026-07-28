@@ -3,6 +3,7 @@ import { X, Plus, Trash2, Loader2, Search } from 'lucide-react';
 import { createPurchaseOrder } from '../api/purchaseOrders';
 import { getVendors, getItems, type Vendor, type Item } from '../api/inventory';
 import { BACKEND_URL } from '../api/axios';
+import { formatCurrency } from '../utils/currency';
 
 interface CreatePOModalProps {
   isOpen: boolean;
@@ -351,7 +352,7 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
                               />
                             </td>
                             <td className="px-4 py-3 text-right font-medium text-slate-700 dark:text-slate-200">
-                              ${(oi.quantity * oi.unit_cost).toFixed(2)}
+                              {formatCurrency(oi.quantity * oi.unit_cost)}
                             </td>
                             <td className="px-4 py-3 text-right">
                               <button
@@ -372,7 +373,7 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
                           Total:
                         </td>
                         <td className="px-4 py-4 text-right font-black text-emerald-700 dark:text-emerald-400 text-lg">
-                          ${orderItems.reduce((sum, oi) => sum + oi.quantity * oi.unit_cost, 0).toFixed(2)}
+                          {formatCurrency(orderItems.reduce((sum, oi) => sum + oi.quantity * oi.unit_cost, 0))}
                         </td>
                         <td></td>
                       </tr>

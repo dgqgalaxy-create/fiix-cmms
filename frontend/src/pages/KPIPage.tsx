@@ -54,6 +54,7 @@ import {
 } from 'recharts';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
+import { formatCurrency, formatCurrencyAxis } from '../utils/currency';
 
 type MetricStatus = 'good' | 'warn' | 'bad' | 'neutral';
 
@@ -786,9 +787,9 @@ export const KPIPage = () => {
                     <BarChart data={charts}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
                       <XAxis dataKey="month" tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
+                      <YAxis tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyAxis(v)} />
                       <Tooltip
-                        formatter={(val: number) => [`$${Number(val).toFixed(2)}`, 'Refacciones']}
+                        formatter={(val: number) => [formatCurrency(val), 'Refacciones']}
                         contentStyle={{ borderRadius: 12, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-fg)', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)' }}
                       />
                       <Bar dataKey="costos" fill="#059669" radius={[4, 4, 0, 0]} />
@@ -858,7 +859,7 @@ export const KPIPage = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={assetCosts} layout="vertical" margin={{ left: 8 }}>
                       <CartesianGrid strokeDasharray="3 3" horizontal vertical={false} stroke="var(--color-border)" />
-                      <XAxis type="number" tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
+                      <XAxis type="number" tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyAxis(v)} />
                       <YAxis
                         type="category"
                         dataKey="assetName"
@@ -869,7 +870,7 @@ export const KPIPage = () => {
                         tickFormatter={(val) => (val.length > 16 ? `${val.slice(0, 16)}…` : val)}
                       />
                       <Tooltip
-                        formatter={(val: number) => [`$${Number(val).toFixed(2)}`, 'Costo']}
+                        formatter={(val: number) => [formatCurrency(val), 'Costo']}
                         contentStyle={{ borderRadius: 12, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-fg)', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)' }}
                       />
                       <Bar dataKey="totalCost" fill="#e11d48" radius={[0, 4, 4, 0]} barSize={18} />

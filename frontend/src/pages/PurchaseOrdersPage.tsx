@@ -6,6 +6,7 @@ import { PODetailModal } from '../components/PODetailModal';
 import { useAuth } from '../context/AuthContext';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatDate } from '../utils/dateUtils';
+import { formatCurrency } from '../utils/currency';
 
 export const PurchaseOrdersPage = () => {
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
@@ -190,7 +191,7 @@ export const PurchaseOrdersPage = () => {
                       {order.vendor?.name || 'Sin proveedor'}
                     </div>
                     <div className="text-[11px] text-slate-500 dark:text-slate-500 mt-0.5 flex items-center gap-2">
-                      <span>${calculateTotal(order.items).toFixed(2)}</span>
+                      <span>{formatCurrency(calculateTotal(order.items))}</span>
                       <span>·</span>
                       <span>{order.items.length} ítem(s)</span>
                       <span>·</span>
@@ -239,7 +240,7 @@ export const PurchaseOrdersPage = () => {
                         {getStatusBadge(order.status)}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="font-medium text-slate-700">${calculateTotal(order.items).toFixed(2)}</div>
+                        <div className="font-medium text-slate-700 dark:text-slate-300">{formatCurrency(calculateTotal(order.items))}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 text-slate-600 text-sm">
