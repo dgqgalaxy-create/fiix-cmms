@@ -54,7 +54,6 @@ import {
 } from 'recharts';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
-import { InfoTip } from '../components/common/InfoTip';
 
 type MetricStatus = 'good' | 'warn' | 'bad' | 'neutral';
 
@@ -131,6 +130,12 @@ const panelClass = 'rounded-2xl border border-slate-200 bg-white dark:border-sla
 const formatHours = (hours: number): string => {
   if (!Number.isFinite(hours) || hours <= 0) return '0 h';
   return `${hours.toLocaleString('es-MX', { maximumFractionDigits: 1 })} h`;
+};
+
+/** Versión corta para tablas densas (ej. 1,5h). */
+const formatHoursCompact = (hours: number): string => {
+  if (!Number.isFinite(hours) || hours <= 0) return '0h';
+  return `${hours.toLocaleString('es-MX', { maximumFractionDigits: 1 })}h`;
 };
 
 const progressPct = (metric: KPIMetric, moreIsBetter: boolean) => {
@@ -935,60 +940,44 @@ export const KPIPage = () => {
                 </h4>
                 {techPerformance.length > 0 ? (
                   <div className="overflow-x-auto max-h-80 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <table className="w-full text-sm">
-                      <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    <table className="w-full min-w-0 table-fixed text-[11px] leading-tight">
+                      <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800 text-[9px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
                         <tr>
-                          <th className="text-left px-3 py-2 font-bold">Técnico</th>
-                          <th className="text-right px-2 py-2 font-bold">
-                            <span className="inline-flex items-center justify-end gap-0.5">Hoy <InfoTip text="Carga del día" size={11} /></span>
-                          </th>
-                          <th className="text-right px-2 py-2 font-bold">
-                            <span className="inline-flex items-center justify-end gap-0.5">Paus. <InfoTip text="En espera" size={11} /></span>
-                          </th>
-                          <th className="text-right px-2 py-2 font-bold">
-                            <span className="inline-flex items-center justify-end gap-0.5">Esp. <InfoTip text="Tiempo en espera" size={11} /></span>
-                          </th>
-                          <th className="text-right px-2 py-2 font-bold">
-                            <span className="inline-flex items-center justify-end gap-0.5">Sem. <InfoTip text="Finalizadas esta semana" size={11} /></span>
-                          </th>
-                          <th className="text-right px-2 py-2 font-bold">
-                            <span className="inline-flex items-center justify-end gap-0.5">Lab. <InfoTip text="Horas de labor esta semana" size={11} /></span>
-                          </th>
-                          <th className="text-right px-2 py-2 font-bold">
-                            <span className="inline-flex items-center justify-end gap-0.5">Fin. <InfoTip text="Finalizadas en el periodo" size={11} /></span>
-                          </th>
-                          <th className="text-right px-2 py-2 font-bold">
-                            <span className="inline-flex items-center justify-end gap-0.5">Proc. <InfoTip text="En proceso" size={11} /></span>
-                          </th>
-                          <th className="text-right px-2 py-2 font-bold">
-                            <span className="inline-flex items-center justify-end gap-0.5">Pend. <InfoTip text="Pendientes" size={11} /></span>
-                          </th>
+                          <th className="text-left pl-2 pr-1 py-1.5 font-bold w-[28%]" title="Técnico">Técnico</th>
+                          <th className="text-right px-0.5 py-1.5 font-bold w-[8%]" title="Carga del día">Hoy</th>
+                          <th className="text-right px-0.5 py-1.5 font-bold w-[8%]" title="En espera">Paus</th>
+                          <th className="text-right px-0.5 py-1.5 font-bold w-[10%]" title="Tiempo en espera">Esp</th>
+                          <th className="text-right px-0.5 py-1.5 font-bold w-[8%]" title="Finalizadas esta semana">Sem</th>
+                          <th className="text-right px-0.5 py-1.5 font-bold w-[10%]" title="Horas de labor esta semana">Lab</th>
+                          <th className="text-right px-0.5 py-1.5 font-bold w-[8%]" title="Finalizadas en el periodo">Fin</th>
+                          <th className="text-right px-0.5 py-1.5 font-bold w-[8%]" title="En proceso">Proc</th>
+                          <th className="text-right pl-0.5 pr-2 py-1.5 font-bold w-[8%]" title="Pendientes">Pend</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {techPerformance.map((row) => (
                           <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                            <td className="px-3 py-2.5 font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                            <td className="pl-2 pr-1 py-1.5 font-medium text-slate-700 dark:text-slate-300 truncate" title={row.name}>
                               {row.name}
                             </td>
-                            <td className="px-2 py-2.5 text-right font-semibold text-sky-700 dark:text-sky-400">
+                            <td className="px-0.5 py-1.5 text-right font-semibold text-sky-700 dark:text-sky-400 tabular-nums">
                               {row.CargaHoy ?? 0}
                             </td>
-                            <td className="px-2 py-2.5 text-right font-semibold text-amber-700 dark:text-amber-400">
+                            <td className="px-0.5 py-1.5 text-right font-semibold text-amber-700 dark:text-amber-400 tabular-nums">
                               {row.Pausadas ?? 0}
                             </td>
-                            <td className="px-2 py-2.5 text-right text-orange-700 dark:text-orange-400 tabular-nums">
-                              {formatHours(row.TiempoEsperaHoras ?? 0)}
+                            <td className="px-0.5 py-1.5 text-right text-orange-700 dark:text-orange-400 tabular-nums">
+                              {formatHoursCompact(row.TiempoEsperaHoras ?? 0)}
                             </td>
-                            <td className="px-2 py-2.5 text-right font-semibold text-emerald-700 dark:text-emerald-400">
+                            <td className="px-0.5 py-1.5 text-right font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">
                               {row.FinalizadasSemana ?? 0}
                             </td>
-                            <td className="px-2 py-2.5 text-right text-slate-600 dark:text-slate-300 tabular-nums">
-                              {formatHours(row.HorasLaborSemana ?? 0)}
+                            <td className="px-0.5 py-1.5 text-right text-slate-600 dark:text-slate-300 tabular-nums">
+                              {formatHoursCompact(row.HorasLaborSemana ?? 0)}
                             </td>
-                            <td className="px-2 py-2.5 text-right text-slate-600 dark:text-slate-400">{row.Finalizadas}</td>
-                            <td className="px-2 py-2.5 text-right text-sky-600 dark:text-sky-400">{row.EnProceso}</td>
-                            <td className="px-2 py-2.5 text-right text-amber-600 dark:text-amber-400">{row.Pendientes}</td>
+                            <td className="px-0.5 py-1.5 text-right text-slate-600 dark:text-slate-400 tabular-nums">{row.Finalizadas}</td>
+                            <td className="px-0.5 py-1.5 text-right text-sky-600 dark:text-sky-400 tabular-nums">{row.EnProceso}</td>
+                            <td className="pl-0.5 pr-2 py-1.5 text-right text-amber-600 dark:text-amber-400 tabular-nums">{row.Pendientes}</td>
                           </tr>
                         ))}
                       </tbody>

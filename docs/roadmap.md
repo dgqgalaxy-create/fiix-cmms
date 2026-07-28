@@ -3,7 +3,10 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 27 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.43.3 (Actualización: 27 de Julio de 2026)
+## 🚀 Versión Actual: v1.43.4 (Actualización: 28 de Julio de 2026)
+
+### Novedades en v1.43.4 (KPIs: tabla técnicos densa)
+- **Mejora:** Dashboard de técnicos — tabla «Detalle por técnico» más compacta para caber mejor junto a la gráfica (sin tocar las 4 tarjetas ni el chart).
 
 ### Novedades en v1.43.3 (Planes Preventivos móvil compacto)
 - **Mejora:** Planes Preventivos en celular: encabezado compacto + lista densa (mismo patrón que Checklist y Compras); en PC se mantiene la tabla.

@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.43.3";
+export const APP_VERSION = "1.43.4";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: En KPIs → Dashboard de técnicos, la tabla de detalle es más densa (menos scroll horizontal) sin cambiar las 4 tarjetas ni la gráfica.",
     "Mejora: Planes Preventivos en celular usa encabezado compacto y lista en tarjetas densas (menos scroll; en PC se mantiene la tabla), igual que Checklist y Compras.",
     "Corrección: En órdenes Pendiente ya no aparece Unirme / Colaborar; solo Aceptar orden. Unirme / Colaborar queda para OT En proceso o En espera si aún no estás asignado.",
     "Mejora: install.sh y update.sh generan solos las claves VAPID (Web Push) si faltan en backend/.env; no regeneran las ya existentes.",
