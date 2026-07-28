@@ -5,7 +5,8 @@ import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { registerSW } from 'virtual:pwa-register'
 
-// PWA: avisar cuando hay build nuevo desplegado (el usuario elige recargar).
+// autoUpdate: al desplegar, la PWA toma el build nuevo (evita quedarse en versión vieja).
+// onNeedRefresh: avisa / refuerza recarga si hace falta.
 let updateSW: (reloadPage?: boolean) => Promise<void | boolean | undefined> = async () => undefined
 updateSW = registerSW({
   immediate: true,
@@ -19,6 +20,8 @@ updateSW = registerSW({
         },
       })
     )
+    // Aplicar en cuanto haya SW nuevo (no esperar al clic)
+    void updateSW(true)
   },
 })
 

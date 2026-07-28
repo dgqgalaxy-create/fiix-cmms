@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.43.9";
+export const APP_VERSION = "1.43.10";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Si la PWA se quedaba en una versión vieja tras ./update.sh, ahora detecta que el servidor es más nuevo y recarga; vuelve autoUpdate del service worker.",
     "Mejora: En Inicio → Turno actual (móvil), la tabla es más densa y cabe sin deslizar a la derecha (SLA como R/V; mismo espíritu que KPIs).",
     "Nuevo: Aviso en la app cuando GitHub tiene una versión más nueva (pendiente de ./update.sh) y cuando ya hay un build desplegado listo para recargar.",
     "Corrección: En la lista de Inventario se restauran los botones de acciones como antes; el estilo naranja «Registrar movimiento» queda solo en el detalle del repuesto.",
