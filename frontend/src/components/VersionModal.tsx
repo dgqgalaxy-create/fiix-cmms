@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.43.4";
+export const APP_VERSION = "1.43.6";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "27 de Julio, 2026";
+  const updateDate = "28 de Julio, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -28,6 +28,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: En el detalle del repuesto (también desde Ctrl+K), el botón pasa a llamarse «Registrar movimiento» y usa estilo naranja de acción (no etiqueta verde).",
+    "Mejora: Costos y precios en pantalla usan formato México ($1,234.56) con símbolo, miles y centavos (compras, activos, OT, KPIs).",
     "Mejora: En KPIs → Dashboard de técnicos, la tabla de detalle es más densa (menos scroll horizontal) sin cambiar las 4 tarjetas ni la gráfica.",
     "Mejora: Planes Preventivos en celular usa encabezado compacto y lista en tarjetas densas (menos scroll; en PC se mantiene la tabla), igual que Checklist y Compras.",
     "Corrección: En órdenes Pendiente ya no aparece Unirme / Colaborar; solo Aceptar orden. Unirme / Colaborar queda para OT En proceso o En espera si aún no estás asignado.",

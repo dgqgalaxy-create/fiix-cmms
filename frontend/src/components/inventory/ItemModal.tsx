@@ -243,9 +243,11 @@ export const ItemModal = ({
               <button
                 type="button"
                 onClick={() => onQuickTransaction(item.id)}
-                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200"
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 active:bg-orange-700 rounded-xl shadow-sm shadow-orange-500/30 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-1 dark:focus:ring-offset-slate-900"
+                title="Registrar entrada o salida de inventario"
               >
-                <ArrowRightLeft size={14} /> Movimiento
+                <ArrowRightLeft size={16} className="shrink-0" />
+                <span>Registrar movimiento</span>
               </button>
             )}
           </div>

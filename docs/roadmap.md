@@ -1,9 +1,15 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
-*(Última actualización: 27 de Julio de 2026)*
+*(Última actualización: 28 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.43.4 (Actualización: 28 de Julio de 2026)
+## 🚀 Versión Actual: v1.43.6 (Actualización: 28 de Julio de 2026)
+
+### Novedades en v1.43.6 (Registrar movimiento en detalle)
+- **Mejora:** En detalle de repuesto (incl. Ctrl+K): botón **Registrar movimiento** naranja de acción (antes «Movimiento» verde tipo etiqueta).
+
+### Novedades en v1.43.5 (formato moneda MXN)
+- **Mejora:** Costos y precios en UI con formato México (`$1,234.56`) vía `formatCurrency` (compras, activos, OT, tooltips KPI).
 
 ### Novedades en v1.43.4 (KPIs: tabla técnicos densa)
 - **Mejora:** Dashboard de técnicos — tabla «Detalle por técnico» más compacta para caber mejor junto a la gráfica (sin tocar las 4 tarjetas ni el chart).
