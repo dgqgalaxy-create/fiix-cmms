@@ -3,7 +3,10 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 28 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.43.8 (Actualización: 28 de Julio de 2026)
+## 🚀 Versión Actual: v1.43.9 (Actualización: 28 de Julio de 2026)
+
+### Novedades en v1.43.9 (Turno actual móvil denso)
+- **Mejora:** Inicio → Turno actual en celular más compacto (sin scroll horizontal); SLA abreviado R/V.
 
 ### Novedades en v1.43.8 (aviso de actualización)
 - **Nuevo:** Banner si GitHub va por delante del servidor (Admin: recuerda `./update.sh`) y banner para **Recargar** cuando el build nuevo ya está desplegado (PWA).

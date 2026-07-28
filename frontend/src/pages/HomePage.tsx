@@ -359,25 +359,25 @@ export const HomePage = () => {
       )}
 
       {shiftByTech.length > 0 && (
-        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          <div className="mb-3 flex items-center justify-between gap-2">
+        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-2.5 sm:p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <div className="mb-2 sm:mb-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-              <Users size={14} className="text-sky-600" />
+              <Users size={14} className="text-sky-600 shrink-0" />
               Turno actual
             </div>
-            <span className="text-[11px] font-medium text-slate-400">
-              {shiftByTech.length} técnico{shiftByTech.length !== 1 ? 's' : ''} con OT abiertas
+            <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 shrink-0">
+              {shiftByTech.length} téc. con OT
             </span>
           </div>
-          <div className="overflow-x-auto -mx-1 px-1">
-            <table className="w-full min-w-[28rem] text-left text-sm">
-              <thead>
-                <tr className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
-                  <th className="pb-2 pr-2 font-semibold">Técnico</th>
-                  <th className="pb-2 px-1 font-semibold text-center">Pend.</th>
-                  <th className="pb-2 px-1 font-semibold text-center">Proc.</th>
-                  <th className="pb-2 px-1 font-semibold text-center">Esp.</th>
-                  <th className="pb-2 pl-1 font-semibold text-right">SLA</th>
+          <div className="overflow-x-auto max-h-72 sm:max-h-none rounded-lg border border-slate-100 dark:border-slate-800 sm:border-0">
+            <table className="w-full min-w-0 table-fixed text-[11px] sm:text-sm leading-tight">
+              <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800/95 sm:bg-transparent dark:sm:bg-transparent">
+                <tr className="text-[9px] sm:text-[10px] uppercase tracking-wide text-slate-400 border-b border-slate-100 dark:border-slate-800">
+                  <th className="py-1.5 pl-1.5 pr-1 sm:pb-2 sm:pr-2 font-semibold text-left w-[36%]" title="Técnico">Técnico</th>
+                  <th className="py-1.5 px-0.5 sm:pb-2 sm:px-1 font-semibold text-center w-[12%]" title="Pendientes">Pend</th>
+                  <th className="py-1.5 px-0.5 sm:pb-2 sm:px-1 font-semibold text-center w-[12%]" title="En proceso">Proc</th>
+                  <th className="py-1.5 px-0.5 sm:pb-2 sm:px-1 font-semibold text-center w-[12%]" title="En espera">Esp</th>
+                  <th className="py-1.5 pl-0.5 pr-1.5 sm:pb-2 sm:pl-1 font-semibold text-right w-[28%]" title="SLA">SLA</th>
                 </tr>
               </thead>
               <tbody>
@@ -385,32 +385,40 @@ export const HomePage = () => {
                   <tr
                     key={row.id || row.name}
                     onClick={goToShiftRow}
-                    className="cursor-pointer border-b border-slate-50 last:border-0 hover:bg-sky-50/70 dark:border-slate-800 dark:hover:bg-sky-950/30 transition-colors"
+                    className="cursor-pointer border-b border-slate-50 last:border-0 hover:bg-sky-50/70 dark:border-slate-800 dark:hover:bg-sky-950/30 transition-colors active:bg-sky-50 dark:active:bg-sky-950/40"
                   >
-                    <td className="py-2 pr-2">
-                      <span className="font-semibold text-slate-800 dark:text-slate-100">{row.name}</span>
-                      <span className="ml-1.5 text-[10px] font-medium text-slate-400">{row.total} OT</span>
+                    <td className="py-1.5 sm:py-2 pl-1.5 pr-1 sm:pr-2">
+                      <div className="truncate font-semibold text-slate-800 dark:text-slate-100" title={row.name}>
+                        {row.name}
+                      </div>
+                      <div className="text-[9px] sm:text-[10px] font-medium text-slate-400 tabular-nums">{row.total} OT</div>
                     </td>
-                    <td className="py-2 px-1 text-center tabular-nums">
+                    <td className="py-1.5 sm:py-2 px-0.5 sm:px-1 text-center tabular-nums">
                       <span className={row.pendientes ? 'font-bold text-amber-600' : 'text-slate-300'}>{row.pendientes}</span>
                     </td>
-                    <td className="py-2 px-1 text-center tabular-nums">
+                    <td className="py-1.5 sm:py-2 px-0.5 sm:px-1 text-center tabular-nums">
                       <span className={row.enProceso ? 'font-bold text-sky-600' : 'text-slate-300'}>{row.enProceso}</span>
                     </td>
-                    <td className="py-2 px-1 text-center tabular-nums">
+                    <td className="py-1.5 sm:py-2 px-0.5 sm:px-1 text-center tabular-nums">
                       <span className={row.enEspera ? 'font-bold text-violet-600' : 'text-slate-300'}>{row.enEspera}</span>
                     </td>
-                    <td className="py-2 pl-1 text-right">
+                    <td className="py-1.5 sm:py-2 pl-0.5 pr-1.5 sm:pl-1 text-right">
                       {(row.slaRisk > 0 || row.slaBreached > 0) ? (
-                        <span className="inline-flex flex-wrap justify-end gap-1">
+                        <span className="inline-flex flex-wrap justify-end gap-0.5">
                           {row.slaRisk > 0 && (
-                            <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 dark:bg-orange-950/50 dark:text-orange-300">
-                              {row.slaRisk} riesgo
+                            <span
+                              className="rounded bg-orange-100 px-1 py-0.5 text-[9px] sm:text-[10px] font-bold text-orange-700 dark:bg-orange-950/50 dark:text-orange-300"
+                              title={`${row.slaRisk} en riesgo`}
+                            >
+                              {row.slaRisk}R
                             </span>
                           )}
                           {row.slaBreached > 0 && (
-                            <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
-                              {row.slaBreached} venc.
+                            <span
+                              className="rounded bg-rose-100 px-1 py-0.5 text-[9px] sm:text-[10px] font-bold text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"
+                              title={`${row.slaBreached} vencidas`}
+                            >
+                              {row.slaBreached}V
                             </span>
                           )}
                         </span>
