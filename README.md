@@ -340,6 +340,7 @@ Las evidencias y fotos viven en **`backend/uploads/`** (disco del servidor), no 
 | Login de la aplicación | Usuarios en la BD (seed: `admin@fiix.com` / `password123` — al entrar te pedirá cambiarla) |
 | Telegram | Opciones de desarrollador en la app, o variables en `.env` |
 | Web Push (PWA) | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` en `backend/.env` (generar con `npx web-push generate-vapid-keys` una sola vez) |
+| Aviso vs GitHub | Opcional: `GITHUB_REPO` / `GITHUB_BRANCH` (default `dgqgalaxy-create/fiix-cmms` / `main`) |
 | GitHub | Cuenta/token de Git — **no** es la contraseña de Postgres |
 
 ### Respaldos y restauración (verificar una vez)

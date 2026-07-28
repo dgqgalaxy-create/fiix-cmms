@@ -10,6 +10,7 @@ import { OfflineBanner } from './OfflineBanner';
 import { GlobalSearchModal, GlobalSearchTrigger } from './GlobalSearchModal';
 import { TechnicianBottomNav } from './TechnicianBottomNav';
 import { useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
+import { UpdateBanner } from './UpdateBanner';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
@@ -136,6 +137,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
 
       {isTechMobileShell && <TechnicianBottomNav />}
 
+      <UpdateBanner />
       <GlobalSearchModal />
       <VersionModal
         isOpen={isVersionModalOpen}

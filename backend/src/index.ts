@@ -42,6 +42,7 @@ import requesterRoutes from './routes/requesterRoutes';
 import rosterRoutes from './routes/rosterRoutes';
 import searchRoutes from './routes/searchRoutes';
 import auditRoutes from './routes/auditRoutes';
+import versionRoutes from './routes/versionRoutes';
 import { initCronJobs } from './utils/cronJobs';
 import { pingDatabase } from './utils/dbHealthCheck';
 
@@ -86,6 +87,7 @@ app.use('/api/requesters', requesterRoutes);
 app.use('/api/roster', rosterRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/audit', auditRoutes);
+app.use('/api/version', versionRoutes);
 
 // Producción: Express sirve el frontend ya compilado (frontend/dist) en el mismo
 // puerto que la API, para no depender de un segundo proceso Vite en :5173.
