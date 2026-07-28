@@ -605,10 +605,9 @@ export const InventoryPage = () => {
                   <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-slate-100" onClick={(e) => e.stopPropagation()}>
                     <button 
                       onClick={(e) => { e.stopPropagation(); handleOpenTransactionModal(item.id); }}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl shadow-sm shadow-orange-500/30 transition-colors"
-                      title="Registrar movimiento"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
                     >
-                      <ArrowRightLeft size={14} /> Registrar movimiento
+                      <ArrowRightLeft size={14} /> Movimiento
                     </button>
                     {canManage && (
                       <>
@@ -729,11 +728,10 @@ export const InventoryPage = () => {
                           <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                             <button 
                               onClick={(e) => { e.stopPropagation(); handleOpenTransactionModal(item.id); }}
-                              className="inline-flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl shadow-sm shadow-orange-500/30 transition-colors"
-                              title="Registrar movimiento"
+                              className="inline-flex min-h-11 min-w-11 items-center justify-center p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-100"
+                              title="Realizar Movimiento"
                             >
-                              <ArrowRightLeft size={16} />
-                              <span className="hidden lg:inline">Registrar movimiento</span>
+                              <ArrowRightLeft size={18} />
                             </button>
                             {canManage && (
                               <>

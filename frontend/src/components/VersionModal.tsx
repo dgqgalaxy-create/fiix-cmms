@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.43.6";
+export const APP_VERSION = "1.43.7";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: En la lista de Inventario se restauran los botones de acciones como antes; el estilo naranja «Registrar movimiento» queda solo en el detalle del repuesto.",
     "Mejora: En el detalle del repuesto (también desde Ctrl+K), el botón pasa a llamarse «Registrar movimiento» y usa estilo naranja de acción (no etiqueta verde).",
     "Mejora: Costos y precios en pantalla usan formato México ($1,234.56) con símbolo, miles y centavos (compras, activos, OT, KPIs).",
     "Mejora: En KPIs → Dashboard de técnicos, la tabla de detalle es más densa (menos scroll horizontal) sin cambiar las 4 tarjetas ni la gráfica.",

@@ -3,10 +3,13 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 28 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.43.6 (Actualización: 28 de Julio de 2026)
+## 🚀 Versión Actual: v1.43.7 (Actualización: 28 de Julio de 2026)
+
+### Novedades en v1.43.7 (lista inventario: acciones restauradas)
+- **Corrección:** Botones de acciones en la lista de refacciones como antes; «Registrar movimiento» naranja solo en el detalle del artículo.
 
 ### Novedades en v1.43.6 (Registrar movimiento en detalle)
-- **Mejora:** En detalle de repuesto (incl. Ctrl+K): botón **Registrar movimiento** naranja de acción (antes «Movimiento» verde tipo etiqueta).
+- **Mejora:** En detalle de repuesto (incl. Ctrl+K): botón **Registrar movimiento** naranja de acción.
 
 ### Novedades en v1.43.5 (formato moneda MXN)
 - **Mejora:** Costos y precios en UI con formato México (`$1,234.56`) vía `formatCurrency` (compras, activos, OT, tooltips KPI).
