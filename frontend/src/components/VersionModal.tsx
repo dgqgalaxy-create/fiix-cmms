@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.43.10";
+export const APP_VERSION = "1.43.11";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "28 de Julio, 2026";
+  const updateDate = "29 de Julio, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -28,6 +28,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Docs: Manual y README explican Web Push (VAPID, cuándo se envía, límites) y el aviso de actualización (banner ámbar/azul, PWA, CasaOS sin GitHub).",
     "Corrección: Si la PWA se quedaba en una versión vieja tras ./update.sh, ahora detecta que el servidor es más nuevo y recarga; vuelve autoUpdate del service worker.",
     "Mejora: En Inicio → Turno actual (móvil), la tabla es más densa y cabe sin deslizar a la derecha (SLA como R/V; mismo espíritu que KPIs).",
     "Nuevo: Aviso en la app cuando GitHub tiene una versión más nueva (pendiente de ./update.sh) y cuando ya hay un build desplegado listo para recargar.",

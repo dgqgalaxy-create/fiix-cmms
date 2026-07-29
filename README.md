@@ -1,5 +1,5 @@
 # FIIX CMMS
-*(Última actualización: 22 de Julio de 2026 — v1.35.0)*
+*(Última actualización: 29 de Julio de 2026 — v1.43.11)*
 
 Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, activos, inventario, preventivos, checklist, KPIs, compras, RCA, roster y notificaciones (Telegram + Web Push PWA).
 
@@ -224,7 +224,55 @@ Ajusta `server_name` en el conf si tu hostname no es `lpet-cmms`. Al final de `u
 - **Requisito:** Telegram debe estar configurado (Opciones de Desarrollador o `TELEGRAM_*` en `backend/.env`). Sin eso, el healthcheck corre pero no puede notificar.
 
 ### Web Push (notificaciones del dispositivo)
-En **install.sh** / **update.sh**, si faltan `VAPID_*` en `backend/.env`, el script `scripts/ensure-vapid-env.sh` las genera y las escribe (no sobrescribe claves ya existentes). También puedes hacerlo a mano: `cd backend && npx web-push generate-vapid-keys` y pegar `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT`. Los usuarios activan el interruptor en la campana o en Configuración → Apariencia.
+
+Canal **opt-in** por dispositivo: avisos del SO aunque la pestaña esté en segundo plano. **No sustituye** campana ni Telegram.
+
+**Para qué:** nuevas OT (roles Admin / Gestionador / Técnico activos) y avisos SLA (mismos destinatarios que in-app: recordatorios a involucrados; escalamiento a Gestionador/Admin). Solo llega a quien tiene suscripción guardada en BD (`PushSubscription`); al desactivar el interruptor se borra la suscripción de ese dispositivo.
+
+**Cómo se arma**
+| Pieza | Rol |
+|---|---|
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Identidad del servidor para PushManager (`backend/.env`) |
+| `scripts/ensure-vapid-env.sh` | Lo llaman `install.sh` y `update.sh`: genera claves si faltan; **no** regenera si ya hay públicas+privadas |
+| `GET /api/notifications/vapid-public-key` | Público; `{ publicKey, configured }` |
+| `GET/POST/DELETE …/push/status\|subscribe\|unsubscribe` | Autenticados; guardan/quitan endpoint + keys |
+| `frontend/public/push-sw.js` | Handlers `push` / `notificationclick`; Workbox lo importa (`vite.config.ts` → `importScripts`) |
+| `DevicePushToggle` | Campana (compacto) y Configuración → Apariencia |
+
+**VAPID en install/update:** si `.env` existe y faltan claves, `ensure-vapid-env.sh` escribe `VAPID_*` (subject por defecto `mailto:mantenimiento@localhost` si falta). Manual: `cd backend && npx web-push generate-vapid-keys`. Tras cambiar VAPID, reinicia PM2 (`pm2 restart fiix-backend`).
+
+**Límites reales**
+- Requiere **HTTPS** (o localhost). iOS: PWA en Inicio + iOS **16.4+**; Safari sin instalar no tiene push.
+- Un usuario puede tener varios dispositivos (una fila por `endpoint`). Endpoints 404/410 se borran solos al enviar.
+- El envío usa las suscripciones en BD; sin opt-in (sin fila) no hay push.
+- No cubre todos los eventos de la campana: hoy **nuevas OT** + **SLA** (ver `NotificationService` / `SlaService`).
+
+**Si no llegan push**
+| Síntoma | Qué revisar |
+|---|---|
+| Interruptor dice «servidor sin VAPID» | `VAPID_PUBLIC_KEY` y `VAPID_PRIVATE_KEY` en `.env`; `curl` a `/api/notifications/vapid-public-key` → `configured: true`; reiniciar PM2 |
+| Permiso denegado | Configuración del sitio / reinstalar PWA |
+| iPhone sin avisos | App en Inicio + iOS 16.4+; HTTPS |
+| Tras rotar VAPID a mano | Usuarios deben desactivar/activar el interruptor (nueva suscripción) |
+
+Detalle de uso: [`docs/manual_usuario.md`](docs/manual_usuario.md) → *Notificaciones del dispositivo*.
+
+### Aviso de actualización (banner en la app)
+
+`UpdateBanner` (layout autenticado) consulta `GET /api/version/status` cada **5 min**:
+
+| Caso | UI | Significado |
+|---|---|---|
+| `github` > `deployed` | Banner **ámbar** | Hay release en GitHub pendiente de aplicar (`./update.sh` / Actions). Admin/Gestionador ven texto con `./update.sh`; el resto un aviso genérico. Se puede cerrar (sessionStorage). |
+| `deployed` > versión del JS (`APP_VERSION` en el cliente) | Recarga automática o banner **azul** «Recargar ahora» | El servidor ya tiene build nuevo pero la pestaña/PWA sigue cacheada. |
+
+**Cómo se calcula:** `deployed` = `version` de `backend/package.json` (o `APP_VERSION`). `github` = `version` de `frontend/package.json` en raw GitHub (`GITHUB_REPO` / `GITHUB_BRANCH`, default `dgqgalaxy-create/fiix-cmms` / `main`). Caché en servidor **15 min**. Si GitHub no responde → `github: null`, `error: "No se pudo consultar GitHub"`, **sin** banner ámbar.
+
+**PWA / service worker:** `registerSW` en modo **autoUpdate** (`frontend/src/main.tsx`); evento `fiix-sw-need-refresh` refuerza la recarga. Si tras un update la UI sigue vieja: Recargar ahora, o en DevTools → Application → Service Workers → Unregister + hard refresh.
+
+**CasaOS / redes restringidas:** el chequeo sale a `raw.githubusercontent.com`. Sin salida a Internet (o DNS/firewall que lo bloquee) no habrá aviso ámbar; el banner azul de «servidor más nuevo que esta pestaña» **sí** funciona (solo compara API local vs JS cargado).
+
+### Health
 - `/api/health` responde `{ status, db: "ok"|"error", message }` (503 si la BD no responde).
 
 ---
@@ -248,7 +296,7 @@ cd ~/fiix-cmms
 
 1. Carga nvm (Node **22**) o usa `node`/`npm`/`pm2` del PATH.
 2. `git restore .` + `git pull --ff-only` + `chmod +x` de scripts.
-3. Backend: `npm ci --include=dev` → `prisma generate` → `db push --accept-data-loss` → `npm run build` (exige `dist/index.js`).
+3. Backend: `npm ci --include=dev` → `prisma generate` → `db push --accept-data-loss` → `npm run build` (exige `dist/index.js`). Completa `VAPID_*` vía `scripts/ensure-vapid-env.sh` si faltan (no pisa claves existentes).
 4. Frontend: `npm ci` → `npm run build:app` (exige `frontend/dist/index.html`).
 5. PM2: borra y crea `fiix-backend` con **`node dist/index.js`** (`--cwd` backend). Quita `fiix-frontend` legado.
 6. Smoke test con reintentos: `GET /api/health` y `/` en `:3000`.
@@ -276,6 +324,9 @@ cd ~/fiix-cmms
 | `Permission denied: ./update.sh` | `chmod +x update.sh` o usa `bash ./update.sh` |
 | `Cannot find module …/dist/index.js` | Build incompleto; `cd backend && npm run build` y reinicia PM2 |
 | Healthcheck rojo tras update | Espera ~30 s (el script reintenta); si sigue: logs de PM2 y `curl -i http://127.0.0.1:3000/api/health` |
+| Push: `configured: false` | Correr `./scripts/ensure-vapid-env.sh backend/.env` (o generar a mano) y `pm2 restart fiix-backend` |
+| Banner ámbar nunca aparece | Salida a GitHub desde el servidor; `curl -sI https://raw.githubusercontent.com/…/frontend/package.json`; en CasaOS sin red externa es esperado |
+| UI en versión vieja tras `./update.sh` | Banner azul / recarga; si persiste, unregister SW + hard refresh (autoUpdate debería bastar en v1.43.10+) |
 
 ---
 

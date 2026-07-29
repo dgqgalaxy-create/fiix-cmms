@@ -1,5 +1,5 @@
 # Manual de Usuario - FIIX CMMS (LPET)
-*(Versión 1.43.3 - 27 de Julio, 2026)*
+*(Versión 1.43.11 - 29 de Julio, 2026)*
 
 FIIX CMMS (despliegue LPET) centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 
@@ -26,7 +26,7 @@ En celular, el temario del manual aparece como una barra horizontal deslizable. 
 - **Historial del activo de un vistazo:** Al abrir un activo (o escanear su QR) la pestaña **De un vistazo** muestra últimas OTs, fallas RCA frecuentes, PMs próximos/vencidos, stock crítico de repuestos del plan y costo acumulado (valor del activo + refacciones). Pasa el puntero sobre las etiquetas (icono ?) para ver la definición de RCA, PM y stock crítico.
 - **Búsqueda global (Ctrl/Cmd+K):** Desde cualquier pantalla abre el buscador único para activos, repuestos, ubicaciones y folios FOL (p. ej. `FOL-0001`). En celular usa el icono de lupa en la barra superior.
 - **Impresión masiva de QR:** En **Activos**, Inventario → **Repuestos** o Inventario → **Ubicaciones**, usa **QR masivo**, selecciona registros (incluidos todos los filtrados) e imprime una hoja con las etiquetas.
-- **Aviso de actualización:** Si en GitHub hay una versión más nueva que la del servidor, aviso ámbar (Admin: `./update.sh` / Actions). Si el servidor ya se actualizó pero la pestaña sigue con cache vieja, se detecta y **recarga** (o banner azul «Recargar ahora»).
+- **Aviso de actualización:** Dos casos distintos. (1) Banner **ámbar**: en GitHub hay una versión más nueva que la del servidor → el administrador aplica `./update.sh` o Actions (puedes cerrar el aviso en esa sesión). (2) Banner **azul** / recarga: el servidor ya tiene el build nuevo pero tu pestaña o PWA sigue con cache vieja → **Recargar ahora**. Si el servidor no puede consultar GitHub (p. ej. sin Internet externo), el ámbar no aparece; el azul sí.
 - **Borrador de compra desde Stock Crítico:** En Inventario, la franja **Stock crítico** (debajo del encabezado) muestra cuántos ítems están bajo mínimo. Un toque filtra la lista; **sin proveedor** aísla los que faltan de proveedor; con permiso de compras, **Generar borrador OC** crea Órdenes de Compra en estado Borrador (una por proveedor, cantidad = lo faltante para llegar al mínimo). Revisa y avanza el flujo en **Órdenes de Compra**.
 - **Recepción parcial:** En una OC **Enviada**, **Recibir…** pide la cantidad real por línea (puede ser menos, igual o más que lo pedido). Solo lo recibido entra al inventario como movimiento de entrada con **fecha = momento en que confirmas la recepción** (aunque el material llegue antes de la fecha pactada). Motivo `Recepción de Orden de Compra PO-…`. La OC se cierra como Recibida con histórico pedido vs recibido y dos totales (pedido / recibido). En **Inventario → Movimientos** busca `PO-` o `Recepción` si el listado está mezclado con fechas del CSV histórico.
 - **Nueva OC:** Al elegir un **proveedor**, se abre el catálogo de sus refacciones sin tener que escribir. También puedes buscar por **nombre o código** sin elegir proveedor; al tocar el ítem se asigna su proveedor a la orden.
@@ -77,11 +77,12 @@ Pantalla de resumen operativo (antes mezclada con el listado de órdenes). Es la
 Al seleccionar una notificación de nueva solicitud, el sistema abre directamente el detalle de esa orden en **Órdenes de Trabajo**.
 
 ### Notificaciones del dispositivo (Web Push / PWA)
-Avisos del sistema operativo aunque la pestaña esté en segundo plano (nuevas OT y recordatorios/escalamientos SLA). **No sustituyen** la campana ni Telegram: son un canal extra.
+Avisos del sistema operativo aunque la pestaña esté en segundo plano. Hoy cubren **nuevas OT** y **recordatorios/escalamientos SLA**. **No sustituyen** la campana ni Telegram: son un canal extra.
 
 - **Cómo activar:** campana (interruptor abajo) o **Configuración → Apariencia → Notificaciones del dispositivo**. El navegador pedirá permiso; hay que **aceptar**.
 - **Requisitos:** sitio en **HTTPS** (o localhost). En **iPhone/iPad**: instala la app en Inicio (Compartir → Añadir a pantalla de inicio) e iOS **16.4+**; en Safari sin instalar no hay push.
-- **Desactivar:** el mismo interruptor quita la suscripción de ese dispositivo. Sin opt-in no recibirás push.
+- **Desactivar:** el mismo interruptor quita la suscripción de **ese** dispositivo. Sin activar, no hay push (aunque sigas viendo la campana).
+- **Si no llegan:** confirma que el interruptor quedó en ON y el permiso del navegador en «permitir»; en iPhone, que la app esté en Inicio. Si el interruptor avisa que el servidor no tiene claves VAPID, avisa al administrador (en install/update suelen generarse solas).
 
 ## 5. Módulo de Órdenes de Trabajo
 
