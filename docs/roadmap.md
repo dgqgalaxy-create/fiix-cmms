@@ -1,9 +1,12 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
-*(Última actualización: 28 de Julio de 2026)*
+*(Última actualización: 30 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.43.10 (Actualización: 28 de Julio de 2026)
+## 🚀 Versión Actual: v1.43.11 (Actualización: 30 de Julio de 2026)
+
+### Novedades en v1.43.11 (Inicio: líneas paradas + racha)
+- **Nuevo:** Indicadores en Inicio — **Líneas paradas** (L1–L5 con OT correctiva abierta y paro de máquina) y **Racha sin paro** (días sin paro correctivo de línea; preventivos no cuentan).
 
 ### Novedades en v1.43.10 (PWA: no quedarse en versión vieja)
 - **Corrección:** Si el servidor ya tiene build nuevo pero la pestaña/PWA sigue en versión anterior, se detecta (`deployed` > `APP_VERSION`) y se recarga. Service worker otra vez en `autoUpdate`.

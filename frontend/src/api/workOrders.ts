@@ -97,6 +97,41 @@ export const getWorkOrdersSummary = async (startDate?: string, endDate?: string)
   return response.data;
 };
 
+export type ProductionLine = 'L1' | 'L2' | 'L3' | 'L4' | 'L5';
+
+export interface LineStoppageWorkOrder {
+  id: string;
+  folio: number;
+  title: string;
+  assetName: string;
+  status: string;
+  created_at: string;
+}
+
+export interface LineStoppageStatus {
+  lines: ProductionLine[];
+  stoppedLines: Array<{
+    line: ProductionLine;
+    workOrders: LineStoppageWorkOrder[];
+  }>;
+  /** Calendar days since last corrective L1–L5 stoppage; 0 if any line is currently stopped; null if never. */
+  daysWithoutStoppage: number | null;
+  lastStoppageAt: string | null;
+  lastStoppage: {
+    id: string;
+    folio: number;
+    title: string;
+    line: string;
+    assetName: string;
+    created_at: string;
+  } | null;
+}
+
+export const getLineStoppageStatus = async (): Promise<LineStoppageStatus> => {
+  const response = await api.get('/work-orders/line-stoppage');
+  return response.data;
+};
+
 export const getUniqueRequesters = async (): Promise<string[]> => {
   const response = await api.get('/work-orders/requesters');
   return response.data;

@@ -7,6 +7,141 @@ import { computeWorkOrderSla, getSlaSettings } from '../services/SlaService';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { parseDateInput } from '../utils/parseDateInput';
 import { writeAuditLog } from '../utils/auditLog';
+import { PRODUCTION_LINES, resolveProductionLine } from '../utils/assetSection';
+
+const OPEN_WO_STATUSES = ['PENDIENTE', 'EN_PROCESO', 'EN_ESPERA'] as const;
+
+/** Calendar-day difference (UTC date parts) between two timestamps; never negative. */
+function calendarDaysBetween(from: Date, to: Date): number {
+  const a = Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate());
+  const b = Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), to.getUTCDate());
+  return Math.max(0, Math.floor((b - a) / 86_400_000));
+}
+
+/**
+ * Home indicators: which L1–L5 lines are stopped by open corrective WOs with
+ * machine_stopped=true, and days since the last such stoppage event (any status except ANULADO).
+ */
+export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const lineNames = [...PRODUCTION_LINES];
+    const lineZoneOr = [
+      { zone: { name: { in: lineNames, mode: 'insensitive' as const } } },
+      { asset: { zone: { name: { in: lineNames, mode: 'insensitive' as const } } } },
+    ];
+
+    const stoppageSelect = {
+      id: true,
+      folio: true,
+      title: true,
+      status: true,
+      created_at: true,
+      asset: { select: { name: true, zone: { select: { name: true } } } },
+      zone: { select: { name: true } },
+    } as const;
+
+    const [openStopped, lastStoppage] = await Promise.all([
+      prisma.workOrder.findMany({
+        where: {
+          maintenance_type: 'CORRECTIVO',
+          machine_stopped: true,
+          status: { in: [...OPEN_WO_STATUSES] },
+          OR: lineZoneOr,
+        },
+        select: stoppageSelect,
+        orderBy: { created_at: 'desc' },
+      }),
+      prisma.workOrder.findFirst({
+        where: {
+          maintenance_type: 'CORRECTIVO',
+          machine_stopped: true,
+          status: { not: 'ANULADO' },
+          OR: lineZoneOr,
+        },
+        select: stoppageSelect,
+        orderBy: { created_at: 'desc' },
+      }),
+    ]);
+
+    type StoppedWo = {
+      id: string;
+      folio: number;
+      title: string;
+      assetName: string;
+      status: string;
+      created_at: string;
+    };
+
+    const byLine = new Map<string, StoppedWo[]>();
+    for (const line of PRODUCTION_LINES) byLine.set(line, []);
+
+    for (const wo of openStopped) {
+      const line =
+        resolveProductionLine(wo.zone?.name) ||
+        resolveProductionLine(wo.asset?.zone?.name);
+      if (!line) continue;
+      byLine.get(line)!.push({
+        id: wo.id,
+        folio: wo.folio,
+        title: wo.title,
+        assetName: wo.asset?.name || 'Sin equipo',
+        status: wo.status,
+        created_at: wo.created_at.toISOString(),
+      });
+    }
+
+    const stoppedLines = PRODUCTION_LINES
+      .filter((line) => (byLine.get(line)?.length || 0) > 0)
+      .map((line) => ({
+        line,
+        workOrders: byLine.get(line)!,
+      }));
+
+    const now = new Date();
+    let daysWithoutStoppage: number | null = null;
+    let lastStoppagePayload: {
+      id: string;
+      folio: number;
+      title: string;
+      line: string;
+      assetName: string;
+      created_at: string;
+    } | null = null;
+
+    if (stoppedLines.length > 0) {
+      daysWithoutStoppage = 0;
+    }
+
+    if (lastStoppage) {
+      const line =
+        resolveProductionLine(lastStoppage.zone?.name) ||
+        resolveProductionLine(lastStoppage.asset?.zone?.name) ||
+        '—';
+      lastStoppagePayload = {
+        id: lastStoppage.id,
+        folio: lastStoppage.folio,
+        title: lastStoppage.title,
+        line,
+        assetName: lastStoppage.asset?.name || 'Sin equipo',
+        created_at: lastStoppage.created_at.toISOString(),
+      };
+      if (daysWithoutStoppage === null) {
+        daysWithoutStoppage = calendarDaysBetween(lastStoppage.created_at, now);
+      }
+    }
+
+    res.json({
+      lines: [...PRODUCTION_LINES],
+      stoppedLines,
+      daysWithoutStoppage,
+      lastStoppageAt: lastStoppagePayload?.created_at ?? null,
+      lastStoppage: lastStoppagePayload,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener estado de líneas paradas' });
+  }
+};
 
 export const getRequesters = async (req: Request, res: Response): Promise<void> => {
   try {

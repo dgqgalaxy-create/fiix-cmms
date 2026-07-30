@@ -4,9 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   Activity,
   AlertCircle,
+  Ban,
   CalendarClock,
   CheckCircle2,
   Clock,
+  Flame,
   LayoutDashboard,
   RefreshCw,
   ShieldAlert,
@@ -33,20 +35,22 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { getWorkOrders, getWorkOrdersSummary } from '../api/workOrders';
-import type { WorkOrder } from '../api/workOrders';
+import { getLineStoppageStatus, getWorkOrders, getWorkOrdersSummary } from '../api/workOrders';
+import type { LineStoppageStatus, ProductionLine, WorkOrder } from '../api/workOrders';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { useAuth } from '../context/AuthContext';
 import { useControlRoomAlerts } from '../hooks/useControlRoomAlerts';
 
 const isOpenWo = (wo: WorkOrder) => wo.status !== 'FINALIZADO' && wo.status !== 'ANULADO';
+const PRODUCTION_LINES: ProductionLine[] = ['L1', 'L2', 'L3', 'L4', 'L5'];
 
 export const HomePage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [summary, setSummary] = useState<Record<string, number>>({});
+  const [lineStoppage, setLineStoppage] = useState<LineStoppageStatus | null>(null);
   const [summaryStartDate, setSummaryStartDate] = useState('');
   const [summaryEndDate, setSummaryEndDate] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -70,12 +74,14 @@ export const HomePage = () => {
   const fetchDashboard = async (backgroundFetch = false) => {
     try {
       if (!backgroundFetch) setIsLoading(true);
-      const [orders, summaryData] = await Promise.all([
+      const [orders, summaryData, stoppageData] = await Promise.all([
         getWorkOrders(),
         getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined),
+        getLineStoppageStatus(),
       ]);
       setWorkOrders(orders);
       setSummary(summaryData);
+      setLineStoppage(stoppageData);
     } catch (error) {
       console.error('Error fetching dashboard summary', error);
     } finally {
@@ -278,6 +284,18 @@ export const HomePage = () => {
     }
   };
 
+  const stoppedByLine = useMemo(() => {
+    const map = new Map<ProductionLine, LineStoppageStatus['stoppedLines'][0]['workOrders']>();
+    for (const line of PRODUCTION_LINES) map.set(line, []);
+    for (const entry of lineStoppage?.stoppedLines || []) {
+      map.set(entry.line, entry.workOrders);
+    }
+    return map;
+  }, [lineStoppage]);
+
+  const hasStoppedLines = (lineStoppage?.stoppedLines.length || 0) > 0;
+  const daysWithout = lineStoppage?.daysWithoutStoppage;
+
   return (
     <>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
@@ -310,6 +328,130 @@ export const HomePage = () => {
           </button>
         </div>
       </div>
+
+      <section className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div
+          className={`rounded-2xl border p-3 sm:p-4 shadow-sm ${
+            hasStoppedLines
+              ? 'border-rose-300/90 bg-rose-50/50 dark:border-rose-900/60 dark:bg-rose-950/25'
+              : 'border-emerald-200/80 bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-950/20'
+          }`}
+        >
+          <div className="mb-2.5 flex items-center justify-between gap-2">
+            <div
+              className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${
+                hasStoppedLines ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300'
+              }`}
+            >
+              <Ban size={14} className="shrink-0" />
+              Líneas paradas
+            </div>
+            <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 shrink-0">
+              Correctivo · L1–L5
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1.5 mb-2.5">
+            {PRODUCTION_LINES.map((line) => {
+              const stopped = (stoppedByLine.get(line)?.length || 0) > 0;
+              return (
+                <span
+                  key={line}
+                  className={`inline-flex min-w-[2.25rem] items-center justify-center rounded-lg px-2 py-1 text-xs font-black tabular-nums ${
+                    stopped
+                      ? 'bg-rose-600 text-white shadow-sm animate-value-heartbeat'
+                      : 'bg-white/80 text-slate-400 border border-slate-200 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-500'
+                  }`}
+                  title={stopped ? `${line} detenida` : `${line} sin paro`}
+                >
+                  {line}
+                </span>
+              );
+            })}
+          </div>
+          {hasStoppedLines ? (
+            <div className="space-y-1.5 max-h-40 overflow-y-auto">
+              {(lineStoppage?.stoppedLines || []).flatMap((entry) =>
+                entry.workOrders.map((wo) => (
+                  <button
+                    key={wo.id}
+                    type="button"
+                    onClick={() => navigate(`/dashboard?wo=${wo.id}`)}
+                    className="w-full text-left rounded-xl border border-rose-200/80 bg-white px-2.5 py-2 hover:border-rose-400 transition-colors dark:border-rose-900 dark:bg-slate-900 dark:hover:border-rose-700"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                          <span className="text-rose-600 dark:text-rose-400 mr-1.5">{entry.line}</span>
+                          {formatWorkOrderFolio(wo.folio)} · {wo.title}
+                        </p>
+                        <p className="text-[10px] text-slate-500 truncate mt-0.5">{wo.assetName}</p>
+                      </div>
+                      <span className="text-[9px] font-bold uppercase text-rose-600 shrink-0 mt-0.5">Paro</span>
+                    </div>
+                  </button>
+                )),
+              )}
+            </div>
+          ) : (
+            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+              Ninguna línea L1–L5 detenida por correctivo
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-white via-amber-50/40 to-orange-50/50 p-3 sm:p-4 shadow-sm dark:border-amber-900/50 dark:from-slate-900 dark:via-amber-950/20 dark:to-orange-950/20">
+          <div className="mb-2.5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+              <Flame size={14} className="shrink-0 text-orange-500" />
+              Racha sin paro
+            </div>
+            <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 shrink-0">
+              Solo correctivo
+            </span>
+          </div>
+          <div className="flex items-end gap-2">
+            {daysWithout === null ? (
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 py-1">
+                Sin paros correctivos registrados en L1–L5
+              </p>
+            ) : (
+              <>
+                <PulsingValue
+                  value={daysWithout}
+                  className="text-4xl sm:text-5xl font-black leading-none text-slate-900 dark:text-white tabular-nums"
+                />
+                <span className="pb-1 text-sm font-bold text-slate-500 dark:text-slate-400">
+                  día{daysWithout === 1 ? '' : 's'}
+                </span>
+              </>
+            )}
+          </div>
+          {lineStoppage?.lastStoppage && (
+            <button
+              type="button"
+              onClick={() => navigate(`/dashboard?wo=${lineStoppage.lastStoppage!.id}`)}
+              className="mt-3 w-full text-left rounded-xl border border-amber-200/70 bg-white/70 px-2.5 py-2 hover:border-amber-400 transition-colors dark:border-amber-900/60 dark:bg-slate-900/60"
+            >
+              <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                {hasStoppedLines || daysWithout === 0 ? 'Último / actual' : 'Último paro'}
+              </p>
+              <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate mt-0.5">
+                {lineStoppage.lastStoppage.line} · {formatWorkOrderFolio(lineStoppage.lastStoppage.folio)} ·{' '}
+                {lineStoppage.lastStoppage.title}
+              </p>
+              <p className="text-[10px] text-slate-500 truncate">
+                {lineStoppage.lastStoppage.assetName}
+                {' · '}
+                {new Date(lineStoppage.lastStoppage.created_at).toLocaleDateString('es-MX', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </p>
+            </button>
+          )}
+        </div>
+      </section>
 
       {isControlRoomRole && (
         <section className="mb-6 rounded-2xl border border-rose-200/80 bg-rose-50/40 p-3 sm:p-4 dark:border-rose-900/50 dark:bg-rose-950/20">

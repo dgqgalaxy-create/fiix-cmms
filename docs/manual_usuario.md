@@ -1,5 +1,5 @@
 # Manual de Usuario - FIIX CMMS (LPET)
-*(Versión 1.43.3 - 27 de Julio, 2026)*
+*(Versión 1.43.11 - 30 de Julio, 2026)*
 
 FIIX CMMS (despliegue LPET) centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 
@@ -16,6 +16,7 @@ En celular, el temario del manual aparece como una barra horizontal deslizable. 
 - **Ayudas ⓘ (InfoTip):** En pantallas táctiles (y también en PC) el icono ⓘ abre una explicación breve (pestañas de Órdenes, folio, Stock crítico, KPIs, SLA, etc.).
 - **Asignación masiva:** En Órdenes de Trabajo, **Asignar…** permite elegir varias OT abiertas y asignarles técnicos de una sola vez.
 - **Turno actual (Inicio):** Panel con conteo por técnico de OT abiertas (pendientes / en proceso / en espera y avisos SLA). Un toque lleva a Órdenes.
+- **Líneas paradas / racha (Inicio):** Chips L1–L5 por OT correctiva abierta con paro de máquina, y días sin paro correctivo de línea (preventivos no cuentan).
 - **KPIs — comparar semanas:** Periodo **Semana pasada** y, al ver **Esta semana**, franja de comparación vs la semana anterior.
 - **Bitácora de auditoría:** Solo **Administrador**, en Opciones de Desarrollador: últimos eventos de cambios en OT, inventario y permisos.
 - **Tiempo real:** Los listados y catálogos se actualizan casi al momento cuando otro usuario crea, edita o elimina datos (órdenes, inventario, activos, compras, checklist, turnos, RCA, zonas, usuarios, etc.). No hace falta pulsar F5.
@@ -65,6 +66,8 @@ Se han mejorado las reglas del almacén para prevenir errores y mejorar la fluid
 ## 4. Módulo Inicio
 
 Pantalla de resumen operativo (antes mezclada con el listado de órdenes). Es la pantalla de entrada al abrir el sistema en una sesión nueva.
+- **Líneas paradas:** Chips L1–L5 y detalle de OT correctivas abiertas con **¿Paró máquina?** = Sí (`machine_stopped`). Si no hay ninguna, el panel lo indica en verde. Toca una OT para abrirla en Órdenes.
+- **Racha sin paro:** Días naturales sin un evento de paro correctivo en L1–L5 (preventivos no cuentan). Al reportar un nuevo paro correctivo en esas líneas, la racha vuelve a 0.
 - **Sala de control (Administrador / Gestionador):** Franja superior con conteos de **Urgentes abiertas**, **Sin asignar**, **SLA en riesgo** y **SLA vencido**. Cada tarjeta abre **Órdenes de Trabajo** ya filtrada. El título de la pestaña del navegador muestra `(N) FIIX CMMS` cuando hay críticas, y puedes activar/desactivar **Sonido al llegar OT críticas** (por defecto encendido; se guarda en el navegador).
 - **Turno actual:** Debajo de Sala de control (o al inicio del resumen), lista compacta por técnico con pendientes / en proceso / en espera y avisos SLA. Toca una fila para ir a Órdenes.
 - **Pulso al actualizar cifras:** Cuando cambia un número de las tarjetas del resumen o de Sala de control (p. ej. por una OT nueva en tiempo real), la cifra late una vez de forma suave; no anima toda la tarjeta.

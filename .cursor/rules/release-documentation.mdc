@@ -11,3 +11,8 @@ alwaysApply: true
 - Documentar nuevas funciones y cambios de uso en `docs/manual_usuario.md`.
 - Actualizar documentación adicional relevante, como README o roadmap, cuando corresponda.
 - No ejecutar `git push`, crear PR, publicar releases ni modificar repositorios remotos salvo petición explícita del usuario.
+
+## Arquitectura del Proyecto
+
+- Este es un sistema CMMS para gestión de mantenimiento de planta.
+- Mantén el código modular, fácil de leer y enfocado en la estabilidad del sistema.

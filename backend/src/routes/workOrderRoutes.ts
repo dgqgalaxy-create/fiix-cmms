@@ -1,5 +1,15 @@
 import { Router } from 'express';
-import { getWorkOrders, getWorkOrdersSummary, getWorkOrderById, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder, getRequesters } from '../controllers/workOrderController';
+import {
+  getWorkOrders,
+  getWorkOrdersSummary,
+  getWorkOrderById,
+  getLineStoppageStatus,
+  createWorkOrder,
+  updateWorkOrder,
+  deleteWorkOrder,
+  joinWorkOrder,
+  getRequesters,
+} from '../controllers/workOrderController';
 import { authenticate, requirePermission } from '../middlewares/authMiddleware';
 import { upload } from '../middlewares/upload';
 
@@ -10,6 +20,7 @@ router.get('/', authenticate, getWorkOrders);
 router.get('/requesters', authenticate, getRequesters);
 
 router.get('/summary', authenticate, getWorkOrdersSummary);
+router.get('/line-stoppage', authenticate, getLineStoppageStatus);
 router.get('/:id', authenticate, getWorkOrderById);
 router.post(
   '/', 

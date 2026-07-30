@@ -1,12 +1,23 @@
 import { AssetSection } from '@prisma/client';
 
-const SECTION_ZONES = new Set(['L1', 'L2', 'L3', 'L4', 'L5']);
+/** Production lines used for stoppage / streak indicators on Home. */
+export const PRODUCTION_LINES = ['L1', 'L2', 'L3', 'L4', 'L5'] as const;
+export type ProductionLine = (typeof PRODUCTION_LINES)[number];
+
+const SECTION_ZONES = new Set<string>(PRODUCTION_LINES);
 const VALID_SECTIONS = new Set<string>(Object.values(AssetSection));
 
 /** Exact match on trimmed zone name (case-insensitive): L1…L5. */
 export function isSectionZoneName(zoneName: string | null | undefined): boolean {
   if (!zoneName) return false;
   return SECTION_ZONES.has(zoneName.trim().toUpperCase());
+}
+
+/** Returns L1–L5 if the zone name matches a production line; otherwise null. */
+export function resolveProductionLine(zoneName: string | null | undefined): ProductionLine | null {
+  if (!zoneName) return null;
+  const upper = zoneName.trim().toUpperCase();
+  return SECTION_ZONES.has(upper) ? (upper as ProductionLine) : null;
 }
 
 export function normalizeAssetSection(
