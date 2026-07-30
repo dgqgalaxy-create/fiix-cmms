@@ -10,9 +10,14 @@ import bcrypt from 'bcrypt';
 import { generateAssetInternalCode } from '../utils/assetCodeGenerator';
 import { parseWorkOrderFolio } from '../utils/folio';
 import { runBackup, listBackups, runRestore, BACKUP_DIR, getBackupProgress } from '../utils/backupService';
-import { assignItemImagesFromZip } from '../utils/itemImageImport';
 import {
+  assignItemImagesFromFolder,
+  assignItemImagesFromZip,
+} from '../utils/itemImageImport';
+import {
+  assignWorkOrderImagesFromFolder,
   assignWorkOrderImagesFromZip,
+  getWorkOrderImagesDir,
   sanitizeWorkOrderPhotoPath,
   type WorkOrderPhotoMapping,
 } from '../utils/workOrderImageImport';
@@ -993,7 +998,7 @@ router.post(
       }
     }
 
-    // Fotos de repuestos desde zip subido (opcional; no rompe si falta o no hay coincidencias)
+    // Fotos de repuestos: zip subido, o carpeta data/Items_Images/ (SCP/rsync en servidor)
     if (zipFile?.path) {
       try {
         const photoResult = await assignItemImagesFromZip(zipFile.path);
@@ -1016,9 +1021,25 @@ router.post(
           filesScanned: 0,
         };
       }
+    } else {
+      try {
+        const photoResult = await assignItemImagesFromFolder();
+        if (photoResult.folderFound && photoResult.filesScanned > 0) {
+          results.itemImages = {
+            matched: photoResult.matched,
+            missing: photoResult.missing,
+            skipped: photoResult.skipped,
+            assetsMatched: photoResult.assetsMatched,
+            folderFound: photoResult.folderFound,
+            filesScanned: photoResult.filesScanned,
+          };
+        }
+      } catch (photoErr) {
+        console.error('Item images folder import error:', photoErr);
+      }
     }
 
-    // Fotos antes/después de OT desde zip (ignora firmas del export)
+    // Fotos antes/después de OT: zip subido, o data/Formulario Solicitudes_Images/
     if (woZipFile?.path && woPhotoMappings.length > 0) {
       try {
         const woPhotoResult = await assignWorkOrderImagesFromZip(woZipFile.path, woPhotoMappings);
@@ -1044,15 +1065,44 @@ router.post(
         };
       }
     } else if (woPhotoMappings.length > 0 && !woZipFile) {
-      results.workOrderImages = {
-        matched: 0,
-        missing: woPhotoMappings.length,
-        skipped: 0,
-        folderFound: false,
-        filesScanned: 0,
-        beforeAssigned: 0,
-        afterAssigned: 0,
-      };
+      try {
+        const woPhotoResult = await assignWorkOrderImagesFromFolder(
+          getWorkOrderImagesDir(),
+          woPhotoMappings
+        );
+        if (woPhotoResult.folderFound && woPhotoResult.filesScanned > 0) {
+          results.workOrderImages = {
+            matched: woPhotoResult.matched,
+            missing: woPhotoResult.missing,
+            skipped: woPhotoResult.skipped,
+            folderFound: woPhotoResult.folderFound,
+            filesScanned: woPhotoResult.filesScanned,
+            beforeAssigned: woPhotoResult.beforeAssigned,
+            afterAssigned: woPhotoResult.afterAssigned,
+          };
+        } else {
+          results.workOrderImages = {
+            matched: 0,
+            missing: woPhotoMappings.length,
+            skipped: 0,
+            folderFound: woPhotoResult.folderFound,
+            filesScanned: woPhotoResult.filesScanned,
+            beforeAssigned: 0,
+            afterAssigned: 0,
+          };
+        }
+      } catch (woPhotoErr) {
+        console.error('Work order images folder import error:', woPhotoErr);
+        results.workOrderImages = {
+          matched: 0,
+          missing: woPhotoMappings.length,
+          skipped: 0,
+          folderFound: false,
+          filesScanned: 0,
+          beforeAssigned: 0,
+          afterAssigned: 0,
+        };
+      }
     } else if (woZipFile && woPhotoMappings.length === 0) {
       results.workOrderImages = {
         matched: 0,

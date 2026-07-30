@@ -215,7 +215,37 @@ sudo ufw allow 80/tcp
 
 Ajusta `server_name` en el conf si tu hostname no es `lpet-cmms`. Al final de `update.sh` (modo interactivo) te pregunta si quieres **actualizar nginx** desde `deploy/nginx-fiix.conf` (útil tras cambios de `client_max_body_size`); en CI no pregunta. También puedes forzar: `UPDATE_NGINX=1 ./update.sh`.
 
-**Import CSV + zip grande:** el conf del repo usa `client_max_body_size 1100M` (2 zips × 500 MB multer + CSV) y timeouts largos (`client_body_timeout 30m`, `proxy_read_timeout 60m`). Si ves *Network Error*, *413* o *408 Request Timeout* al subir el zip por el puerto 80, el sites-enabled del servidor probablemente sigue con defaults de nginx (body 1m, timeouts 60s). Actualiza la conf (comandos arriba o fila de la tabla «Si algo falla») o usa `http://HOST:3000` directo.
+**Import CSV + zip grande:** el conf del repo usa `client_max_body_size 1100M` (2 zips × 500 MB multer + CSV) y timeouts largos (`client_body_timeout 120m`, `proxy_read_timeout 120m`). Si ves *Network Error*, *413* o *408 Request Timeout* al subir el zip por el puerto 80, el sites-enabled del servidor probablemente sigue con defaults de nginx (body 1m, timeouts 60s). Actualiza la conf (comandos arriba o fila de la tabla «Si algo falla»), entra por `http://HOST:3000` directo, o copia las carpetas de fotos a `data/` en el servidor e importa solo los CSV.
+
+**Verificar que nginx ya aplicó la conf del repo** (en el Ubuntu):
+
+```bash
+# Debe mostrar 1100M / 120m / 120m — NO vacío y NO 1m / 60s
+grep -E 'client_max_body_size|client_body_timeout|proxy_read_timeout' /etc/nginx/sites-available/fiix
+# Confirmar que sites-enabled apunta a ese archivo:
+ls -la /etc/nginx/sites-enabled/fiix
+# Tras copiar/actualizar:
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+| Valor en grep | Significado |
+|---|---|
+| `client_max_body_size 1100M` | Aplicado (zip grande OK) |
+| `client_body_timeout 120m` | Aplicado (evita 408 por Tailscale lento) |
+| `proxy_read_timeout 120m` | Aplicado (evita 504 al procesar) |
+| Sin líneas / `1m` / `60s` / archivo inexistente | **Aún default** — hay que `sudo cp ~/fiix-cmms/deploy/nginx-fiix.conf …` y reload |
+
+**Workaround Tailscale (recomendado si sigue el 408):** sube los zips/carpetas por SCP/rsync (no pasa por nginx HTTP) y abre la app en `:3000`:
+
+```bash
+# Desde tu PC (PowerShell / WSL), ejemplo:
+scp -r "Items_Images" usuario@HOST:~/fiix-cmms/data/
+scp -r "Formulario Solicitudes_Images" usuario@HOST:~/fiix-cmms/data/
+# O el zip y descomprimir en el servidor:
+# scp Items_Images.zip usuario@HOST:~/fiix-cmms/data/ && ssh … 'cd ~/fiix-cmms/data && unzip -o Items_Images.zip'
+```
+
+Luego en el navegador: `http://HOST:3000` → Opciones de Desarrollador → importa **solo los 7 CSV** (sin elegir zip). El backend usa `data/Items_Images/` y `data/Formulario Solicitudes_Images/` si no hay zip en el formulario.
 
 **Windows / desarrollo local:** sigue usando `http://localhost:3000` (build de producción) o Vite en `:5173`; nginx es para el servidor Ubuntu.
 
@@ -274,7 +304,7 @@ cd ~/fiix-cmms
 | Síntoma | Qué hacer |
 |---|---|
 | nginx **502** | `pm2 status` y `pm2 logs fiix-backend --lines 80`. Suele ser proceso caído. Corre `bash ./update.sh` (arranca `node dist/index.js`, no nodemon). |
-| Import CSV + zip: **413**, **408** o **Network Error** (body grande / timeout) | Nginx aún con límites default (body 1m, timeouts 60s). Copia la conf del repo y recarga: `sudo cp ~/fiix-cmms/deploy/nginx-fiix.conf /etc/nginx/sites-available/fiix && sudo nginx -t && sudo systemctl reload nginx` (debe verse `client_max_body_size 1100M` y `client_body_timeout 30m`). Alternativa: entra por `http://HOST:3000` (sin nginx). Tras `update.sh`, responde **s** a nginx o `UPDATE_NGINX=1 ./update.sh`. |
+| Import CSV + zip: **413**, **408** o **Network Error** (body grande / timeout) | Nginx aún con límites default (body 1m, timeouts 60s). Verifica: `grep -E 'client_max_body_size\|client_body_timeout\|proxy_read_timeout' /etc/nginx/sites-available/fiix` — debe verse `1100M` y `120m`. Si no: `sudo cp ~/fiix-cmms/deploy/nginx-fiix.conf /etc/nginx/sites-available/fiix && sudo nginx -t && sudo systemctl reload nginx`. Alternativa Tailscale: `http://HOST:3000` o SCP a `data/` + import solo CSV. Tras `update.sh`, responde **s** a nginx o `UPDATE_NGINX=1 ./update.sh`. |
 | `nodemon: not found` | Instalación antigua con `npm run dev`. Recrea con update.sh o: `pm2 delete fiix-backend && pm2 start ~/fiix-cmms/backend/dist/index.js --name fiix-backend --cwd ~/fiix-cmms/backend && pm2 save` |
 | `Permission denied: ./update.sh` | `chmod +x update.sh` o usa `bash ./update.sh` |
 | `Cannot find module …/dist/index.js` | Build incompleto; `cd backend && npm run build` y reinicia PM2 |

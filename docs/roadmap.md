@@ -3,7 +3,15 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 30 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.44.12 (Actualización: 30 de Julio de 2026)
+## 🚀 Versión Actual: v1.44.14 (Actualización: 30 de Julio de 2026)
+
+### Novedades en v1.44.14 (Import CSV — timeouts nginx/axios 120m)
+- **Corrección:** Timeouts nginx (`client_body_timeout`, `send_timeout`, `proxy_read_timeout`, `proxy_send_timeout`) y axios de import a **120m** (2 h); `client_max_body_size` sigue en **1100M**.
+
+### Novedades en v1.44.13 (Import CSV — Tailscale / nginx 60m + data/)
+- **Corrección:** `client_body_timeout` de nginx a **60m** (zips grandes por Tailscale).
+- **Mejora:** Si no hay zip en el formulario, la importación CSV usa `data/Items_Images/` y `data/Formulario Solicitudes_Images/` (SCP/rsync).
+- **Docs:** checklist de verificación nginx (`grep` = aplicado vs default) y workaround `:3000` / SCP.
 
 ### Novedades en v1.44.12 (PWA — recarga fiable)
 - **Corrección:** Si el banner decía «servidor ya tiene vX» pero **Recargar ahora** no avanzaba la UI, el soft-reload seguía sirviendo el precache del SW. Ahora desregistra SW, limpia Cache Storage y fuerza navegación; `skipWaiting`/`clientsClaim`; `index.html`/`sw.js` con `Cache-Control: no-cache`.

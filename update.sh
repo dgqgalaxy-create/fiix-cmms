@@ -283,7 +283,7 @@ DO_NGINX="${UPDATE_NGINX:-}"
 if [ -z "$DO_NGINX" ]; then
   if [ -t 0 ] && [ -z "${CI:-}" ] && [ -z "${GITHUB_ACTIONS:-}" ] && [ -f "$NGINX_SRC" ]; then
     echo
-    read -r -p "¿Actualizar conf nginx (body 1100M + timeouts 30m para zips)? [s/N] " DO_NGINX_ANS || DO_NGINX_ANS="N"
+    read -r -p "¿Actualizar conf nginx (body 1100M + timeouts 120m para zips)? [s/N] " DO_NGINX_ANS || DO_NGINX_ANS="N"
     DO_NGINX="$DO_NGINX_ANS"
   else
     DO_NGINX="N"
@@ -299,7 +299,7 @@ if [[ "${DO_NGINX}" =~ ^[sSyY1]$ ]]; then
     fi
     if sudo nginx -t; then
       sudo systemctl reload nginx
-      ok "nginx recargado (client_max_body_size 1100M, timeouts 30m/60m)"
+      ok "nginx recargado (client_max_body_size 1100M, timeouts 120m/120m)"
     else
       echo "  [AVISO] nginx -t falló; revisa /etc/nginx/sites-available/fiix"
     fi

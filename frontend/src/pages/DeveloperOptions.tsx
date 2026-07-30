@@ -577,7 +577,7 @@ export const DeveloperOptions = () => {
           'x-dev-password': password,
           // No fijar Content-Type: el navegador debe enviar boundary=...
         },
-        timeout: 60 * 60 * 1000, // zip grande + procesamiento (alineado con nginx 30m+ margen)
+        timeout: 120 * 60 * 1000, // zip grande + procesamiento (alineado con nginx 120m)
         maxBodyLength: Infinity,
         maxContentLength: Infinity,
         onUploadProgress: (evt) => {
@@ -618,7 +618,7 @@ export const DeveloperOptions = () => {
           msg += `, sin archivo: ${results.workOrderImages.missing}`;
         }
         if (!results.workOrderImages.folderFound && results.workOrderImages.matched === 0) {
-          msg += ' — no se detectó el zip de órdenes; selecciónalo antes de los CSV.';
+          msg += ' — no se detectó zip ni carpeta data/Formulario Solicitudes_Images/.';
         }
         msg += '.';
       } else if (workOrderImagesZip) {
@@ -638,10 +638,10 @@ export const DeveloperOptions = () => {
             'El servidor rechazó el zip (413 Payload Too Large). En Ubuntu: sudo cp ~/fiix-cmms/deploy/nginx-fiix.conf /etc/nginx/sites-available/fiix && sudo nginx -t && sudo systemctl reload nginx (client_max_body_size 1100M). O entra por http://HOST:3000 sin nginx.';
         } else if (status === 408) {
           detail =
-            'Timeout 408 (nginx cortó la subida: client_body_timeout). Por Tailscale el zip va lento. En Ubuntu: sudo cp ~/fiix-cmms/deploy/nginx-fiix.conf /etc/nginx/sites-available/fiix && sudo nginx -t && sudo systemctl reload nginx (timeouts 30m). O importa por http://HOST:3000 / SSH a data/.';
+            'Timeout 408 (nginx cortó la subida: client_body_timeout). Por Tailscale el zip va lento. En Ubuntu: sudo cp ~/fiix-cmms/deploy/nginx-fiix.conf /etc/nginx/sites-available/fiix && sudo nginx -t && sudo systemctl reload nginx (debe verse client_body_timeout 120m). Mejor: http://HOST:3000 o SCP/rsync a data/ (ver tip abajo).';
         } else if (!err.response && (err.code === 'ECONNABORTED' || /timeout/i.test(err.message))) {
           detail =
-            'Se agotó el tiempo de espera al subir/procesar (cliente o Tailscale). Reintenta por :3000, sube el zip por SSH a data/, o aumenta proxy_read_timeout / client_body_timeout en nginx a 30m.';
+            'Se agotó el tiempo de espera al subir/procesar (cliente o Tailscale). Reintenta por http://HOST:3000, o SCP las fotos a data/ e importa solo los CSV.';
         } else if (!err.response && /network error/i.test(err.message)) {
           detail =
             'Network Error al subir el zip (nginx/proxy o Tailscale cortó el body grande). En Ubuntu: sudo grep client_max_body /etc/nginx/sites-available/fiix ; si falta o es <1100M, sudo cp ~/fiix-cmms/deploy/nginx-fiix.conf /etc/nginx/sites-available/fiix && sudo nginx -t && sudo systemctl reload nginx. O usa http://HOST:3000.';
@@ -902,6 +902,13 @@ export const DeveloperOptions = () => {
                   <p className="mt-1">
                     <strong>Órdenes:</strong> <code className="rounded bg-black/20 px-1 py-0.5">Formulario Solicitudes_Images.zip</code>{' '}
                     — solo se usan <em>FOTO ANTES</em> / <em>FOTO DESPUÉS</em> (las firmas se ignoran). Límite ~500&nbsp;MB c/u.
+                  </p>
+                  <p className="mt-2 text-indigo-100/90">
+                    <strong>Tailscale / 408:</strong> entra por <code className="rounded bg-black/20 px-1 py-0.5">http://HOST:3000</code>{' '}
+                    (sin nginx) o copia las carpetas al servidor (
+                    <code className="rounded bg-black/20 px-1 py-0.5">data/Items_Images/</code>,{' '}
+                    <code className="rounded bg-black/20 px-1 py-0.5">data/Formulario Solicitudes_Images/</code>
+                    ) y importa solo los CSV — las fotos se toman de ahí si no eliges zip.
                   </p>
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
