@@ -283,7 +283,7 @@ DO_NGINX="${UPDATE_NGINX:-}"
 if [ -z "$DO_NGINX" ]; then
   if [ -t 0 ] && [ -z "${CI:-}" ] && [ -z "${GITHUB_ACTIONS:-}" ] && [ -f "$NGINX_SRC" ]; then
     echo
-    read -r -p "¿Actualizar conf nginx (body 500M para zips de importación)? [s/N] " DO_NGINX_ANS || DO_NGINX_ANS="N"
+    read -r -p "¿Actualizar conf nginx (body 1100M + timeouts 30m para zips)? [s/N] " DO_NGINX_ANS || DO_NGINX_ANS="N"
     DO_NGINX="$DO_NGINX_ANS"
   else
     DO_NGINX="N"
@@ -299,7 +299,7 @@ if [[ "${DO_NGINX}" =~ ^[sSyY1]$ ]]; then
     fi
     if sudo nginx -t; then
       sudo systemctl reload nginx
-      ok "nginx recargado (client_max_body_size 500M)"
+      ok "nginx recargado (client_max_body_size 1100M, timeouts 30m/60m)"
     else
       echo "  [AVISO] nginx -t falló; revisa /etc/nginx/sites-available/fiix"
     fi
@@ -307,7 +307,7 @@ if [[ "${DO_NGINX}" =~ ^[sSyY1]$ ]]; then
     echo "  [AVISO] nginx no está instalado o falta ${NGINX_SRC}; omite."
   fi
 else
-  info "nginx no modificado. Si el zip de importación falla con 413:"
+  info "nginx no modificado. Si el zip de importación falla con 413 / 408 / Network Error:"
   echo "    sudo cp ${APP_DIR}/deploy/nginx-fiix.conf /etc/nginx/sites-available/fiix"
   echo "    sudo nginx -t && sudo systemctl reload nginx"
   echo "  (o UPDATE_NGINX=1 ./update.sh)"

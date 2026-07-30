@@ -50,6 +50,9 @@ export const DeveloperOptions = () => {
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
+  const [lockedUntil, setLockedUntil] = useState<string | null>(null);
+  const [lockCountdown, setLockCountdown] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
@@ -103,16 +106,15 @@ export const DeveloperOptions = () => {
   const [restoreModalError, setRestoreModalError] = useState<string | null>(null);
   const [itemImagesZip, setItemImagesZip] = useState<File | null>(null);
   const [workOrderImagesZip, setWorkOrderImagesZip] = useState<File | null>(null);
-  const [woPhotosOnlyZip, setWoPhotosOnlyZip] = useState<File | null>(null);
-  const [woPhotosOnlyCsv, setWoPhotosOnlyCsv] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [auditOpen, setAuditOpen] = useState(false);
   const [auditLogs, setAuditLogs] = useState<AuditLogRow[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
 
-  /** Límite alineado con multer / nginx (500 MB). */
+  /** Por archivo: alineado con multer. Nginx permite ~1100 MB de body (2 zips). */
   const ZIP_MAX_BYTES = 500 * 1024 * 1024;
+  const IMPORT_BODY_MAX_BYTES = 1100 * 1024 * 1024;
 
   const fetchAuditLogs = async () => {
     if (!isAdmin) return;
@@ -164,8 +166,78 @@ export const DeveloperOptions = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!lockedUntil) {
+      setLockCountdown(null);
+      return;
+    }
+    const tick = () => {
+      const ms = Date.parse(lockedUntil) - Date.now();
+      if (Number.isNaN(ms) || ms <= 0) {
+        setLockedUntil(null);
+        setRemainingAttempts(null);
+        setLockCountdown(null);
+        setError(null);
+        return;
+      }
+      const totalSec = Math.ceil(ms / 1000);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      const parts = [
+        h > 0 ? `${h}h` : null,
+        m > 0 || h > 0 ? `${m}m` : null,
+        `${s}s`,
+      ].filter(Boolean);
+      setLockCountdown(parts.join(' '));
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [lockedUntil]);
+
+  const parseDevPasswordError = (err: unknown): void => {
+    if (!isAxiosError(err)) {
+      setError('Contraseña incorrecta o error de conexión.');
+      setRemainingAttempts(null);
+      setLockedUntil(null);
+      return;
+    }
+    const data = err.response?.data as
+      | {
+          code?: string;
+          message?: string;
+          remainingAttempts?: number;
+          lockedUntil?: string | null;
+        }
+      | undefined;
+    const msg = data?.message || 'Contraseña incorrecta.';
+    setError(msg);
+    if (typeof data?.remainingAttempts === 'number') {
+      setRemainingAttempts(data.remainingAttempts);
+    } else {
+      setRemainingAttempts(null);
+    }
+    if (data?.lockedUntil) {
+      setLockedUntil(data.lockedUntil);
+    } else if (data?.code === 'DEV_PASSWORD_LOCKED') {
+      // Sin timestamp: bloqueo genérico
+      setLockedUntil(null);
+    } else {
+      setLockedUntil(null);
+    }
+  };
+
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (lockedUntil && Date.parse(lockedUntil) > Date.now()) {
+      setError(
+        lockCountdown
+          ? `Acceso bloqueado. Espera ${lockCountdown} e inténtalo de nuevo.`
+          : 'Acceso bloqueado por demasiados intentos fallidos.'
+      );
+      return;
+    }
     setIsLoading(true);
     setError(null);
     try {
@@ -184,9 +256,11 @@ export const DeveloperOptions = () => {
         console.error('Error fetching settings', e);
       }
       setIsAuthenticated(true);
+      setRemainingAttempts(null);
+      setLockedUntil(null);
       saveDevOptionsSession(password);
-    } catch {
-      setError('Contraseña incorrecta o error de conexión.');
+    } catch (err) {
+      parseDevPasswordError(err);
     } finally {
       setIsLoading(false);
     }
@@ -469,6 +543,13 @@ export const DeveloperOptions = () => {
 
     const zipBytes = (itemImagesZip?.size || 0) + (workOrderImagesZip?.size || 0);
     const hasZips = Boolean(itemImagesZip || workOrderImagesZip);
+    if (zipBytes > IMPORT_BODY_MAX_BYTES) {
+      setError(
+        `Los zips juntos pesan ${(zipBytes / (1024 * 1024)).toFixed(0)} MB; el máximo del body es ~${Math.round(IMPORT_BODY_MAX_BYTES / (1024 * 1024))} MB. Sube un zip por vez o usa http://HOST:3000 / SSH a data/.`
+      );
+      e.target.value = '';
+      return;
+    }
     setIsLoading(true);
     setUploadProgress(hasZips ? 0 : null);
     setLoadingMessage(
@@ -496,7 +577,7 @@ export const DeveloperOptions = () => {
           'x-dev-password': password,
           // No fijar Content-Type: el navegador debe enviar boundary=...
         },
-        timeout: 30 * 60 * 1000, // zip grande + miles de fotos
+        timeout: 60 * 60 * 1000, // zip grande + procesamiento (alineado con nginx 30m+ margen)
         maxBodyLength: Infinity,
         maxContentLength: Infinity,
         onUploadProgress: (evt) => {
@@ -554,13 +635,16 @@ export const DeveloperOptions = () => {
         const serverMsg = err.response?.data?.message;
         if (status === 413) {
           detail =
-            'El servidor rechazó el zip (413 Payload Too Large). En Ubuntu: copia deploy/nginx-fiix.conf (client_max_body_size 500M), nginx -t && systemctl reload nginx. O entra por http://HOST:3000 sin nginx.';
+            'El servidor rechazó el zip (413 Payload Too Large). En Ubuntu: sudo cp ~/fiix-cmms/deploy/nginx-fiix.conf /etc/nginx/sites-available/fiix && sudo nginx -t && sudo systemctl reload nginx (client_max_body_size 1100M). O entra por http://HOST:3000 sin nginx.';
+        } else if (status === 408) {
+          detail =
+            'Timeout 408 (nginx cortó la subida: client_body_timeout). Por Tailscale el zip va lento. En Ubuntu: sudo cp ~/fiix-cmms/deploy/nginx-fiix.conf /etc/nginx/sites-available/fiix && sudo nginx -t && sudo systemctl reload nginx (timeouts 30m). O importa por http://HOST:3000 / SSH a data/.';
         } else if (!err.response && (err.code === 'ECONNABORTED' || /timeout/i.test(err.message))) {
           detail =
-            'Se agotó el tiempo de espera al subir el zip (Tailscale lento o proxy cortó la conexión). Reintenta por :3000 o sube el zip por SSH a data/Items_Images/.';
+            'Se agotó el tiempo de espera al subir/procesar (cliente o Tailscale). Reintenta por :3000, sube el zip por SSH a data/, o aumenta proxy_read_timeout / client_body_timeout en nginx a 30m.';
         } else if (!err.response && /network error/i.test(err.message)) {
           detail =
-            'Network Error al subir el zip (nginx/proxy o Tailscale cortó el body grande). Revisa client_max_body_size o usa http://HOST:3000.';
+            'Network Error al subir el zip (nginx/proxy o Tailscale cortó el body grande). En Ubuntu: sudo grep client_max_body /etc/nginx/sites-available/fiix ; si falta o es <1100M, sudo cp ~/fiix-cmms/deploy/nginx-fiix.conf /etc/nginx/sites-available/fiix && sudo nginx -t && sudo systemctl reload nginx. O usa http://HOST:3000.';
         } else if (typeof serverMsg === 'string' && /unexpected field/i.test(serverMsg)) {
           detail =
             'El servidor rechazó un campo de archivo (Unexpected field). En Ubuntu: cd ~/fiix-cmms && git pull && ./update.sh ; luego abre /api/health y confirma "version":"1.30.7" o superior.';
@@ -576,65 +660,6 @@ export const DeveloperOptions = () => {
       setLoadingMessage(null);
       setUploadProgress(null);
       e.target.value = ''; // Reset input
-    }
-  };
-
-  const handleImportWoPhotosOnly = async () => {
-    if (!woPhotosOnlyZip || !woPhotosOnlyCsv) {
-      setError('Selecciona el zip de fotos y el CSV de Solicitudes (FOLIO / FOTO ANTES / FOTO DESPUÉS).');
-      return;
-    }
-    setIsLoading(true);
-    setUploadProgress(0);
-    setLoadingMessage(
-      `Asignando fotos OT (${(woPhotosOnlyZip.size / (1024 * 1024)).toFixed(1)} MB). No cierres esta ventana...`
-    );
-    setError(null);
-    const formData = new FormData();
-    formData.append('csvFiles', woPhotosOnlyCsv);
-    formData.append('csvFiles', woPhotosOnlyZip, woPhotosOnlyZip.name);
-
-    try {
-      const res = await axios.post(`/dev/import-wo-photos`, formData, {
-        headers: { 'x-dev-password': password },
-        timeout: 30 * 60 * 1000,
-        maxBodyLength: Infinity,
-        maxContentLength: Infinity,
-        onUploadProgress: (evt) => {
-          if (!evt.total) return;
-          const pct = Math.min(99, Math.round((evt.loaded / evt.total) * 100));
-          setUploadProgress(pct);
-          setLoadingMessage(`Subiendo zip + CSV... ${pct}%`);
-        },
-      });
-      setUploadProgress(100);
-      const r = res.data.results || {};
-      let msg = `Fotos OT: ${r.matched ?? 0} (antes ${r.beforeAssigned ?? 0}, después ${r.afterAssigned ?? 0})`;
-      if (r.missing > 0) msg += `, sin archivo: ${r.missing}`;
-      msg += '.';
-      setSuccessMsg(msg);
-      setWoPhotosOnlyZip(null);
-      setWoPhotosOnlyCsv(null);
-      setTimeout(() => setSuccessMsg(null), 12000);
-    } catch (err: unknown) {
-      let detail = 'Error desconocido';
-      if (isAxiosError(err)) {
-        const status = err.response?.status;
-        const serverMsg = err.response?.data?.message;
-        if (status === 413) {
-          detail =
-            'El servidor rechazó el zip (413). En Ubuntu: responde «s» al actualizar nginx en update.sh, o entra por :3000.';
-        } else {
-          detail = (typeof serverMsg === 'string' && serverMsg) || err.message;
-        }
-      } else if (err instanceof Error) {
-        detail = err.message;
-      }
-      setError(`Fallo al asignar fotos de OT: ${detail}`);
-    } finally {
-      setIsLoading(false);
-      setLoadingMessage(null);
-      setUploadProgress(null);
     }
   };
 
@@ -758,21 +783,43 @@ export const DeveloperOptions = () => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-10 pr-4 text-white outline-none transition-all focus:border-red-500 focus:ring-1 focus:ring-red-500"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-10 pr-4 text-white outline-none transition-all focus:border-red-500 focus:ring-1 focus:ring-red-500 disabled:opacity-50"
               placeholder="Contraseña maestra..."
               required
               autoFocus
+              disabled={Boolean(lockedUntil && lockCountdown)}
             />
           </div>
 
-          {error && <p className="mb-4 text-center text-sm text-red-400">{error}</p>}
+          {error && (
+            <div
+              role="alert"
+              className="mb-4 rounded-xl border border-red-500/40 bg-red-950/50 px-3 py-2.5 text-center text-sm text-red-300"
+            >
+              <p className="font-medium">{error}</p>
+              {lockedUntil && lockCountdown && (
+                <p className="mt-1 text-xs text-red-400/90">
+                  Tiempo restante: <span className="font-semibold tabular-nums">{lockCountdown}</span>
+                </p>
+              )}
+              {!lockedUntil && remainingAttempts !== null && remainingAttempts > 0 && (
+                <p className="mt-1 text-xs text-amber-300/90">
+                  Intentos restantes: {remainingAttempts} de 3
+                </p>
+              )}
+            </div>
+          )}
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || Boolean(lockedUntil && lockCountdown)}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 py-3 font-bold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
           >
-            {isLoading ? 'Verificando...' : 'Desbloquear'}
+            {isLoading
+              ? 'Verificando...'
+              : lockedUntil && lockCountdown
+                ? 'Bloqueado'
+                : 'Desbloquear'}
           </button>
         </form>
       </div>
@@ -922,7 +969,7 @@ export const DeveloperOptions = () => {
                   )}
                 </div>
                 <p className="mt-3 text-[11px] leading-4 text-indigo-200/90">
-                  Por Tailscale un zip grande puede tardar; si falla con 413, actualiza nginx o entra por{' '}
+                  Por Tailscale un zip grande puede tardar; si falla con 413/408, actualiza nginx o entra por{' '}
                   <code className="rounded bg-black/20 px-1">:3000</code>.
                 </p>
                 <label className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-5 py-3.5 font-black text-indigo-700 shadow-sm transition hover:bg-indigo-50 sm:w-fit">
@@ -936,71 +983,6 @@ export const DeveloperOptions = () => {
                     disabled={isLoading}
                   />
                 </label>
-              </div>
-            </article>
-
-            <article className="flex flex-col rounded-3xl border border-sky-200 bg-gradient-to-br from-sky-600 to-cyan-700 p-5 text-white shadow-sm sm:col-span-2 lg:col-span-1">
-              <div className="flex items-start gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-white">
-                  <Upload size={21} />
-                </div>
-                <div>
-                  <h3 className="font-black text-white">Solo fotos de órdenes</h3>
-                  <p className="mt-1 text-sm leading-5 text-sky-100">
-                    Si las OT ya están en la BD, sube solo el zip + el CSV de Solicitudes. No hace falta volver a importar los 7 CSV.
-                  </p>
-                </div>
-              </div>
-              <div className="mt-4 flex flex-col gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm">
-                <span className="font-bold">Zip Formulario Solicitudes_Images.zip</span>
-                <span className="text-xs text-sky-100">
-                  {woPhotosOnlyZip
-                    ? `${woPhotosOnlyZip.name} (${(woPhotosOnlyZip.size / (1024 * 1024)).toFixed(1)} MB)`
-                    : 'Ningún zip seleccionado'}
-                </span>
-                <label className="mt-1 block cursor-pointer text-xs">
-                  <input
-                    type="file"
-                    accept=".zip,application/zip,application/x-zip-compressed"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      e.target.value = '';
-                      if (!f) return;
-                      if (f.size > ZIP_MAX_BYTES) {
-                        setError(`El zip supera ${Math.round(ZIP_MAX_BYTES / (1024 * 1024))} MB.`);
-                        return;
-                      }
-                      setWoPhotosOnlyZip(f);
-                    }}
-                    className="block w-full file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-sky-700"
-                    disabled={isLoading}
-                  />
-                </label>
-                <span className="mt-2 font-bold">CSV Solicitudes (FOLIO / fotos)</span>
-                <span className="text-xs text-sky-100">
-                  {woPhotosOnlyCsv ? woPhotosOnlyCsv.name : 'Ningún CSV seleccionado'}
-                </span>
-                <label className="mt-1 block cursor-pointer text-xs">
-                  <input
-                    type="file"
-                    accept=".csv"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0] || null;
-                      e.target.value = '';
-                      setWoPhotosOnlyCsv(f);
-                    }}
-                    className="block w-full file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-sky-700"
-                    disabled={isLoading}
-                  />
-                </label>
-                <button
-                  type="button"
-                  onClick={() => void handleImportWoPhotosOnly()}
-                  disabled={isLoading || !woPhotosOnlyZip || !woPhotosOnlyCsv}
-                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 font-black text-sky-700 shadow-sm transition hover:bg-sky-50 disabled:opacity-50"
-                >
-                  <Upload size={18} /> Asignar fotos OT
-                </button>
               </div>
             </article>
 

@@ -36,7 +36,15 @@ export const Login = () => {
       login(response.data.token, response.data.user);
       navigate('/home');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Ocurrió un error al iniciar sesión');
+      const status = err.response?.status;
+      const apiError = err.response?.data?.error as string | undefined;
+      if (status === 401) {
+        setError(apiError || 'Contraseña o usuario incorrectos');
+      } else if (apiError) {
+        setError(apiError);
+      } else {
+        setError('Ocurrió un error al iniciar sesión');
+      }
     } finally {
       setIsLoading(false);
     }

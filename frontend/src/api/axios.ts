@@ -122,6 +122,13 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 401) {
+      // No cerrar sesión / recargar por 401 de login (credenciales incorrectas)
+      // ni de /dev/* (contraseña maestra ≠ token de sesión).
+      // El backend ya usa 403 para contraseña de desarrollador incorrecta; esto es red de seguridad.
+      const reqUrl = String(error.config?.url || '');
+      if (reqUrl.includes('/auth/login') || reqUrl.includes('/dev/')) {
+        return Promise.reject(error);
+      }
       localStorage.removeItem('token');
       localStorage.removeItem('lastActivity');
       window.location.href = '/login';

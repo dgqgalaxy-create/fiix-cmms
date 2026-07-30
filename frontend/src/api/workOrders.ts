@@ -116,6 +116,8 @@ export interface LineStoppageStatus {
   }>;
   /** Calendar days since last corrective L1–L5 stoppage; 0 if any line is currently stopped; null if never. */
   daysWithoutStoppage: number | null;
+  /** All-time best streak: max calendar-day gap between consecutive stoppage events, including current. */
+  bestStreakDays: number | null;
   lastStoppageAt: string | null;
   lastStoppage: {
     id: string;

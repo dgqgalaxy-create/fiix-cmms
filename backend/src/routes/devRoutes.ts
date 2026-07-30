@@ -24,8 +24,19 @@ import {
 } from '../utils/uploadsCleanup';
 import { parseCsvDate } from '../utils/parseCsvDate';
 import { syncAssetsFromActivosInventory } from '../utils/assetInventoryImport';
+import { authenticate, type AuthRequest } from '../middlewares/authMiddleware';
+import {
+  DEV_PASSWORD_CODES,
+  DEV_PASSWORD_MAX_ATTEMPTS,
+  clearDevPasswordFailures,
+  getDevPasswordGateStatus,
+  recordDevPasswordFailure,
+} from '../utils/devPasswordGate';
 
 const router = express.Router();
+
+// Sesión JWT obligatoria: la contraseña maestra NO usa 401 (el interceptor del front cerraría sesión).
+router.use(authenticate);
 
 /** Límite del zip de fotos (~171 MB típico; deja margen). CSV son pequeños. */
 export const IMPORT_MAX_FILE_BYTES = 500 * 1024 * 1024;
@@ -106,54 +117,116 @@ function unlinkUploadedSafe(file?: Express.Multer.File): void {
   }
 }
 
-// Middleware to verify the developer password
+/** Formatea tiempo restante de bloqueo para mensajes al usuario. */
+function formatLockWait(lockedUntilIso: string): string {
+  const ms = Math.max(0, Date.parse(lockedUntilIso) - Date.now());
+  const mins = Math.ceil(ms / 60000);
+  if (mins >= 60) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m > 0 ? `${h} h ${m} min` : `${h} h`;
+  }
+  return mins <= 1 ? '1 minuto' : `${mins} minutos`;
+}
+
+// Middleware to verify the developer password (403 = wrong/locked; never 401 for bad password)
 const verifyDevPassword = async (req: Request, res: Response, next: express.NextFunction): Promise<void> => {
+  const authReq = req as AuthRequest;
+  const userId = authReq.user?.userId;
   const password = req.headers['x-dev-password'] as string;
 
+  if (!userId) {
+    // authenticate ya debería haber respondido; defensa en profundidad
+    res.status(401).json({ error: 'No autenticado' });
+    return;
+  }
+
   if (!password) {
-    res.status(401).json({ message: 'Se requiere contraseña.' });
+    res.status(403).json({
+      code: DEV_PASSWORD_CODES.REQUIRED,
+      message: 'Se requiere contraseña maestra.',
+    });
     return;
   }
 
   try {
+    const gate = await getDevPasswordGateStatus(userId);
+    if (gate.locked) {
+      res.status(403).json({
+        code: DEV_PASSWORD_CODES.LOCKED,
+        message: `Demasiados intentos fallidos. Espera ${formatLockWait(gate.lockedUntil)} e inténtalo de nuevo.`,
+        lockedUntil: gate.lockedUntil,
+        remainingAttempts: 0,
+      });
+      return;
+    }
+
+    let isValid = false;
+
     // 1) Contraseña maestra personalizada guardada en BD (cambiable desde la app)
     const settings = await prisma.systemSettings.findFirst();
     if (settings?.dev_menu_password_hash) {
       const matchesCustomHash = await bcrypt.compare(password, settings.dev_menu_password_hash);
       if (matchesCustomHash) {
-        next();
-        return;
+        isValid = true;
       }
     }
 
     // 2) Fallback a variable de entorno (o clave de emergencia) para prevenir bloqueo si la BD se vacía
-    const envPassword = process.env.DEV_MENU_PASSWORD || 'DavidG.Q.1991';
-    if (password === envPassword) {
-      next();
-      return;
+    if (!isValid) {
+      const envPassword = process.env.DEV_MENU_PASSWORD || 'DavidG.Q.1991';
+      if (password === envPassword) {
+        isValid = true;
+      }
     }
 
-    const admins = await prisma.user.findMany({
-      where: { role: 'ADMINISTRADOR', is_active: true }
-    });
-
-    let isValid = false;
-    for (const admin of admins) {
-      if (!admin.password_hash) continue;
-      const match = await bcrypt.compare(password, admin.password_hash);
-      // DEV VERIFY
-      if (match) {
-        isValid = true;
-        break;
+    // 3) Contraseña de cualquier administrador activo
+    if (!isValid) {
+      const admins = await prisma.user.findMany({
+        where: { role: 'ADMINISTRADOR', is_active: true },
+      });
+      for (const admin of admins) {
+        if (!admin.password_hash) continue;
+        const match = await bcrypt.compare(password, admin.password_hash);
+        if (match) {
+          isValid = true;
+          break;
+        }
       }
     }
 
     if (!isValid) {
-      // DEV VERIFY Invalid
-      res.status(401).json({ message: 'Contraseña de administrador incorrecta.' });
+      // Solo el desbloqueo (POST /verify) consume intentos; otras rutas no bloquean por sesión caducada.
+      const trackFailures = req.method === 'POST' && (req.path === '/verify' || req.path.endsWith('/verify'));
+
+      if (trackFailures) {
+        const result = await recordDevPasswordFailure(userId);
+        if (result.locked && result.lockedUntil) {
+          res.status(403).json({
+            code: DEV_PASSWORD_CODES.LOCKED,
+            message: `Contraseña incorrecta. Tras ${DEV_PASSWORD_MAX_ATTEMPTS} intentos fallidos, el acceso queda bloqueado 1 hora. Espera ${formatLockWait(result.lockedUntil)}.`,
+            lockedUntil: result.lockedUntil,
+            remainingAttempts: 0,
+          });
+          return;
+        }
+        res.status(403).json({
+          code: DEV_PASSWORD_CODES.INVALID,
+          message: `Contraseña incorrecta. Te quedan ${result.remainingAttempts} intento${result.remainingAttempts === 1 ? '' : 's'}.`,
+          remainingAttempts: result.remainingAttempts,
+          lockedUntil: null,
+        });
+        return;
+      }
+
+      res.status(403).json({
+        code: DEV_PASSWORD_CODES.INVALID,
+        message: 'Contraseña maestra incorrecta.',
+      });
       return;
     }
 
+    await clearDevPasswordFailures(userId);
     next();
   } catch (error) {
     console.error(`[DEV VERIFY] Error:`, error);
@@ -1005,106 +1078,5 @@ router.post(
     }
   }
 });
-
-/**
- * Asigna solo fotos antes/después de OT existentes (sin reimportar los 7 CSV).
- * Multipart: workOrderImagesZip (o .zip en csvFiles) + CSV Solicitudes (FOLIO / FOTO ANTES / FOTO DESPUÉS).
- */
-router.post(
-  '/import-wo-photos',
-  verifyDevPassword,
-  uploadImportFields,
-  async (req: Request, res: Response): Promise<void> => {
-    const filesMap = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
-    const csvFieldFiles = filesMap?.csvFiles || [];
-    const csvFiles = csvFieldFiles.filter((f) => !/\.zip$/i.test(f.originalname || ''));
-    const woZipFile =
-      filesMap?.workOrderImagesZip?.[0] ||
-      csvFieldFiles.find((f) => /\.zip$/i.test(f.originalname || ''));
-    const uploadedTemps = [
-      ...csvFieldFiles,
-      ...(filesMap?.workOrderImagesZip || []),
-    ];
-
-    try {
-      if (!woZipFile?.path) {
-        res.status(400).json({
-          message:
-            'Falta el zip de fotos de órdenes (Formulario Solicitudes_Images.zip).',
-        });
-        return;
-      }
-      if (csvFiles.length === 0) {
-        res.status(400).json({
-          message:
-            'Falta el CSV de Solicitudes (columnas FOLIO, FOTO ANTES, FOTO DESPUÉS) para emparejar fotos.',
-        });
-        return;
-      }
-
-      const woPhotoMappings: WorkOrderPhotoMapping[] = [];
-      for (const file of csvFiles) {
-        const content = readUploadedUtf8(file);
-        const records = parse(content, {
-          columns: true,
-          skip_empty_lines: true,
-          relax_column_count: true,
-          bom: true,
-        }) as Record<string, string>[];
-
-        for (const row of records) {
-          const folioCsv = parseWorkOrderFolio(row['FOLIO'] ?? row['Folio'] ?? row['folio']);
-          if (!folioCsv) continue;
-          const beforePath = sanitizeWorkOrderPhotoPath(
-            row['FOTO ANTES'] ?? row['FOTO ANTES '] ?? row['Foto Antes'] ?? ''
-          );
-          const afterPath = sanitizeWorkOrderPhotoPath(
-            row['FOTO DESPUÉS'] ??
-              row['FOTO DESPUES'] ??
-              row['Foto Después'] ??
-              row['Foto Despues'] ??
-              ''
-          );
-          if (beforePath || afterPath) {
-            woPhotoMappings.push({ folio: folioCsv, beforePath, afterPath });
-          }
-        }
-      }
-
-      if (woPhotoMappings.length === 0) {
-        res.status(400).json({
-          message:
-            'No se encontraron filas con FOLIO y FOTO ANTES / FOTO DESPUÉS en el CSV.',
-        });
-        return;
-      }
-
-      const woPhotoResult = await assignWorkOrderImagesFromZip(woZipFile.path, woPhotoMappings);
-      emitRefresh('refresh_work_orders');
-      res.json({
-        success: true,
-        message: 'Fotos de órdenes asignadas.',
-        results: {
-          mappings: woPhotoMappings.length,
-          matched: woPhotoResult.matched,
-          missing: woPhotoResult.missing,
-          skipped: woPhotoResult.skipped,
-          folderFound: woPhotoResult.folderFound,
-          filesScanned: woPhotoResult.filesScanned,
-          beforeAssigned: woPhotoResult.beforeAssigned,
-          afterAssigned: woPhotoResult.afterAssigned,
-        },
-      });
-    } catch (error: unknown) {
-      console.error('WO photos-only import error:', error);
-      const message = error instanceof Error ? error.message : 'Error asignando fotos de OT.';
-      res.status(500).json({ message });
-    } finally {
-      for (const f of uploadedTemps) {
-        unlinkUploadedSafe(f);
-      }
-    }
-  }
-);
 
 export default router;

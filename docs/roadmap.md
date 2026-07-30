@@ -3,7 +3,19 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 30 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.44.2 (Actualización: 30 de Julio de 2026)
+## 🚀 Versión Actual: v1.44.11 (Actualización: 30 de Julio de 2026)
+
+### Novedades en v1.44.11 (Limpieza Dev — Solo fotos OT)
+- **Cambio:** Se eliminó la tarjeta/API «Solo fotos de órdenes» (redundante respecto a la importación maestra CSV + zip). Se conservan los selectores de zip de inventario y fotos de OT en Importar CSV.
+
+### Novedades en v1.44.9 (Racha — récord e incentivos)
+- **Mejora:** En Inicio, Racha sin paro muestra el récord histórico y mensajes de ánimo/celebración.
+
+### Novedades en v1.44.8 (Activos — listado denso)
+- **Mejora:** Tabla/lista de Activos más compacta (como Checklist/Compras); código MTTO completo en una línea; sin chip C/F redundante.
+
+### Novedades en v1.44.7 (Import CSV — timeout 408)
+- **Corrección:** Subida de CSV + zip por nginx/Tailscale: `408 Request Timeout` por `client_body_timeout` corto; plantilla nginx con timeouts 30m/60m, mensaje UX y axios a 60 min.
 
 ### Novedades en v1.44.2 (Fotos Activos + Editar en detalle)
 - **Nuevo:** Zip `Items_Images` — ítems ACTIVOS copian foto a `uploads/assets/` y actualizan el activo.
@@ -122,7 +134,6 @@ Este documento contiene la lista de módulos y características pendientes de de
 - **Cambio:** Node.js 22+ (`.nvmrc`, install/update, `engines`).
 
 ### Novedades en v1.31.0 (UX OT + import fotos + rendimiento)
-- **Nuevo:** Asignar solo fotos de OT (zip + CSV Solicitudes) sin reimportar los 7 CSV.
 - **Mejora:** `update.sh` pregunta si actualizar nginx (o `UPDATE_NGINX=1`) para evitar 413 en zips.
 - **Mejora:** Listado de Órdenes más ligero (sin firmas base64 en el GET de lista).
 - **Mejora:** Galería Antes/Después con tamaño fijo y zoom.

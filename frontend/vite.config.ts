@@ -10,6 +10,8 @@ export default defineConfig({
     // Hostnames del Header "Host" permitidos en Vite (dev / preview).
     // "lpet-cmms" = nombre local en red; ".ts.net" = cualquier máquina MagicDNS de Tailscale.
     allowedHosts: ['lpet-cmms', '.ts.net'],
+    // Sin proxy a la API: en DEV axios usa hostname:3000 directo (ver resolveBackendUrl).
+    // Así las subidas grandes (zip import) no pasan por el proxy de Vite.
   },
   build: {
     chunkSizeWarningLimit: 3000, // KB — evita confundir el warning de Vite con el fallo de Workbox
@@ -65,7 +67,10 @@ export default defineConfig({
         // Cache API requests
         runtimeCaching: [
           {
-            urlPattern: /^https?:\/\/.*\/(api|socket\.io)\/.*/i,
+            // Solo GET: no interceptar POST/PUT de import CSV+zip (body grande → Network Error).
+            urlPattern: ({ url, request }) =>
+              request.method === 'GET' &&
+              /\/(api|socket\.io)\//i.test(url.pathname),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',

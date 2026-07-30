@@ -115,16 +115,20 @@ export const AssetsPage = () => {
     if (!showSectionFilter) setFilterSectionId('');
   }, [showSectionFilter]);
 
-  const filteredAssets = assets.filter((a) => {
+  const filteredAssets = useMemo(() => {
     const term = searchTerm.toLowerCase();
-    const matchesSearch =
-      a.name.toLowerCase().includes(term) ||
-      a.internal_code.toLowerCase().includes(term);
-    const matchesZone = !filterZoneId || a.zone_id === filterZoneId;
-    const matchesSection =
-      !filterSectionId || a.zone_section_id === filterSectionId;
-    return matchesSearch && matchesZone && matchesSection;
-  });
+    return assets.filter((a) => {
+      const matchesSearch =
+        a.name.toLowerCase().includes(term) ||
+        a.internal_code.toLowerCase().includes(term);
+      const matchesZone = !filterZoneId || a.zone_id === filterZoneId;
+      const matchesSection =
+        !filterSectionId || a.zone_section_id === filterSectionId;
+      return matchesSearch && matchesZone && matchesSection;
+    });
+  }, [assets, searchTerm, filterZoneId, filterSectionId]);
+
+  const assetsFilterKey = `${searchTerm}|${filterZoneId}|${filterSectionId}`;
 
   const handleScan = (scanned: string) => {
     const scannedId = scanned.replace(/^FIIX-(ASSET|ITEM|LOCATION):/, '').trim();
@@ -241,7 +245,7 @@ export const AssetsPage = () => {
             {selectedIds.size} seleccionado{selectedIds.size === 1 ? '' : 's'}
           </span>
           <button type="button" onClick={selectAllFiltered} className="text-sm text-emerald-700 dark:text-emerald-300 underline">
-            Seleccionar visibles ({filteredAssets.length})
+            Seleccionar filtrados ({filteredAssets.length})
           </button>
           <button
             type="button"
@@ -309,7 +313,8 @@ export const AssetsPage = () => {
             )}
           </div>
           <AssetsTable 
-            assets={filteredAssets} 
+            assets={filteredAssets}
+            filterKey={assetsFilterKey}
             onDelete={handleDeleteAsset} 
             onEdit={(asset) => { setEditingAsset(asset); setIsModalOpen(true); }}
             onRowClick={(asset) => setDetailAsset(asset)}

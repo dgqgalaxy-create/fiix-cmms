@@ -13,6 +13,7 @@ import {
   RefreshCw,
   ShieldAlert,
   Siren,
+  Trophy,
   Users,
   UserX,
   Volume2,
@@ -45,6 +46,28 @@ import { useControlRoomAlerts } from '../hooks/useControlRoomAlerts';
 const isOpenWo = (wo: WorkOrder) => wo.status !== 'FINALIZADO' && wo.status !== 'ANULADO';
 const PRODUCTION_LINES: ProductionLine[] = ['L1', 'L2', 'L3', 'L4', 'L5'];
 
+/** Plant-friendly nudges when the current streak is still below the record. */
+const STREAK_ENCOURAGE = [
+  'Cada día sin paro suma. Sigamos así.',
+  'La línea corre; el récord se acerca.',
+  'Mantenimiento firme = producción estable.',
+  'Detectar a tiempo evita el siguiente paro.',
+  'Hoy también: cero paros correctivos en L1–L5.',
+  'La racha crece con prevención y respuesta rápida.',
+  'Un día más sin correctivo de paro. Buen trabajo.',
+  'El récord se gana en el piso, no en el papel.',
+];
+
+const STREAK_CELEBRATE = [
+  '¡Récord igualado! Manténganlo.',
+  '¡Mejor racha histórica! Así se hace en planta.',
+  'Récord en juego: cero paros correctivos. Excelente.',
+];
+
+function pickMessage(list: string[], seed = Date.now()): string {
+  return list[Math.abs(seed) % list.length]!;
+}
+
 export const HomePage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -54,6 +77,7 @@ export const HomePage = () => {
   const [summaryStartDate, setSummaryStartDate] = useState('');
   const [summaryEndDate, setSummaryEndDate] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [streakMsgSeed, setStreakMsgSeed] = useState(() => Date.now());
 
   const isControlRoomRole =
     user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR';
@@ -91,6 +115,12 @@ export const HomePage = () => {
 
   useEffect(() => {
     fetchDashboard();
+  }, []);
+
+  // Light rotation of streak encouragement (does not refetch data).
+  useEffect(() => {
+    const id = window.setInterval(() => setStreakMsgSeed(Date.now()), 45_000);
+    return () => window.clearInterval(id);
   }, []);
 
   useSocketRefresh('refresh_work_orders', () => fetchDashboard(true));
@@ -295,6 +325,15 @@ export const HomePage = () => {
 
   const hasStoppedLines = (lineStoppage?.stoppedLines.length || 0) > 0;
   const daysWithout = lineStoppage?.daysWithoutStoppage;
+  const bestStreak = lineStoppage?.bestStreakDays ?? null;
+  const atOrBeatingRecord =
+    daysWithout != null && bestStreak != null && daysWithout > 0 && daysWithout >= bestStreak;
+  const streakMessage =
+    daysWithout == null
+      ? null
+      : atOrBeatingRecord
+        ? pickMessage(STREAK_CELEBRATE, streakMsgSeed)
+        : pickMessage(STREAK_ENCOURAGE, streakMsgSeed);
 
   return (
     <>
@@ -409,28 +448,61 @@ export const HomePage = () => {
               Solo correctivo
             </span>
           </div>
-          <div className="flex items-end gap-2">
-            {daysWithout === null ? (
-              <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 py-1">
-                Sin paros correctivos registrados en L1–L5
-              </p>
-            ) : (
-              <>
-                <PulsingValue
-                  value={daysWithout}
-                  className="text-4xl sm:text-5xl font-black leading-none text-slate-900 dark:text-white tabular-nums"
-                />
-                <span className="pb-1 text-sm font-bold text-slate-500 dark:text-slate-400">
-                  día{daysWithout === 1 ? '' : 's'}
-                </span>
-              </>
+          <div className="flex items-end justify-between gap-3">
+            <div className="flex items-end gap-2 min-w-0">
+              {daysWithout === null ? (
+                <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 py-1">
+                  Sin paros correctivos registrados en L1–L5
+                </p>
+              ) : (
+                <>
+                  <PulsingValue
+                    value={daysWithout}
+                    className={`text-4xl sm:text-5xl font-black leading-none tabular-nums ${
+                      atOrBeatingRecord
+                        ? 'text-amber-700 dark:text-amber-300'
+                        : 'text-slate-900 dark:text-white'
+                    }`}
+                  />
+                  <span className="pb-1 text-sm font-bold text-slate-500 dark:text-slate-400">
+                    día{daysWithout === 1 ? '' : 's'}
+                  </span>
+                </>
+              )}
+            </div>
+            {bestStreak != null && bestStreak > 0 && (
+              <div
+                className="shrink-0 text-right rounded-xl border border-amber-200/80 bg-white/70 px-2.5 py-1.5 dark:border-amber-900/50 dark:bg-slate-900/50"
+                title="Mayor racha histórica (días entre paros correctivos L1–L5)"
+              >
+                <div className="flex items-center justify-end gap-1 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                  <Trophy size={11} className="shrink-0" />
+                  Récord
+                </div>
+                <p className="text-lg font-black leading-none text-slate-800 dark:text-slate-100 tabular-nums mt-0.5">
+                  {bestStreak}
+                  <span className="ml-0.5 text-[10px] font-bold text-slate-500">d</span>
+                </p>
+              </div>
             )}
           </div>
+          {streakMessage && (
+            <p
+              key={streakMsgSeed}
+              className={`mt-2 text-xs font-medium leading-snug ${
+                atOrBeatingRecord
+                  ? 'text-amber-800 dark:text-amber-200'
+                  : 'text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              {streakMessage}
+            </p>
+          )}
           {lineStoppage?.lastStoppage && (
             <button
               type="button"
               onClick={() => navigate(`/dashboard?wo=${lineStoppage.lastStoppage!.id}`)}
-              className="mt-3 w-full text-left rounded-xl border border-amber-200/70 bg-white/70 px-2.5 py-2 hover:border-amber-400 transition-colors dark:border-amber-900/60 dark:bg-slate-900/60"
+              className="mt-2.5 w-full text-left rounded-xl border border-amber-200/70 bg-white/70 px-2.5 py-2 hover:border-amber-400 transition-colors dark:border-amber-900/60 dark:bg-slate-900/60"
             >
               <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
                 {hasStoppedLines || daysWithout === 0 ? 'Último / actual' : 'Último paro'}

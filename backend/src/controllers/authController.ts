@@ -17,7 +17,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      res.status(401).json({ error: 'Credenciales inválidas' });
+      // Mismo mensaje que contraseña incorrecta (no revelar si el usuario existe).
+      res.status(401).json({ error: 'Contraseña o usuario incorrectos' });
       return;
     }
 
@@ -28,7 +29,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
     if (!passwordMatch) {
-      res.status(401).json({ error: 'Credenciales inválidas' });
+      res.status(401).json({ error: 'Contraseña o usuario incorrectos' });
       return;
     }
 

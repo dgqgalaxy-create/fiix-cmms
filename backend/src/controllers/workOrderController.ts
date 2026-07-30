@@ -20,7 +20,15 @@ function calendarDaysBetween(from: Date, to: Date): number {
 
 /**
  * Home indicators: which L1–L5 lines are stopped by open corrective WOs with
- * machine_stopped=true, and days since the last such stoppage event (any status except ANULADO).
+ * machine_stopped=true, days since the last such stoppage event (any status except ANULADO),
+ * and the all-time best streak (bestStreakDays).
+ *
+ * Streak definition (same filters for every event: CORRECTIVO + machine_stopped + L1–L5 + not ANULADO):
+ * - A "stoppage event" is the created_at of such a work order.
+ * - Completed streaks = calendar-day gaps between consecutive events (sorted ascending).
+ * - Current streak = days from the latest event to now (0 if any L1–L5 line is currently stopped).
+ * - bestStreakDays = max(completed gaps, current streak). We do NOT invent a gap before the
+ *   first recorded event (no plant "start of history" date in data).
  */
 export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -29,6 +37,13 @@ export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): P
       { zone: { name: { in: lineNames, mode: 'insensitive' as const } } },
       { asset: { zone: { name: { in: lineNames, mode: 'insensitive' as const } } } },
     ];
+
+    const stoppageWhere = {
+      maintenance_type: 'CORRECTIVO' as const,
+      machine_stopped: true,
+      status: { not: 'ANULADO' as const },
+      OR: lineZoneOr,
+    };
 
     const stoppageSelect = {
       id: true,
@@ -40,7 +55,7 @@ export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): P
       zone: { select: { name: true } },
     } as const;
 
-    const [openStopped, lastStoppage] = await Promise.all([
+    const [openStopped, historicalStoppages] = await Promise.all([
       prisma.workOrder.findMany({
         where: {
           maintenance_type: 'CORRECTIVO',
@@ -51,15 +66,10 @@ export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): P
         select: stoppageSelect,
         orderBy: { created_at: 'desc' },
       }),
-      prisma.workOrder.findFirst({
-        where: {
-          maintenance_type: 'CORRECTIVO',
-          machine_stopped: true,
-          status: { not: 'ANULADO' },
-          OR: lineZoneOr,
-        },
+      prisma.workOrder.findMany({
+        where: stoppageWhere,
         select: stoppageSelect,
-        orderBy: { created_at: 'desc' },
+        orderBy: { created_at: 'asc' },
       }),
     ]);
 
@@ -99,6 +109,7 @@ export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): P
 
     const now = new Date();
     let daysWithoutStoppage: number | null = null;
+    let bestStreakDays: number | null = null;
     let lastStoppagePayload: {
       id: string;
       folio: number;
@@ -108,9 +119,14 @@ export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): P
       created_at: string;
     } | null = null;
 
-    if (stoppedLines.length > 0) {
+    const currentlyStopped = stoppedLines.length > 0;
+    if (currentlyStopped) {
       daysWithoutStoppage = 0;
     }
+
+    const lastStoppage = historicalStoppages.length > 0
+      ? historicalStoppages[historicalStoppages.length - 1]
+      : null;
 
     if (lastStoppage) {
       const line =
@@ -128,12 +144,26 @@ export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): P
       if (daysWithoutStoppage === null) {
         daysWithoutStoppage = calendarDaysBetween(lastStoppage.created_at, now);
       }
+
+      // Max calendar-day gap between consecutive historical events.
+      let maxGap = 0;
+      for (let i = 1; i < historicalStoppages.length; i++) {
+        const gap = calendarDaysBetween(
+          historicalStoppages[i - 1].created_at,
+          historicalStoppages[i].created_at,
+        );
+        if (gap > maxGap) maxGap = gap;
+      }
+      // Include the open streak (last → now), already 0 when a line is currently stopped.
+      const currentForBest = daysWithoutStoppage ?? 0;
+      bestStreakDays = Math.max(maxGap, currentForBest);
     }
 
     res.json({
       lines: [...PRODUCTION_LINES],
       stoppedLines,
       daysWithoutStoppage,
+      bestStreakDays,
       lastStoppageAt: lastStoppagePayload?.created_at ?? null,
       lastStoppage: lastStoppagePayload,
     });

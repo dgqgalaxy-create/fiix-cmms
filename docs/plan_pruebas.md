@@ -279,7 +279,7 @@ Marca cada casilla al completar. Anota folio, código o captura si falla un **P0
 - [ ] **P1** (Staging) **Restaurar** escribiendo `RESTAURAR` → éxito cierra sesión; fallo muestra error **sin** cerrar sesión.
 - [ ] **P1** Import de 7 CSV juntos → datos coherentes; folios `FOL-####`; activos nuevos sin código → `MTTO-…`.
 - [ ] **P2** Zip fotos repuestos (`Items_Images`) → «Fotos asignadas: N».
-- [ ] **P2** Zip + CSV solicitudes → Antes/Después por FOLIO; o tarjeta «Solo fotos de órdenes».
+- [ ] **P2** Zip + CSV solicitudes (junto a los 7 CSV) → Antes/Después por FOLIO.
 - [ ] **P2** Telegram token/chat ID en UI → prueba con OT nueva.
 - [ ] **P1** Descartar cola offline desde Dev.
 - [ ] **P0 (peligro)** Vaciar BD solo en lab: confirma `ELIMINAR` → login `admin@fiix.com` / `password123` + aviso.

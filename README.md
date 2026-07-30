@@ -215,6 +215,8 @@ sudo ufw allow 80/tcp
 
 Ajusta `server_name` en el conf si tu hostname no es `lpet-cmms`. Al final de `update.sh` (modo interactivo) te pregunta si quieres **actualizar nginx** desde `deploy/nginx-fiix.conf` (útil tras cambios de `client_max_body_size`); en CI no pregunta. También puedes forzar: `UPDATE_NGINX=1 ./update.sh`.
 
+**Import CSV + zip grande:** el conf del repo usa `client_max_body_size 1100M` (2 zips × 500 MB multer + CSV) y timeouts largos (`client_body_timeout 30m`, `proxy_read_timeout 60m`). Si ves *Network Error*, *413* o *408 Request Timeout* al subir el zip por el puerto 80, el sites-enabled del servidor probablemente sigue con defaults de nginx (body 1m, timeouts 60s). Actualiza la conf (comandos arriba o fila de la tabla «Si algo falla») o usa `http://HOST:3000` directo.
+
 **Windows / desarrollo local:** sigue usando `http://localhost:3000` (build de producción) o Vite en `:5173`; nginx es para el servidor Ubuntu.
 
 ### Vigilancia (healthcheck) y Telegram
@@ -272,6 +274,7 @@ cd ~/fiix-cmms
 | Síntoma | Qué hacer |
 |---|---|
 | nginx **502** | `pm2 status` y `pm2 logs fiix-backend --lines 80`. Suele ser proceso caído. Corre `bash ./update.sh` (arranca `node dist/index.js`, no nodemon). |
+| Import CSV + zip: **413**, **408** o **Network Error** (body grande / timeout) | Nginx aún con límites default (body 1m, timeouts 60s). Copia la conf del repo y recarga: `sudo cp ~/fiix-cmms/deploy/nginx-fiix.conf /etc/nginx/sites-available/fiix && sudo nginx -t && sudo systemctl reload nginx` (debe verse `client_max_body_size 1100M` y `client_body_timeout 30m`). Alternativa: entra por `http://HOST:3000` (sin nginx). Tras `update.sh`, responde **s** a nginx o `UPDATE_NGINX=1 ./update.sh`. |
 | `nodemon: not found` | Instalación antigua con `npm run dev`. Recrea con update.sh o: `pm2 delete fiix-backend && pm2 start ~/fiix-cmms/backend/dist/index.js --name fiix-backend --cwd ~/fiix-cmms/backend && pm2 save` |
 | `Permission denied: ./update.sh` | `chmod +x update.sh` o usa `bash ./update.sh` |
 | `Cannot find module …/dist/index.js` | Build incompleto; `cd backend && npm run build` y reinicia PM2 |

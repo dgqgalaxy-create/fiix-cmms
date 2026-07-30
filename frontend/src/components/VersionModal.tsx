@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.44.3";
+export const APP_VERSION = "1.44.11";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -29,6 +29,14 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Cambio: Se eliminó la tarjeta «Solo fotos de órdenes» de Opciones de Desarrollador (redundante: el zip de OT va con la importación maestra de 7 CSV). Se mantiene el selector de zip en Importar CSV.",
+    "Mejora: Listado de Activos sin scroll horizontal (columnas que se ocultan/recortan según ancho) y paginación de 20 por página, igual que Inventario.",
+    "Mejora: En Inicio → Racha sin paro muestra el récord histórico (mejor racha) y mensajes de ánimo/celebración al igualarlo o superarlo.",
+    "Mejora: Listado de Activos más denso (filas/tarjetas compactas como Checklist y Compras); código interno completo en una línea; se quita el chip C/F redundante.",
+    "Corrección: Import CSV + zip — timeout 408 de nginx (client_body_timeout) al subir por Tailscale; conf con timeouts 30m/60m, mensaje claro y axios a 60 min.",
+    "Corrección: Import CSV + zip — nginx documentado a client_max_body_size 1100M (2 zips × 500 MB); el service worker ya no intercepta POST de /api (evita Network Error); mensajes de error con comandos Ubuntu exactos.",
+    "Corrección: En el login, usuario o contraseña incorrectos muestran el mensaje «Contraseña o usuario incorrectos» sin recargar la página ni comportarse como un cierre de sesión. No hay bloqueo por intentos fallidos (a diferencia del menú de desarrollador).",
+    "Corrección: Contraseña incorrecta en Opciones de Desarrollador ya no cierra la sesión ni manda al login; muestra el error, permite 3 intentos y bloquea 1 hora tras fallar (bloqueo guardado en la cuenta).",
     "Corrección: Al crear un repuesto, el stock inicial ya no se escribe a ciegas: si es mayor a 0 se registra como movimiento de entrada «Levantamiento de inventario (stock inicial)». En edición el stock sigue solo lectura (cambia con movimientos).",
     "Nuevo: Import CSV — fotos del zip Items_Images de ítems ACTIVOS también se copian a Activos (uploads/assets/). En el detalle del activo (Información) hay botón Editar. Códigos MTTO siguen generándose con las reglas normales (Item ID Fiix no sobrescribe el código del activo).",
     "Nuevo: La importación CSV maestra crea/actualiza Activos desde ítems de inventario con categoría ACTIVOS (ubicación LINEA N ACTIVOS → zona L1–L5; TAPANCO → TAPANCO; sin inventar sección). Los ítems de inventario se conservan.",
@@ -103,7 +111,6 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Mejora: Al descartar la cola offline también se limpian las fotos guardadas en el dispositivo; avisos más claros si un sync falla por conflicto (409) con fotos.",
     "Mejora: La app carga pantallas bajo demanda (code-splitting) para arrancar más rápido en celular/Tailscale.",
     "Cambio: Node.js recomendado 22+ (install.sh / update.sh / .nvmrc).",
-    "Nuevo: En Opciones de Desarrollador puedes asignar solo fotos de OT (zip + CSV Solicitudes) sin reimportar los 7 CSV.",
     "Mejora: update.sh pregunta si quieres actualizar la conf nginx (body 500M) para no olvidar el 413 al subir zips; también UPDATE_NGINX=1.",
     "Mejora: El listado de Órdenes carga más rápido (~750 OT): ya no trae firmas base64 ni árboles RCA; el detalle sigue pidiendo esos datos al abrir.",
     "Mejora: Galería Antes/Después con miniaturas de tamaño fijo y zoom al tocar (menos huecos blancos).",
