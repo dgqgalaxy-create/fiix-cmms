@@ -3,7 +3,21 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 30 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.43.11 (Actualización: 30 de Julio de 2026)
+## 🚀 Versión Actual: v1.44.2 (Actualización: 30 de Julio de 2026)
+
+### Novedades en v1.44.2 (Fotos Activos + Editar en detalle)
+- **Nuevo:** Zip `Items_Images` — ítems ACTIVOS copian foto a `uploads/assets/` y actualizan el activo.
+- **Nuevo:** Botón **Editar** en el detalle del activo (pestaña Información).
+- **Confirmado:** Generador MTTO intacto; import no usa Item ID Fiix como `internal_code`.
+
+### Novedades en v1.44.1 (Activos desde inventario ACTIVOS)
+- **Nuevo:** En la importación CSV maestra, tras Items, los ítems con categoría **ACTIVOS** se crean/actualizan en el módulo Activos (sin borrar el ítem de inventario). Ubicación `LINEA N ACTIVOS` → zona `LN`; `TAPANCO` → `TAPANCO`; sección no se inventa.
+
+### Novedades en v1.44.0 (Zonas dentro de Activos + secciones)
+- **Nuevo:** Las zonas se gestionan desde **Activos → Administrar zonas** (la ruta `/zones` redirige ahí). Cada zona puede tener **secciones/subzonas** o modo **Sin secciones**.
+- **Migración:** En L1–L5 existentes se crean secciones A–E y se enlazan activos que ya tenían `section` A–E; el resto de zonas quedan en Sin secciones.
+- **Import CSV:** Solicitudes sigue emparejando por `Equipo:` / `Zona:`; sin columna de sección los activos quedan sin sección (`zone_section_id` null). No exige columnas nuevas.
+- **Respaldos:** Siguen siendo `pg_dump` completo (incluyen `ZoneSection` y columnas nuevas automáticamente).
 
 ### Novedades en v1.43.11 (Inicio: líneas paradas + racha)
 - **Nuevo:** Indicadores en Inicio — **Líneas paradas** (L1–L5 con OT correctiva abierta y paro de máquina) y **Racha sin paro** (días sin paro correctivo de línea; preventivos no cuentan).

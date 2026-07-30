@@ -1,4 +1,4 @@
-/** Exact match on trimmed zone name (case-insensitive): L1…L5. */
+/** Legacy A–E letters still used in MTTO codes when ZoneSection.name is A–E. */
 export const ASSET_SECTIONS = ['A', 'B', 'C', 'D', 'E'] as const;
 export type AssetSectionValue = (typeof ASSET_SECTIONS)[number];
 
@@ -16,16 +16,30 @@ export function assetKindLetter(kind: AssetKindValue | null | undefined): 'F' | 
   return '?';
 }
 
-const SECTION_ZONES = new Set(['L1', 'L2', 'L3', 'L4', 'L5']);
+/** Production line zone names (stoppage KPIs). */
+const PRODUCTION_LINES = new Set(['L1', 'L2', 'L3', 'L4', 'L5']);
 
-export function isSectionZoneName(zoneName: string | null | undefined): boolean {
+export function isProductionLineZoneName(zoneName: string | null | undefined): boolean {
   if (!zoneName) return false;
-  return SECTION_ZONES.has(zoneName.trim().toUpperCase());
+  return PRODUCTION_LINES.has(zoneName.trim().toUpperCase());
+}
+
+/** @deprecated Prefer zone.has_sections + sections.length; kept for filters/KPIs. */
+export function isSectionZoneName(zoneName: string | null | undefined): boolean {
+  return isProductionLineZoneName(zoneName);
 }
 
 /** Letter used in MTTO code for section (A–E or X). */
-export function sectionCodeLetter(section: string | null | undefined, zoneName?: string | null): string {
-  if (section && ASSET_SECTIONS.includes(section as AssetSectionValue)) return section;
-  if (zoneName && isSectionZoneName(zoneName) && section) return section;
+export function sectionCodeLetter(section: string | null | undefined, _zoneName?: string | null): string {
+  if (section && ASSET_SECTIONS.includes(section.trim().toUpperCase() as AssetSectionValue)) {
+    return section.trim().toUpperCase();
+  }
   return 'X';
+}
+
+export function zoneNeedsSections(zone: {
+  has_sections?: boolean;
+  sections?: { id: string; name: string }[];
+} | null | undefined): boolean {
+  return Boolean(zone?.has_sections && (zone.sections?.length ?? 0) > 0);
 }

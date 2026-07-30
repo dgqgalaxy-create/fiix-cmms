@@ -195,12 +195,25 @@ export const getItems = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+const INITIAL_STOCK_REASON = 'Levantamiento de inventario (stock inicial)';
+
 export const createItem = async (req: Request, res: Response): Promise<void> => {
   try {
     const { 
       name, description, category_id, vendor_id, location_id,
       purchase_cost, stock, minimum_inventory, is_active, uom
     } = req.body;
+    const user_id = (req as any).user?.userId as string | undefined;
+
+    const initialStock = stock !== undefined && stock !== '' ? parseFloat(stock) : 0;
+    if (isNaN(initialStock) || initialStock < 0) {
+      res.status(400).json({ error: 'El stock inicial debe ser un número mayor o igual a 0' });
+      return;
+    }
+    if (initialStock > 0 && !user_id) {
+      res.status(401).json({ error: 'Sesión requerida para registrar stock inicial' });
+      return;
+    }
 
     const internal_code = await generateInventoryCode('Item', 'MTTO-', 4);
 
@@ -209,7 +222,8 @@ export const createItem = async (req: Request, res: Response): Promise<void> => 
       name,
       description,
       purchase_cost: purchase_cost ? parseFloat(purchase_cost) : null,
-      stock: stock ? parseFloat(stock) : 0,
+      // El stock solo se aplica vía movimiento (levantamiento); nunca se escribe a ciegas.
+      stock: 0,
       minimum_inventory: minimum_inventory ? parseFloat(minimum_inventory) : 0,
       is_active: is_active === undefined ? true : (is_active === 'true' || is_active === true),
       uom: uom || 'PIEZAS'
@@ -235,7 +249,40 @@ export const createItem = async (req: Request, res: Response): Promise<void> => 
       itemData.image_url = `/uploads/inventory/${files['image'][0].filename}`;
     }
 
-    const newItem = await prisma.item.create({ data: itemData });
+    const newItem = await prisma.$transaction(async (tx) => {
+      const created = await tx.item.create({ data: itemData });
+
+      if (initialStock > 0 && user_id) {
+        await tx.inventoryTransaction.create({
+          data: {
+            item_id: created.id,
+            user_id,
+            amount: initialStock,
+            reason: INITIAL_STOCK_REASON,
+          },
+        });
+        return tx.item.update({
+          where: { id: created.id },
+          data: { stock: initialStock },
+        });
+      }
+
+      return created;
+    });
+
+    if (initialStock > 0 && user_id) {
+      const actor = await prisma.user.findUnique({ where: { id: user_id }, select: { name: true } });
+      await writeAuditLog({
+        userId: user_id,
+        userName: actor?.name,
+        action: 'INVENTORY_IN',
+        entity: 'inventory',
+        entityId: newItem.id,
+        summary: `Entrada ${initialStock} · ${newItem.name || newItem.id}: ${INITIAL_STOCK_REASON}`,
+        meta: { amount: initialStock, reason: INITIAL_STOCK_REASON },
+      });
+    }
+
     emitRefresh('refresh_inventory');
     res.status(201).json(newItem);
   } catch (error: any) {
@@ -243,6 +290,7 @@ export const createItem = async (req: Request, res: Response): Promise<void> => 
       res.status(400).json({ error: 'El internal_code ya existe' });
       return;
     }
+    console.error('Error al crear repuesto:', error);
     res.status(500).json({ error: 'Error al crear repuesto' });
   }
 };

@@ -15,7 +15,6 @@ const KPIPage = lazy(() => import('./pages/KPIPage').then((m) => ({ default: m.K
 const PermissionsPage = lazy(() =>
   import('./pages/PermissionsPage').then((m) => ({ default: m.PermissionsPage }))
 );
-const ZonesPage = lazy(() => import('./pages/ZonesPage').then((m) => ({ default: m.ZonesPage })));
 const InventoryPage = lazy(() =>
   import('./pages/InventoryPage').then((m) => ({ default: m.InventoryPage }))
 );
@@ -222,15 +221,9 @@ function App() {
             } 
           />
           
-          <Route 
-            path="/zones" 
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <ZonesPage />
-                </Layout>
-              </ProtectedRoute>
-            } 
+          <Route
+            path="/zones"
+            element={<Navigate to="/assets?manageZones=1" replace />}
           />
 
           <Route 

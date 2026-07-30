@@ -19,7 +19,7 @@ enum AssetStatus {
   FUERA_DE_SERVICIO
 }
 
-/// Sección A–E dentro de líneas L1–L5 (solo aplica a esas zonas).
+/// Sección A–E (legacy / letra MTTO). Preferir ZoneSection + asset.zone_section_id.
 enum AssetSection {
   A
   B
@@ -131,13 +131,31 @@ model Requester {
 }
 
 model Zone {
-  id          String      @id @default(uuid()) @db.Uuid
-  name        String      @unique
-  created_at  DateTime    @default(now())
-  updated_at  DateTime    @updatedAt
+  id            String        @id @default(uuid()) @db.Uuid
+  name          String        @unique
+  /// Si false, la zona está en modo «Sin secciones» (activos sin sección).
+  has_sections  Boolean       @default(true)
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
 
-  work_orders WorkOrder[]
-  assets      Asset[]
+  work_orders   WorkOrder[]
+  assets        Asset[]
+  sections      ZoneSection[]
+}
+
+/// Subzona / sección configurable dentro de una zona (p. ej. A–E en L1).
+model ZoneSection {
+  id         String   @id @default(uuid()) @db.Uuid
+  zone_id    String   @db.Uuid
+  zone       Zone     @relation(fields: [zone_id], references: [id], onDelete: Cascade)
+  name       String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  assets     Asset[]
+
+  @@unique([zone_id, name])
+  @@index([zone_id])
 }
 
 model Asset {
@@ -149,8 +167,11 @@ model Asset {
   serial_number   String?
   description     String?
   status          AssetStatus
-  /// Solo aplica cuando la zona es L1–L5; en el resto queda null.
+  /// Letra A–E sincronizada desde ZoneSection.name cuando aplica al código MTTO; null → X.
   section         AssetSection?
+  /// Sección/subzona de la zona (nullable = sin sección).
+  zone_section_id String?     @db.Uuid
+  zone_section    ZoneSection? @relation(fields: [zone_section_id], references: [id], onDelete: SetNull)
   /// Activo fijo (F) o controlable (C); entra en el código MTTO-…-F/C.
   asset_kind      AssetKind   @default(FIJO)
 

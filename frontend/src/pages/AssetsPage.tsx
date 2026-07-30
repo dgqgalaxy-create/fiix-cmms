@@ -1,30 +1,37 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Plus, RefreshCw, Search, QrCode, Printer } from 'lucide-react';
+import { Plus, RefreshCw, Search, QrCode, Printer, MapPin } from 'lucide-react';
 import { AssetsTable } from '../components/AssetsTable';
 import { CreateAssetModal } from '../components/CreateAssetModal';
 import { AssetDetailModal } from '../components/AssetDetailModal';
+import { ManageZonesDrawer } from '../components/ManageZonesDrawer';
 import { QRDisplayModal } from '../components/common/QRDisplayModal';
 import { QRScannerModal } from '../components/common/QRScannerModal';
 import { BulkQRPrintModal } from '../components/common/BulkQRPrintModal';
 import { getAssets, createAsset, deleteAsset, updateAsset } from '../api/assets';
 import type { Asset } from '../api/assets';
+import { getZones } from '../api/zones';
+import type { Zone } from '../api/zones';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
-import { ASSET_SECTIONS, isSectionZoneName } from '../utils/assetSection';
+import { zoneNeedsSections } from '../utils/assetSection';
 
 export const AssetsPage = () => {
   const { hasPermission } = useAuth();
   const canManage = hasPermission('MANAGE_ASSETS');
+  const canManageZones =
+    hasPermission('MANAGE_ZONES') || hasPermission('MANAGE_ASSETS');
   const canUseScanner = hasPermission('USE_QR_SCANNER');
   const [searchParams, setSearchParams] = useSearchParams();
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [zones, setZones] = useState<Zone[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [manageZonesOpen, setManageZonesOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterZoneId, setFilterZoneId] = useState('');
-  const [filterSection, setFilterSection] = useState('');
+  const [filterSectionId, setFilterSectionId] = useState('');
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [detailAsset, setDetailAsset] = useState<Asset | null>(null);
   const [qrAsset, setQrAsset] = useState<Asset | null>(null);
@@ -44,11 +51,31 @@ export const AssetsPage = () => {
     }
   };
 
+  const fetchZones = async () => {
+    try {
+      const data = await getZones();
+      setZones(data);
+    } catch (error) {
+      console.error('Error fetching zones', error);
+    }
+  };
+
   useEffect(() => {
     fetchAssets();
+    fetchZones();
   }, []);
 
   useSocketRefresh('refresh_assets', () => fetchAssets(true));
+  useSocketRefresh('refresh_zones', () => fetchZones());
+
+  useEffect(() => {
+    if (searchParams.get('manageZones') === '1') {
+      setManageZonesOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('manageZones');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     const assetId = searchParams.get('asset');
@@ -71,19 +98,21 @@ export const AssetsPage = () => {
 
   const zoneOptions = useMemo(() => {
     const map = new Map<string, string>();
+    for (const z of zones) map.set(z.id, z.name);
     for (const a of assets) {
       if (a.zone_id && a.zone?.name) map.set(a.zone_id, a.zone.name);
     }
     return Array.from(map.entries())
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
-  }, [assets]);
+  }, [assets, zones]);
 
-  const selectedFilterZoneName = zoneOptions.find((z) => z.id === filterZoneId)?.name;
-  const showSectionFilter = isSectionZoneName(selectedFilterZoneName);
+  const filterZone = zones.find((z) => z.id === filterZoneId);
+  const sectionFilterOptions = filterZone?.sections || [];
+  const showSectionFilter = zoneNeedsSections(filterZone);
 
   useEffect(() => {
-    if (!showSectionFilter) setFilterSection('');
+    if (!showSectionFilter) setFilterSectionId('');
   }, [showSectionFilter]);
 
   const filteredAssets = assets.filter((a) => {
@@ -92,7 +121,8 @@ export const AssetsPage = () => {
       a.name.toLowerCase().includes(term) ||
       a.internal_code.toLowerCase().includes(term);
     const matchesZone = !filterZoneId || a.zone_id === filterZoneId;
-    const matchesSection = !filterSection || a.section === filterSection;
+    const matchesSection =
+      !filterSectionId || a.zone_section_id === filterSectionId;
     return matchesSearch && matchesZone && matchesSection;
   });
 
@@ -165,6 +195,17 @@ export const AssetsPage = () => {
           >
             <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
           </button>
+
+          {canManageZones && (
+            <button
+              type="button"
+              onClick={() => setManageZonesOpen(true)}
+              className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium rounded-xl border bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <MapPin size={16} />
+              Administrar zonas
+            </button>
+          )}
 
           <button
             type="button"
@@ -255,14 +296,14 @@ export const AssetsPage = () => {
             </select>
             {showSectionFilter && (
               <select
-                className="sm:w-36 px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm text-slate-700 dark:text-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-emerald-600"
-                value={filterSection}
-                onChange={(e) => setFilterSection(e.target.value)}
+                className="sm:w-40 px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm text-slate-700 dark:text-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-emerald-600"
+                value={filterSectionId}
+                onChange={(e) => setFilterSectionId(e.target.value)}
                 title="Filtrar por sección"
               >
                 <option value="">Todas las secciones</option>
-                {ASSET_SECTIONS.map((s) => (
-                  <option key={s} value={s}>Sección {s}</option>
+                {sectionFilterOptions.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
             )}
@@ -288,10 +329,21 @@ export const AssetsPage = () => {
         initialData={editingAsset}
       />
 
+      <ManageZonesDrawer
+        isOpen={manageZonesOpen}
+        onClose={() => setManageZonesOpen(false)}
+      />
+
       <AssetDetailModal
         asset={detailAsset}
         isOpen={!!detailAsset}
         onClose={() => setDetailAsset(null)}
+        canEdit={canManage}
+        onEdit={(asset) => {
+          setDetailAsset(null);
+          setEditingAsset(asset);
+          setIsModalOpen(true);
+        }}
       />
 
       <QRDisplayModal

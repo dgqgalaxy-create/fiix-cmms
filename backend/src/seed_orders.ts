@@ -63,25 +63,27 @@ async function seedOrders() {
         continue;
       }
 
-      // 1. ZONA
+      // 1. ZONA (por nombre; CSV sin sección → zona nueva en modo «Sin secciones»)
       let zoneName = row['Zona:']?.trim() || 'SIN ZONA';
       let zoneId = zoneCache.get(zoneName);
       if (!zoneId) {
         let zone = await prisma.zone.findUnique({ where: { name: zoneName } });
         if (!zone) {
-          zone = await prisma.zone.create({ data: { name: zoneName } });
+          zone = await prisma.zone.create({
+            data: { name: zoneName, has_sections: false },
+          });
         }
         zoneId = zone.id;
         zoneCache.set(zoneName, zoneId);
       }
 
-      // 2. EQUIPO (ASSET)
+      // 2. EQUIPO (ASSET) — match por Equipo:; sin sección (compatible con import histórico)
       let assetName = row['Equipo:']?.trim() || 'EQUIPO NO ESPECIFICADO';
       let assetId = assetCache.get(assetName);
       if (!assetId) {
         let asset = await prisma.asset.findFirst({ where: { name: assetName } });
         if (!asset) {
-          // Código MTTO-NNNN-S-DDD-T (sin código importado → se genera).
+          // Código MTTO-NNNN-S-DDD-T (sin código importado → se genera; S = X sin sección).
           const internal_code = await generateAssetInternalCode({
             name: assetName,
             zoneId,
@@ -96,6 +98,8 @@ async function seedOrders() {
               model: 'Desconocido',
               status: 'OPERATIVO',
               asset_kind: AssetKind.FIJO,
+              section: null,
+              zone_section_id: null,
               zone_id: zoneId
             } 
           });

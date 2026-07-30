@@ -509,8 +509,18 @@ export const DeveloperOptions = () => {
       setUploadProgress(100);
       const results = res.data.results;
       let msg = `Archivos CSV procesados: ${results.categories} Categorías, ${results.locations} Ubicaciones, ${results.vendors} Proveedores, ${results.items} Repuestos, ${results.users} Usuarios, ${results.inventory} Movimientos, ${results.orders} Órdenes.`;
+      if (results.assets) {
+        msg += ` Activos (desde inventario ACTIVOS): ${results.assets.created} creados, ${results.assets.updated} actualizados`;
+        if (results.assets.skipped > 0) {
+          msg += `, ${results.assets.skipped} omitidos`;
+        }
+        msg += '.';
+      }
       if (results.itemImages) {
         msg += ` Fotos repuestos: ${results.itemImages.matched}`;
+        if (results.itemImages.assetsMatched > 0) {
+          msg += ` (también en Activos: ${results.itemImages.assetsMatched})`;
+        }
         if (results.itemImages.missing > 0) {
           msg += ` (${results.itemImages.missing} sin ítem coincidente)`;
         }

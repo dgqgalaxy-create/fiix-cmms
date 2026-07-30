@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck, AlertTriangle, Clock, Wrench, Package, CalendarClock, Layers } from 'lucide-react';
+import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck, AlertTriangle, Clock, Wrench, Package, CalendarClock, Layers, Pencil } from 'lucide-react';
 import type { Asset } from '../api/assets';
 import { BACKEND_URL } from '../api/axios';
 import { getAssetMetrics } from '../api/assets';
@@ -15,6 +15,9 @@ interface Props {
   asset: Asset | null;
   isOpen: boolean;
   onClose: () => void;
+  /** Abre el modal de edición (mismo CreateAssetModal que la tabla). */
+  onEdit?: (asset: Asset) => void;
+  canEdit?: boolean;
 }
 
 const WO_STATUS_LABELS: Record<string, string> = {
@@ -25,7 +28,7 @@ const WO_STATUS_LABELS: Record<string, string> = {
   ANULADO: 'Anulado',
 };
 
-export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
+export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Props) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'info' | 'metrics' | 'history'>('overview');
   const [metrics, setMetrics] = useState<any>(null);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
@@ -266,6 +269,19 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
           {/* TAB: INFO */}
           {activeTab === 'info' && (
             <div className="space-y-6">
+              {canEdit && onEdit && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => onEdit(asset)}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 rounded-xl shadow-sm transition-colors"
+                  >
+                    <Pencil size={16} />
+                    Editar
+                  </button>
+                </div>
+              )}
+
               {/* Image */}
               {asset.image_url && (
                 <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex-shrink-0 shadow-sm p-2">
@@ -313,13 +329,15 @@ export const AssetDetailModal = ({ asset, isOpen, onClose }: Props) => {
                   <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{asset.zone?.name || 'Sin Zona'}</div>
                 </div>
 
-                {asset.section && (
+                {(asset.zone_section?.name || asset.section) && (
                   <div className="bg-white dark:bg-slate-900 shadow-sm p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
                     <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
                       <MapPin size={16} />
                       <span className="text-xs font-bold uppercase tracking-wider">Sección</span>
                     </div>
-                    <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{asset.section}</div>
+                    <div className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                      {asset.zone_section?.name || asset.section}
+                    </div>
                   </div>
                 )}
 

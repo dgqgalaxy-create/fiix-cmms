@@ -15,7 +15,8 @@ export function pathToModuleLabel(path?: string | null): string {
   if (normalized.startsWith('/users')) return 'Personal';
   if (normalized.startsWith('/kpis')) return 'KPIs';
   if (normalized.startsWith('/checklists')) return 'Checklist';
-  if (normalized.startsWith('/zones')) return 'Zonas';
+  // /zones redirige a Activos → Administrar zonas
+  if (normalized.startsWith('/zones')) return 'Activos';
   if (normalized.startsWith('/permissions')) return 'Permisos';
   if (normalized.startsWith('/rca')) return 'Árbol de Fallas';
   if (normalized.startsWith('/settings')) return 'Configuración';

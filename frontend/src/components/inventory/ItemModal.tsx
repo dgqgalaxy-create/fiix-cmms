@@ -207,8 +207,16 @@ export const ItemModal = ({
         return;
       }
 
+      if (!item && Number(formData.stock) < 0) {
+        setError('El stock inicial no puede ser negativo');
+        setIsSubmitting(false);
+        return;
+      }
+
       const data = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
+        // En edición no enviar stock: el backend lo ignora; evita confusión / manipulación.
+        if (item && key === 'stock') return;
         data.append(key, value.toString());
       });
 
@@ -446,16 +454,32 @@ export const ItemModal = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Stock Actual</label>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                    {item ? 'Stock Actual' : 'Stock inicial'}
+                  </label>
                   <input
                     type="number"
                     step="0.01"
+                    min="0"
                     required
-                    disabled={!!item || readOnly} // Stock debe cambiar vía transacciones, no edición manual directa si es por CRUD
+                    // En alta: cantidad inicial → movimiento «Levantamiento de inventario».
+                    // En edición: solo lectura; el stock cambia con entradas/salidas.
+                    disabled={!!item || readOnly}
                     value={formData.stock}
                     onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                     className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
+                    title={item ? 'El stock solo cambia con movimientos de inventario' : 'Se registra como levantamiento de inventario'}
                   />
+                  {!item && !readOnly && (
+                    <p className="mt-1 text-[10px] leading-snug text-slate-400 dark:text-slate-500">
+                      Si es mayor a 0, se crea un movimiento de entrada: Levantamiento de inventario (stock inicial).
+                    </p>
+                  )}
+                  {!!item && (
+                    <p className="mt-1 text-[10px] leading-snug text-slate-400 dark:text-slate-500">
+                      Solo cambia con movimientos (entrada/salida).
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Stock Mínimo</label>

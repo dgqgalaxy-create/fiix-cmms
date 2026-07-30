@@ -2,12 +2,25 @@ import { Request, Response } from 'express';
 import { AssetKind, Prisma } from '@prisma/client';
 import prisma from '../config/prisma';
 import { emitRefresh } from '../utils/socket';
-import { resolveAssetSection } from '../utils/assetSection';
+import { resolveAssetZoneSection } from '../utils/assetSection';
 import {
   generateAssetInternalCode,
   normalizeAssetKind,
   normalizeEquipmentName,
 } from '../utils/assetCodeGenerator';
+
+const assetInclude = {
+  zone: { include: { sections: { orderBy: { name: 'asc' as const } } } },
+  zone_section: true,
+  vendor: true,
+};
+
+async function loadZoneForSection(zoneId: string) {
+  return prisma.zone.findUnique({
+    where: { id: zoneId },
+    include: { sections: { orderBy: { name: 'asc' } } },
+  });
+}
 
 export const getAssetMetrics = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -220,10 +233,7 @@ export const getAssetMetrics = async (req: Request, res: Response): Promise<void
 export const getAssets = async (req: Request, res: Response): Promise<void> => {
   try {
     const assets = await prisma.asset.findMany({
-      include: {
-        zone: true,
-        vendor: true,
-      },
+      include: assetInclude,
       orderBy: { created_at: 'desc' },
     });
     res.json(assets);
@@ -237,10 +247,7 @@ export const getAssetById = async (req: Request, res: Response): Promise<void> =
     const id = req.params.id as string;
     const asset = await prisma.asset.findUnique({
       where: { id },
-      include: {
-        zone: true,
-        vendor: true,
-      },
+      include: assetInclude,
     });
     if (!asset) {
       res.status(404).json({ error: 'Activo no encontrado' });
@@ -267,6 +274,7 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
       description,
       status,
       section,
+      zone_section_id,
       asset_kind,
     } = req.body;
 
@@ -286,14 +294,15 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const zone = await prisma.zone.findUnique({ where: { id: zone_id } });
+    const zone = await loadZoneForSection(zone_id);
     if (!zone) {
       res.status(400).json({ error: 'La zona indicada no existe' });
       return;
     }
 
-    const sectionResult = resolveAssetSection({
-      zoneName: zone.name,
+    const sectionResult = resolveAssetZoneSection({
+      zone,
+      zoneSectionIdInput: zone_section_id,
       sectionInput: section,
     });
     if ('error' in sectionResult) {
@@ -338,6 +347,9 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
               zone: { connect: { id: zone_id } },
             };
 
+            if (sectionResult.zone_section_id) {
+              assetData.zone_section = { connect: { id: sectionResult.zone_section_id } };
+            }
             if (vendor_id) {
               assetData.vendor = { connect: { id: vendor_id } };
             }
@@ -346,7 +358,7 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
 
             return tx.asset.create({
               data: assetData,
-              include: { zone: true, vendor: true },
+              include: assetInclude,
             });
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
@@ -391,6 +403,7 @@ export const updateAsset = async (req: Request, res: Response): Promise<void> =>
       description,
       status,
       section,
+      zone_section_id,
       asset_kind,
     } = req.body;
 
@@ -404,15 +417,13 @@ export const updateAsset = async (req: Request, res: Response): Promise<void> =>
     }
 
     let nextZoneId = existing.zone_id;
-    let zoneName = existing.zone?.name ?? null;
     if (zone_id) {
-      const zone = await prisma.zone.findUnique({ where: { id: zone_id } });
-      if (!zone) {
+      const zoneCheck = await prisma.zone.findUnique({ where: { id: zone_id } });
+      if (!zoneCheck) {
         res.status(400).json({ error: 'La zona indicada no existe' });
         return;
       }
-      nextZoneId = zone.id;
-      zoneName = zone.name;
+      nextZoneId = zoneCheck.id;
     }
 
     if (!nextZoneId) {
@@ -420,9 +431,17 @@ export const updateAsset = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const sectionResult = resolveAssetSection({
-      zoneName,
+    const zone = await loadZoneForSection(nextZoneId);
+    if (!zone) {
+      res.status(400).json({ error: 'La zona indicada no existe' });
+      return;
+    }
+
+    const sectionResult = resolveAssetZoneSection({
+      zone,
+      zoneSectionIdInput: zone_section_id,
       sectionInput: section,
+      existingZoneSectionId: existing.zone_section_id,
       existingSection: existing.section,
       isUpdate: true,
     });
@@ -450,7 +469,9 @@ export const updateAsset = async (req: Request, res: Response): Promise<void> =>
     const nameChanged =
       normalizeEquipmentName(nextName) !== normalizeEquipmentName(existing.name);
     const zoneChanged = nextZoneId !== existing.zone_id;
-    const sectionChanged = sectionResult.section !== existing.section;
+    const sectionChanged =
+      sectionResult.section !== existing.section ||
+      sectionResult.zone_section_id !== existing.zone_section_id;
     const kindChanged = nextKind !== existing.asset_kind;
     const shouldRegenerateCode =
       nameChanged || zoneChanged || sectionChanged || kindChanged;
@@ -469,6 +490,9 @@ export const updateAsset = async (req: Request, res: Response): Promise<void> =>
               section: sectionResult.section,
               asset_kind: nextKind,
               name: nextName,
+              zone_section: sectionResult.zone_section_id
+                ? { connect: { id: sectionResult.zone_section_id } }
+                : { disconnect: true },
             };
             if (brand) assetData.brand = brand;
             if (model) assetData.model = model;
@@ -506,7 +530,7 @@ export const updateAsset = async (req: Request, res: Response): Promise<void> =>
             return tx.asset.update({
               where: { id },
               data: assetData,
-              include: { zone: true, vendor: true },
+              include: assetInclude,
             });
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }

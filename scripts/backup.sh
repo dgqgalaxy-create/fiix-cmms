@@ -29,7 +29,7 @@ DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/fiix
 # Prisma añade ?schema=public; pg_dump (libpq) lo rechaza en PostgreSQL 15+.
 DATABASE_URL="$(printf '%s' "${DATABASE_URL}" | sed -E 's/([?&])schema=[^&]*//g; s/\?&/?/g; s/[?&]$//')"
 
-# --- Dump de la base de datos ---
+# --- Dump de la base de datos (pg_dump completo: incluye ZoneSection y columnas nuevas) ---
 DUMP_FILE="${BACKUP_DIR}/fiix_${TIMESTAMP}.sql.gz"
 if command -v pg_dump >/dev/null 2>&1; then
   pg_dump --no-owner --no-acl "${DATABASE_URL}" | gzip > "${DUMP_FILE}"

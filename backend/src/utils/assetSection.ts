@@ -30,16 +30,103 @@ export function normalizeAssetSection(
   return undefined; // invalid
 }
 
+/** Sync MTTO letter A–E from ZoneSection.name when it is exactly A–E; else null → X. */
+export function sectionEnumFromName(name: string | null | undefined): AssetSection | null {
+  if (!name) return null;
+  const upper = name.trim().toUpperCase();
+  if (VALID_SECTIONS.has(upper)) return upper as AssetSection;
+  return null;
+}
+
+export type ZoneForSection = {
+  id: string;
+  name: string;
+  has_sections: boolean;
+  sections: { id: string; name: string }[];
+};
+
 /**
- * Resolves section for create/update given the target zone name.
- * - L1–L5: section required (A–E)
- * - other zones: forces null
- * Returns { section } or { error }.
+ * Resolves zone_section_id + legacy AssetSection for create/update.
+ * - has_sections=false or no section rows → null (Sin sección)
+ * - has_sections with rows → zone_section_id required (or legacy A–E name match)
+ */
+export function resolveAssetZoneSection(params: {
+  zone: ZoneForSection;
+  zoneSectionIdInput: unknown;
+  /** Legacy: A–E string from older clients. */
+  sectionInput?: unknown;
+  existingZoneSectionId?: string | null;
+  existingSection?: AssetSection | null;
+  isUpdate?: boolean;
+}): { zone_section_id: string | null; section: AssetSection | null } | { error: string } {
+  const { zone } = params;
+  const configured = zone.has_sections && zone.sections.length > 0;
+
+  if (!configured) {
+    return { zone_section_id: null, section: null };
+  }
+
+  let zoneSectionId: string | null | undefined;
+
+  if (params.zoneSectionIdInput !== undefined) {
+    if (params.zoneSectionIdInput === null || params.zoneSectionIdInput === '') {
+      zoneSectionId = null;
+    } else {
+      const id = String(params.zoneSectionIdInput).trim();
+      const found = zone.sections.find((s) => s.id === id);
+      if (!found) {
+        return { error: 'La sección no pertenece a la zona seleccionada' };
+      }
+      zoneSectionId = found.id;
+    }
+  } else if (params.sectionInput !== undefined) {
+    // Legacy path: match by A–E name
+    if (params.sectionInput === null || params.sectionInput === '') {
+      zoneSectionId = null;
+    } else {
+      const letter = normalizeAssetSection(params.sectionInput);
+      if (letter === undefined) {
+        return { error: 'La sección indicada no es válida' };
+      }
+      if (letter === null) {
+        zoneSectionId = null;
+      } else {
+        const found = zone.sections.find(
+          (s) => s.name.trim().toUpperCase() === letter
+        );
+        if (!found) {
+          return { error: `No existe la sección «${letter}» en esta zona` };
+        }
+        zoneSectionId = found.id;
+      }
+    }
+  } else if (params.isUpdate) {
+    zoneSectionId = params.existingZoneSectionId ?? null;
+    if (zoneSectionId) {
+      const stillValid = zone.sections.some((s) => s.id === zoneSectionId);
+      if (!stillValid) zoneSectionId = null;
+    }
+  } else {
+    zoneSectionId = null;
+  }
+
+  if (!zoneSectionId) {
+    return { error: 'Debes seleccionar una sección de la zona' };
+  }
+
+  const matched = zone.sections.find((s) => s.id === zoneSectionId)!;
+  return {
+    zone_section_id: zoneSectionId,
+    section: sectionEnumFromName(matched.name),
+  };
+}
+
+/**
+ * @deprecated Prefer resolveAssetZoneSection. Kept for callers that only had zone name + A–E.
  */
 export function resolveAssetSection(params: {
   zoneName: string | null | undefined;
   sectionInput: unknown;
-  /** On update, if sectionInput is undefined, keep existing (unless zone no longer needs it). */
   existingSection?: AssetSection | null;
   isUpdate?: boolean;
 }): { section: AssetSection | null } | { error: string } {

@@ -6,10 +6,8 @@ import type { Zone } from '../api/zones';
 import { getVendors } from '../api/inventory';
 import type { Vendor } from '../api/inventory';
 import {
-  ASSET_SECTIONS,
   ASSET_KIND_LABELS,
   assetKindLetter,
-  isSectionZoneName,
   sectionCodeLetter,
   type AssetKindValue,
 } from '../utils/assetSection';
@@ -30,7 +28,7 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'OPERATIVO' | 'EN_MANTENIMIENTO' | 'FUERA_DE_SERVICIO'>('OPERATIVO');
   const [zoneId, setZoneId] = useState('');
-  const [section, setSection] = useState('');
+  const [zoneSectionId, setZoneSectionId] = useState('');
   const [assetKind, setAssetKind] = useState<AssetKindValue | ''>('');
   const [vendorId, setVendorId] = useState('');
   const [price, setPrice] = useState('');
@@ -46,24 +44,33 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
   const [documentFile, setDocumentFile] = useState<File | null>(null);
 
   const selectedZone = zones.find((z) => z.id === zoneId);
-  const showSection = isSectionZoneName(selectedZone?.name);
+  const zoneSections = selectedZone?.sections || [];
+  const needsSection = Boolean(
+    selectedZone?.has_sections && zoneSections.length > 0
+  );
+  const selectedSectionName =
+    zoneSections.find((s) => s.id === zoneSectionId)?.name || null;
 
   const codePreview = useMemo(() => {
-    const s = showSection && section ? section : sectionCodeLetter(null, selectedZone?.name);
+    const s = needsSection
+      ? sectionCodeLetter(selectedSectionName)
+      : sectionCodeLetter(null);
     const t = assetKind ? assetKindLetter(assetKind) : '?';
     return `MTTO-····-${s}-···-${t}`;
-  }, [showSection, section, assetKind, selectedZone?.name]);
+  }, [needsSection, selectedSectionName, assetKind]);
 
   const willRegenerateOnEdit = useMemo(() => {
     if (!initialData) return false;
-    const nameChanged = name.trim().toLowerCase().replace(/\s+/g, ' ') !==
+    const nameChanged =
+      name.trim().toLowerCase().replace(/\s+/g, ' ') !==
       initialData.name.trim().toLowerCase().replace(/\s+/g, ' ');
     const zoneChanged = zoneId !== (initialData.zone_id || '');
-    const nextSection = showSection ? section || null : null;
-    const sectionChanged = (nextSection || null) !== (initialData.section || null);
+    const nextSectionId = needsSection ? zoneSectionId || null : null;
+    const sectionChanged =
+      (nextSectionId || null) !== (initialData.zone_section_id || null);
     const kindChanged = assetKind !== (initialData.asset_kind || '');
     return nameChanged || zoneChanged || sectionChanged || kindChanged;
-  }, [initialData, name, zoneId, showSection, section, assetKind]);
+  }, [initialData, name, zoneId, needsSection, zoneSectionId, assetKind]);
 
   useEffect(() => {
     if (isOpen) {
@@ -76,7 +83,7 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
         setDescription(initialData.description || '');
         setStatus(initialData.status);
         setZoneId(initialData.zone_id || '');
-        setSection(initialData.section || '');
+        setZoneSectionId(initialData.zone_section_id || '');
         setAssetKind(initialData.asset_kind || '');
         setVendorId(initialData.vendor_id || '');
         setPrice(initialData.price?.toString() || '');
@@ -89,41 +96,43 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
         setDescription('');
         setStatus('OPERATIVO');
         setZoneId('');
-        setSection('');
+        setZoneSectionId('');
         setAssetKind('');
         setVendorId('');
         setPrice('');
       }
       setImageFile(null);
       setDocumentFile(null);
+      setError('');
 
       setIsLoadingZones(true);
-      getZones().then(data => {
-        setZones(data);
-        if (data.length > 0 && !initialData?.zone_id) setZoneId(data[0].id);
-      }).catch(() => {
-        setError('Error al cargar las zonas');
-      }).finally(() => {
-        setIsLoadingZones(false);
-      });
+      getZones()
+        .then((data) => {
+          setZones(data);
+          if (data.length > 0 && !initialData?.zone_id) setZoneId(data[0].id);
+        })
+        .catch(() => {
+          setError('Error al cargar las zonas');
+        })
+        .finally(() => {
+          setIsLoadingZones(false);
+        });
 
       setIsLoadingVendors(true);
-      getVendors().then(data => {
-        setVendors(data);
-      }).catch(() => {
-        // Silencioso, puede no ser crítico
-      }).finally(() => {
-        setIsLoadingVendors(false);
-      });
+      getVendors()
+        .then((data) => {
+          setVendors(data);
+        })
+        .catch(() => {})
+        .finally(() => {
+          setIsLoadingVendors(false);
+        });
     }
   }, [isOpen, initialData]);
 
   const handleZoneChange = (nextZoneId: string) => {
     setZoneId(nextZoneId);
-    const nextZone = zones.find((z) => z.id === nextZoneId);
-    if (!isSectionZoneName(nextZone?.name)) {
-      setSection('');
-    }
+    setZoneSectionId('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,8 +142,8 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
         setError('Debes seleccionar una zona');
         return;
       }
-      if (showSection && !section) {
-        setError('Debes seleccionar la sección (A–E) para zonas L1–L5');
+      if (needsSection && !zoneSectionId) {
+        setError('Debes seleccionar una sección de la zona');
         return;
       }
       if (!assetKind) {
@@ -145,7 +154,6 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
       setError('');
       
       const submitData = new FormData();
-      // Código autogenerado en servidor (MTTO-NNNN-S-DDD-T); no se envía desde el cliente.
       submitData.append('name', name);
       submitData.append('brand', brand);
       submitData.append('model', model);
@@ -155,7 +163,7 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
       submitData.append('zone_id', zoneId);
       submitData.append('vendor_id', vendorId);
       submitData.append('price', price);
-      submitData.append('section', showSection ? section : '');
+      submitData.append('zone_section_id', needsSection ? zoneSectionId : '');
       submitData.append('asset_kind', assetKind);
       
       if (imageFile) submitData.append('image', imageFile);
@@ -246,25 +254,41 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {showSection ? (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Sección *</label>
-                  <select
-                    required
-                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all"
-                    value={section}
-                    onChange={(e) => setSection(e.target.value)}
-                  >
-                    <option value="" disabled>Selecciona sección (A–E)</option>
-                    {ASSET_SECTIONS.map((s) => (
-                      <option key={s} value={s}>Sección {s}</option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-slate-400 mt-1">Las líneas L1–L5 se dividen en cinco secciones (A a E).</p>
-                </div>
-              ) : (
-                <div className="hidden sm:block" />
-              )}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                  Sección {needsSection ? '*' : ''}
+                </label>
+                {needsSection ? (
+                  <>
+                    <select
+                      required
+                      className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all"
+                      value={zoneSectionId}
+                      onChange={(e) => setZoneSectionId(e.target.value)}
+                    >
+                      <option value="" disabled>Selecciona sección</option>
+                      {zoneSections.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Secciones de la zona (administrables desde Activos → Administrar zonas).
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      disabled
+                      className="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 rounded-xl cursor-not-allowed"
+                      value="Sin sección"
+                    />
+                    <p className="text-xs text-slate-400 mt-1">
+                      Esta zona no tiene secciones configuradas (modo «Sin secciones» o lista vacía).
+                    </p>
+                  </>
+                )}
+              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Tipo de activo *</label>
                 <select

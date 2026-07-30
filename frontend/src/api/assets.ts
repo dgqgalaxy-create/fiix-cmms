@@ -9,8 +9,15 @@ export interface Asset {
   serial_number?: string;
   description?: string;
   status: 'OPERATIVO' | 'EN_MANTENIMIENTO' | 'FUERA_DE_SERVICIO';
-  /** Sección A–E; solo aplica a zonas L1–L5. */
+  /** Letra A–E sincronizada desde la sección (MTTO); null → X. */
   section?: 'A' | 'B' | 'C' | 'D' | 'E' | null;
+  /** Sección/subzona de la zona. */
+  zone_section_id?: string | null;
+  zone_section?: {
+    id: string;
+    name: string;
+    zone_id: string;
+  } | null;
   /** Activo fijo (F) o controlable (C). */
   asset_kind: 'FIJO' | 'CONTROLABLE';
   zone_id: string;
@@ -19,6 +26,8 @@ export interface Asset {
   zone?: {
     id: string;
     name: string;
+    has_sections?: boolean;
+    sections?: { id: string; name: string }[];
   };
   vendor_id?: string;
   price?: number;

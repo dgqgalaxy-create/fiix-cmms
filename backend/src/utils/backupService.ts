@@ -186,7 +186,12 @@ function unlinkQuiet(filePath: string) {
   }
 }
 
-/** Ejecuta pg_dump y comprime la salida con gzip vía streams de Node (sin bash). */
+/**
+ * Ejecuta pg_dump completo del esquema `public` (todas las tablas Prisma, p. ej. Zone,
+ * ZoneSection, Asset con has_sections / zone_section_id) y comprime con gzip vía streams
+ * de Node (sin bash). No filtra por tabla: un dump nuevo siempre incluye columnas/tablas
+ * añadidas por migraciones.
+ */
 async function dumpDatabase(pgDumpPath: string, databaseUrl: string, outFile: string): Promise<void> {
   const pgUrl = sanitizeDatabaseUrlForPgClients(databaseUrl);
   const child = spawn(

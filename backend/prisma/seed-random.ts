@@ -90,7 +90,9 @@ async function main() {
 
   const zones = [];
   for (const z of zonesData) {
-    const zone = await prisma.zone.create({ data: z });
+    const zone = await prisma.zone.create({
+      data: { ...z, has_sections: false },
+    });
     zones.push(zone);
   }
 
@@ -142,6 +144,8 @@ async function main() {
         description: `Activo crítico en la sección de producción de ${zone.name}`,
         status,
         asset_kind: AssetKind.FIJO,
+        section: null,
+        zone_section_id: null,
         zone_id: zone.id,
       },
     });

@@ -23,6 +23,7 @@ import {
   emptyUploadsDirectory,
 } from '../utils/uploadsCleanup';
 import { parseCsvDate } from '../utils/parseCsvDate';
+import { syncAssetsFromActivosInventory } from '../utils/assetInventoryImport';
 
 const router = express.Router();
 
@@ -460,10 +461,17 @@ router.post(
       users: number;
       inventory: number;
       orders: number;
+      assets?: {
+        created: number;
+        updated: number;
+        skipped: number;
+        zonesEnsured: string[];
+      };
       itemImages?: {
         matched: number;
         missing: number;
         skipped: number;
+        assetsMatched?: number;
         folderFound: boolean;
         filesScanned: number;
       };
@@ -630,6 +638,21 @@ router.post(
           results.items++;
         } catch (e) {}
       }
+
+      // Ítems categoría ACTIVOS → módulo Activos (upsert por nombre / código).
+      // No borra filas de inventario; sección queda null (CSV sin columna de sección).
+      try {
+        const assetSync = await syncAssetsFromActivosInventory();
+        results.assets = {
+          created: assetSync.created,
+          updated: assetSync.updated,
+          skipped: assetSync.skipped,
+          zonesEnsured: assetSync.zonesEnsured,
+        };
+      } catch (assetErr) {
+        console.error('Asset inventory sync error:', assetErr);
+        results.assets = { created: 0, updated: 0, skipped: 0, zonesEnsured: [] };
+      }
     }
 
     if (userFile) {
@@ -738,11 +761,16 @@ router.post(
             const folioCsv = parseWorkOrderFolio(row['FOLIO']);
             if (!folioCsv) continue;
 
+            // Misma lógica histórica: Zona: / Equipo: por nombre. El CSV de Solicitudes
+            // no trae columna de sección → activos quedan sin sección (zone_section_id null).
+            // No inventar secciones A–E ni exigir columnas nuevas.
             let zoneName = row['Zona:'] ? row['Zona:'].trim() : 'Sin Zona';
             if(zoneName === 'N/A' || !zoneName) zoneName = 'Sin Zona';
             let zone = await prisma.zone.findUnique({ where: { name: zoneName } });
             if (!zone) {
-               zone = await prisma.zone.create({ data: { name: zoneName } });
+               zone = await prisma.zone.create({
+                 data: { name: zoneName, has_sections: false },
+               });
             }
 
             let assetName = row['Equipo:'] ? row['Equipo:'].trim() : 'Sin Equipo';
@@ -750,6 +778,7 @@ router.post(
             let asset = await prisma.asset.findFirst({ where: { name: assetName } });
             if (!asset) {
                // Sin código en el CSV de OT → esquema MTTO; si hubiera código importado se conservaría.
+               // section / zone_section_id explícitamente null (= «Sin sección»), como antes.
                asset = await prisma.asset.create({
                   data: {
                      internal_code: await generateAssetInternalCode({
@@ -763,6 +792,8 @@ router.post(
                      model: 'N/A',
                      status: AssetStatus.OPERATIVO,
                      asset_kind: AssetKind.FIJO,
+                     section: null,
+                     zone_section_id: null,
                      zone_id: zone.id
                   }
                });
@@ -897,6 +928,7 @@ router.post(
           matched: photoResult.matched,
           missing: photoResult.missing,
           skipped: photoResult.skipped,
+          assetsMatched: photoResult.assetsMatched,
           folderFound: photoResult.folderFound,
           filesScanned: photoResult.filesScanned,
         };
@@ -906,6 +938,7 @@ router.post(
           matched: 0,
           missing: 0,
           skipped: 0,
+          assetsMatched: 0,
           folderFound: false,
           filesScanned: 0,
         };
@@ -962,6 +995,7 @@ router.post(
     res.json({ success: true, message: 'Archivos CSV importados con éxito.', results });
     emitRefresh('refresh_work_orders');
     emitRefresh('refresh_inventory');
+    emitRefresh('refresh_assets');
   } catch (error: any) {
     console.error('CSV Import error:', error);
     res.status(500).json({ message: 'Error procesando archivos CSV.', error: error.message });

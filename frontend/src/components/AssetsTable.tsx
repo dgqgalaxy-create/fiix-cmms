@@ -88,8 +88,8 @@ export const AssetsTable = ({
         valB = b.zone?.name || '';
         break;
       case 'section':
-        valA = a.section || '';
-        valB = b.section || '';
+        valA = a.zone_section?.name || a.section || '';
+        valB = b.zone_section?.name || b.section || '';
         break;
       case 'vendor':
         valA = a.vendor?.name || '';
@@ -180,8 +180,8 @@ export const AssetsTable = ({
             <div className="flex justify-between items-center text-[11px] border-t border-slate-100 dark:border-slate-800 pt-2.5 mt-2">
               <div className="text-slate-500 dark:text-slate-400">
                 Zona: <span className="font-semibold text-slate-700 dark:text-slate-200">{asset.zone?.name || 'Sin Zona'}</span>
-                {asset.section && (
-                  <span className="ml-2">· Sec: <span className="font-semibold text-slate-700 dark:text-slate-200">{asset.section}</span></span>
+                {(asset.zone_section?.name || asset.section) && (
+                  <span className="ml-2">· Sec: <span className="font-semibold text-slate-700 dark:text-slate-200">{asset.zone_section?.name || asset.section}</span></span>
                 )}
               </div>
 
@@ -305,7 +305,7 @@ export const AssetsTable = ({
                     {asset.zone?.name || <span className="text-slate-400 italic">Sin Zona</span>}
                   </td>
                   <td className="px-4 py-4 text-slate-700 dark:text-slate-200 hidden md:table-cell font-medium">
-                    {asset.section || <span className="text-slate-400 italic">—</span>}
+                    {asset.zone_section?.name || asset.section || <span className="text-slate-400 italic">—</span>}
                   </td>
                   <td className="px-6 py-4 text-slate-700 dark:text-slate-200 hidden lg:table-cell">
                     {asset.vendor?.name || <span className="text-slate-400 italic">-</span>}

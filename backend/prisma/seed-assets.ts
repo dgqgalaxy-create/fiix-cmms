@@ -16,7 +16,9 @@ async function upsertAssetByName(data: {
   // Seed sin zona: usa una zona placeholder o la primera disponible.
   let zone = await prisma.zone.findFirst({ orderBy: { name: 'asc' } });
   if (!zone) {
-    zone = await prisma.zone.create({ data: { name: 'SIN ZONA' } });
+    zone = await prisma.zone.create({
+      data: { name: 'SIN ZONA', has_sections: false },
+    });
   }
 
   const internal_code = await generateAssetInternalCode({
@@ -30,6 +32,8 @@ async function upsertAssetByName(data: {
       ...data,
       internal_code,
       asset_kind: AssetKind.FIJO,
+      section: null,
+      zone_section_id: null,
       zone_id: zone.id,
     },
   });

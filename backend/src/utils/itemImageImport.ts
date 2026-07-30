@@ -4,6 +4,7 @@ import os from 'os';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import prisma from '../config/prisma';
+import { isActivosCategoryName } from './inventoryLocationToZone';
 
 const execFileAsync = promisify(execFile);
 
@@ -16,6 +17,10 @@ export function getItemImagesDir(): string {
 
 function getInventoryUploadDir(): string {
   return path.join(__dirname, '../../uploads/inventory');
+}
+
+function getAssetsUploadDir(): string {
+  return path.join(__dirname, '../../uploads/assets');
 }
 
 /**
@@ -52,6 +57,8 @@ export interface ItemImageImportResult {
   matched: number;
   missing: number;
   skipped: number;
+  /** Fotos también copiadas a uploads/assets/ y ligadas a Asset (categoría ACTIVOS). */
+  assetsMatched: number;
   folderFound: boolean;
   folderPath: string;
   filesScanned: number;
@@ -151,6 +158,8 @@ export async function extractZipToDir(zipPath: string, destDir: string): Promise
  * Escanea una carpeta de fotos, copia cada una a uploads/inventory/
  * (mismo formato que ItemModal) y actualiza item.image_url.
  * Empareja por el Item ID embebido en el nombre (p. ej. MTTO-0001.Image.163526.png).
+ * Si el ítem es categoría ACTIVOS/ACTIVO y existe un Asset con el mismo nombre,
+ * copia también a uploads/assets/ y actualiza Asset.image_url (UI de Activos).
  * No falla si la carpeta no existe o está vacía.
  */
 export async function assignItemImagesFromFolder(
@@ -160,6 +169,7 @@ export async function assignItemImagesFromFolder(
     matched: 0,
     missing: 0,
     skipped: 0,
+    assetsMatched: 0,
     folderFound: false,
     folderPath,
     filesScanned: 0,
@@ -177,11 +187,17 @@ export async function assignItemImagesFromFolder(
   }
 
   const items = await prisma.item.findMany({
-    select: { id: true, internal_code: true, name: true },
+    select: {
+      id: true,
+      internal_code: true,
+      name: true,
+      category: { select: { name: true } },
+    },
   });
 
-  const byCode = new Map<string, { id: string; internal_code: string; name: string }>();
-  const bySlug = new Map<string, { id: string; internal_code: string; name: string }>();
+  type ItemRow = (typeof items)[number];
+  const byCode = new Map<string, ItemRow>();
+  const bySlug = new Map<string, ItemRow>();
   for (const item of items) {
     byCode.set(item.internal_code.toLowerCase(), item);
     const slug = slugifyName(item.name);
@@ -193,6 +209,10 @@ export async function assignItemImagesFromFolder(
   const uploadDir = getInventoryUploadDir();
   if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
+  }
+  const assetsUploadDir = getAssetsUploadDir();
+  if (!fs.existsSync(assetsUploadDir)) {
+    fs.mkdirSync(assetsUploadDir, { recursive: true });
   }
 
   const usedItemIds = new Set<string>();
@@ -232,6 +252,23 @@ export async function assignItemImagesFromFolder(
 
       usedItemIds.add(item.id);
       result.matched++;
+
+      // Categoría Activo → también en módulo Activos (ruta uploads/assets/).
+      if (isActivosCategoryName(item.category?.name)) {
+        const assetName = (item.name || '').trim();
+        if (assetName) {
+          const asset = await prisma.asset.findFirst({ where: { name: assetName } });
+          if (asset) {
+            const assetDestName = `image-${uniqueSuffix}${ext}`;
+            fs.copyFileSync(src, path.join(assetsUploadDir, assetDestName));
+            await prisma.asset.update({
+              where: { id: asset.id },
+              data: { image_url: `/uploads/assets/${assetDestName}` },
+            });
+            result.assetsMatched++;
+          }
+        }
+      }
     } catch (e) {
       console.error('Item image assign error', file, e);
       result.skipped++;
@@ -250,6 +287,7 @@ export async function assignItemImagesFromZip(zipPath: string): Promise<ItemImag
     matched: 0,
     missing: 0,
     skipped: 0,
+    assetsMatched: 0,
     folderFound: false,
     folderPath: zipPath,
     filesScanned: 0,

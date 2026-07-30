@@ -9,7 +9,7 @@ import { useSocketRefresh } from '../hooks/useSocketRefresh';
 const AVAILABLE_PERMISSIONS = [
   { key: 'MANAGE_USERS', label: 'Administrar Usuarios', description: 'Crear, editar y eliminar usuarios del sistema.' },
   { key: 'MANAGE_ASSETS', label: 'Administrar Activos', description: 'Crear, editar y eliminar equipos o maquinaria.' },
-  { key: 'MANAGE_ZONES', label: 'Administrar Zonas', description: 'Crear y eliminar zonas de la planta.' },
+  { key: 'MANAGE_ZONES', label: 'Administrar Zonas', description: 'Crear y editar zonas/secciones desde Activos. Eliminar zona: solo Administrador.' },
   { key: 'MANAGE_KPIS', label: 'Administrar Metas KPI', description: 'Modificar metas e indicadores de desempeño.' },
   { key: 'CREATE_WORK_ORDERS', label: 'Crear Órdenes', description: 'Generar nuevas solicitudes de mantenimiento.' },
   { key: 'VIEW_ALL_WORK_ORDERS', label: 'Ver Todas las Órdenes', description: 'Permite visualizar el historial y lista completa de órdenes de todos.' },

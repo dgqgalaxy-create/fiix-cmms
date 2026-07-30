@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.43.11";
+export const APP_VERSION = "1.44.3";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -20,7 +20,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Catálogo de Inventario",
     "Planes Preventivos",
     "Módulo de Compras",
-    "Zonas y Permisos",
+    "Activos (zonas y secciones)",
+    "Permisos",
     "Directorio y Solicitantes",
     "KPIs y Metas",
     "Checklist Diario",
@@ -28,6 +29,10 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Al crear un repuesto, el stock inicial ya no se escribe a ciegas: si es mayor a 0 se registra como movimiento de entrada «Levantamiento de inventario (stock inicial)». En edición el stock sigue solo lectura (cambia con movimientos).",
+    "Nuevo: Import CSV — fotos del zip Items_Images de ítems ACTIVOS también se copian a Activos (uploads/assets/). En el detalle del activo (Información) hay botón Editar. Códigos MTTO siguen generándose con las reglas normales (Item ID Fiix no sobrescribe el código del activo).",
+    "Nuevo: La importación CSV maestra crea/actualiza Activos desde ítems de inventario con categoría ACTIVOS (ubicación LINEA N ACTIVOS → zona L1–L5; TAPANCO → TAPANCO; sin inventar sección). Los ítems de inventario se conservan.",
+    "Nuevo: Zonas se administran dentro de Activos («Administrar zonas»). Cada zona puede tener secciones/subzonas configurables o modo «Sin secciones»; el import CSV de Solicitudes sigue igual (Equipo/Zona por nombre, activos sin sección si el CSV no trae sección).",
     "Nuevo: En Inicio, indicadores de líneas paradas (L1–L5 por OT correctiva con paro de máquina) y racha de días sin paro correctivo de línea.",
     "Corrección: Si la PWA se quedaba en una versión vieja tras ./update.sh, ahora detecta que el servidor es más nuevo y recarga; vuelve autoUpdate del service worker.",
     "Mejora: En Inicio → Turno actual (móvil), la tabla es más densa y cabe sin deslizar a la derecha (SLA como R/V; mismo espíritu que KPIs).",
