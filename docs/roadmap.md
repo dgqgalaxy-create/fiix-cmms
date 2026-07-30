@@ -3,7 +3,10 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 30 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.44.11 (Actualización: 30 de Julio de 2026)
+## 🚀 Versión Actual: v1.44.12 (Actualización: 30 de Julio de 2026)
+
+### Novedades en v1.44.12 (PWA — recarga fiable)
+- **Corrección:** Si el banner decía «servidor ya tiene vX» pero **Recargar ahora** no avanzaba la UI, el soft-reload seguía sirviendo el precache del SW. Ahora desregistra SW, limpia Cache Storage y fuerza navegación; `skipWaiting`/`clientsClaim`; `index.html`/`sw.js` con `Cache-Control: no-cache`.
 
 ### Novedades en v1.44.11 (Limpieza Dev — Solo fotos OT)
 - **Cambio:** Se eliminó la tarjeta/API «Solo fotos de órdenes» (redundante respecto a la importación maestra CSV + zip). Se conservan los selectores de zip de inventario y fotos de OT en Importar CSV.

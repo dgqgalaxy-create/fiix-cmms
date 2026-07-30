@@ -1096,21 +1096,21 @@ export const DeveloperOptions = () => {
             <h2 className="mt-1 text-xl font-black text-slate-900 dark:text-white">Herramientas locales</h2>
             <div className="mt-5 space-y-3">
               <button
-                onClick={() => {
-                  if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.getRegistrations().then(registrations => {
-                      for (const registration of registrations) registration.unregister();
-                    });
+                onClick={async () => {
+                  try {
+                    const { forceClientUpdate } = await import('../utils/forceClientUpdate');
+                    localStorage.clear();
+                    await forceClientUpdate();
+                  } catch {
+                    window.location.reload();
                   }
-                  localStorage.clear();
-                  window.location.reload();
                 }}
                 className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-slate-300 hover:shadow-sm dark:border-slate-700 dark:bg-slate-900"
               >
                 <RefreshCw className="shrink-0 text-slate-500" size={20} />
                 <span>
                   <span className="block text-sm font-black text-slate-800 dark:text-white">Limpiar caché PWA</span>
-                  <span className="text-xs text-slate-500">Reinicia Service Workers y almacenamiento local.</span>
+                  <span className="text-xs text-slate-500">Desregistra Service Workers, limpia Cache Storage y recarga el build.</span>
                 </span>
               </button>
               <button

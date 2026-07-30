@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.44.11";
+export const APP_VERSION = "1.44.12";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -29,6 +29,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: «Recargar ahora» / actualización PWA ya no se queda en versión vieja: desregistra el service worker, limpia caché y fuerza carga del build nuevo; index.html/sw.js sin cache largo en el servidor.",
     "Cambio: Se eliminó la tarjeta «Solo fotos de órdenes» de Opciones de Desarrollador (redundante: el zip de OT va con la importación maestra de 7 CSV). Se mantiene el selector de zip en Importar CSV.",
     "Mejora: Listado de Activos sin scroll horizontal (columnas que se ocultan/recortan según ancho) y paginación de 20 por página, igual que Inventario.",
     "Mejora: En Inicio → Racha sin paro muestra el récord histórico (mejor racha) y mensajes de ánimo/celebración al igualarlo o superarlo.",

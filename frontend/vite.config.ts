@@ -62,6 +62,10 @@ export default defineConfig({
       workbox: {
         // Bundle JS ~2.5 MB; default Workbox limit is 2 MiB and fails the build
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MiB
+        // Activar SW nuevo de inmediato (evita tabs eternas con APP_VERSION vieja)
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         // Handlers push / notificationclick
         importScripts: ['/push-sw.js'],
         // Cache API requests

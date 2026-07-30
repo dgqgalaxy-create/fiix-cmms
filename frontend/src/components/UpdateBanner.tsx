@@ -5,6 +5,7 @@ import { APP_VERSION } from './VersionModal';
 import { useAuth } from '../context/AuthContext';
 import { useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
 import { compareSemver } from '../utils/semver';
+import { forceClientUpdate } from '../utils/forceClientUpdate';
 
 type VersionStatus = {
   deployed: string;
@@ -16,13 +17,18 @@ type VersionStatus = {
 
 const DISMISS_GH_KEY = 'fiix_dismiss_github_update';
 const RELOAD_ONCE_KEY = 'fiix_reload_for_deployed';
+const HARD_RELOAD_ONCE_KEY = 'fiix_hard_reload_for_deployed';
+
+type SwUpdateFn = (reloadPage?: boolean) => Promise<void | boolean | undefined>;
 
 /**
  * Avisos de actualización:
  * 1) GitHub > servidor → pendiente de ./update.sh (ámbar)
  * 2) Servidor (o SW) > JS de esta pestaña → hay que recargar (azul)
  *
- * El caso (2) evita quedarse en una PWA cacheada (p. ej. ver 1.43.7 con dist 1.43.9).
+ * El caso (2) evita quedarse en una PWA cacheada (p. ej. ver 1.44.3 con dist 1.44.11).
+ * Soft reload no basta: hay que desregistrar SW + limpiar Cache Storage.
+ * Tras un hard reload automático, el banner queda para clic manual (evita loop si dist no se rebuildió).
  */
 export function UpdateBanner() {
   const { user } = useAuth();
@@ -40,27 +46,60 @@ export function UpdateBanner() {
   });
   const [clientStale, setClientStale] = useState(false);
   const [serverVersion, setServerVersion] = useState<string | null>(null);
-  const [swUpdateFn, setSwUpdateFn] = useState<(() => void) | null>(null);
+  const [swUpdateFn, setSwUpdateFn] = useState<SwUpdateFn | null>(null);
+  const [updating, setUpdating] = useState(false);
 
-  const applyReload = useCallback((deployed: string, updateSW?: (() => void) | null) => {
+  const hardReload = useCallback(async (deployed: string) => {
+    setUpdating(true);
     try {
-      const already = sessionStorage.getItem(RELOAD_ONCE_KEY);
-      if (already === deployed) {
-        // Ya recargamos una vez para esta versión; mostrar banner por si el SW sigue viejo
-        setClientStale(true);
-        setServerVersion(deployed);
-        return;
-      }
-      sessionStorage.setItem(RELOAD_ONCE_KEY, deployed);
+      sessionStorage.setItem(HARD_RELOAD_ONCE_KEY, deployed);
     } catch {
       /* ignore */
     }
-    if (updateSW) {
-      updateSW();
-      return;
-    }
-    window.location.reload();
+    await forceClientUpdate(deployed);
   }, []);
+
+  const applyReload = useCallback(
+    async (deployed: string, updateSW?: SwUpdateFn | null) => {
+      let softTried = false;
+      let hardTried = false;
+      try {
+        softTried = sessionStorage.getItem(RELOAD_ONCE_KEY) === deployed;
+        hardTried = sessionStorage.getItem(HARD_RELOAD_ONCE_KEY) === deployed;
+      } catch {
+        /* ignore */
+      }
+
+      setClientStale(true);
+      setServerVersion(deployed);
+
+      // Ya hicimos hard reload automático: dejar banner para clic (no loop infinito).
+      if (hardTried) return;
+
+      if (!softTried) {
+        try {
+          sessionStorage.setItem(RELOAD_ONCE_KEY, deployed);
+        } catch {
+          /* ignore */
+        }
+        if (updateSW) {
+          try {
+            await updateSW(true);
+          } catch {
+            /* fall through */
+          }
+          // Si no había waiting worker, updateSW puede no recargar: forzar.
+          window.setTimeout(() => {
+            void hardReload(deployed);
+          }, 1500);
+          return;
+        }
+      }
+
+      await hardReload(deployed);
+    },
+    [hardReload]
+  );
 
   const checkVersions = useCallback(async () => {
     try {
@@ -78,15 +117,16 @@ export function UpdateBanner() {
 
       const deployed = (data.deployed || '').trim();
       if (deployed && compareSemver(deployed, APP_VERSION) > 0) {
-        // Servidor más nuevo que el JS cargado → recarga (PWA cacheada)
-        applyReload(deployed, swUpdateFn);
+        await applyReload(deployed, swUpdateFn);
       } else if (deployed && compareSemver(deployed, APP_VERSION) === 0) {
         try {
           sessionStorage.removeItem(RELOAD_ONCE_KEY);
+          sessionStorage.removeItem(HARD_RELOAD_ONCE_KEY);
         } catch {
           /* ignore */
         }
         setClientStale(false);
+        setServerVersion(null);
       }
     } catch {
       /* silencioso */
@@ -101,14 +141,13 @@ export function UpdateBanner() {
 
   useEffect(() => {
     const onNeedRefresh = (e: Event) => {
-      const detail = (e as CustomEvent<{ updateSW?: () => void }>).detail;
+      const detail = (e as CustomEvent<{ updateSW?: SwUpdateFn }>).detail;
       const fn = detail?.updateSW || null;
       if (fn) setSwUpdateFn(() => fn);
       setClientStale(true);
-      // Intentar aplicar de inmediato
       try {
         const deployed = serverVersion || ghStatus?.deployed || APP_VERSION;
-        applyReload(deployed, fn);
+        void applyReload(deployed, fn);
       } catch {
         /* banner queda visible */
       }
@@ -137,13 +176,15 @@ export function UpdateBanner() {
             </p>
             <button
               type="button"
+              disabled={updating}
               onClick={() => {
-                if (swUpdateFn) swUpdateFn();
-                else window.location.reload();
+                const deployed = serverVersion || ghStatus?.deployed || APP_VERSION;
+                void hardReload(deployed);
               }}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold px-3 py-1.5"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white text-xs font-bold px-3 py-1.5"
             >
-              <RefreshCw size={14} /> Recargar ahora
+              <RefreshCw size={14} className={updating ? 'animate-spin' : undefined} />
+              {updating ? 'Actualizando…' : 'Recargar ahora'}
             </button>
           </div>
         </div>

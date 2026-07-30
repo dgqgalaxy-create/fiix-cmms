@@ -94,12 +94,34 @@ app.use('/api/version', versionRoutes);
 // Se coloca DESPUÉS de las rutas /api para no interferir con ellas ni con /uploads.
 const frontendDistPath = path.join(__dirname, '../../frontend/dist');
 if (fs.existsSync(frontendDistPath)) {
-  app.use(express.static(frontendDistPath));
+  // index.html / sw.js sin cache largo: si no, el SW o el browser pueden
+  // servir el shell viejo tras ./update.sh y el banner de versión no avanza.
+  app.use(
+    express.static(frontendDistPath, {
+      setHeaders(res, filePath) {
+        const base = path.basename(filePath);
+        if (
+          base === 'index.html' ||
+          base === 'sw.js' ||
+          base === 'registerSW.js' ||
+          base === 'manifest.webmanifest' ||
+          /^workbox-.+\.js$/i.test(base)
+        ) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+          res.setHeader('Pragma', 'no-cache');
+        } else if (/\.[a-f0-9]{8,}\.(js|css)$/i.test(base)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+      },
+    })
+  );
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.method !== 'GET' || req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
       next();
       return;
     }
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
     res.sendFile(path.join(frontendDistPath, 'index.html'));
   });
   console.log('[FIIX] Sirviendo frontend/dist en este mismo puerto (modo producción de un solo proceso).');
