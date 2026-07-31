@@ -79,9 +79,12 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.46.1 (Actualización: 30 de Julio de 2026)
+## 🚀 Versión Actual: v1.46.2 (Actualización: 30 de Julio de 2026)
 
-### Novedades en v1.46.1 (Sheets públicos temporales)
+### Novedades en v1.46.2 (login sin pista permanente)
+- **Cambio:** El login ya no muestra siempre `admin@fiix.com` / `password123`. Esas credenciales solo aparecen en el aviso ámbar tras vaciar la BD.
+
+### Novedades Anteriores (v1.46.1 - Sheets públicos temporales)
 - **Cambio:** Import Google Sheets sin cuenta de servicio: descarga CSV público. Ambos spreadsheets deben estar en «Cualquier persona con el enlace → Lector».
 
 ### Novedades Anteriores (v1.46.0 - Google Sheets bajo demanda)

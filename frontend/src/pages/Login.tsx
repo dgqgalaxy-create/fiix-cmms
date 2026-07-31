@@ -149,10 +149,6 @@ export const Login = () => {
             )}
           </button>
         </form>
-        
-        <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
-          Usa <span className="font-medium text-slate-700 dark:text-slate-300">admin@fiix.com</span> y <span className="font-medium text-slate-700 dark:text-slate-300">password123</span> para probar.
-        </div>
       </div>
     </div>
   );

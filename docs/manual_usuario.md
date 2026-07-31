@@ -1,5 +1,5 @@
 # Manual de Usuario - GTZ CMMS
-*(Versión 1.46.1 - 30 de Julio, 2026)*
+*(Versión 1.46.2 - 30 de Julio, 2026)*
 
 GTZ CMMS centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 
@@ -12,7 +12,7 @@ Sus pilares son **Rapidez** (menos formatos y pasos), **Trazabilidad** (responsa
 En celular, el temario del manual aparece como una barra horizontal deslizable. Toca un tema para mostrarlo debajo con una transición de entrada de derecha a izquierda. El encabezado, el temario y el botón **Volver** permanecen fijos; únicamente se desplaza la información del tema hasta el borde inferior, con un degradado superior que aparece progresivamente.
 
 ## 0. Operación diaria
-- **Inicio de sesión:** Si el usuario o la contraseña no son correctos, verás el mensaje **Contraseña o usuario incorrectos** en la misma pantalla (puedes reintentar de inmediato). No hay bloqueo por intentos fallidos en el login (el menú de Desarrollador sí bloquea tras 3 fallos).
+- **Inicio de sesión:** Si el usuario o la contraseña no son correctos, verás el mensaje **Contraseña o usuario incorrectos** en la misma pantalla (puedes reintentar de inmediato). No hay bloqueo por intentos fallidos en el login (el menú de Desarrollador sí bloquea tras 3 fallos). El login **no** muestra credenciales de prueba de forma permanente; solo tras **Vaciar base de datos** aparece un aviso con `admin@fiix.com` / `password123`.
 - **Colaborar en OT en curso:** Si una orden ya está **En proceso** o **En espera** y tú no estás en la lista de asignados, no verás el desplegable de estado ni Pausar / Finalizar / Reanudar: solo **Unirme / Colaborar**. Al unirte aparecen las acciones. En **Pendiente** no aparece Unirme / Colaborar: solo **Aceptar orden** (te asigna al aceptar). En la interfaz móvil de técnico las acciones van en botones grandes (sin duplicar el desplegable).
 - **Ayudas ⓘ (InfoTip):** En pantallas táctiles (y también en PC) el icono ⓘ abre una explicación breve (pestañas de Órdenes, folio, Stock crítico, KPIs, SLA, etc.).
 - **Asignación masiva:** En Órdenes de Trabajo, **Asignar…** permite elegir varias OT abiertas y asignarles técnicos de una sola vez.
