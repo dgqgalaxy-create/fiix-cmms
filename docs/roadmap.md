@@ -77,6 +77,11 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 **Acuerdos:** Primero solo import bajo demanda. Auto-sync **después**. Fotos Drive **después**.
 
+### 🔧 Acordado para mañana (30→31 Jul 2026)
+
+1. **Fotos / imágenes** — integrar import de fotos (botón «solo fotos» y/o Drive; ver conversación Fase 1 Sheets).
+2. **Zona horaria México en rachas / import CSV** — `parseCsvDate` y el conteo de racha/récord (`calendarDaysBetween` en `getLineStoppageStatus`) deben usar **`America/Mexico_City`**, no la TZ del SO. Hoy Mac (México) vs Ubuntu (UTC) dejan **±1 día** en racha y récord tras el mismo import. Fijar TZ en código (y/o `TZ=` en el servidor) y reimportar OT si hace falta para alinear `created_at`.
+
 ---
 
 ## 🚀 Versión Actual: v1.46.2 (Actualización: 30 de Julio de 2026)
