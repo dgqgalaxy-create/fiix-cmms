@@ -22,8 +22,8 @@ export interface DailyChecklist {
   date: string;
   status: 'DRAFT' | 'COMPLETED' | 'REVIEWED';
   column_count?: number;
-  technician_id: string;
-  technician?: { name: string };
+  technician_id?: string | null;
+  technician?: { name: string } | null;
   leader_id?: string;
   leader?: { name: string };
   rows?: ChecklistRow[];
@@ -42,6 +42,11 @@ export const getTodayChecklist = async () => {
 
 export const createTodayChecklist = async () => {
   const response = await api.post('/checklists/today');
+  return response.data;
+};
+
+export const startChecklist = async (id: string) => {
+  const response = await api.post(`/checklists/${id}/start`);
   return response.data;
 };
 

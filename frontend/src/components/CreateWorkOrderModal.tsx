@@ -49,14 +49,18 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
   const loadAssetsAndTechs = async () => {
     try {
       setIsLoading(true);
-      const [assetsData, techsData, zonesData, requestersData] = await Promise.all([
+      const [assetsData, usersData, zonesData, requestersData] = await Promise.all([
         getAssets(),
-        getUsers('TECNICO'),
+        getUsers(),
         getZones(),
         getRequesters()
       ]);
       setAssets(assetsData);
-      setTechnicians(techsData);
+      setTechnicians(
+        usersData.filter(
+          (u) => u.is_active && (u.role === 'TECNICO' || u.role === 'GESTIONADOR')
+        )
+      );
       setZones(zonesData);
       setRequesters(requestersData);
       setAssetId('');
@@ -321,17 +325,17 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Asignar a (Técnicos)</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Personal asignado</label>
               {isLoading ? (
                 <div className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                  <Loader2 className="animate-spin" size={16} /> Cargando técnicos...
+                  <Loader2 className="animate-spin" size={16} /> Cargando personal...
                 </div>
               ) : (
                 <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2">
                   {technicians.length === 0 ? (
-                    <div className="text-sm text-slate-500 dark:text-slate-400 italic">No hay técnicos disponibles</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400 italic">No hay personal disponible</div>
                   ) : (
-                    technicians.filter(tech => tech.is_active !== false).map((tech) => (
+                    technicians.map((tech) => (
                       <label key={tech.id} className="flex items-center gap-3 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-lg cursor-pointer transition-colors">
                         <input
                           type="checkbox"

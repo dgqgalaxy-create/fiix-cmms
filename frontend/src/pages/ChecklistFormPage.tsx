@@ -13,7 +13,7 @@ import {
   Printer,
   AlertTriangle,
 } from 'lucide-react';
-import { getChecklistById, updateChecklistRow, submitChecklist, reviewChecklist, getRowLineStatus } from '../api/checklists';
+import { getChecklistById, updateChecklistRow, submitChecklist, reviewChecklist, startChecklist, getRowLineStatus } from '../api/checklists';
 import type { DailyChecklist, ChecklistRow } from '../api/checklists';
 import { useAuth } from '../context/AuthContext';
 import { parseDateOnly } from '../utils/dateUtils';
@@ -30,11 +30,13 @@ import {
 export default function ChecklistFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
+  const userId = user?.userId;
 
   const [checklist, setChecklist] = useState<DailyChecklist | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const [incompleteMissing, setIncompleteMissing] = useState<ChecklistMissingItem[]>([]);
   const [showIncompleteFeedback, setShowIncompleteFeedback] = useState(false);
   const [isIncompleteModalOpen, setIsIncompleteModalOpen] = useState(false);
@@ -80,8 +82,36 @@ export default function ChecklistFormPage() {
     setShowIncompleteFeedback(true);
   };
 
+  const isClaimedByMe =
+    !!checklist &&
+    checklist.status === 'DRAFT' &&
+    !!checklist.technician_id &&
+    checklist.technician_id === userId;
+  const isUnclaimedDraft =
+    !!checklist && checklist.status === 'DRAFT' && !checklist.technician_id;
+  const isClaimedByOther =
+    !!checklist &&
+    checklist.status === 'DRAFT' &&
+    !!checklist.technician_id &&
+    checklist.technician_id !== userId;
+
+  const handleStartChecklist = async () => {
+    if (!id) return;
+    try {
+      setIsStarting(true);
+      const data = await startChecklist(id);
+      setChecklist(data);
+    } catch (error: any) {
+      console.error('Error iniciando checklist', error);
+      alert(error?.response?.data?.error || 'No se pudo iniciar el checklist.');
+      if (id) await fetchChecklist(id);
+    } finally {
+      setIsStarting(false);
+    }
+  };
+
   const handleStatusChange = async (rowId: string, line: number, status: string | null) => {
-    if (!checklist || checklist.status !== 'DRAFT') return; // Solo editable en DRAFT
+    if (!checklist || checklist.status !== 'DRAFT' || checklist.technician_id !== userId) return;
     const key = String(line);
 
     // Update local state for immediate feedback (null = celda vacía otra vez)
@@ -117,7 +147,7 @@ export default function ChecklistFormPage() {
   };
 
   const handleObservationChange = async (rowId: string, obs: string) => {
-    if (!checklist || checklist.status !== 'DRAFT') return;
+    if (!checklist || checklist.status !== 'DRAFT' || checklist.technician_id !== userId) return;
 
     const updatedRows = checklist.rows?.map((row) => {
       if (row.id === rowId) {
@@ -132,7 +162,7 @@ export default function ChecklistFormPage() {
   };
 
   const handleObservationBlur = async (rowId: string, obs: string) => {
-    if (!checklist || checklist.status !== 'DRAFT') return;
+    if (!checklist || checklist.status !== 'DRAFT' || checklist.technician_id !== userId) return;
     try {
       await updateChecklistRow(rowId, { observations: obs });
       if (showIncompleteFeedback) {
@@ -215,7 +245,7 @@ export default function ChecklistFormPage() {
 
   const renderStatusButton = (row: ChecklistRow, line: number) => {
     const currentValue = getRowLineStatus(row, line);
-    const isEditable = checklist?.status === 'DRAFT';
+    const isEditable = checklist?.status === 'DRAFT' && checklist.technician_id === userId;
     const fieldType = row.field_type || 'CHECKBOX';
     const isIncomplete = highlightedCells.has(cellKey(row.id, line));
     const incompleteRing = isIncomplete
@@ -270,7 +300,7 @@ export default function ChecklistFormPage() {
     return <div className="p-8 text-center text-slate-500 dark:text-slate-400">Cargando formato...</div>;
   }
 
-  const isDraft = checklist.status === 'DRAFT';
+  const isEditable = isClaimedByMe;
   const isPendingReview = checklist.status === 'COMPLETED';
   const canReview = isPendingReview && hasPermission('APPROVE_CHECKLIST');
   const columnCount = Math.max(1, checklist.column_count || 5);
@@ -306,7 +336,18 @@ export default function ChecklistFormPage() {
             <span className="hidden md:inline">Imprimir / PDF</span>
           </button>
 
-          {isDraft && (
+          {isUnclaimedDraft && (
+            <button
+              onClick={handleStartChecklist}
+              disabled={isStarting}
+              className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl hover:bg-emerald-700 transition-all font-medium shadow-sm"
+            >
+              <PenTool size={20} />
+              {isStarting ? 'Iniciando...' : 'Iniciar checklist'}
+            </button>
+          )}
+
+          {isEditable && (
             <button
               onClick={handleSubmit}
               disabled={isSaving}
@@ -330,8 +371,45 @@ export default function ChecklistFormPage() {
         </div>
       </div>
 
+      {isUnclaimedDraft && (
+        <div
+          role="status"
+          className="print:hidden flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900 shadow-sm dark:border-emerald-700/60 dark:bg-emerald-950/40 dark:text-emerald-200"
+        >
+          <div className="min-w-0 flex-1 text-sm">
+            <p className="font-semibold">Checklist sin asignar</p>
+            <p className="mt-0.5 text-emerald-800/90 dark:text-emerald-300/90">
+              Puedes revisarlo en solo lectura. Pulsa «Iniciar checklist» para reclamarlo y poder editarlo o enviarlo.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleStartChecklist}
+            disabled={isStarting}
+            className="shrink-0 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
+          >
+            {isStarting ? 'Iniciando...' : 'Iniciar checklist'}
+          </button>
+        </div>
+      )}
+
+      {isClaimedByOther && (
+        <div
+          role="status"
+          className="print:hidden flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900 shadow-sm dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200"
+        >
+          <AlertTriangle className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" size={20} />
+          <div className="min-w-0 flex-1 text-sm">
+            <p className="font-semibold">Solo lectura</p>
+            <p className="mt-0.5 text-amber-800/90 dark:text-amber-300/90">
+              Asignado a {checklist.technician?.name || 'otro técnico'}. Solo esa persona puede editar o enviar este checklist.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Banner sticky tras intento de envío incompleto */}
-      {isDraft && showIncompleteFeedback && incompleteMissing.length > 0 && (
+      {isEditable && showIncompleteFeedback && incompleteMissing.length > 0 && (
         <div
           role="alert"
           className="sticky top-2 z-20 print:hidden flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900 shadow-sm dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200"
@@ -425,12 +503,12 @@ export default function ChecklistFormPage() {
                       value={row.observations || ''}
                       onChange={(e) => handleObservationChange(row.id, e.target.value)}
                       onBlur={(e) => handleObservationBlur(row.id, e.target.value)}
-                      disabled={!isDraft}
+                      disabled={!isEditable}
                       required={needsObs}
                       aria-required={needsObs || undefined}
                       aria-invalid={obsMissing || undefined}
                     />
-                    {needsObs && isDraft && (
+                    {needsObs && isEditable && (
                       <p className={`mt-1 text-[11px] font-medium ${obsMissing ? 'text-rose-600 dark:text-rose-400' : 'text-amber-700 dark:text-amber-400'}`}>
                         Obligatorio: hay cruz (falla) en esta fila
                       </p>

@@ -14,9 +14,9 @@ export function parseDateOnly(dateOnlyString: string | Date): Date {
   return new Date(utcDate.getUTCFullYear(), utcDate.getUTCMonth(), utcDate.getUTCDate());
 }
 
-/** Fecha/hora de movimientos y registros (locale México, evita mm/dd en navegadores US). */
+/** Fecha/hora de movimientos y registros (locale México, zona de planta). */
 export function formatDateTime(iso: string | Date): string {
-  return new Date(iso).toLocaleString('es-MX');
+  return new Date(iso).toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
 }
 
 /** Solo fecha (created_at, etc.) en formato México dd/mm/aaaa. */

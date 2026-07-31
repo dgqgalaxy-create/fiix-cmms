@@ -85,7 +85,21 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.46.4 (Actualización: 31 de Julio de 2026)
+## 🚀 Versión Actual: v1.46.7 (Actualización: 31 de Julio de 2026)
+
+### Novedades en v1.46.7 (OT — acciones, tiempos, roles y costos)
+- **Nuevo:** Acciones rápidas en tarjetas de OT (Admin/Gestionador): **Sin asignar** abre el detalle en asignación; icono de calendario navega a Calendario listo para agendar esa orden.
+- **Mejora:** Listas de asignación (crear OT, detalle, asignación masiva) incluyen **Gestionadores** activos además de Técnicos.
+- **Corrección:** Al finalizar no se sobrescribe `completed_at` si ya venía del CSV; `formatDateTime` usa **America/Mexico_City**.
+- **Corrección:** Costo de refacciones en OT ya no queda en $0 (`unit_cost` nullable, fallback al catálogo, migración `0→null`).
+- **Mejora:** Búsqueda de OT por **zona** en Ctrl+K y en la barra de Órdenes (atajo «Órdenes en zona…»).
+
+### Novedades en v1.46.6 (fechas CSV en hora de planta)
+- **Corrección:** `parseCsvDate` / `parseDateInput` interpretan la hora de pared como **America/Mexico_City** (`utils/plantTimezone.ts`), sin depender del `TZ` del proceso. En el servidor (UTC) el mismo CSV guardaba `created_at` 6 h antes que en local → la racha sin paros y el récord salían con un día de diferencia.
+- **Pendiente para el servidor:** `timedatectl set-timezone America/Mexico_City` + reimportar el CSV/Sheets de órdenes para reescribir los `created_at` ya guardados con el desfase.
+
+### Novedades en v1.46.5 (Iniciar checklist)
+- **Cambio:** Crear/abrir el Checklist Diario no asigna técnico. Solo lectura hasta **Iniciar checklist**; entonces se reclama y se puede editar/enviar. Si otro ya lo inició → solo lectura.
 
 ### Novedades en v1.46.4 (Import CSV separado)
 - **Mejora:** Opciones de Desarrollador separa el import manual en **Inventario (6 CSV + zip)** y **Órdenes (1 CSV + zip)**. Pueden ejecutarse por separado; el motor conserva upsert y no borra los datos de la otra sección.

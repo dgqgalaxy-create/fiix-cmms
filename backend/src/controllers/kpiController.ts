@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import prisma from '../config/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
+import { resolvePartsUnitCost } from '../utils/resolvePartsUnitCost';
 
 const MS_PER_HOUR = 3_600_000;
 const DEFAULT_REWORK_WINDOW_DAYS = 7;
@@ -525,8 +526,7 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
         (tx) => tx.created_at >= interval.start && tx.created_at <= interval.end,
       );
       const costs = intervalTx.reduce((sum, tx) => {
-        const costPerUnit = tx.item?.purchase_cost || 0;
-        return sum + Math.abs(tx.amount) * costPerUnit;
+        return sum + Math.abs(tx.amount) * resolvePartsUnitCost(tx);
       }, 0);
 
       // MTBF aproximado de flota: horas operativas / fallas correctivas con paro o correctivas finalizadas
@@ -584,7 +584,7 @@ export const getCostsByAsset = async (req: AuthRequest, res: Response): Promise<
       if (!match) continue;
       const wo = woMap.get(parseInt(match[1], 10));
       if (!wo?.asset) continue;
-      const cost = Math.abs(tx.amount) * (tx.item?.purchase_cost || 0);
+      const cost = Math.abs(tx.amount) * resolvePartsUnitCost(tx);
       if (!assetCosts[wo.asset.id]) {
         assetCosts[wo.asset.id] = {
           assetId: wo.asset.id,

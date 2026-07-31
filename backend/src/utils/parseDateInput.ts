@@ -3,8 +3,11 @@
  *
  * Do NOT use `new Date('2026-07-15')` for date-only strings: engines treat that
  * as UTC midnight, so Mexico (UTC-6) shows the previous calendar day.
- * We store local noon so DST / timezone shifts keep the same day.
+ * Guardamos mediodía de planta (America/Mexico_City) para que el día civil sea
+ * el mismo aunque el proceso corra en UTC (servidor) o en México (local).
  */
+import { plantWallClockToDate } from './plantTimezone';
+
 export function parseDateInput(value: string | null | undefined): Date | null {
   if (value == null) return null;
   const raw = String(value).trim();
@@ -17,15 +20,7 @@ export function parseDateInput(value: string | null | undefined): Date | null {
     const month = parseInt(m[2], 10);
     const day = parseInt(m[3], 10);
     if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-    const d = new Date(year, month - 1, day, 12, 0, 0);
-    if (
-      d.getFullYear() !== year ||
-      d.getMonth() !== month - 1 ||
-      d.getDate() !== day
-    ) {
-      return null;
-    }
-    return d;
+    return plantWallClockToDate(year, month, day, 12, 0, 0);
   }
 
   const d = new Date(raw);

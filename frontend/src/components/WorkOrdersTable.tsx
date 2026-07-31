@@ -8,6 +8,10 @@ import { BACKEND_URL } from '../api/axios';
 interface Props {
   workOrders: WorkOrder[];
   onRowClick?: (wo: WorkOrder) => void;
+  /** Admin/Gestionador: chip «Sin asignar» abre detalle en asignación. */
+  onAssignClick?: (wo: WorkOrder) => void;
+  /** Admin/Gestionador (+ MANAGE_CALENDAR): ir a calendario para agendar. */
+  onScheduleClick?: (wo: WorkOrder) => void;
 }
 
 const getInitials = (name: string) => {
@@ -39,7 +43,7 @@ const formatFriendlyDate = (dateString: string) => {
   }
 };
 
-export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
+export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onScheduleClick }: Props) => {
   const [sortField, setSortField] = useState<'folio' | 'asset' | 'date' | 'status'>('folio');
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
 
@@ -240,6 +244,17 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
                       </div>
                     ))}
                   </div>
+                ) : onAssignClick ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAssignClick(wo);
+                    }}
+                    className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-xs font-medium italic hover:underline print:pointer-events-none"
+                  >
+                    <User size={14} /> Sin asignar
+                  </button>
                 ) : (
                   <div className="flex items-center gap-1.5 text-slate-400 dark:text-slate-400 text-xs italic">
                     <User size={14} /> Sin asignar
@@ -248,9 +263,31 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
               </div>
 
               {/* Timing */}
-              <div className="space-y-1.5 bg-white dark:bg-slate-900 dark:bg-slate-800 p-2.5 rounded-lg border border-slate-200/60 dark:border-slate-700 shadow-sm">
+              <div
+                className={`space-y-1.5 bg-white dark:bg-slate-900 dark:bg-slate-800 p-2.5 rounded-lg border border-slate-200/60 dark:border-slate-700 shadow-sm ${
+                  onScheduleClick
+                    ? 'cursor-pointer hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors print:pointer-events-none'
+                    : ''
+                }`}
+                onClick={onScheduleClick ? (e) => {
+                  e.stopPropagation();
+                  onScheduleClick(wo);
+                } : undefined}
+                role={onScheduleClick ? 'button' : undefined}
+                tabIndex={onScheduleClick ? 0 : undefined}
+                onKeyDown={onScheduleClick ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onScheduleClick(wo);
+                  }
+                } : undefined}
+                title={onScheduleClick ? 'Agendar en calendario' : undefined}
+              >
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-400 dark:text-slate-400 font-medium flex items-center gap-1"><Calendar size={12}/> Inicio</span>
+                  <span className={`font-medium flex items-center gap-1 ${onScheduleClick ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-400'}`}>
+                    <Calendar size={12}/> Inicio
+                  </span>
                   <span className="font-semibold text-slate-700 dark:text-slate-200 dark:text-slate-300">
                     {wo.scheduled_date ? formatFriendlyDate(wo.scheduled_date) : <span className="text-slate-300 dark:text-slate-600 dark:text-slate-400">-</span>}
                   </span>
@@ -355,14 +392,45 @@ export const WorkOrdersTable = ({ workOrders, onRowClick }: Props) => {
                           </div>
                         ))}
                       </div>
+                    ) : onAssignClick ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAssignClick(wo);
+                        }}
+                        className="text-xs text-amber-600 dark:text-amber-400 italic font-medium hover:underline print:pointer-events-none"
+                      >
+                        Sin asignar
+                      </button>
                     ) : (
                       <span className="text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400 italic">Sin asignar</span>
                     )}
                   </td>
                   <td className="px-6 py-4 print:px-1.5 print:py-0.5 align-top print:align-middle whitespace-nowrap">
-                    <div className="flex flex-col gap-1.5 print:gap-0">
+                    <div
+                      className={`flex flex-col gap-1.5 print:gap-0 ${
+                        onScheduleClick
+                          ? 'cursor-pointer rounded-lg -mx-1 px-1 py-0.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors print:pointer-events-none'
+                          : ''
+                      }`}
+                      onClick={onScheduleClick ? (e) => {
+                        e.stopPropagation();
+                        onScheduleClick(wo);
+                      } : undefined}
+                      role={onScheduleClick ? 'button' : undefined}
+                      tabIndex={onScheduleClick ? 0 : undefined}
+                      onKeyDown={onScheduleClick ? (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onScheduleClick(wo);
+                        }
+                      } : undefined}
+                      title={onScheduleClick ? 'Agendar en calendario' : undefined}
+                    >
                       <div className="flex items-center gap-1.5 text-xs print:text-[9px] print:gap-0.5">
-                        <Calendar size={12} className="text-slate-400 print:hidden" />
+                        <Calendar size={12} className={`${onScheduleClick ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'} print:hidden`} />
                         <span className="text-slate-700 dark:text-slate-200 dark:text-slate-300">
                           {wo.scheduled_date ? formatFriendlyDate(wo.scheduled_date) : '-'}
                         </span>

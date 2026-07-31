@@ -7,6 +7,7 @@ import { getChecklistHistory, getTodayChecklist, createTodayChecklist } from '..
 import type { DailyChecklist } from '../api/checklists';
 import { parseDateOnly } from '../utils/dateUtils';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import { useAuth } from '../context/AuthContext';
 
 export default function DailyChecklistsPage() {
   const [history, setHistory] = useState<DailyChecklist[]>([]);
@@ -15,6 +16,14 @@ export default function DailyChecklistsPage() {
   const [sortField, setSortField] = useState<'date' | 'technician' | 'leader' | 'status'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const userId = user?.userId;
+
+  const draftActionLabel = (checklist: DailyChecklist) => {
+    if (checklist.status !== 'DRAFT') return 'Ver Detalles';
+    if (checklist.technician_id && checklist.technician_id === userId) return 'Continuar';
+    return 'Ver';
+  };
 
   useEffect(() => {
     fetchData();
@@ -200,7 +209,7 @@ export default function DailyChecklistsPage() {
                       {format(parseDateOnly(checklist.date), "EEEE, d 'de' MMMM", { locale: es })}
                     </td>
                     <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
-                      {checklist.technician?.name || '-'}
+                      {checklist.technician?.name || 'Sin técnico'}
                     </td>
                     <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
                       {checklist.leader?.name || <span className="text-slate-400 dark:text-slate-500 italic">Pendiente</span>}
@@ -213,7 +222,7 @@ export default function DailyChecklistsPage() {
                         onClick={() => navigate(`/checklists/${checklist.id}`)}
                         className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-medium text-sm transition-colors"
                       >
-                        {checklist.status === 'DRAFT' ? 'Continuar' : 'Ver Detalles'}
+                        {draftActionLabel(checklist)}
                       </button>
                     </td>
                   </tr>

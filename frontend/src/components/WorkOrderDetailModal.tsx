@@ -20,6 +20,7 @@ import { socket } from '../api/socket';
 import { useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
 import { formatDate, formatDateTime } from '../utils/dateUtils';
 import { formatCurrency } from '../utils/currency';
+import { resolvePartsUnitCost } from '../utils/resolvePartsUnitCost';
 import { InfoTip } from './common/InfoTip';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -42,6 +43,8 @@ interface Props {
   /** Lista filtrada/ordenada del Dashboard (para ← →). */
   workOrderList?: WorkOrder[];
   onNavigateWorkOrder?: (wo: WorkOrder) => void;
+  /** Al abrir, hacer scroll a la sección indicada. */
+  initialFocus?: 'assign';
 }
 
 const EvidenceThumb = ({
@@ -82,6 +85,7 @@ export const WorkOrderDetailModal = ({
   onJoin,
   workOrderList,
   onNavigateWorkOrder,
+  initialFocus,
 }: Props) => {
   const { user, hasPermission } = useAuth();
   const { canEdit, remoteEditorName } = useWorkOrderPresence(workOrder?.id, isOpen);
@@ -89,6 +93,7 @@ export const WorkOrderDetailModal = ({
   const evidenceRef = useRef<HTMLDivElement>(null);
   const holdReasonRef = useRef<HTMLInputElement>(null);
   const finalizeSectionRef = useRef<HTMLDivElement>(null);
+  const assignSectionRef = useRef<HTMLDivElement>(null);
   const pendingAutoSaveRef = useRef(false);
 
   const [liveWorkOrder, setLiveWorkOrder] = useState<WorkOrder | null>(workOrder);
@@ -179,6 +184,15 @@ export const WorkOrderDetailModal = ({
     }
   }, [isOpen, workOrder?.id]);
 
+  // Scroll a «Técnicos Asignados» cuando se abre desde acción rápida «Sin asignar».
+  useEffect(() => {
+    if (!isOpen || initialFocus !== 'assign') return;
+    const timer = window.setTimeout(() => {
+      assignSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [isOpen, workOrder?.id, initialFocus]);
+
   // Al cambiar de OT (← →), limpia borradores locales de fotos/repuestos.
   useEffect(() => {
     setBeforeImage(null);
@@ -264,7 +278,15 @@ export const WorkOrderDetailModal = ({
 
   useEffect(() => {
     if (isOpen && user?.role !== 'TECNICO') {
-      getUsers('TECNICO').then(setTechnicians).catch(console.error);
+      getUsers()
+        .then((users) =>
+          setTechnicians(
+            users.filter(
+              (u) => u.is_active && (u.role === 'TECNICO' || u.role === 'GESTIONADOR')
+            )
+          )
+        )
+        .catch(console.error);
     }
     if (isOpen) {
       getItems().then(setInventoryItems).catch(console.error);
@@ -912,13 +934,13 @@ export const WorkOrderDetailModal = ({
                 </div>
 
                 {user?.role !== 'TECNICO' && !isReadOnly ? (
-                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Técnicos Asignados</label>
+                  <div ref={assignSectionRef} className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Personal asignado</label>
                     <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2">
                       {technicians.length === 0 ? (
-                        <div className="text-sm text-slate-500 dark:text-slate-400 italic">No hay técnicos disponibles</div>
+                        <div className="text-sm text-slate-500 dark:text-slate-400 italic">No hay personal disponible</div>
                       ) : (
-                        technicians.filter(tech => tech.is_active !== false).map((tech) => (
+                        technicians.map((tech) => (
                           <label key={tech.id} className="flex items-center gap-3 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-lg transition-colors cursor-pointer">
                             <input
                               type="checkbox"
@@ -950,9 +972,9 @@ export const WorkOrderDetailModal = ({
                     )}
                   </div>
                 ) : (
-                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div ref={assignSectionRef} className="animate-in fade-in slide-in-from-top-2 duration-300">
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
-                      {workOrder.status === 'FINALIZADO' ? 'Técnicos que intervinieron' : 'Técnicos Asignados'}
+                      {workOrder.status === 'FINALIZADO' ? 'Personal que intervino' : 'Personal asignado'}
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {workOrder.assigned_technicians && workOrder.assigned_technicians.length > 0 ? (
@@ -1110,7 +1132,7 @@ export const WorkOrderDetailModal = ({
                           <ul className="bg-white dark:bg-slate-900 rounded-lg border border-blue-100 dark:border-blue-900 divide-y divide-blue-50 dark:divide-slate-800">
                             {consumedParts.map((tx) => {
                               const qty = Math.abs(tx.amount);
-                              const unit = tx.unit_cost ?? tx.item.purchase_cost ?? 0;
+                              const unit = resolvePartsUnitCost(tx);
                               return (
                                 <li key={tx.id} className="px-4 py-2.5 flex justify-between items-center text-sm gap-3">
                                   <div className="min-w-0">

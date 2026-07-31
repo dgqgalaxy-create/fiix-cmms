@@ -167,7 +167,7 @@ async function seedOrders() {
       }
 
       const startedAt = parseDate(row['FECHA INICIO']);
-      const completedAt = parseDate(row['FECHA FINALIZACIÓN']);
+      const completedAt = parseDate(row['FECHA FINALIZACIÓN'] || row['FECHA FINALIZACION']);
       const createdAt = parseDate(row['Marca temporal']) || new Date();
 
       const timeMins = parseFloat(row['TIEMPO REPARACIÓN']);

@@ -8,16 +8,29 @@ interface SearchResults {
   assets: Array<{ id: string; name: string; internal_code: string; status: string; zone?: { name: string } | null }>;
   items: Array<{ id: string; name: string; internal_code: string; stock: number; uom: string; location?: { name: string } | null }>;
   locations: Array<{ id: string; name: string; internal_id: string }>;
-  work_orders: Array<{ id: string; folio: number; title: string; status: string; asset?: { name: string; internal_code: string } | null }>;
+  work_orders: Array<{
+    id: string;
+    folio: number;
+    title: string;
+    status: string;
+    asset?: { name: string; internal_code: string; zone?: { name: string } | null } | null;
+    zone?: { name: string } | null;
+  }>;
 }
 
-type ResultKind = 'asset' | 'item' | 'location' | 'work_order';
+function workOrderZoneName(wo: SearchResults['work_orders'][number]): string | undefined {
+  return wo.zone?.name || wo.asset?.zone?.name || undefined;
+}
+
+type ResultKind = 'asset' | 'item' | 'location' | 'work_order' | 'zone_orders';
 
 interface FlatResult {
   kind: ResultKind;
   id: string;
   title: string;
   subtitle: string;
+  /** Para zone_orders: término a llevar a /dashboard?q= */
+  query?: string;
 }
 
 export const GlobalSearchModal = () => {
@@ -30,14 +43,41 @@ export const GlobalSearchModal = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const flatten = useCallback((data: SearchResults): FlatResult[] => {
+  const flatten = useCallback((data: SearchResults, q: string): FlatResult[] => {
     const list: FlatResult[] = [];
+    const term = q.trim().toLowerCase();
+
+    // Atajo: si hay OT y la consulta parece una zona, ofrecer ver todas en Órdenes
+    const zoneNames = new Set<string>();
     data.work_orders.forEach((wo) => {
+      const z = workOrderZoneName(wo);
+      if (z) zoneNames.add(z);
+    });
+    data.assets.forEach((a) => {
+      if (a.zone?.name) zoneNames.add(a.zone.name);
+    });
+    const matchedZones = [...zoneNames].filter((z) => z.toLowerCase().includes(term));
+    if (term && matchedZones.length > 0 && data.work_orders.length > 0) {
+      const label = matchedZones.length === 1 ? matchedZones[0] : matchedZones.slice(0, 3).join(', ');
+      list.push({
+        kind: 'zone_orders',
+        id: `zone:${matchedZones[0]}`,
+        title: `Órdenes en zona ${label}`,
+        subtitle: 'Abrir listado filtrado en Órdenes de Trabajo',
+        query: matchedZones[0],
+      });
+    }
+
+    data.work_orders.forEach((wo) => {
+      const bits = [wo.status.replace(/_/g, ' ')];
+      const zoneName = workOrderZoneName(wo);
+      if (zoneName) bits.push(zoneName);
+      if (wo.asset) bits.push(wo.asset.internal_code);
       list.push({
         kind: 'work_order',
         id: wo.id,
         title: `${formatWorkOrderFolio(wo.folio)} · ${wo.title}`,
-        subtitle: `${wo.status.replace(/_/g, ' ')}${wo.asset ? ` · ${wo.asset.internal_code}` : ''}`,
+        subtitle: bits.join(' · '),
       });
     });
     data.assets.forEach((a) => {
@@ -67,7 +107,7 @@ export const GlobalSearchModal = () => {
     return list;
   }, []);
 
-  const flatResults = flatten(results);
+  const flatResults = flatten(results, query);
 
   useEffect(() => {
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
@@ -126,6 +166,9 @@ export const GlobalSearchModal = () => {
       case 'work_order':
         navigate(`/dashboard?wo=${item.id}`);
         break;
+      case 'zone_orders':
+        navigate(`/dashboard?q=${encodeURIComponent(item.query || query.trim())}`);
+        break;
       case 'asset':
         navigate(`/assets?asset=${item.id}`);
         break;
@@ -157,6 +200,7 @@ export const GlobalSearchModal = () => {
       case 'item': return <Package size={16} className="text-emerald-500" />;
       case 'location': return <MapPin size={16} className="text-amber-500" />;
       case 'work_order': return <ClipboardList size={16} className="text-violet-500" />;
+      case 'zone_orders': return <MapPin size={16} className="text-violet-500" />;
     }
   };
 
@@ -166,6 +210,7 @@ export const GlobalSearchModal = () => {
       case 'item': return 'Repuesto';
       case 'location': return 'Ubicación';
       case 'work_order': return 'Orden';
+      case 'zone_orders': return 'Zona';
     }
   };
 
@@ -182,7 +227,7 @@ export const GlobalSearchModal = () => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={onInputKeyDown}
-                placeholder="Buscar activos, repuestos, ubicaciones o folios FOL-…"
+                placeholder="Buscar activos, repuestos, zonas, folios FOL-…"
                 className="flex-1 bg-transparent outline-none text-slate-800 dark:text-slate-100 placeholder:text-slate-400 text-sm"
               />
               <button type="button" onClick={() => setIsOpen(false)} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
@@ -193,7 +238,7 @@ export const GlobalSearchModal = () => {
             <div className="max-h-[50vh] overflow-y-auto">
               {!query.trim() && (
                 <p className="px-4 py-8 text-center text-sm text-slate-400">
-                  Escribe un código, nombre o folio (ej. MTTO-0001-A-001-F, FOL-0042, ACT-0001…)
+                  Escribe un código, nombre, zona o folio (ej. L1, MTTO-0001-A-001-F, FOL-0042…)
                 </p>
               )}
               {query.trim() && !loading && flatResults.length === 0 && (

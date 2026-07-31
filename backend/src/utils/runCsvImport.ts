@@ -284,7 +284,11 @@ if (itemFile) {
     try {
       let uom = row['UOM'] ? row['UOM'].toUpperCase() : 'PIEZAS';
       
-      let cost = row['Purchase Cost'] ? parseFloat(row['Purchase Cost'].replace(/[^0-9.-]+/g,"")) : 0;
+      const rawCost = (row['Purchase Cost'] || '').toString().trim();
+      let cost: number | null = rawCost
+        ? parseFloat(rawCost.replace(/[^0-9.-]+/g, ''))
+        : null;
+      if (cost !== null && !Number.isFinite(cost)) cost = null;
       let stock = parseFloat(row['Stock']) || 0;
       let minStock = parseFloat(row['Minimum Inventory']) || 0;
       
@@ -522,7 +526,7 @@ if (woFile) {
 
         let created_at = parseSafeDate(row['Marca temporal']) || new Date();
         let started_at = parseSafeDate(row['FECHA INICIO']);
-        let completed_at = parseSafeDate(row['FECHA FINALIZACIÓN']);
+        let completed_at = parseSafeDate(row['FECHA FINALIZACIÓN'] || row['FECHA FINALIZACION']);
         
         const machine_stopped = row['¿Paró máquina por la falla?']?.toUpperCase() === 'SI' || row['¿Paró máquina por la falla?']?.toUpperCase() === 'SÍ';
         

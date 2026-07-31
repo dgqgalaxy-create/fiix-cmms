@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.46.4";
+export const APP_VERSION = "1.46.7";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -29,6 +29,13 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: En tarjetas de OT, Admin/Gestionador puede tocar «Sin asignar» para abrir el detalle en asignación, o el icono de calendario para ir a Calendario listo para agendar esa orden.",
+    "Mejora: Al crear, editar o asignar en masa una OT, la lista de personal incluye Gestionadores activos (además de Técnicos).",
+    "Corrección: Al finalizar una OT no se sobrescribe completed_at si ya venía del CSV; las fechas/horas en pantalla usan America/Mexico_City.",
+    "Corrección: El costo de refacciones de una OT ya no queda en $0 cuando el catálogo tenía purchase_cost vacío o unit_cost forzado a 0 (fallback al catálogo + migración 0→null).",
+    "Mejora: Buscar por zona (ej. L1) muestra órdenes en Ctrl+K y en la barra de Órdenes de Trabajo; también puedes abrir el listado filtrado desde el resultado «Órdenes en zona…».",
+    "Corrección: Las fechas de los CSV se interpretan siempre en hora de planta (America/Mexico_City), no en la zona horaria del servidor. Antes el mismo archivo importado en el servidor Ubuntu (UTC) guardaba las OT 6 horas antes que en local y eso movía un día la racha sin paros, el récord y los KPIs.",
+    "Cambio: Crear o abrir el Checklist Diario ya no asigna técnico. Solo lectura hasta pulsar «Iniciar checklist»; entonces se reclama y se puede editar/enviar. Si otro ya lo inició, queda en solo lectura.",
     "Mejora: La importación manual se separa en dos operaciones seguras: Inventario (6 CSV + Items_Images.zip) y Órdenes (1 CSV + Formulario Solicitudes_Images.zip). Ambas usan upsert y pueden ejecutarse por separado.",
     "Nuevo: Fotos desde carpetas públicas de Google Drive en import CSV/Sheets (Opciones de Desarrollador) — casilla + GOOGLE_DRIVE_* en .env; prioridad zip > Drive > data/.",
     "Corrección: Con «Alertas por Telegram» desactivadas en Configuración ya no se envían mensajes (SLA, checklist, nuevas OT, ni el cron healthcheck.sh); el .env solo se usa como credencial si el interruptor está activo (o BD inaccesible en healthcheck).",

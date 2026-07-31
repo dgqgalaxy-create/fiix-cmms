@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { 
   getTodayChecklist, 
-  createTodayChecklist, 
+  createTodayChecklist,
+  startChecklist,
   updateChecklistRow, 
   submitChecklist, 
   reviewChecklist, 
@@ -36,6 +37,7 @@ router.delete('/activities/:id', requirePermission('MANAGE_CHECKLIST_CATALOG'), 
 router.get('/today', getTodayChecklist);
 router.post('/today', createTodayChecklist);
 router.get('/history', getChecklistHistory);
+router.post('/:id/start', startChecklist);
 router.get('/:id', getChecklistById);
 router.put('/row/:rowId', updateChecklistRow);
 router.post('/:id/submit', submitChecklist);

@@ -5,13 +5,39 @@
  *
  * Do NOT call `new Date('05/07/2026')` first — engines treat that as US mm/dd
  * and swap day/month when day ≤ 12.
+ *
+ * Las horas sin zona son hora de planta (America/Mexico_City), no del proceso:
+ * el mismo CSV importado en Windows local y en el servidor Ubuntu (UTC) debe
+ * guardar el mismo instante.
  */
+import { plantWallClockToDate } from './plantTimezone';
+
 export function parseCsvDate(dString: string | null | undefined): Date | null {
   if (dString == null) return null;
   const raw = String(dString).trim();
   if (!raw) return null;
 
-  // ISO / RFC-ish: 2026-07-15 or 2026-07-15T14:30:00(.sss)(Z|±hh:mm)?
+  // ISO / RFC-ish: 2026-07-15 o 2026-07-15T14:30:00(.sss)(Z|±hh:mm)?
+  const iso = raw.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?$/
+  );
+  if (iso) {
+    // Con zona explícita el instante ya es absoluto.
+    if (iso[7]) {
+      const d = new Date(raw);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const hasTime = iso[4] != null;
+    return plantWallClockToDate(
+      Number(iso[1]),
+      Number(iso[2]),
+      Number(iso[3]),
+      hasTime ? Number(iso[4]) : 12, // sin hora: mediodía de planta, nunca cambia de día
+      hasTime ? Number(iso[5]) : 0,
+      iso[6] != null ? Number(iso[6]) : 0
+    );
+  }
+
   if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
     const d = new Date(raw);
     return isNaN(d.getTime()) ? null : d;
@@ -31,16 +57,7 @@ export function parseCsvDate(dString: string | null | undefined): Date | null {
 
     if (month < 1 || month > 12 || day < 1 || day > 31) return null;
 
-    // Local wall-clock (not …Z) so Mexico UTC-6 does not shift the calendar day.
-    const d = new Date(year, month - 1, day, hours, mins, secs);
-    if (
-      d.getFullYear() !== year ||
-      d.getMonth() !== month - 1 ||
-      d.getDate() !== day
-    ) {
-      return null; // e.g. 31/02/2026
-    }
-    return d;
+    return plantWallClockToDate(year, month, day, hours, mins, secs);
   }
 
   return null;

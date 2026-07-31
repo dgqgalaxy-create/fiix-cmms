@@ -9,7 +9,7 @@ import { InfoTip } from '../components/common/InfoTip';
 import { BulkAssignModal } from '../components/BulkAssignModal';
 import { getWorkOrders, getWorkOrderById, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder } from '../api/workOrders';
 import type { WorkOrder } from '../api/workOrders';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
@@ -17,6 +17,7 @@ import { formatDate, formatDateTime } from '../utils/dateUtils';
 
 export const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { user, hasPermission } = useAuth();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,6 +25,7 @@ export const Dashboard = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
+  const [detailInitialFocus, setDetailInitialFocus] = useState<'assign' | undefined>(undefined);
   
   const tableContainerRef = useRef<HTMLDivElement>(null);
   
@@ -46,6 +48,10 @@ export const Dashboard = () => {
     const priority = searchParams.get('priority');
     const unassigned = searchParams.get('unassigned');
     const sla = searchParams.get('sla');
+    const q = searchParams.get('q');
+    if (q != null) {
+      setSearchTerm(q);
+    }
 
     if (priority === 'URGENTE' || priority === 'NORMAL' || priority === 'BAJO') {
       setPriorityFilter(priority);
@@ -115,6 +121,7 @@ export const Dashboard = () => {
 
     if (!woId && !folioParam) {
       setSelectedWorkOrder(null);
+      setDetailInitialFocus(undefined);
       return;
     }
 
@@ -153,7 +160,8 @@ export const Dashboard = () => {
   };
 
   /** Abre el detalle empujando ?wo= al historial (Atrás cierra el modal, no sale del módulo). */
-  const openWorkOrderDetail = (wo: WorkOrder) => {
+  const openWorkOrderDetail = (wo: WorkOrder, options?: { initialFocus?: 'assign' }) => {
+    setDetailInitialFocus(options?.initialFocus);
     setSelectedWorkOrder(wo);
     const next = new URLSearchParams(searchParams);
     const alreadyOpen = Boolean(searchParams.get('wo') || searchParams.get('folio'));
@@ -164,7 +172,20 @@ export const Dashboard = () => {
 
   const handleCloseDetail = () => {
     setSelectedWorkOrder(null);
+    setDetailInitialFocus(undefined);
     clearDeepLinkParams();
+  };
+
+  const canQuickActions =
+    user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR';
+  const canQuickSchedule = canQuickActions && hasPermission('MANAGE_CALENDAR');
+
+  const handleAssignClick = (wo: WorkOrder) => {
+    openWorkOrderDetail(wo, { initialFocus: 'assign' });
+  };
+
+  const handleScheduleClick = (wo: WorkOrder) => {
+    navigate('/calendar', { state: { scheduleOrderId: wo.id } });
   };
 
   const uniqueAssets = Array.from(new Set(workOrders.map(wo => wo.asset?.name).filter(Boolean))) as string[];
@@ -339,17 +360,27 @@ export const Dashboard = () => {
     }
 
     if (searchTerm.trim() !== '') {
-      const term = searchTerm.toLowerCase();
+      const term = searchTerm.toLowerCase().trim();
       list = list.filter(wo => {
         const folioMatch =
           `wo-${(wo.folio || 0).toString().padStart(4, '0')}`.includes(term) ||
           `fol-${(wo.folio || 0).toString().padStart(4, '0')}`.includes(term) ||
           String(wo.folio || '').includes(term);
         const assetMatch = wo.asset?.name?.toLowerCase().includes(term);
+        const assetCodeMatch = wo.asset?.internal_code?.toLowerCase().includes(term);
         const zoneMatch = wo.zone?.name?.toLowerCase().includes(term);
         const titleMatch = wo.title?.toLowerCase().includes(term);
         const typeMatch = wo.maintenance_type?.toLowerCase().includes(term);
-        return folioMatch || assetMatch || zoneMatch || titleMatch || typeMatch;
+        const requesterMatch = wo.requester_name?.toLowerCase().includes(term);
+        return (
+          folioMatch ||
+          assetMatch ||
+          assetCodeMatch ||
+          zoneMatch ||
+          titleMatch ||
+          typeMatch ||
+          requesterMatch
+        );
       });
     }
 
@@ -463,7 +494,7 @@ export const Dashboard = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
                   type="text" 
-                  placeholder="Buscar equipo, folio..." 
+                  placeholder="Buscar equipo, folio, zona…" 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm"
@@ -597,6 +628,8 @@ export const Dashboard = () => {
           <WorkOrdersTable 
             workOrders={filteredList} 
             onRowClick={openWorkOrderDetail}
+            onAssignClick={canQuickActions ? handleAssignClick : undefined}
+            onScheduleClick={canQuickSchedule ? handleScheduleClick : undefined}
           />
         </div>
       )}
@@ -625,6 +658,7 @@ export const Dashboard = () => {
             onJoin={handleJoinWorkOrder}
             workOrderList={filteredList}
             onNavigateWorkOrder={openWorkOrderDetail}
+            initialFocus={detailInitialFocus}
           />
         </ErrorBoundary>
       )}

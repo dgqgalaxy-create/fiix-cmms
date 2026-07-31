@@ -5,6 +5,30 @@ import { parseWorkOrderFolio } from '../utils/folio';
 
 const LIMIT_PER_TYPE = 6;
 
+const workOrderSearchSelect = {
+  id: true,
+  folio: true,
+  title: true,
+  status: true,
+  asset: {
+    select: {
+      name: true,
+      internal_code: true,
+      zone: { select: { name: true } },
+    },
+  },
+  zone: { select: { name: true } },
+} as const;
+
+function workOrderTextOrZoneFilter(q: string) {
+  return [
+    { title: { contains: q, mode: 'insensitive' as const } },
+    { description: { contains: q, mode: 'insensitive' as const } },
+    { zone: { name: { contains: q, mode: 'insensitive' as const } } },
+    { asset: { zone: { name: { contains: q, mode: 'insensitive' as const } } } },
+  ];
+}
+
 export const globalSearch = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const q = String(req.query.q || '').trim();
@@ -23,6 +47,7 @@ export const globalSearch = async (req: AuthRequest, res: Response): Promise<voi
             { internal_code: { contains: q, mode: 'insensitive' } },
             { brand: { contains: q, mode: 'insensitive' } },
             { model: { contains: q, mode: 'insensitive' } },
+            { zone: { name: { contains: q, mode: 'insensitive' } } },
           ],
         },
         take: LIMIT_PER_TYPE,
@@ -69,21 +94,11 @@ export const globalSearch = async (req: AuthRequest, res: Response): Promise<voi
       folioNum != null
         ? prisma.workOrder.findMany({
             where: {
-              OR: [
-                { folio: folioNum },
-                { title: { contains: q, mode: 'insensitive' } },
-                { description: { contains: q, mode: 'insensitive' } },
-              ],
+              OR: [{ folio: folioNum }, ...workOrderTextOrZoneFilter(q)],
             },
             take: LIMIT_PER_TYPE,
             orderBy: { folio: 'desc' },
-            select: {
-              id: true,
-              folio: true,
-              title: true,
-              status: true,
-              asset: { select: { name: true, internal_code: true } },
-            },
+            select: workOrderSearchSelect,
           }).then((rows) => {
             // Folio exacto primero (Cmd+K con FOL-0001).
             const exact = rows.filter((r) => r.folio === folioNum);
@@ -92,20 +107,11 @@ export const globalSearch = async (req: AuthRequest, res: Response): Promise<voi
           })
         : prisma.workOrder.findMany({
             where: {
-              OR: [
-                { title: { contains: q, mode: 'insensitive' } },
-                { description: { contains: q, mode: 'insensitive' } },
-              ],
+              OR: workOrderTextOrZoneFilter(q),
             },
             take: LIMIT_PER_TYPE,
             orderBy: { folio: 'desc' },
-            select: {
-              id: true,
-              folio: true,
-              title: true,
-              status: true,
-              asset: { select: { name: true, internal_code: true } },
-            },
+            select: workOrderSearchSelect,
           }),
     ]);
 

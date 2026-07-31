@@ -8,6 +8,7 @@ import { formatWorkOrderFolio } from '../utils/folio';
 import { parseDateInput } from '../utils/parseDateInput';
 import { writeAuditLog } from '../utils/auditLog';
 import { PRODUCTION_LINES, resolveProductionLine } from '../utils/assetSection';
+import { resolvePartsUnitCost } from '../utils/resolvePartsUnitCost';
 
 const OPEN_WO_STATUSES = ['PENDIENTE', 'EN_PROCESO', 'EN_ESPERA'] as const;
 
@@ -305,8 +306,7 @@ export const getWorkOrderById = async (req: AuthRequest, res: Response): Promise
     }
     const parts_cost_total = workOrder.inventory_transactions.reduce((sum, tx) => {
       const qty = Math.abs(tx.amount);
-      const unit = tx.unit_cost ?? tx.item.purchase_cost ?? 0;
-      return sum + qty * unit;
+      return sum + qty * resolvePartsUnitCost(tx);
     }, 0);
     const { sla_policy } = await getSlaSettings();
     res.json({
@@ -591,7 +591,8 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
     let didConsumeInventory = false;
 
     if (status === 'FINALIZADO' && currentWorkOrder.status !== 'FINALIZADO') {
-      updateData.completed_at = new Date();
+      // Preserve CSV-imported completed_at; only stamp now when missing
+      updateData.completed_at = currentWorkOrder.completed_at ?? new Date();
 
       // Parsear used_items si viene como string (ej. desde FormData)
       let parsedUsedItems = used_items;
@@ -626,7 +627,7 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
                   item_id: part.item_id,
                   user_id: userId,
                   work_order_id: id,
-                  unit_cost: item.purchase_cost ?? 0,
+                  unit_cost: item.purchase_cost,
                   amount: -amountToDeduct,
                   reason: `Consumo OT ${folioLabel}`,
                 },

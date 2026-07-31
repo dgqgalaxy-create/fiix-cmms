@@ -34,9 +34,13 @@ export function BulkAssignModal({ isOpen, onClose, candidates, onDone }: Props) 
     setLoading(true);
     getUsers()
       .then((users) => {
-        setTechnicians(users.filter((u) => u.is_active && (u.role === 'TECNICO' || u.role === 'GESTIONADOR' || u.role === 'ADMINISTRADOR')));
+        setTechnicians(
+          users.filter(
+            (u) => u.is_active && (u.role === 'TECNICO' || u.role === 'GESTIONADOR')
+          )
+        );
       })
-      .catch(() => setError('No se pudieron cargar los técnicos'))
+      .catch(() => setError('No se pudo cargar el personal'))
       .finally(() => setLoading(false));
   }, [isOpen, openCandidates]);
 
@@ -56,7 +60,7 @@ export function BulkAssignModal({ isOpen, onClose, candidates, onDone }: Props) 
       return;
     }
     if (selectedTechIds.length === 0) {
-      setError('Selecciona al menos un técnico');
+      setError('Selecciona al menos una persona');
       return;
     }
     setSaving(true);
@@ -125,7 +129,7 @@ export function BulkAssignModal({ isOpen, onClose, candidates, onDone }: Props) 
 
               <div>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Técnicos ({selectedTechIds.length})
+                  Personal asignado ({selectedTechIds.length})
                 </p>
                 <div className="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2 dark:border-slate-700">
                   {technicians.map((tech) => (

@@ -89,7 +89,6 @@ export const createTodayChecklist = async (req: AuthRequest, res: Response) => {
     const checklist = await prisma.dailyChecklist.create({
       data: {
         date: today,
-        technician_id: userId,
         status: 'DRAFT',
         column_count: columnCount,
         rows: {
@@ -102,6 +101,7 @@ export const createTodayChecklist = async (req: AuthRequest, res: Response) => {
         }
       },
       include: {
+        technician: { select: { name: true } },
         rows: {
           orderBy: { order: 'asc' }
         }
@@ -116,14 +116,82 @@ export const createTodayChecklist = async (req: AuthRequest, res: Response) => {
   }
 };
 
+/** Reclama el checklist DRAFT: asigna technician_id al usuario actual. */
+export const startChecklist = async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const existing = await prisma.dailyChecklist.findUnique({
+      where: { id },
+      include: {
+        technician: { select: { name: true } },
+      },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Checklist no encontrado' });
+    }
+
+    if (existing.status !== 'DRAFT') {
+      return res.status(400).json({ error: 'Solo se puede iniciar un checklist en borrador' });
+    }
+
+    if (existing.technician_id && existing.technician_id !== userId) {
+      return res.status(409).json({
+        error: `Este checklist ya fue iniciado por ${existing.technician?.name || 'otro técnico'}`,
+      });
+    }
+
+    if (existing.technician_id === userId) {
+      const same = await prisma.dailyChecklist.findUnique({
+        where: { id },
+        include: {
+          technician: { select: { name: true } },
+          leader: { select: { name: true } },
+          rows: { orderBy: { order: 'asc' } },
+        },
+      });
+      return res.json(same);
+    }
+
+    const checklist = await prisma.dailyChecklist.update({
+      where: { id },
+      data: { technician_id: userId },
+      include: {
+        technician: { select: { name: true } },
+        leader: { select: { name: true } },
+        rows: { orderBy: { order: 'asc' } },
+      },
+    });
+
+    emitChecklists();
+    res.json(checklist);
+  } catch (error) {
+    console.error('Error starting checklist', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 export const updateChecklistRow = async (req: AuthRequest, res: Response) => {
   try {
     const rowId = req.params.rowId as string;
+    const userId = req.user?.userId;
     const { observations, line, status, line_statuses } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
     const existing = await prisma.dailyChecklistRow.findUnique({
       where: { id: rowId },
-      include: { checklist: { select: { column_count: true, status: true } } },
+      include: {
+        checklist: { select: { column_count: true, status: true, technician_id: true } },
+      },
     });
 
     if (!existing) {
@@ -133,6 +201,20 @@ export const updateChecklistRow = async (req: AuthRequest, res: Response) => {
 
     if (existing.checklist.status !== 'DRAFT') {
       res.status(400).json({ error: 'El checklist ya no es editable' });
+      return;
+    }
+
+    if (!existing.checklist.technician_id) {
+      res.status(403).json({
+        error: 'Debes pulsar «Iniciar checklist» antes de editar.',
+      });
+      return;
+    }
+
+    if (existing.checklist.technician_id !== userId) {
+      res.status(403).json({
+        error: 'Solo el técnico que inició este checklist puede editarlo.',
+      });
       return;
     }
 
@@ -199,6 +281,18 @@ export const submitChecklist = async (req: AuthRequest, res: Response) => {
 
     if (existing.status !== 'DRAFT') {
       return res.status(400).json({ error: 'El checklist ya fue enviado o revisado' });
+    }
+
+    if (!existing.technician_id) {
+      return res.status(403).json({
+        error: 'Debes pulsar «Iniciar checklist» antes de enviar.',
+      });
+    }
+
+    if (existing.technician_id !== userId) {
+      return res.status(403).json({
+        error: 'Solo el técnico que inició este checklist puede enviarlo.',
+      });
     }
 
     const validation = validateChecklistForSubmit(

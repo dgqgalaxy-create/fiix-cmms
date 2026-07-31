@@ -8,6 +8,7 @@ import {
   normalizeAssetKind,
   normalizeEquipmentName,
 } from '../utils/assetCodeGenerator';
+import { resolvePartsUnitCost } from '../utils/resolvePartsUnitCost';
 
 const assetInclude = {
   zone: { include: { sections: { orderBy: { name: 'asc' as const } } } },
@@ -189,8 +190,7 @@ export const getAssetMetrics = async (req: Request, res: Response): Promise<void
     });
     const parts_cost_total = partTx.reduce((sum, tx) => {
       const qty = Math.abs(tx.amount);
-      const unit = tx.unit_cost ?? tx.item.purchase_cost ?? 0;
-      return sum + qty * unit;
+      return sum + qty * resolvePartsUnitCost(tx);
     }, 0);
 
     // Últimas OT (cualquier estado) para vista rápida

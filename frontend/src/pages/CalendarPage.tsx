@@ -14,6 +14,7 @@ import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatDateTime } from '../utils/dateUtils';
 import { resolveCalendarDropDate } from '../utils/calendarDropDate';
 import { InfoTip } from '../components/common/InfoTip';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const withDragAndDrop = (withDragAndDropRaw as any).default || withDragAndDropRaw;
 const DnDCalendar = withDragAndDrop(BigCalendar);
@@ -57,6 +58,8 @@ function prefersTouchScheduling(): boolean {
 
 export const CalendarPage = () => {
   const { token, hasPermission } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const canManageCalendar = hasPermission('MANAGE_CALENDAR');
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [events, setEvents] = useState<CustomEvent[]>([]);
@@ -71,6 +74,7 @@ export const CalendarPage = () => {
   const pointerUnbindRef = useRef<(() => void) | null>(null);
   const currentDateRef = useRef(new Date());
   const currentViewRef = useRef<any>(Views.MONTH);
+  const processedScheduleIdRef = useRef<string | null>(null);
 
   const [currentView, setCurrentView] = useState<any>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -143,6 +147,21 @@ export const CalendarPage = () => {
   }, [token]);
 
   useSocketRefresh('refresh_work_orders', () => { void fetchOrders(); });
+
+  // Abrir modal de programación cuando se llega desde Dashboard con scheduleOrderId.
+  useEffect(() => {
+    const scheduleOrderId = (location.state as { scheduleOrderId?: string } | null)?.scheduleOrderId;
+    if (!scheduleOrderId || loading) return;
+    if (processedScheduleIdRef.current === scheduleOrderId) return;
+
+    const order = workOrders.find((wo) => wo.id === scheduleOrderId);
+    if (!order) return;
+
+    processedScheduleIdRef.current = scheduleOrderId;
+    setSelectedOrder(order);
+    setIsModalOpen(true);
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location.state, location.pathname, workOrders, loading, navigate]);
 
   const handleEventClick = (event: CustomEvent) => {
     setSelectedOrder(event.order);
