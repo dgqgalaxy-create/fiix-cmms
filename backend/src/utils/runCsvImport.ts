@@ -27,6 +27,14 @@ import {
 import { parseCsvDate } from './parseCsvDate';
 import { syncAssetsFromActivosInventory } from './assetInventoryImport';
 import { emitRefresh } from './socket';
+import {
+  downloadPublicDriveFolderToTemp,
+  extractDriveFolderId,
+  getDriveApiKey,
+  getDriveItemsFolderId,
+  getDriveWoFolderId,
+  rmTempDirSafe,
+} from './googleDriveImport';
 
 export class CsvImportError extends Error {
   status: number;
@@ -58,28 +66,36 @@ export type CsvImportResults = {
     skipped: number;
     zonesEnsured: string[];
   };
-  itemImages?: {
-    matched: number;
-    missing: number;
-    skipped: number;
-    assetsMatched?: number;
-    folderFound: boolean;
-    filesScanned: number;
-  };
-  workOrderImages?: {
-    matched: number;
-    missing: number;
-    skipped: number;
-    folderFound: boolean;
-    filesScanned: number;
+  itemImages?: PhotoImportSummary & { assetsMatched?: number };
+  workOrderImages?: PhotoImportSummary & {
     beforeAssigned: number;
     afterAssigned: number;
   };
 };
 
+export type PhotoSource = 'zip' | 'google_drive' | 'data_folder';
+
+export type PhotoImportSummary = {
+  matched: number;
+  missing: number;
+  skipped: number;
+  folderFound: boolean;
+  filesScanned: number;
+  source?: PhotoSource;
+  driveListed?: number;
+  driveDownloaded?: number;
+  driveErrors?: string[];
+  error?: string;
+};
+
 export type ProcessCsvImportOptions = {
   /** Si false, no intenta data/Items_Images ni data/Formulario… cuando no hay zip. Default true. */
   includeLocalPhotoFolders?: boolean;
+  /** Si true y hay API key + carpeta configurada, baja fotos de Drive cuando no hay zip. */
+  useGoogleDrive?: boolean;
+  /** Override opcional de carpeta (URL o ID); si falta usa GOOGLE_DRIVE_*_FOLDER. */
+  driveItemsFolder?: string | null;
+  driveWoFolder?: string | null;
 };
 
 function readImportFileUtf8(file: ImportFileLike): string {
@@ -104,8 +120,16 @@ export async function processCsvImportFiles(
   } = {}
 ): Promise<CsvImportResults> {
   const includeLocalPhotoFolders = options.includeLocalPhotoFolders !== false;
+  const useGoogleDrive = Boolean(options.useGoogleDrive);
   const zipFile = options.zipFile ?? null;
   const woZipFile = options.woZipFile ?? null;
+  const driveApiKey = useGoogleDrive ? getDriveApiKey() : null;
+  const itemsFolderId =
+    extractDriveFolderId(options.driveItemsFolder) || (useGoogleDrive ? getDriveItemsFolderId() : null);
+  const woFolderId =
+    extractDriveFolderId(options.driveWoFolder) || (useGoogleDrive ? getDriveWoFolderId() : null);
+  let driveItemsTemp: string | null = null;
+  let driveWoTemp: string | null = null;
 
 // Fechas Fiix CSV: dd/mm/yyyy (ver parseCsvDate). No usar new Date('05/07/…') (mm/dd US).
 const parseSafeDate = parseCsvDate;
@@ -145,20 +169,8 @@ const results: {
     skipped: number;
     zonesEnsured: string[];
   };
-  itemImages?: {
-    matched: number;
-    missing: number;
-    skipped: number;
-    assetsMatched?: number;
-    folderFound: boolean;
-    filesScanned: number;
-  };
-  workOrderImages?: {
-    matched: number;
-    missing: number;
-    skipped: number;
-    folderFound: boolean;
-    filesScanned: number;
+  itemImages?: PhotoImportSummary & { assetsMatched?: number };
+  workOrderImages?: PhotoImportSummary & {
     beforeAssigned: number;
     afterAssigned: number;
   };
@@ -598,7 +610,8 @@ if (woFile) {
   }
 }
 
-// Fotos de repuestos: zip subido, o carpeta data/Items_Images/ (SCP/rsync en servidor)
+// Fotos de repuestos: zip > Google Drive (carpeta pública) > data/Items_Images/
+try {
 if (zipFile?.path) {
   try {
     const photoResult = await assignItemImagesFromZip(zipFile.path);
@@ -609,6 +622,7 @@ if (zipFile?.path) {
       assetsMatched: photoResult.assetsMatched,
       folderFound: photoResult.folderFound,
       filesScanned: photoResult.filesScanned,
+      source: 'zip',
     };
   } catch (photoErr) {
     console.error('Item images import error:', photoErr);
@@ -619,6 +633,37 @@ if (zipFile?.path) {
       assetsMatched: 0,
       folderFound: false,
       filesScanned: 0,
+      source: 'zip',
+    };
+  }
+} else if (useGoogleDrive && driveApiKey && itemsFolderId) {
+  try {
+    const dl = await downloadPublicDriveFolderToTemp(itemsFolderId, driveApiKey, 'items');
+    driveItemsTemp = dl.dir;
+    const photoResult = await assignItemImagesFromFolder(dl.dir);
+    results.itemImages = {
+      matched: photoResult.matched,
+      missing: photoResult.missing,
+      skipped: photoResult.skipped + dl.skipped,
+      assetsMatched: photoResult.assetsMatched,
+      folderFound: photoResult.folderFound,
+      filesScanned: photoResult.filesScanned || dl.filesDownloaded,
+      source: 'google_drive',
+      driveListed: dl.filesListed,
+      driveDownloaded: dl.filesDownloaded,
+      driveErrors: dl.errors,
+    };
+  } catch (photoErr: any) {
+    console.error('Item images Drive import error:', photoErr);
+    results.itemImages = {
+      matched: 0,
+      missing: 0,
+      skipped: 0,
+      assetsMatched: 0,
+      folderFound: false,
+      filesScanned: 0,
+      source: 'google_drive',
+      error: photoErr?.message || String(photoErr),
     };
   }
 } else if (includeLocalPhotoFolders) {
@@ -632,6 +677,7 @@ if (zipFile?.path) {
         assetsMatched: photoResult.assetsMatched,
         folderFound: photoResult.folderFound,
         filesScanned: photoResult.filesScanned,
+        source: 'data_folder',
       };
     }
   } catch (photoErr) {
@@ -639,7 +685,7 @@ if (zipFile?.path) {
   }
 }
 
-// Fotos antes/después de OT: zip subido, o data/Formulario Solicitudes_Images/
+// Fotos antes/después de OT: zip > Google Drive > data/Formulario Solicitudes_Images/
 if (woZipFile?.path && woPhotoMappings.length > 0) {
   try {
     const woPhotoResult = await assignWorkOrderImagesFromZip(woZipFile.path, woPhotoMappings);
@@ -651,6 +697,7 @@ if (woZipFile?.path && woPhotoMappings.length > 0) {
       filesScanned: woPhotoResult.filesScanned,
       beforeAssigned: woPhotoResult.beforeAssigned,
       afterAssigned: woPhotoResult.afterAssigned,
+      source: 'zip',
     };
   } catch (woPhotoErr) {
     console.error('Work order images import error:', woPhotoErr);
@@ -662,6 +709,39 @@ if (woZipFile?.path && woPhotoMappings.length > 0) {
       filesScanned: 0,
       beforeAssigned: 0,
       afterAssigned: 0,
+      source: 'zip',
+    };
+  }
+} else if (woPhotoMappings.length > 0 && !woZipFile && useGoogleDrive && driveApiKey && woFolderId) {
+  try {
+    const dl = await downloadPublicDriveFolderToTemp(woFolderId, driveApiKey, 'wo');
+    driveWoTemp = dl.dir;
+    const woPhotoResult = await assignWorkOrderImagesFromFolder(dl.dir, woPhotoMappings);
+    results.workOrderImages = {
+      matched: woPhotoResult.matched,
+      missing: woPhotoResult.missing,
+      skipped: woPhotoResult.skipped + dl.skipped,
+      folderFound: woPhotoResult.folderFound,
+      filesScanned: woPhotoResult.filesScanned || dl.filesDownloaded,
+      beforeAssigned: woPhotoResult.beforeAssigned,
+      afterAssigned: woPhotoResult.afterAssigned,
+      source: 'google_drive',
+      driveListed: dl.filesListed,
+      driveDownloaded: dl.filesDownloaded,
+      driveErrors: dl.errors,
+    };
+  } catch (woPhotoErr: any) {
+    console.error('Work order images Drive import error:', woPhotoErr);
+    results.workOrderImages = {
+      matched: 0,
+      missing: woPhotoMappings.length,
+      skipped: 0,
+      folderFound: false,
+      filesScanned: 0,
+      beforeAssigned: 0,
+      afterAssigned: 0,
+      source: 'google_drive',
+      error: woPhotoErr?.message || String(woPhotoErr),
     };
   }
 } else if (woPhotoMappings.length > 0 && !woZipFile && includeLocalPhotoFolders) {
@@ -679,6 +759,7 @@ if (woZipFile?.path && woPhotoMappings.length > 0) {
         filesScanned: woPhotoResult.filesScanned,
         beforeAssigned: woPhotoResult.beforeAssigned,
         afterAssigned: woPhotoResult.afterAssigned,
+        source: 'data_folder',
       };
     } else {
       results.workOrderImages = {
@@ -689,6 +770,7 @@ if (woZipFile?.path && woPhotoMappings.length > 0) {
         filesScanned: woPhotoResult.filesScanned,
         beforeAssigned: 0,
         afterAssigned: 0,
+        source: 'data_folder',
       };
     }
   } catch (woPhotoErr) {
@@ -701,6 +783,7 @@ if (woZipFile?.path && woPhotoMappings.length > 0) {
       filesScanned: 0,
       beforeAssigned: 0,
       afterAssigned: 0,
+      source: 'data_folder',
     };
   }
 } else if (woZipFile && woPhotoMappings.length === 0) {
@@ -712,7 +795,12 @@ if (woZipFile?.path && woPhotoMappings.length > 0) {
     filesScanned: 0,
     beforeAssigned: 0,
     afterAssigned: 0,
+    source: 'zip',
   };
+}
+} finally {
+  rmTempDirSafe(driveItemsTemp);
+  rmTempDirSafe(driveWoTemp);
 }
 
 

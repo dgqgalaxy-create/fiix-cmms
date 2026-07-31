@@ -107,6 +107,12 @@ export const DeveloperOptions = () => {
   const [restoreModalError, setRestoreModalError] = useState<string | null>(null);
   const [itemImagesZip, setItemImagesZip] = useState<File | null>(null);
   const [workOrderImagesZip, setWorkOrderImagesZip] = useState<File | null>(null);
+  const [useGoogleDrive, setUseGoogleDrive] = useState(true);
+  const [driveStatus, setDriveStatus] = useState<{
+    configured: boolean;
+    itemsFolderConfigured: boolean;
+    woFolderConfigured: boolean;
+  } | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [auditOpen, setAuditOpen] = useState(false);
   const [auditLogs, setAuditLogs] = useState<AuditLogRow[]>([]);
@@ -157,6 +163,20 @@ export const DeveloperOptions = () => {
         }
       } catch (e) {
         console.error('Error fetching settings', e);
+      }
+      try {
+        const driveRes = await axios.get('/dev/google-drive-status');
+        if (!cancelled && driveRes.data) {
+          setDriveStatus({
+            configured: Boolean(driveRes.data.configured),
+            itemsFolderConfigured: Boolean(driveRes.data.itemsFolderConfigured),
+            woFolderConfigured: Boolean(driveRes.data.woFolderConfigured),
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setDriveStatus({ configured: false, itemsFolderConfigured: false, woFolderConfigured: false });
+        }
       }
     })();
 
@@ -571,6 +591,9 @@ export const DeveloperOptions = () => {
     if (workOrderImagesZip) {
       formData.append('csvFiles', workOrderImagesZip, workOrderImagesZip.name);
     }
+    if (useGoogleDrive) {
+      formData.append('useGoogleDrive', 'true');
+    }
 
     try {
       const res = await axios.post(`/dev/import-csv`, formData, {
@@ -674,33 +697,62 @@ export const DeveloperOptions = () => {
       msg += '.';
     }
     if (results.itemImages) {
-      msg += ` Fotos repuestos: ${results.itemImages.matched}`;
+      const src =
+        results.itemImages.source === 'google_drive'
+          ? 'Drive'
+          : results.itemImages.source === 'zip'
+            ? 'zip'
+            : 'data/';
+      msg += ` Fotos repuestos (${src}): ${results.itemImages.matched}`;
       if (results.itemImages.assetsMatched > 0) {
         msg += ` (también en Activos: ${results.itemImages.assetsMatched})`;
       }
       if (results.itemImages.missing > 0) {
         msg += ` (${results.itemImages.missing} sin ítem coincidente)`;
       }
+      if (results.itemImages.driveDownloaded != null) {
+        msg += `; descargadas Drive: ${results.itemImages.driveDownloaded}`;
+      }
+      if (results.itemImages.error) {
+        msg += ` — error Drive: ${results.itemImages.error}`;
+      }
       msg += '.';
     }
     if (results.workOrderImages) {
-      msg += ` Fotos OT: ${results.workOrderImages.matched} (antes ${results.workOrderImages.beforeAssigned}, después ${results.workOrderImages.afterAssigned}).`;
+      const src =
+        results.workOrderImages.source === 'google_drive'
+          ? 'Drive'
+          : results.workOrderImages.source === 'zip'
+            ? 'zip'
+            : 'data/';
+      msg += ` Fotos OT (${src}): ${results.workOrderImages.matched} (antes ${results.workOrderImages.beforeAssigned}, después ${results.workOrderImages.afterAssigned})`;
+      if (results.workOrderImages.driveDownloaded != null) {
+        msg += `; descargadas Drive: ${results.workOrderImages.driveDownloaded}`;
+      }
+      if (results.workOrderImages.error) {
+        msg += ` — error Drive: ${results.workOrderImages.error}`;
+      }
+      msg += '.';
     }
     return msg;
   };
 
   const handleImportSheets = async () => {
     setIsLoading(true);
-    setLoadingMessage('Leyendo Google Sheets e importando. Puede tardar unos minutos...');
+    setLoadingMessage(
+      useGoogleDrive && driveStatus?.configured
+        ? 'Leyendo Google Sheets y fotos de Drive. Puede tardar...'
+        : 'Leyendo Google Sheets e importando. Puede tardar unos minutos...'
+    );
     setError(null);
     setSuccessMsg(null);
     try {
       const res = await axios.post(
         '/dev/import-sheets',
-        {},
+        { useGoogleDrive },
         {
           headers: { 'x-dev-password': password },
-          timeout: 30 * 60 * 1000,
+          timeout: 120 * 60 * 1000,
         }
       );
       const results = res.data.results;
@@ -1076,10 +1128,32 @@ export const DeveloperOptions = () => {
                   <em>Cualquier persona con el enlace → Lector</em> (sin cuenta de Google Cloud).
                 </p>
                 <p className="mt-3 text-xs leading-5 text-sky-100/90">
-                  Las fotos locales en <code className="rounded bg-black/20 px-1">data/Items_Images/</code> o{' '}
-                  <code className="rounded bg-black/20 px-1">data/Formulario Solicitudes_Images/</code> se siguen
-                  usando si existen. Cuando dejes de usarlo, vuelve a restringir el acceso de los Sheets.
+                  Las fotos: zip subido, o Google Drive (abajo), o carpetas en{' '}
+                  <code className="rounded bg-black/20 px-1">data/Items_Images/</code> /{' '}
+                  <code className="rounded bg-black/20 px-1">data/Formulario Solicitudes_Images/</code>.
+                  Cuando dejes de usarlo, vuelve a restringir el acceso de los Sheets.
                 </p>
+                <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-sky-50">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 rounded border-white/30"
+                    checked={useGoogleDrive}
+                    onChange={(e) => setUseGoogleDrive(e.target.checked)}
+                    disabled={isLoading}
+                  />
+                  <span>
+                    <span className="font-bold text-white">Fotos desde Google Drive</span>
+                    <span className="mt-0.5 block text-xs text-sky-100">
+                      Si no hay zip, descarga las carpetas públicas (
+                      <code className="rounded bg-black/20 px-1">GOOGLE_DRIVE_*</code>).
+                      {driveStatus
+                        ? driveStatus.configured
+                          ? ` Key OK${driveStatus.itemsFolderConfigured ? ' · inventario' : ''}${driveStatus.woFolderConfigured ? ' · órdenes' : ''}.`
+                          : ' Key no configurada en el servidor.'
+                        : ''}
+                    </span>
+                  </span>
+                </label>
                 <button
                   type="button"
                   onClick={() => void handleImportSheets()}
@@ -1087,7 +1161,7 @@ export const DeveloperOptions = () => {
                   className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-white px-5 py-3.5 font-black text-sky-700 shadow-sm transition hover:bg-sky-50 disabled:opacity-50 sm:w-fit"
                 >
                   <Cloud size={18} />
-                  {isLoading ? 'Importando…' : 'Importar ahora desde Google Sheets'}
+                  {isLoading ? 'Importando…' : 'Importar Sheets (+ fotos Drive)'}
                 </button>
               </div>
             </article>

@@ -8,8 +8,8 @@
 #
 # Estado: /tmp/fiix-health-state (debounce: solo avisa al pasar a unhealthy
 # y recordatorios cada N horas mientras siga caído).
-# Telegram: TELEGRAM_* en backend/.env (o SystemSettings vía psql si hay BD).
-# Requiere Telegram configurado (app o .env) para que las alertas lleguen.
+# Telegram: respeta SystemSettings.telegram_enabled. Credenciales en BD o TELEGRAM_* del .env.
+# Si el interruptor está en false → no envía, aunque exista .env.
 set -uo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -27,29 +27,63 @@ read_env_var() {
   fi
 }
 
-load_telegram_creds() {
-  TG_TOKEN="$(read_env_var TELEGRAM_BOT_TOKEN)"
-  TG_CHAT="$(read_env_var TELEGRAM_CHAT_ID)"
+# 0 = habilitado (o BD inaccesible), 1 = desactivado en app, 2 = sin psql/db_url
+telegram_enabled_in_db() {
+  local db_url
+  db_url="$(read_env_var DATABASE_URL)"
+  if [ -z "$db_url" ] || ! command -v psql >/dev/null 2>&1; then
+    return 2
+  fi
+  local flag
+  flag="$(psql "$db_url" -At -c \
+    "SELECT telegram_enabled::text FROM \"SystemSettings\" ORDER BY id ASC LIMIT 1;" \
+    2>/dev/null || true)"
+  if [ -z "$flag" ]; then
+    return 2
+  fi
+  if [ "$flag" = "f" ] || [ "$flag" = "false" ] || [ "$flag" = "FALSE" ]; then
+    return 1
+  fi
+  return 0
+}
 
-  if [ -n "${TG_TOKEN:-}" ] && [ -n "${TG_CHAT:-}" ]; then
-    return 0
+load_telegram_creds() {
+  TG_TOKEN=""
+  TG_CHAT=""
+
+  local enabled_rc=0
+  telegram_enabled_in_db
+  enabled_rc=$?
+
+  # Interruptor de la app en false → silencio total (aunque haya TELEGRAM_* en .env).
+  if [ "$enabled_rc" -eq 1 ]; then
+    echo "  [AVISO] Telegram desactivado en Configuración (telegram_enabled=false); no se envía alerta."
+    return 1
   fi
 
   local db_url
   db_url="$(read_env_var DATABASE_URL)"
-  if [ -z "$db_url" ] || ! command -v psql >/dev/null 2>&1; then
-    return 1
+
+  # Preferir credenciales de BD cuando el toggle está activo.
+  if [ "$enabled_rc" -eq 0 ] && [ -n "$db_url" ] && command -v psql >/dev/null 2>&1; then
+    local row
+    row="$(psql "$db_url" -At -c \
+      "SELECT COALESCE(telegram_bot_token,''), COALESCE(telegram_chat_id,'') FROM \"SystemSettings\" WHERE telegram_enabled = true LIMIT 1;" \
+      2>/dev/null || true)"
+    if [ -n "$row" ]; then
+      TG_TOKEN="$(echo "$row" | cut -d '|' -f1)"
+      TG_CHAT="$(echo "$row" | cut -d '|' -f2)"
+    fi
   fi
 
-  local row
-  row="$(psql "$db_url" -At -c \
-    "SELECT COALESCE(telegram_bot_token,''), COALESCE(telegram_chat_id,'') FROM \"SystemSettings\" WHERE telegram_enabled = true LIMIT 1;" \
-    2>/dev/null || true)"
-  if [ -z "$row" ]; then
-    return 1
+  # Completar con .env si faltan (toggle activo o BD inaccesible).
+  if [ -z "${TG_TOKEN:-}" ]; then
+    TG_TOKEN="$(read_env_var TELEGRAM_BOT_TOKEN)"
   fi
-  TG_TOKEN="${TG_TOKEN:-$(echo "$row" | cut -d '|' -f1)}"
-  TG_CHAT="${TG_CHAT:-$(echo "$row" | cut -d '|' -f2)}"
+  if [ -z "${TG_CHAT:-}" ]; then
+    TG_CHAT="$(read_env_var TELEGRAM_CHAT_ID)"
+  fi
+
   [ -n "${TG_TOKEN:-}" ] && [ -n "${TG_CHAT:-}" ]
 }
 

@@ -67,7 +67,7 @@ export const runDbSelfCheck = async (): Promise<void> => {
 
   if (shouldNotify) {
     const suffix = state.status === 'unhealthy' ? ' (sigue caído)' : '';
-    await sendTelegramAlert(`GTZ: Postgres no responde${suffix}`);
+    await sendTelegramAlert(`GTZ: Postgres no responde${suffix}`, { allowEnvFallback: true });
     writeState({ status: 'unhealthy', lastNotifyAt: now });
     console.warn('[health] Postgres unhealthy — Telegram notify sent');
   } else {

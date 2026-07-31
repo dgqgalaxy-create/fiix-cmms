@@ -25,6 +25,11 @@ import {
   getDevPasswordGateStatus,
   recordDevPasswordFailure,
 } from '../utils/devPasswordGate';
+import {
+  getDriveApiKey,
+  getDriveItemsFolderId,
+  getDriveWoFolderId,
+} from '../utils/googleDriveImport';
 
 const router = express.Router();
 
@@ -488,7 +493,14 @@ router.post(
   ];
 
   try {
-    const results = await processCsvImportFiles(files, { zipFile, woZipFile });
+    const useGoogleDrive =
+      String((req.body as any)?.useGoogleDrive || '').toLowerCase() === 'true' ||
+      String((req.body as any)?.useGoogleDrive || '') === '1';
+    const results = await processCsvImportFiles(files, {
+      zipFile,
+      woZipFile,
+      useGoogleDrive,
+    });
     res.json({ success: true, message: 'Archivos CSV importados con éxito.', results });
   } catch (error: any) {
     if (error instanceof CsvImportError) {
@@ -505,7 +517,7 @@ router.post(
 });
 
 /** Importa las 7 pestañas mapeadas desde Google Sheets (mismo motor que CSV). */
-router.post('/import-sheets', verifyDevPassword, async (_req: Request, res: Response): Promise<void> => {
+router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
   const tempPaths: string[] = [];
   try {
     fs.mkdirSync(importTmpDir, { recursive: true });
@@ -530,8 +542,15 @@ router.post('/import-sheets', verifyDevPassword, async (_req: Request, res: Resp
       return { originalname, path: tempPath };
     });
 
+    const useGoogleDrive =
+      String((req.body as any)?.useGoogleDrive || '').toLowerCase() === 'true' ||
+      String((req.body as any)?.useGoogleDrive || '') === '1' ||
+      // Por defecto: sí usar Drive en sync Sheets si hay key/carpetas (sin zip).
+      ((req.body as any)?.useGoogleDrive === undefined && Boolean(getDriveApiKey()));
+
     const results = await processCsvImportFiles(files, {
       includeLocalPhotoFolders: true,
+      useGoogleDrive,
     });
 
     res.json({
@@ -574,6 +593,15 @@ router.post('/import-sheets', verifyDevPassword, async (_req: Request, res: Resp
       }
     }
   }
+});
+
+/** Estado de Google Drive (nunca expone la API key). */
+router.get('/google-drive-status', (_req: AuthRequest, res: Response) => {
+  res.json({
+    configured: Boolean(getDriveApiKey()),
+    itemsFolderConfigured: Boolean(getDriveItemsFolderId()),
+    woFolderConfigured: Boolean(getDriveWoFolderId()),
+  });
 });
 
 export default router;

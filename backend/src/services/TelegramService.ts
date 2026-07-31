@@ -1,40 +1,58 @@
 import TelegramBot from 'node-telegram-bot-api';
 import prisma from '../config/prisma';
 
+export type SendTelegramOptions = {
+  /**
+   * Solo para alertas de salud de BD: si Postgres no responde, permitir
+   * TELEGRAM_* del .env. El resto de avisos NUNCA deben enviar si
+   * SystemSettings.telegram_enabled es false o no se puede leer la BD.
+   */
+  allowEnvFallback?: boolean;
+};
+
 /**
- * Envía un mensaje a Telegram.
- * Usa SystemSettings (BD) cuando está disponible; si la BD no responde,
- * cae a TELEGRAM_* del .env (p. ej. alertas de healthcheck con Postgres caído).
+ * Envía un mensaje a Telegram respetando el interruptor de Configuración.
+ * Si telegram_enabled=false en BD → no envía (nunca).
  */
-export const sendTelegramAlert = async (message: string) => {
+export const sendTelegramAlert = async (message: string, options: SendTelegramOptions = {}) => {
+  const allowEnvFallback = Boolean(options.allowEnvFallback);
+
   try {
-    let activeToken = (process.env.TELEGRAM_BOT_TOKEN || '').trim().replace(/^["']|["']$/g, '');
-    let activeChatId = (process.env.TELEGRAM_CHAT_ID || '').trim().replace(/^["']|["']$/g, '');
-    let telegramEnabled = Boolean(activeToken && activeChatId);
+    const envToken = (process.env.TELEGRAM_BOT_TOKEN || '').trim().replace(/^["']|["']$/g, '');
+    const envChatId = (process.env.TELEGRAM_CHAT_ID || '').trim().replace(/^["']|["']$/g, '');
+
+    let activeToken = '';
+    let activeChatId = '';
 
     try {
       const settings = await prisma.systemSettings.findFirst();
-      if (settings) {
-        if (!settings.telegram_enabled) {
-          return; // Telegram is disabled in app settings
+      if (!settings) {
+        // Sin fila de ajustes: solo env fallback si está permitido (healthcheck).
+        if (!allowEnvFallback || !envToken || !envChatId) {
+          return;
         }
-        activeToken = (settings.telegram_bot_token || activeToken || '').trim();
-        activeChatId = (settings.telegram_chat_id || activeChatId || '').trim();
-        telegramEnabled = true;
-      } else if (!telegramEnabled) {
-        return;
+        activeToken = envToken;
+        activeChatId = envChatId;
+      } else {
+        if (!settings.telegram_enabled) {
+          // Interruptor de la app: desactivado → silencio total.
+          return;
+        }
+        activeToken = (settings.telegram_bot_token || envToken || '').trim();
+        activeChatId = (settings.telegram_chat_id || envChatId || '').trim();
       }
     } catch {
-      // BD caída: solo .env (necesario para alertas de healthcheck)
-      console.warn('Telegram: no se pudo leer SystemSettings; usando .env si existe.');
-      if (!telegramEnabled) {
+      // BD caída: solo healthcheck (u otras alertas explícitas) pueden usar .env.
+      console.warn('Telegram: no se pudo leer SystemSettings; fallback .env solo si allowEnvFallback.');
+      if (!allowEnvFallback || !envToken || !envChatId) {
         return;
       }
+      activeToken = envToken;
+      activeChatId = envChatId;
     }
 
     // Los Chat ID de grupos/supergrupos en Telegram son negativos.
     // Si en BD quedó el número positivo pero el .env tiene el mismo ID con signo -, usar el del .env.
-    const envChatId = (process.env.TELEGRAM_CHAT_ID || '').trim().replace(/^["']|["']$/g, '');
     if (
       activeChatId &&
       !activeChatId.startsWith('-') &&

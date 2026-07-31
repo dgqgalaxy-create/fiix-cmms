@@ -31,7 +31,10 @@ function getAssetsUploadDir(): string {
  *   MTTO-0001.jpg               → MTTO-0001
  */
 export function extractItemCodeFromFilename(filename: string): string | null {
-  const base = path.basename(filename, path.extname(filename));
+  let base = path.basename(filename, path.extname(filename));
+  if (!base) return null;
+  // Drive a veces antepone "Image " al nombre del export Fiix.
+  base = base.replace(/^Image\s+/i, '').trim();
   if (!base) return null;
 
   const fiixMatch = base.match(/^(.+)\.Image\.\d+$/i);

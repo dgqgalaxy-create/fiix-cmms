@@ -1,14 +1,15 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
-*(Última actualización: 30 de Julio de 2026)*
+*(Última actualización: 31 de Julio de 2026)*
 
 ## 📌 Próxima implementación
 
 ### Importación desde Google Sheets + Drive (GTZ)
 
-**Estado Fase 1:** Hecha en **v1.46.0**; en **v1.46.1** el botón usa **export CSV público** (sin cuenta de servicio; Sheets en «enlace → Lector»). Temporal.  
-**Pendiente:** Fase 2 (auto-sync), Fase 3 (fotos Drive), y opcionalmente volver a cuenta de servicio.
+**Estado Fase 1 (datos Sheets):** Hecha en **v1.46.0–1.46.2** (export CSV público).  
+**Estado Fase 3 (fotos Drive):** Hecha en **v1.46.3** — casilla «Fotos desde Google Drive»; `GOOGLE_DRIVE_*` en `.env`; prioridad zip → Drive → `data/`.  
+**Pendiente:** Fase 2 (auto-sync periódico) y opcionalmente volver a cuenta de servicio.
 
 **Objetivo:** Importar los mismos datos que hoy llegan por CSV + zip, pero leyendo **Google Sheets** (tablas) y **Google Drive** (fotos), reutilizando la tubería de import CSV (upsert + orden Categorías → … → Órdenes).
 
@@ -84,7 +85,11 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.46.2 (Actualización: 30 de Julio de 2026)
+## 🚀 Versión Actual: v1.46.3 (Actualización: 31 de Julio de 2026)
+
+### Novedades en v1.46.3 (Fotos Google Drive + Telegram)
+- **Nuevo:** Casilla «Fotos desde Google Drive» en Opciones de Desarrollador (CSV y Sheets). Requiere `GOOGLE_DRIVE_API_KEY` + carpetas públicas. Prioridad: zip → Drive → `data/`.
+- **Corrección:** Con «Alertas por Telegram» desactivadas no se envían SLA/checklist/OT; el `.env` solo respalda el healthcheck si la BD está caída.
 
 ### Novedades en v1.46.2 (login sin pista permanente)
 - **Cambio:** El login ya no muestra siempre `admin@fiix.com` / `password123`. Esas credenciales solo aparecen en el aviso ámbar tras vaciar la BD.
@@ -572,7 +577,8 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 - [x] **Stock crítico accionable (v1.18.0):** Desde la tarjeta de Stock Crítico en Inventario, generar borradores de OC con ítems bajo mínimo en un clic (agrupados por proveedor).
 
 ## [ ] Mejoras Transversales Futuras (Backlog)
-- [x] **Importación Google Sheets Fase 1 (v1.46.0):** Botón «Importar ahora» (2 Sheets, 7 pestañas). Pendiente: auto-sync y fotos Drive. CSV/zip se conservan.
+- [x] **Importación Google Sheets Fase 1 (v1.46.0):** Botón «Importar ahora» (2 Sheets, 7 pestañas). CSV/zip se conservan.
+- [x] **Fotos Google Drive (v1.46.3):** Casilla + `GOOGLE_DRIVE_*`; prioridad zip → Drive → `data/`. Pendiente: auto-sync periódico.
 - [x] **Migración de Órdenes e Inventario:** Importación exitosa de los archivos CSV históricos.
 - [ ] **Checklists avanzados y LOTO:** Pasos obligatorios dentro de la Orden de Trabajo y firmas de bloqueo de energías peligrosas.
 - [x] **Notificaciones y Escalamiento:** Recordatorios y escalamiento SLA por prioridad (respuesta, detenida, resolución) vía Telegram + in-app a gestores/admins (v1.14.0).
