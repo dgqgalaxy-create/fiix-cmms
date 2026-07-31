@@ -35,7 +35,7 @@ export const sendEmailAlert = async (subject: string, text: string, html: string
     }
 
     await transporter.sendMail({
-      from: `"FIIX CMMS" <${smtpUser}>`,
+      from: `"GTZ CMMS" <${smtpUser}>`,
       to: escalationEmail,
       subject,
       text,

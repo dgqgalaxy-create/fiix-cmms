@@ -416,7 +416,7 @@ export const KPIPage = () => {
       <div className="hidden print:flex justify-between items-end border-b-2 border-slate-800 pb-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Reporte de Indicadores</h1>
-          <p className="text-slate-500 mt-1">LPET CMMS — Mantenimiento</p>
+          <p className="text-slate-500 mt-1">GTZ CMMS — Mantenimiento</p>
         </div>
         <div className="text-right text-sm text-slate-600">
           <p className="font-bold">Generado:</p>

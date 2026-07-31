@@ -124,9 +124,9 @@ if (fs.existsSync(frontendDistPath)) {
     res.setHeader('Pragma', 'no-cache');
     res.sendFile(path.join(frontendDistPath, 'index.html'));
   });
-  console.log('[FIIX] Sirviendo frontend/dist en este mismo puerto (modo producción de un solo proceso).');
+  console.log('[GTZ] Sirviendo frontend/dist en este mismo puerto (modo producción de un solo proceso).');
 } else {
-  console.log('[FIIX] frontend/dist no encontrado; solo se sirve la API (usa "cd frontend && npm run dev" para la UI en desarrollo).');
+  console.log('[GTZ] frontend/dist no encontrado; solo se sirve la API (usa "cd frontend && npm run dev" para la UI en desarrollo).');
 }
 
 // Initialize Cron Jobs

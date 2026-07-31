@@ -220,13 +220,13 @@ DB_NOW="$(check_db)"
 echo "  API: ${API_NOW}  |  DB: ${DB_NOW}"
 
 if [ "$API_NOW" = "unhealthy" ]; then
-  maybe_notify API unhealthy "FIIX: servidor caído / API no responde (${HEALTH_URL})"
+  maybe_notify API unhealthy "GTZ: servidor caído / API no responde (${HEALTH_URL})"
 else
   maybe_notify API healthy ""
 fi
 
 if [ "$DB_NOW" = "unhealthy" ]; then
-  maybe_notify DB unhealthy "FIIX: Postgres no responde"
+  maybe_notify DB unhealthy "GTZ: Postgres no responde"
 else
   maybe_notify DB healthy ""
 fi

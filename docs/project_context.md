@@ -1,7 +1,7 @@
 # Contexto Global del Proyecto (CMMS)
 
 ## ¿Qué estamos construyendo?
-Un Sistema Computarizado de Gestión de Mantenimiento (CMMS / GMAO) self-hosted para entornos industriales. Inspirado en plataformas como Fiix o SAP PM, con UX moderna y operación en planta (escritorio + celular). Nombre del producto en repo: **FIIX CMMS** (despliegue LPET).
+Un Sistema Computarizado de Gestión de Mantenimiento (CMMS / GMAO) self-hosted para entornos industriales. Nombre del producto: **GTZ CMMS**.
 
 ## Filosofía de Diseño
 - **Estética industrial:** base slate/emerald, interfaces limpias y usables en escritorio y móvil (capa específica para técnicos en celular).

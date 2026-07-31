@@ -69,7 +69,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
             <Menu size={20} />
           </button>
           <span className="font-bold text-lg tracking-tight truncate">
-            {isTechMobileShell ? 'Mis tareas' : 'LPET CMMS'}
+            {isTechMobileShell ? 'Mis tareas' : 'GTZ CMMS'}
           </span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">

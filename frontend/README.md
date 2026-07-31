@@ -1,4 +1,4 @@
-# Frontend (FIIX CMMS)
+# Frontend (GTZ CMMS)
 
 UI React + Vite + Tailwind del CMMS. Para instalar o actualizar el sistema completo, usa el **[README raíz](../README.md)** (`install.sh` / `update.sh` o desarrollo local).
 

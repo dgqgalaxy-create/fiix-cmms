@@ -41,7 +41,7 @@ export const UserManual = () => {
             <BookOpen className="text-emerald-600 dark:text-emerald-400" size={32} />
             Manual de Usuario Interactivo
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Guía completa, detallada y paso a paso para dominar LPET CMMS.</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Guía completa, detallada y paso a paso para dominar GTZ CMMS.</p>
         </div>
       </div>
 
@@ -135,7 +135,7 @@ export const UserManual = () => {
                       <BookOpen size={28} />
                     </div>
                     <p className="mb-2 text-xs font-black uppercase tracking-[0.2em] text-emerald-200">Guía operativa de mantenimiento</p>
-                    <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Bienvenido a LPET CMMS</h2>
+                    <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Bienvenido a GTZ CMMS</h2>
                     <p className="mt-4 max-w-2xl text-base leading-7 text-emerald-50/90">
                       Una plataforma para registrar, ejecutar y comprobar el mantenimiento de planta:
                       desde el primer reporte de una falla hasta su solución, consumo de refacciones,
@@ -525,7 +525,7 @@ export const UserManual = () => {
                 </div>
 
                 <p className="text-lg text-slate-600 dark:text-slate-400">
-                  Para mantener el sistema ordenado, LPET CMMS hace una división estricta entre quienes trabajan **dentro** del sistema y quienes solo lo usan para **pedir ayuda**.
+                  Para mantener el sistema ordenado, GTZ CMMS hace una división estricta entre quienes trabajan **dentro** del sistema y quienes solo lo usan para **pedir ayuda**.
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">

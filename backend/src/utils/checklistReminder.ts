@@ -114,10 +114,10 @@ export async function runChecklistReminderCheck(now = new Date()): Promise<void>
     : 'sigue en borrador (no enviado)';
 
   const message =
-    `⚠️ FIIX CMMS — Checklist diario pendiente\n\n` +
+    `⚠️ GTZ CMMS — Checklist diario pendiente\n\n` +
     `El checklist del día ${ymd} ${reason}.\n` +
     `Recuerda completarlo y enviarlo hoy; los días pasados ya no se pueden llenar.\n\n` +
-    `Abre FIIX → Checklist Diario → Firmar y Enviar.`;
+    `Abre GTZ → Checklist Diario → Firmar y Enviar.`;
 
   await sendTelegramAlert(message);
   writeState({ date: ymd, lastHour: hour });

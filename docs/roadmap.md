@@ -3,9 +3,23 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 30 de Julio de 2026)*
 
-## 🚀 Versión Actual: v1.44.14 (Actualización: 30 de Julio de 2026)
+## 🚀 Versión Actual: v1.45.3 (Actualización: 30 de Julio de 2026)
 
-### Novedades en v1.44.14 (Import CSV — timeouts nginx/axios 120m)
+### Novedades en v1.45.3 (volumen alerta)
+- **Mejora:** Sonido de OT críticas otro **+50%** de volumen.
+
+### Novedades Anteriores (v1.45.2 - volumen alerta)
+- **Mejora:** Sonido de OT críticas otro **+50%** de volumen.
+
+### Novedades Anteriores (v1.45.1 - volumen alerta)
+- **Mejora:** Sonido de OT críticas (Inicio / sala de control) un **50% más alto**.
+
+### Novedades Anteriores (v1.45.0 - marca GTZ + bip QR)
+- **Cambio:** Nombre visible del producto **GTZ CMMS** (PWA, títulos, Telegram/email, install/update).
+- **Cambio:** QR nuevos `GTZ-ASSET` / `GTZ-ITEM` / `GTZ-LOCATION`; se siguen leyendo etiquetas `FIIX-*`.
+- **Nuevo:** Bip corto al escanear un QR.
+
+### Novedades Anteriores (v1.44.14 - Import CSV — timeouts nginx/axios 120m)
 - **Corrección:** Timeouts nginx (`client_body_timeout`, `send_timeout`, `proxy_read_timeout`, `proxy_send_timeout`) y axios de import a **120m** (2 h); `client_max_body_size` sigue en **1100M**.
 
 ### Novedades en v1.44.13 (Import CSV — Tailscale / nginx 60m + data/)

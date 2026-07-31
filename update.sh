@@ -1,5 +1,5 @@
 #!/bin/bash
-# Actualización de FIIX CMMS en un servidor YA instalado (no sustituye install.sh).
+# Actualización de GTZ CMMS en un servidor YA instalado (no sustituye install.sh).
 # Conserva backend/.env y backend/uploads/ (no van en Git).
 # Producción: compila backend (dist/) + frontend (dist/) y arranca con node (sin nodemon).
 set -euo pipefail
@@ -11,7 +11,7 @@ ok()   { echo "  [OK] $*"; }
 info() { echo "  --> $*"; }
 die()  { echo "  [ERROR] $*" >&2; exit 1; }
 
-echo "=== Actualización FIIX CMMS ==="
+echo "=== Actualización GTZ CMMS ==="
 echo "Directorio: ${APP_DIR}"
 echo
 

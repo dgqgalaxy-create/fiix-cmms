@@ -17,7 +17,7 @@ import { formatDateTime } from '../utils/dateUtils';
 import { QRScannerModal } from '../components/common/QRScannerModal';
 import { BulkQRPrintModal } from '../components/common/BulkQRPrintModal';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
-import { parseFiixQr } from '../utils/fiixQr';
+import { parseFiixQr, formatItemQr, formatLocationQr } from '../utils/fiixQr';
 import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
 import { InfoTip } from '../components/common/InfoTip';
 
@@ -202,7 +202,7 @@ export const InventoryPage = () => {
       }
     }
 
-    // Código sin prefijo FIIX-* (p. ej. E2-0): resolver ubicación o repuesto.
+    // Código sin prefijo GTZ-*/FIIX-* (p. ej. E2-0): resolver ubicación o repuesto.
     const scanCode = next.get('scan');
     if (scanCode && !isLoading) {
       const loc = matchLocation(scanCode);
@@ -1463,7 +1463,7 @@ export const InventoryPage = () => {
         onClose={() => setQrItem(null)}
         title={qrItem?.name || ''}
         subtitle={qrItem?.internal_code || ''}
-        value={qrItem ? `FIIX-ITEM:${qrItem.id}` : ''}
+        value={qrItem ? formatItemQr(qrItem.id) : ''}
       />
 
       <QRDisplayModal
@@ -1471,7 +1471,7 @@ export const InventoryPage = () => {
         onClose={() => setQrLocation(null)}
         title={qrLocation?.name || ''}
         subtitle={qrLocation?.internal_id || ''}
-        value={qrLocation ? `FIIX-LOCATION:${qrLocation.id}` : ''}
+        value={qrLocation ? formatLocationQr(qrLocation.id) : ''}
       />
 
       <BulkQRPrintModal
@@ -1484,7 +1484,7 @@ export const InventoryPage = () => {
             id: item.id,
             title: item.name,
             subtitle: item.internal_code,
-            value: `FIIX-ITEM:${item.id}`,
+            value: formatItemQr(item.id),
           }))}
       />
 
@@ -1498,7 +1498,7 @@ export const InventoryPage = () => {
             id: l.id,
             title: l.name,
             subtitle: l.internal_id,
-            value: `FIIX-LOCATION:${l.id}`,
+            value: formatLocationQr(l.id),
           }))}
       />
 

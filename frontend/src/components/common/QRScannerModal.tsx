@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { X, Camera, AlertCircle, ImagePlus, Loader2 } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
+import { playScanBeep } from '../../utils/scanBeep';
 
 interface Props {
   isOpen: boolean;
@@ -10,7 +11,7 @@ interface Props {
 
 const NOT_STARTED = 1;
 
-const isFiixCode = (data: string) => data.trim().length > 0;
+const isScannableCode = (data: string) => data.trim().length > 0;
 
 /** Detiene y limpia sin lanzar errores (stop() de html5-qrcode puede tirar strings). */
 const safeStop = (scanner: Html5Qrcode | null): Promise<void> => {
@@ -86,12 +87,13 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose, onScan }) => 
 
   const deliverScan = async (raw: string) => {
     const data = raw.trim();
-    if (!isFiixCode(data)) {
+    if (!isScannableCode(data)) {
       setError('No se leyó ningún código.');
       return;
     }
     if (handledRef.current) return;
     handledRef.current = true;
+    playScanBeep();
     const live = scannerRef.current;
     scannerRef.current = null;
     await safeStop(live);

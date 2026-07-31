@@ -374,7 +374,7 @@ export const Dashboard = () => {
       <div className="hidden print:flex justify-between items-baseline border-b border-slate-800 pb-1 mb-2">
         <div className="flex items-baseline gap-2">
           <h1 className="text-sm font-bold text-slate-900 tracking-tight">Órdenes de Trabajo</h1>
-          <p className="text-[10px] text-slate-500">LPET CMMS</p>
+          <p className="text-[10px] text-slate-500">GTZ CMMS</p>
         </div>
         <p className="text-[10px] text-slate-600">{formatDate(new Date())} · {filteredList.length} OT</p>
       </div>

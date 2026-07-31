@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.44.14";
+export const APP_VERSION = "1.45.3";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -29,6 +29,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: El sonido de alerta de OT críticas (Inicio / sala de control) vuelve a subir otro 50% de volumen (tercera subida).",
+    "Mejora: El sonido de alerta de OT críticas (Inicio / sala de control) vuelve a subir otro 50% de volumen.",
+    "Mejora: El sonido de alerta de OT críticas (Inicio / sala de control) suena un 50% más alto.",
+    "Cambio: Marca visible del producto pasa a GTZ CMMS (PWA, títulos, Telegram/email, scripts). Las etiquetas QR nuevas usan GTZ-ASSET/ITEM/LOCATION; las FIIX-* impresas siguen leyéndose.",
+    "Nuevo: Al escanear un QR suena un bip corto de confirmación.",
     "Corrección: Import CSV + zip — timeouts nginx/axios a 120m (2 h) por si acaso tras 408 en Tailscale; client_max_body_size sigue en 1100M.",
     "Corrección: Import CSV + zip por Tailscale — nginx client_body_timeout a 60m; si no hay zip en el navegador, se usan data/Items_Images/ y data/Formulario Solicitudes_Images/ (SCP/rsync); tip :3000 en Opciones de Desarrollador.",
     "Corrección: «Recargar ahora» / actualización PWA ya no se queda en versión vieja: desregistra el service worker, limpia caché y fuerza carga del build nuevo; index.html/sw.js sin cache largo en el servidor.",
@@ -250,7 +255,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
             <X size={20} />
           </button>
           
-          <img src="/lpet.png" alt="LPET Logo" className="h-16 object-contain mb-3" />
+          <img src="/lpet.png" alt="GTZ Logo" className="h-16 object-contain mb-3" />
           <h2 className="text-2xl font-black text-white tracking-widest uppercase">CMMS MTTO</h2>
           <span className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-sm font-bold border border-emerald-500/30">
             <Rocket size={14} />

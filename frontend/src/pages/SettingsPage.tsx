@@ -289,7 +289,7 @@ export const SettingsPage = () => {
         <p className="text-slate-500 dark:text-slate-300 mt-1">
           {appearanceOnly
             ? 'Ajusta la apariencia y preferencias de tu cuenta.'
-            : 'Administra las preferencias globales y la apariencia de LPET CMMS.'}
+            : 'Administra las preferencias globales y la apariencia de GTZ CMMS.'}
         </p>
       </div>
 

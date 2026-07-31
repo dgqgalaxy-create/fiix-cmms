@@ -1,5 +1,5 @@
 #!/bin/bash
-# Instalación inicial de FIIX CMMS en Ubuntu.
+# Instalación inicial de GTZ CMMS en Ubuntu.
 # Requiere el repo YA clonado (ver README §1.1 SSH). Este script NO hace git clone.
 # No sustituye update.sh: este es SOLO la primera configuración del servidor.
 set -euo pipefail
@@ -8,7 +8,7 @@ set -euo pipefail
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NODE_MAJOR="${NODE_MAJOR:-22}"
 
-echo "=== Instalación FIIX CMMS ==="
+echo "=== Instalación GTZ CMMS ==="
 echo "Directorio del proyecto: ${APP_DIR}"
 echo
 

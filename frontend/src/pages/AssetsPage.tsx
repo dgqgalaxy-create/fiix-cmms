@@ -9,6 +9,7 @@ import { ManageZonesDrawer } from '../components/ManageZonesDrawer';
 import { QRDisplayModal } from '../components/common/QRDisplayModal';
 import { QRScannerModal } from '../components/common/QRScannerModal';
 import { BulkQRPrintModal } from '../components/common/BulkQRPrintModal';
+import { formatAssetQr } from '../utils/fiixQr';
 import { getAssets, createAsset, deleteAsset, updateAsset } from '../api/assets';
 import type { Asset } from '../api/assets';
 import { getZones } from '../api/zones';
@@ -131,7 +132,7 @@ export const AssetsPage = () => {
   const assetsFilterKey = `${searchTerm}|${filterZoneId}|${filterSectionId}`;
 
   const handleScan = (scanned: string) => {
-    const scannedId = scanned.replace(/^FIIX-(ASSET|ITEM|LOCATION):/, '').trim();
+    const scannedId = scanned.replace(/^(?:GTZ|FIIX)-(ASSET|ITEM|LOCATION):/i, '').trim();
     const asset = assets.find(a => a.id === scannedId || a.internal_code === scannedId);
     if (asset) {
       setDetailAsset(asset);
@@ -180,7 +181,7 @@ export const AssetsPage = () => {
       id: a.id,
       title: a.name,
       subtitle: a.internal_code,
-      value: `FIIX-ASSET:${a.id}`,
+      value: formatAssetQr(a.id),
     }));
 
   return (
@@ -356,7 +357,7 @@ export const AssetsPage = () => {
         onClose={() => setQrAsset(null)}
         title={qrAsset?.name || ''}
         subtitle={qrAsset?.internal_code || ''}
-        value={qrAsset ? `FIIX-ASSET:${qrAsset.id}` : ''}
+        value={qrAsset ? formatAssetQr(qrAsset.id) : ''}
       />
 
       <BulkQRPrintModal

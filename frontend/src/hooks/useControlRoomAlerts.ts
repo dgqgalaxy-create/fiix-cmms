@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 const SOUND_KEY = 'fiix-control-room-sound';
-const BASE_TITLE = 'FIIX CMMS';
+const BASE_TITLE = 'GTZ CMMS';
 
 export type ControlRoomCounts = {
   urgentOpen: number;
@@ -23,7 +23,7 @@ function playAlertBeep() {
     const gain = ctx.createGain();
     osc.type = 'sine';
     osc.frequency.value = 880;
-    gain.gain.value = 0.08;
+    gain.gain.value = 0.27;
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start();

@@ -56,7 +56,7 @@ export const Login = () => {
         <div className="text-center mb-8">
           <img 
             src="/lpet.png" 
-            alt="LPET Logo" 
+            alt="GTZ Logo" 
             className="mx-auto h-20 md:h-24 object-contain mb-4"
           />
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2">

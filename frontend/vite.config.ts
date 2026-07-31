@@ -41,8 +41,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icono_app.jpg'],
       manifest: {
-        name: 'Fiix CMMS',
-        short_name: 'Fiix',
+        name: 'GTZ CMMS',
+        short_name: 'GTZ',
         description: 'Gestor de Mantenimiento',
         theme_color: '#ffffff',
         start_url: '/home',

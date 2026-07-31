@@ -1,4 +1,4 @@
-# FIIX CMMS
+# GTZ CMMS
 *(Última actualización: 22 de Julio de 2026 — v1.35.0)*
 
 Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, activos, inventario, preventivos, checklist, KPIs, compras, RCA, roster y notificaciones (Telegram + Web Push PWA).
@@ -251,7 +251,7 @@ Luego en el navegador: `http://HOST:3000` → Opciones de Desarrollador → impo
 
 ### Vigilancia (healthcheck) y Telegram
 
-- **Externo (cron):** `scripts/healthcheck.sh` hace `curl` a `http://127.0.0.1:3000/api/health` y comprueba Postgres. Si falla, envía a Telegram *«FIIX: servidor caído / API no responde»* o *«Postgres no responde»*. Solo avisa al pasar de sano→caído (y un recordatorio cada 6 h mientras siga caído). Estado en `/tmp/fiix-health-state`.
+- **Externo (cron):** `scripts/healthcheck.sh` hace `curl` a `http://127.0.0.1:3000/api/health` y comprueba Postgres. Si falla, envía a Telegram *«GTZ: servidor caído / API no responde»* o *«Postgres no responde»*. Solo avisa al pasar de sano→caído (y un recordatorio cada 6 h mientras siga caído). Estado en `/tmp/fiix-health-state`.
 - **Interno (backend):** cada 5 min el propio Node hace `SELECT 1` vía Prisma; si la BD cae pero PM2 sigue vivo, también avisa por Telegram (mismo debounce).
 - **Requisito:** Telegram debe estar configurado (Opciones de Desarrollador o `TELEGRAM_*` en `backend/.env`). Sin eso, el healthcheck corre pero no puede notificar.
 
