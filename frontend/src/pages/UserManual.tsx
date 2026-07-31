@@ -665,7 +665,7 @@ export const UserManual = () => {
                 
                 <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 p-6 rounded-2xl shadow-sm">
                   <h3 className="text-xl font-bold text-red-800 dark:text-red-300 mb-3 flex items-center gap-2">
-                    <AlertTriangle size={24} className="animate-pulse" /> El Botón Rojo Nuclear
+                    <AlertTriangle size={24} className="animate-pulse" /> Zona de peligro
                   </h3>
                   <p className="text-red-700 dark:text-red-400/90 text-sm leading-relaxed mb-4">
                     Esta sección de sistema está encriptada detrás de una contraseña maestra por una razón. El botón <strong>"Vaciar Base de Datos"</strong> es un proceso de borrado absoluto y destructivo (TRUNCATE CASCADE).
