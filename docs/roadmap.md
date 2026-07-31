@@ -3,13 +3,14 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 30 de Julio de 2026)*
 
-## 📌 Próxima implementación (acordado — pendiente de arrancar)
+## 📌 Próxima implementación
 
 ### Importación desde Google Sheets + Drive (GTZ)
 
-**Estado:** Diseñado / no iniciado. Retomar cuando el usuario diga «adelante» / Fase 1.
+**Estado Fase 1:** Hecha en **v1.46.0**; en **v1.46.1** el botón usa **export CSV público** (sin cuenta de servicio; Sheets en «enlace → Lector»). Temporal.  
+**Pendiente:** Fase 2 (auto-sync), Fase 3 (fotos Drive), y opcionalmente volver a cuenta de servicio.
 
-**Objetivo:** Importar los mismos datos que hoy llegan por CSV + zip, pero leyendo **Google Sheets** (tablas) y **Google Drive** (fotos), reutilizando la tubería actual de `POST /dev/import-csv` (upsert + orden Categorías → … → Órdenes).
+**Objetivo:** Importar los mismos datos que hoy llegan por CSV + zip, pero leyendo **Google Sheets** (tablas) y **Google Drive** (fotos), reutilizando la tubería de import CSV (upsert + orden Categorías → … → Órdenes).
 
 **Orígenes (confirmados por el usuario):**
 
@@ -20,45 +21,73 @@ Este documento contiene la lista de módulos y características pendientes de de
 | Carpeta Drive plana — inventario | Como `Items_Images.zip` / `data/Items_Images/` |
 | Carpeta Drive plana — órdenes | Como `Formulario Solicitudes_Images.zip` / carpeta de fotos OT |
 
+**IDs / links capturados (30 Jul 2026) — revisión parcial:**
+
+| Recurso | Spreadsheet ID / URL |
+|---------|----------------------|
+| **Órdenes / Solicitudes** (público lectura OK) | `1yApMaUXyhBeMkuJczDOr6mH6f3VdNdcFrctPuSKU1to` — [abrir](https://docs.google.com/spreadsheets/d/1yApMaUXyhBeMkuJczDOr6mH6f3VdNdcFrctPuSKU1to/edit) |
+| **Inventario y demás** (lectura OK tras compartir) | `1ciJtRqFvIzKYskYGdd6t_MR0r9hml2SUxMkTr6dwp_U` — [abrir](https://docs.google.com/spreadsheets/d/1ciJtRqFvIzKYskYGdd6t_MR0r9hml2SUxMkTr6dwp_U/edit) |
+
+**Mapeo verificado — Solicitudes (`1yApMaUXyh…`):**
+
+| Pestaña (gid) | ¿Usar en import CMMS? | Notas |
+|---------------|----------------------|--------|
+| **Formulario Solicitudes** (`gid=1826783870`) | **SÍ → Órdenes CSV** | Columnas idénticas al CSV local (`Marca temporal`, `FOLIO`, `FOTO ANTES`, `FOTO DESPUÉS`, etc.). ~794 filas. |
+| Auditar (`2101138842`) | No | Auditoría / tiempos |
+| Uso Refacciones (`1922817217`) | No (por ahora) | Consumos; no es uno de los 7 CSV maestros |
+| Datos LockerStudio (`588049399`) | No | Dashboard externo |
+| Dashboard Inicio (`1832532611`) | No | KPIs embebidos |
+| Horarios (`538831923`) | No | Turnos; el CMMS ya tiene Roster propio |
+
+**Mapeo verificado — Inventario (`1ciJtRqFvIzKYskYGdd6t_MR0r9hml2SUxMkTr6dwp_U`) — 30 Jul 2026:**
+
+| Pestaña (gid) | ¿Usar en import CMMS? | CSV equivalente | Notas |
+|---------------|----------------------|-----------------|--------|
+| **Categories** (`915855901`) | **SÍ** | `Items - Categories.csv` | Headers OK (`ID,Category,Icon`; cols vacías extra al final) |
+| **Location** (`524501125`) | **SÍ** | `Items - Location.csv` | Headers idénticos (~161 filas) |
+| **Vendors** (`1305174716`) | **SÍ** | `Items - Vendors.csv` | Headers OK (+ col vacía) |
+| **Items** (`1448500833`) | **SÍ** | `Items - Items.csv` | Headers idénticos (~2482 filas) |
+| **Users** (`1571243379`) | **SÍ** | `Items - Users.csv` | Headers idénticos |
+| **Inventory** (`1882570459`) | **SÍ** | `Items - Inventory.csv` | Headers idénticos (~4127 filas) |
+| Menu / Shift Schedule / Print / Buscar | No | — | Auxiliares del spreadsheet Fiix |
+
+**Resumen — 7 fuentes para el import (orden de proceso):**  
+Categories → Location → Vendors → Items → Users → Inventory → **Formulario Solicitudes**.
+
 **UI (Opciones de Desarrollador):**
 
-1. **Botón «Importar ahora»** — bajo demanda (Sheets + Drive → mismo motor de import).
-2. **Interruptor «Actualización automática»** — ON/OFF a conveniencia.
-   - ON: cron en el servidor (horario configurable, p. ej. nocturno).
-   - OFF: solo el botón manual.
-3. Config guardada: IDs de 2 spreadsheets, IDs de 2 carpetas Drive, credencial Google, horario del auto-sync.
+1. **Botón «Importar ahora desde Google Sheets»** — bajo demanda. **← Hecho (v1.46.0).**
+2. **Interruptor «Actualización automática»** — ON/OFF. **← Después.**
+3. Config: IDs de 2 spreadsheets + credencial Google (carpetas Drive y horario auto más adelante).
 4. **Conservar** importación CSV + zip como respaldo.
 
-**Credenciales / IDs (qué pedir al implementar):**
+**Credenciales (Fase 1 — modo temporal actual):**
 
-1. **JSON de cuenta de servicio (Google Cloud):**
-   - Proyecto en [Google Cloud Console](https://console.cloud.google.com/).
-   - Activar **Google Sheets API** y **Google Drive API**.
-   - Crear **Cuenta de servicio** → Claves → Agregar clave → **JSON**.
-   - El JSON vive **solo en el servidor** (secreto; no en Git / no en el frontend).
-   - Compartir Sheets y carpetas Drive con el `client_email` del JSON (permiso **Lector**).
-2. **ID de spreadsheet:** en la URL  
-   `https://docs.google.com/spreadsheets/d/<<<ID>>>/edit`  
-   (un ID por cada uno de los 2 archivos).
-3. **ID de carpeta Drive:** en la URL  
-   `https://drive.google.com/drive/folders/<<<ID>>>`  
-   (un ID por carpeta de fotos inventario y otro por órdenes).
+1. **Sin JSON / sin Google Cloud:** ambos Sheets en **Cualquier persona con el enlace → Lector**.
+2. Opcional: `GOOGLE_SHEETS_INVENTORY_ID` / `GOOGLE_SHEETS_ORDERS_ID` (hay defaults).
+3. Más adelante: cuenta de servicio si dejan de ser públicos.
+4. **ID de carpeta Drive:** cuando implementemos fotos.
 
-**Fases sugeridas:**
+**Fases:**
 
-1. Auth + leer 2 Sheets + 2 carpetas → reutilizar import + botón «Importar ahora» + prueba.
-2. Interruptor auto + cron + logs / último resultado + no solapar imports.
-3. Pulido (progreso, errores, docs; avisar/respaldar antes de auto en producción).
+1. **Hecha:** Auth + 2 Sheets (7 pestañas) + botón «Importar ahora».
+2. **Después:** Interruptor auto + cron + logs / no solapar.
+3. **Después:** Fotos Drive (2 carpetas planas).
+4. Pulido (progreso UI, errores, docs).
 
-**Esfuerzo estimado:** ~2.5–3.5 semanas. No activar auto-sync en producción hasta 2–3 imports manuales OK.
-
-**Notas:** Miles de fotos por Drive pueden hacer lenta la primera corrida; luego optimizar (solo archivos nuevos). Auto-sync sobrescribe como un reimport CSV.
+**Acuerdos:** Primero solo import bajo demanda. Auto-sync **después**. Fotos Drive **después**.
 
 ---
 
-## 🚀 Versión Actual: v1.45.3 (Actualización: 30 de Julio de 2026)
+## 🚀 Versión Actual: v1.46.1 (Actualización: 30 de Julio de 2026)
 
-### Novedades en v1.45.3 (volumen alerta)
+### Novedades en v1.46.1 (Sheets públicos temporales)
+- **Cambio:** Import Google Sheets sin cuenta de servicio: descarga CSV público. Ambos spreadsheets deben estar en «Cualquier persona con el enlace → Lector».
+
+### Novedades Anteriores (v1.46.0 - Google Sheets bajo demanda)
+- **Nuevo:** En Opciones de Desarrollador, **Importar ahora desde Google Sheets** lee las 7 pestañas mapeadas y usa el mismo motor que el import CSV (`processCsvImportFiles`).
+
+### Novedades Anteriores (v1.45.3 - volumen alerta)
 - **Mejora:** Sonido de OT críticas otro **+50%** de volumen.
 
 ### Novedades Anteriores (v1.45.2 - volumen alerta)
@@ -535,7 +564,7 @@ Este documento contiene la lista de módulos y características pendientes de de
 - [x] **Stock crítico accionable (v1.18.0):** Desde la tarjeta de Stock Crítico en Inventario, generar borradores de OC con ítems bajo mínimo en un clic (agrupados por proveedor).
 
 ## [ ] Mejoras Transversales Futuras (Backlog)
-- [ ] **Importación Google Sheets + Drive (próxima):** Ver sección «📌 Próxima implementación» arriba. 2 spreadsheets (6+1 hojas, mismas columnas CSV) + 2 carpetas Drive planas (fotos inventario/OT); botón bajo demanda + interruptor auto-sync; CSV/zip se conservan.
+- [x] **Importación Google Sheets Fase 1 (v1.46.0):** Botón «Importar ahora» (2 Sheets, 7 pestañas). Pendiente: auto-sync y fotos Drive. CSV/zip se conservan.
 - [x] **Migración de Órdenes e Inventario:** Importación exitosa de los archivos CSV históricos.
 - [ ] **Checklists avanzados y LOTO:** Pasos obligatorios dentro de la Orden de Trabajo y firmas de bloqueo de energías peligrosas.
 - [x] **Notificaciones y Escalamiento:** Recordatorios y escalamiento SLA por prioridad (respuesta, detenida, resolución) vía Telegram + in-app a gestores/admins (v1.14.0).

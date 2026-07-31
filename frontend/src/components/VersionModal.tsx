@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.45.3";
+export const APP_VERSION = "1.46.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -29,6 +29,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Cambio: Import Google Sheets en modo temporal sin credenciales — export CSV público (ambos Sheets en «Cualquier persona con el enlace → Lector»).",
+    "Nuevo: Importar ahora desde Google Sheets (Opciones de Desarrollador) — lee las 7 pestañas mapeadas y reutiliza el motor de import CSV.",
     "Mejora: El sonido de alerta de OT críticas (Inicio / sala de control) vuelve a subir otro 50% de volumen (tercera subida).",
     "Mejora: El sonido de alerta de OT críticas (Inicio / sala de control) vuelve a subir otro 50% de volumen.",
     "Mejora: El sonido de alerta de OT críticas (Inicio / sala de control) suena un 50% más alto.",

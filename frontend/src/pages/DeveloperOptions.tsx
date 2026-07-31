@@ -18,6 +18,7 @@ import {
   ImageOff,
   ScrollText,
   ChevronDown,
+  Cloud,
 } from 'lucide-react';
 import axios from '../api/axios';
 import { isAxiosError } from 'axios';
@@ -663,6 +664,71 @@ export const DeveloperOptions = () => {
     }
   };
 
+  const formatImportResultsMessage = (results: any, prefix: string) => {
+    let msg = `${prefix}: ${results.categories} Categorías, ${results.locations} Ubicaciones, ${results.vendors} Proveedores, ${results.items} Repuestos, ${results.users} Usuarios, ${results.inventory} Movimientos, ${results.orders} Órdenes.`;
+    if (results.assets) {
+      msg += ` Activos (desde inventario ACTIVOS): ${results.assets.created} creados, ${results.assets.updated} actualizados`;
+      if (results.assets.skipped > 0) {
+        msg += `, ${results.assets.skipped} omitidos`;
+      }
+      msg += '.';
+    }
+    if (results.itemImages) {
+      msg += ` Fotos repuestos: ${results.itemImages.matched}`;
+      if (results.itemImages.assetsMatched > 0) {
+        msg += ` (también en Activos: ${results.itemImages.assetsMatched})`;
+      }
+      if (results.itemImages.missing > 0) {
+        msg += ` (${results.itemImages.missing} sin ítem coincidente)`;
+      }
+      msg += '.';
+    }
+    if (results.workOrderImages) {
+      msg += ` Fotos OT: ${results.workOrderImages.matched} (antes ${results.workOrderImages.beforeAssigned}, después ${results.workOrderImages.afterAssigned}).`;
+    }
+    return msg;
+  };
+
+  const handleImportSheets = async () => {
+    setIsLoading(true);
+    setLoadingMessage('Leyendo Google Sheets e importando. Puede tardar unos minutos...');
+    setError(null);
+    setSuccessMsg(null);
+    try {
+      const res = await axios.post(
+        '/dev/import-sheets',
+        {},
+        {
+          headers: { 'x-dev-password': password },
+          timeout: 30 * 60 * 1000,
+        }
+      );
+      const results = res.data.results;
+      setSuccessMsg(formatImportResultsMessage(results, 'Google Sheets importados'));
+      setTimeout(() => setSuccessMsg(null), 15000);
+    } catch (err: unknown) {
+      let detail = 'Error desconocido';
+      if (isAxiosError(err)) {
+        const status = err.response?.status;
+        const data = err.response?.data as { message?: string; serviceAccountEmail?: string } | undefined;
+        const serverMsg = data?.message;
+        if (status === 403) {
+          detail =
+            serverMsg ||
+            'Sin acceso al Sheet. Pon ambos documentos en «Cualquier persona con el enlace → Lector».';
+        } else {
+          detail = serverMsg || err.message;
+        }
+      } else if (err instanceof Error) {
+        detail = err.message;
+      }
+      setError(`Fallo al importar desde Google Sheets: ${detail}`);
+    } finally {
+      setIsLoading(false);
+      setLoadingMessage(null);
+    }
+  };
+
   const formatBytes = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -880,6 +946,7 @@ export const DeveloperOptions = () => {
           </div>
 
           <div className="grid gap-5 lg:grid-cols-[1.35fr_1fr]">
+            <div className="grid gap-5">
             <article className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-600 to-violet-700 p-6 text-white shadow-lg shadow-indigo-200/40 dark:border-indigo-800 dark:shadow-none sm:p-7">
               <div className="absolute -bottom-20 -right-12 h-56 w-56 rounded-full bg-white/10" />
               <div className="relative">
@@ -992,6 +1059,39 @@ export const DeveloperOptions = () => {
                 </label>
               </div>
             </article>
+
+            <article className="relative overflow-hidden rounded-3xl border border-sky-200 bg-gradient-to-br from-sky-600 to-cyan-700 p-6 text-white shadow-lg shadow-sky-200/40 dark:border-sky-800 dark:shadow-none sm:p-7">
+              <div className="absolute -bottom-16 -right-10 h-48 w-48 rounded-full bg-white/10" />
+              <div className="relative">
+                <div className="mb-5 flex items-center justify-between">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15">
+                    <Cloud size={25} />
+                  </div>
+                  <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">Fase 1 · bajo demanda</span>
+                </div>
+                <h3 className="text-2xl font-black">Importar ahora desde Google Sheets</h3>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-sky-100">
+                  Lee las 7 pestañas mapeadas (inventario + solicitudes) y usa el mismo motor que los CSV.
+                  <strong> Modo temporal:</strong> ambos Sheets deben estar en{' '}
+                  <em>Cualquier persona con el enlace → Lector</em> (sin cuenta de Google Cloud).
+                </p>
+                <p className="mt-3 text-xs leading-5 text-sky-100/90">
+                  Las fotos locales en <code className="rounded bg-black/20 px-1">data/Items_Images/</code> o{' '}
+                  <code className="rounded bg-black/20 px-1">data/Formulario Solicitudes_Images/</code> se siguen
+                  usando si existen. Cuando dejes de usarlo, vuelve a restringir el acceso de los Sheets.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void handleImportSheets()}
+                  disabled={isLoading}
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-white px-5 py-3.5 font-black text-sky-700 shadow-sm transition hover:bg-sky-50 disabled:opacity-50 sm:w-fit"
+                >
+                  <Cloud size={18} />
+                  {isLoading ? 'Importando…' : 'Importar ahora desde Google Sheets'}
+                </button>
+              </div>
+            </article>
+            </div>
 
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
               <article className="flex flex-col rounded-3xl border border-amber-200 bg-white p-5 shadow-sm dark:border-amber-900/60 dark:bg-slate-900">

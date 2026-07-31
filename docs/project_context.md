@@ -31,7 +31,7 @@ Un Sistema Computarizado de Gestión de Mantenimiento (CMMS / GMAO) self-hosted 
 - `docs/` guarda manual, roadmap, contexto y estrategia (markdown). Los PDF de planta, si existen, son referencia externa.
 
 ## Próximo a implementar (ver detalle en `docs/roadmap.md`)
-- **Importación Google Sheets + Drive:** 2 spreadsheets (6+1 hojas, mismas columnas CSV) + 2 carpetas Drive planas (fotos inventario/OT). Botón bajo demanda + interruptor de auto-sync. Reutiliza el motor CSV actual; CSV/zip se mantienen. Requiere JSON de cuenta de servicio + IDs de sheets/carpetas.
+- **Importación Google Sheets + Drive:** Fase 1 (v1.46.1) — botón «Importar ahora» vía CSV público temporal (Sheets con enlace → Lector). Auto-sync y fotos Drive después. Ver `docs/roadmap.md`.
 
 ## Tecnologías
 - **Frontend:** React, TypeScript, Tailwind CSS v4, Vite, Lucide, Socket.IO client, PWA (parcial).

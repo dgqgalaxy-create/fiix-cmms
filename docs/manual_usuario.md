@@ -1,5 +1,5 @@
 # Manual de Usuario - GTZ CMMS
-*(Versión 1.44.11 - 30 de Julio, 2026)*
+*(Versión 1.46.1 - 30 de Julio, 2026)*
 
 GTZ CMMS centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 
@@ -231,6 +231,12 @@ Panel de indicadores de mantenimiento:
 - **Workaround Tailscale (408):** Preferible `http://HOST:3000` para subir zips, o SCP/rsync de las carpetas a `~/fiix-cmms/data/` y luego importar solo los CSV desde Opciones de Desarrollador. Verifica nginx con `grep -E 'client_max_body_size|client_body_timeout|proxy_read_timeout' /etc/nginx/sites-available/fiix` (debe verse `1100M` y `120m`, no vacío/`1m`/`60s`).
 - **Usuarios de inventario:** Si un movimiento de inventario referencia un correo que no está en el archivo de Usuarios, ese usuario se crea automáticamente como **inactivo** (rol Técnico) para no perder el historial de consumos. Luego puedes activarlo o completarlo desde el Directorio.
 - **Tiempos de reparación:** Los valores de tiempo con coma de miles (por ejemplo `2,140.22` minutos) se interpretan correctamente, de modo que el MTTR y demás métricas de tiempo no se distorsionan.
+- **Importar ahora desde Google Sheets (Fase 1, modo temporal):** En la misma pantalla hay un botón que lee las **7 pestañas** ya mapeadas (Categories, Location, Vendors, Items, Users, Inventory y Formulario Solicitudes) desde dos spreadsheets de Google y usa el **mismo motor** que los CSV (mismos conteos y orden). No sustituye el import CSV+zip; lo complementa.
+  - **Acceso (temporal, sin Google Cloud):** Pon **ambos** spreadsheets en **Compartir → Cualquier persona con el enlace → Lector**. El servidor descarga cada pestaña como CSV público (`/export?format=csv&gid=…`). No hace falta cuenta de servicio ni JSON en `.env`.
+  - **IDs opcionales:** `GOOGLE_SHEETS_INVENTORY_ID` y `GOOGLE_SHEETS_ORDERS_ID` en `backend/.env` (hay valores por defecto GTZ).
+  - **Seguridad:** Mientras estén públicos, cualquiera con el link puede ver inventario, usuarios y OT. Cuando dejes de usar este modo, vuelve a restringir el acceso (solo personas concretas).
+  - **Fotos:** Esta fase no baja fotos de Drive. Si existen carpetas locales `data/Items_Images/` o `data/Formulario Solicitudes_Images/`, el import las usa igual que cuando importas CSV sin zip.
+  - **Pendiente:** actualización automática periódica, fotos desde Drive y (opcional) volver a cuenta de servicio sin Sheets públicos.
 
 ## 11. Vincular Telegram (Bot Token y Chat ID)
 
