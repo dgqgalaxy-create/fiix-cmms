@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.46.7";
+export const APP_VERSION = "1.46.8";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -29,6 +29,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: En Inicio, la tarjeta «Total recibidas» aclara con una leyenda breve que no incluye órdenes invalidadas.",
     "Nuevo: En tarjetas de OT, Admin/Gestionador puede tocar «Sin asignar» para abrir el detalle en asignación, o el icono de calendario para ir a Calendario listo para agendar esa orden.",
     "Mejora: Al crear, editar o asignar en masa una OT, la lista de personal incluye Gestionadores activos (además de Técnicos).",
     "Corrección: Al finalizar una OT no se sobrescribe completed_at si ya venía del CSV; las fechas/horas en pantalla usan America/Mexico_City.",

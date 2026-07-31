@@ -1,5 +1,5 @@
 # Manual de Usuario - GTZ CMMS
-*(Versión 1.46.7 - 31 de Julio, 2026)*
+*(Versión 1.46.8 - 31 de Julio, 2026)*
 
 GTZ CMMS centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 
@@ -78,7 +78,7 @@ Pantalla de resumen operativo (antes mezclada con el listado de órdenes). Es la
 - **Pulso al actualizar cifras:** Cuando cambia un número de las tarjetas del resumen o de Sala de control (p. ej. por una OT nueva en tiempo real), la cifra late una vez de forma suave; no anima toda la tarjeta.
 - **Pareto de problemas frecuentes** (correctivo) y distribución visual de mantenimiento. La gráfica de dona muestra el total en el centro y desglosa cada tipo con cantidad, porcentaje y barra comparativa; al pasar el cursor, la etiqueta del segmento se muestra al frente sin encimarse con el total central.
 - **Filtro de fechas** para el resumen superior (o modo histórico si no hay rango). El selector, las tarjetas y la distribución de mantenimiento están dentro del marco **Resumen por periodo**, indicando claramente qué elementos afecta.
-- **Tarjetas de estado:** **Total recibidas** es únicamente informativa y muestra la cifra general con mayor énfasis. Pendientes, En Proceso, Pausadas, Finalizadas e Invalidadas sí abren **Órdenes de Trabajo** con el filtro correspondiente.
+- **Tarjetas de estado:** **Total recibidas** es únicamente informativa y muestra la cifra general con mayor énfasis (no incluye órdenes invalidadas; la tarjeta lo indica con la leyenda «Sin contar invalidadas»). Pendientes, En Proceso, Pausadas, Finalizadas e Invalidadas sí abren **Órdenes de Trabajo** con el filtro correspondiente.
 - **Órdenes finalizadas esta semana:** Debajo del resumen, un bloque visible para todos los roles con el total de la semana actual (Lunes a Domingo), gráfica por día y listado de las OT cerradas. Al hacer clic en una fila se abre su detalle.
 
 ### Notificaciones (campana)

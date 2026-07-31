@@ -85,7 +85,10 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.46.7 (Actualización: 31 de Julio de 2026)
+## 🚀 Versión Actual: v1.46.8 (Actualización: 31 de Julio de 2026)
+
+### Novedades en v1.46.8 (Inicio — Total recibidas)
+- **Mejora:** La tarjeta **Total recibidas** muestra la leyenda «Sin contar invalidadas» (el recuento ya excluía `ANULADO`).
 
 ### Novedades en v1.46.7 (OT — acciones, tiempos, roles y costos)
 - **Nuevo:** Acciones rápidas en tarjetas de OT (Admin/Gestionador): **Sin asignar** abre el detalle en asignación; icono de calendario navega a Calendario listo para agendar esa orden.

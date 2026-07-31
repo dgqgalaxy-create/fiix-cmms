@@ -709,7 +709,7 @@ export const HomePage = () => {
 
       <div className="flex flex-col xl:flex-row gap-4 mb-6 sm:mb-8">
         <div className="flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-6 gap-3 sm:gap-4">
-          <SummaryCard title="Total recibidas" value={totalRecibidas} icon={<LayoutDashboard />} color="slate" emphasized detail={(summaryStartDate && summaryEndDate) ? `${summaryStartDate} — ${summaryEndDate}` : 'Histórico completo'} />
+          <SummaryCard title="Total recibidas" value={totalRecibidas} icon={<LayoutDashboard />} color="slate" emphasized hint="Sin contar invalidadas" detail={(summaryStartDate && summaryEndDate) ? `${summaryStartDate} — ${summaryEndDate}` : 'Histórico completo'} />
           <SummaryCard title="Pendientes" value={summary.PENDIENTE || 0} icon={<Clock />} color="amber" onClick={() => goToStatus('PENDIENTE')} detail={
             <div className="flex flex-wrap gap-1">
               {urgentCount > 0 && <span className="bg-rose-600 text-white px-1.5 py-0.5 rounded-sm">{urgentCount} URG</span>}
@@ -919,13 +919,14 @@ const PulsingValue = ({ value, className }: { value: number; className?: string 
   );
 };
 
-const SummaryCard = ({ title, value, icon, color, onClick, detail, emphasized = false }: {
+const SummaryCard = ({ title, value, icon, color, onClick, detail, hint, emphasized = false }: {
   title: string;
   value: number;
   icon: ReactNode;
   color: string;
   onClick?: () => void;
   detail?: ReactNode;
+  hint?: string;
   emphasized?: boolean;
 }) => {
   const className = `text-left p-3.5 sm:p-4 rounded-2xl border flex flex-col relative overflow-hidden group shadow-sm min-h-[130px] ${onClick ? 'cursor-pointer transition-all hover:scale-[1.03]' : 'cursor-default'} ${cardColors[color]}`;
@@ -938,6 +939,7 @@ const SummaryCard = ({ title, value, icon, color, onClick, detail, emphasized = 
         value={value}
         className={`${emphasized ? 'text-3xl sm:text-[2.75rem]' : 'text-2xl sm:text-4xl'} font-black ${color === 'slate' || color === 'amber' ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}
       />
+      {hint && <span className="text-[9px] sm:text-[10px] font-medium opacity-70 leading-tight mt-0.5">{hint}</span>}
       {detail && <div className="mt-auto pt-2 text-[10px] font-semibold leading-tight line-clamp-2">{detail}</div>}
     </div>
     </>
