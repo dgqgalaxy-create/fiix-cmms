@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ClipboardCheck, Plus, CheckCircle, Clock, AlertCircle, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
+import { ClipboardCheck, Plus, CheckCircle, Clock, AlertCircle, ChevronUp, ChevronDown, ChevronRight, ArrowRightLeft } from 'lucide-react';
 import { getChecklistHistory, getTodayChecklist, createTodayChecklist } from '../api/checklists';
 import type { DailyChecklist } from '../api/checklists';
 import { parseDateOnly } from '../utils/dateUtils';
@@ -80,6 +80,25 @@ export default function DailyChecklistsPage() {
       default:
         return null;
     }
+  };
+
+  const transferBadge = (checklist: DailyChecklist, compact = false) => {
+    if (checklist.pending_transfer?.status !== 'PENDING') return null;
+    const pad = compact ? 'px-2 py-0.5' : 'px-3 py-1';
+    const isMine = checklist.pending_transfer.to_user_id === userId;
+    return (
+      <span
+        className={`inline-flex items-center text-violet-700 bg-violet-50 dark:bg-violet-950/40 dark:text-violet-300 ${pad} rounded-full text-[11px] font-medium`}
+        title={
+          isMine
+            ? 'Te ofrecieron la responsabilidad de este checklist'
+            : `Traspaso pendiente a ${checklist.pending_transfer.to_user?.name || 'otro usuario'}`
+        }
+      >
+        <ArrowRightLeft className="w-3 h-3 mr-1" />
+        {compact ? 'Traspaso' : isMine ? 'Traspaso para ti' : 'Traspaso pendiente'}
+      </span>
+    );
   };
 
   const sortedHistory = useMemo(() => {
@@ -164,7 +183,8 @@ export default function DailyChecklistsPage() {
                     {checklist.leader?.name ? ` · ${checklist.leader.name}` : ' · Líder pend.'}
                   </div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex flex-wrap items-center justify-end gap-1 shrink-0 max-w-[50%]">
+                  {transferBadge(checklist, true)}
                   {getStatusBadge(checklist.status, true)}
                   <ChevronRight size={16} className="text-slate-400" />
                 </div>
@@ -215,7 +235,10 @@ export default function DailyChecklistsPage() {
                       {checklist.leader?.name || <span className="text-slate-400 dark:text-slate-500 italic">Pendiente</span>}
                     </td>
                     <td className="px-6 py-4">
-                      {getStatusBadge(checklist.status)}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {getStatusBadge(checklist.status)}
+                        {transferBadge(checklist)}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button

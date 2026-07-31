@@ -14,12 +14,14 @@ interface Props {
 
 export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemId }: Props) => {
   const { hasPermission } = useAuth();
+  const canRegisterIn = hasPermission('REGISTER_INVENTORY_ENTRIES');
+  const defaultType = canRegisterIn ? 'IN' : 'OUT';
   
   const [formData, setFormData] = useState({
     item_id: '',
     amount: '',
     reason: '',
-    type: hasPermission('REGISTER_INVENTORY_ENTRIES') ? 'IN' : 'OUT' // IN = Entrada, OUT = Salida
+    type: defaultType // IN = Entrada, OUT = Salida
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,16 +33,16 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
     if (isOpen) {
       if (defaultItemId) {
         const item = items.find(i => i.id === defaultItemId);
-        setFormData({ item_id: defaultItemId, amount: '', reason: '', type: hasPermission('REGISTER_INVENTORY_ENTRIES') ? 'IN' : 'OUT' });
+        setFormData({ item_id: defaultItemId, amount: '', reason: '', type: defaultType });
         setSearchQuery(item ? `${item.internal_code} - ${item.name}` : '');
       } else {
-        setFormData({ item_id: '', amount: '', reason: '', type: hasPermission('REGISTER_INVENTORY_ENTRIES') ? 'IN' : 'OUT' });
+        setFormData({ item_id: '', amount: '', reason: '', type: defaultType });
         setSearchQuery('');
       }
       setIsSubmitting(false);
       setError(null);
     }
-  }, [isOpen, defaultItemId, items]);
+  }, [isOpen, defaultItemId, items, defaultType]);
 
   if (!isOpen) return null;
 
@@ -50,6 +52,12 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
     setError(null);
 
     try {
+      if (formData.type === 'IN' && !canRegisterIn) {
+        setError('No tienes permiso para registrar entradas de inventario.');
+        setIsSubmitting(false);
+        return;
+      }
+
       const amountValue = formData.type === 'IN' ? Math.abs(Number(formData.amount)) : -Math.abs(Number(formData.amount));
       
       if (amountValue === 0) {
@@ -80,7 +88,7 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
       onSaved();
       onClose();
       // reset
-      setFormData({ item_id: '', amount: '', reason: '', type: hasPermission('REGISTER_INVENTORY_ENTRIES') ? 'IN' : 'OUT' });
+      setFormData({ item_id: '', amount: '', reason: '', type: defaultType });
       setSearchQuery('');
     } catch (err: any) {
       if (err?.isOfflineHandled || err?.response?.data?.offline) {
@@ -127,7 +135,7 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
 
           <div className="space-y-5">
             <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-              {hasPermission('REGISTER_INVENTORY_ENTRIES') && (
+              {canRegisterIn && (
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, type: 'IN' })}

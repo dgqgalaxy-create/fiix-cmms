@@ -80,6 +80,9 @@ export const NotificationsBell = () => {
   };
 
   const resolveNotificationPath = (notif: { link?: string; title?: string }) => {
+    if (notif.link && notif.link.startsWith('/checklists/')) {
+      return notif.link;
+    }
     if (notif.link && notif.link.includes('wo=')) {
       return notif.link;
     }

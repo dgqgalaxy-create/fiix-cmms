@@ -1,5 +1,7 @@
 # Manual de Usuario - GTZ CMMS
-*(Versión 1.46.8 - 31 de Julio, 2026)*
+*(Versión 1.46.11 - 31 de Julio, 2026)*
+
+Este manual se mantiene alineado con cada release de la app (misma versión que `package.json` y el modal de novedades).
 
 GTZ CMMS centraliza el ciclo completo del mantenimiento: reportar una necesidad, asignar responsables, documentar tiempos y refacciones, cerrar con evidencia y convertir el historial en indicadores para tomar decisiones.
 
@@ -17,7 +19,7 @@ En celular, el temario del manual aparece como una barra horizontal deslizable. 
 - **Ayudas ⓘ (InfoTip):** En pantallas táctiles (y también en PC) el icono ⓘ abre una explicación breve (pestañas de Órdenes, folio, Stock crítico, KPIs, SLA, etc.).
 - **Asignación masiva:** En Órdenes de Trabajo, **Asignar…** permite elegir varias OT abiertas y asignarles **técnicos o gestionadores** de una sola vez.
 - **Turno actual (Inicio):** Panel con conteo por técnico de OT abiertas (pendientes / en proceso / en espera y avisos SLA). Un toque lleva a Órdenes.
-- **Líneas paradas / racha (Inicio):** Chips L1–L5 por OT correctiva abierta con paro de máquina, racha actual de días sin paro correctivo de línea, y el **récord** histórico (mejor racha). Preventivos no cuentan.
+- **Líneas paradas / racha (Inicio):** Chips L1–L5 por OT correctiva o preventiva abierta con paro de máquina; la racha y el **récord** siguen siendo solo correctivo (preventivos no reinician la racha).
 - **KPIs — comparar semanas:** Periodo **Semana pasada** y, al ver **Esta semana**, franja de comparación vs la semana anterior.
 - **Bitácora de auditoría:** Solo **Administrador**, en Opciones de Desarrollador: últimos eventos de cambios en OT, inventario y permisos.
 - **Tiempo real:** Los listados y catálogos se actualizan casi al momento cuando otro usuario crea, edita o elimina datos (órdenes, inventario, activos, compras, checklist, turnos, RCA, zonas, usuarios, etc.). No hace falta pulsar F5.
@@ -39,11 +41,13 @@ En celular, el temario del manual aparece como una barra horizontal deslizable. 
 ## 1. Módulo Checklist: Campos Numéricos y de Texto
 Las actividades del Checklist ahora son más flexibles:
 - **Iniciar sin autoasignar:** Al **crear** o **abrir** el checklist del día no se asigna técnico: puedes verlo en solo lectura. Para editarlo y firmarlo pulsa **Iniciar checklist** (te asigna a ti). Si otro técnico ya lo inició, verás «Asignado a …» y no podrás editar ni enviar. En el listado, **Continuar** aparece solo si eres el técnico asignado; si no, **Ver**.
+- **Traspasar responsabilidad:** Si eres el técnico asignado de un checklist en borrador (sin traspaso pendiente), usa **Traspasar** y elige a otro usuario. El destinatario ve un aviso para **Aceptar** o **Rechazar**; hasta que acepte solo puede verlo en lectura. Tú puedes seguir editando o **Cancelar traspaso** mientras esté pendiente. Al aceptar, pasa a ser el técnico asignado (puedes Continuar / Firmar). Hay notificación in-app al ofrecer, aceptar, rechazar o cancelar.
 - **Tipo por tarea (Catálogo):** En Configuración → Catálogo de Checklist, cada pregunta tiene un selector **Check / Número / Texto**. Check usa OK/Falla/N/A; Número y Texto muestran un campo para capturar lecturas. El cambio aplica a los checklists nuevos.
 - **Columnas / máquinas:** En el mismo catálogo, el campo **Columnas** define cuántas líneas (L1, L2…) tendrá el formulario (1 a 12). Si agregas una máquina, aumenta el número; el siguiente checklist diario ya mostrará la columna nueva. Los checklists ya creados conservan el número con el que se generaron.
 - **Campos Mixtos:** Además de los clásicos checks (✔️/❌), algunas actividades específicas (como temperatura o lecturas de agua) mostrarán un pequeño campo de texto.
 - **Uso:** Simplemente haz clic en la línea correspondiente y teclea el valor numérico (ej. 45.5) o un texto corto. El sistema guardará la información tal como si fuese un check tradicional.
 - **Envío completo obligatorio:** No puedes firmar y enviar si falta algún check o lectura (número/texto) en alguna línea. Si marcas una **cruz (falla)** en una fila, la **observación de esa fila es obligatoria**. Con palomita o N/A, la observación vacía se rellena sola con **N/A** al enviar.
+- **Imprimir / PDF:** Solo cuando el checklist ya está **enviado/firmado** o **revisado** (no en borrador). El PDF se genera en **una hoja A4 vertical** con la matriz completa.
 - **Recordatorio Telegram:** Si el checklist del día no se crea o no se envía, el sistema avisa por Telegram en horario laboral (por defecto 10:00, 14:00 y 16:00, hora México). Así no se olvida: los días pasados ya no se pueden llenar.
 - **Configuración:** Para restaurar el listado estándar (con temperaturas en Número y lecturas de agua en Texto), ve a Configuración → Catálogo de Checklist y pulsa **"Restaurar por Defecto"**.
 
@@ -51,7 +55,7 @@ Las actividades del Checklist ahora son más flexibles:
 Se han mejorado las reglas del almacén para prevenir errores y mejorar la fluidez:
 - **Stock inicial al crear:** Al dar de alta un repuesto puedes indicar un **Stock inicial**. Si es mayor a 0, el sistema crea automáticamente un movimiento de **entrada** con motivo `Levantamiento de inventario (stock inicial)` (queda en el historial). En **editar**, el stock es solo lectura: para cambiarlo usa **Registrar movimiento** (entrada/salida).
 - **Cantidades Flexibles (Decimales y Enteros):** Al registrar movimientos puedes usar cantidades decimales (ej. 0.5 litros o metros) tecleando el valor. Por otro lado, usar los botones (+/-) ajustará la cantidad de 1 en 1 (enteros).
-- **Acceso Ágil para Técnicos:** El botón "Registrar Movimiento" se encuentra disponible directamente en la vista principal de Repuestos, sin necesidad de cambiar a la pestaña de historial. En celular, **Nuevo** / **Excel** / **Movimiento** comparten la misma fila y tamaño; en escritorio los tres botones tienen altura y ancho mínimos iguales.
+- **Acceso Ágil para Técnicos:** El botón "Registrar Movimiento" se encuentra disponible directamente en la vista principal de Repuestos, sin necesidad de cambiar a la pestaña de historial. En celular, **Nuevo** / **Excel** / **Movimiento** comparten la misma fila y tamaño; en escritorio los tres botones tienen altura y ancho mínimos iguales. En el **detalle del repuesto**, el botón naranja **Registrar movimiento** también lo ven Técnico y Gestionador (no solo Admin): por defecto solo puedes registrar **salidas (OUT)**; si tu rol tiene el permiso **Registrar Entradas de Inventario**, el mismo modal permite **entradas (IN)**.
 - **Guardado Silencioso:** Los registros de movimientos, así como las creaciones de repuestos, ahora se sincronizan en segundo plano sin mostrar pantallas de carga molestas.
 - **Validación de Stock Mínimo:** El sistema ya no permite configurar un stock mínimo igual a 0.
 - **Bloqueo de Inventario Negativo:** Si intentas sacar más piezas de las que existen actualmente, el sistema bloqueará la operación con una alerta.
@@ -70,7 +74,7 @@ Se han mejorado las reglas del almacén para prevenir errores y mejorar la fluid
 ## 4. Módulo Inicio
 
 Pantalla de resumen operativo (antes mezclada con el listado de órdenes). Es la pantalla de entrada al abrir el sistema en una sesión nueva.
-- **Líneas paradas:** Chips L1–L5 y detalle de OT correctivas abiertas con **¿Paró máquina?** = Sí (`machine_stopped`). Si no hay ninguna, el panel lo indica en verde. Toca una OT para abrirla en Órdenes.
+- **Líneas paradas:** Chips L1–L5 y detalle de OT correctivas o preventivas abiertas con **¿Paró máquina?** = Sí (`machine_stopped`). Si no hay ninguna, el panel lo indica en verde. Toca una OT para abrirla en Órdenes.
 - **Racha sin paro:** Días naturales sin un evento de paro correctivo en L1–L5 (preventivos no cuentan). Al reportar un nuevo paro correctivo en esas líneas, la racha vuelve a 0. El panel muestra también el **récord** (mayor racha histórica entre eventos de paro) y mensajes breves de ánimo; si la racha actual iguala o supera el récord, el texto es de celebración. Las fechas y horas que llegan por importación CSV/Sheets se interpretan siempre en **hora de planta (México)**, así que la racha y el récord son los mismos en el servidor y en cualquier equipo local.
 - **Sala de control (Administrador / Gestionador):** Franja superior con conteos de **Urgentes abiertas**, **Sin asignar**, **SLA en riesgo** y **SLA vencido**. Cada tarjeta abre **Órdenes de Trabajo** ya filtrada. El título de la pestaña del navegador muestra `(N) GTZ CMMS` cuando hay críticas, y puedes activar/desactivar **Sonido al llegar OT críticas** (por defecto encendido; se guarda en el navegador).
 - **Escáner QR:** Al leer un código suena un bip corto. Las etiquetas nuevas usan prefijo `GTZ-ASSET` / `GTZ-ITEM` / `GTZ-LOCATION`; las antiguas `FIIX-*` siguen funcionando.

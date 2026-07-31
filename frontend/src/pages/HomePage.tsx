@@ -386,7 +386,7 @@ export const HomePage = () => {
               Líneas paradas
             </div>
             <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 shrink-0">
-              Correctivo · L1–L5
+              Correctivo / Preventivo · L1–L5
             </span>
           </div>
           <div className="flex flex-wrap gap-1.5 mb-2.5">
@@ -433,7 +433,7 @@ export const HomePage = () => {
             </div>
           ) : (
             <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-              Ninguna línea L1–L5 detenida por correctivo
+              Ninguna línea L1–L5 detenida por correctivo o preventivo
             </p>
           )}
         </div>

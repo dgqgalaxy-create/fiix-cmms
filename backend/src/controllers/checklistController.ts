@@ -1,15 +1,68 @@
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import prisma from '../config/prisma';
-import { emitRefresh } from '../utils/socket';
+import { emitRefresh, getIO } from '../utils/socket';
 import { validateChecklistForSubmit, rowHasFailAnomaly } from '../utils/checklistValidation';
 import { getMexicoCityNow } from '../utils/checklistReminder';
+import { writeAuditLog } from '../utils/auditLog';
+import { sendWebPushToUsers } from '../utils/webPush';
 
 const emitChecklists = () => emitRefresh('refresh_checklists');
 
 export const MIN_CHECKLIST_COLUMNS = 1;
 export const MAX_CHECKLIST_COLUMNS = 12;
 const DEFAULT_CHECKLIST_COLUMNS = 5;
+const ONLINE_WINDOW_MS = 5 * 60 * 1000;
+
+const pendingTransferInclude = {
+  from_user: { select: { id: true, name: true } },
+  to_user: { select: { id: true, name: true } },
+} as const;
+
+const checklistDetailInclude = {
+  technician: { select: { name: true } },
+  leader: { select: { name: true } },
+  rows: { orderBy: { order: 'asc' as const } },
+};
+
+async function findPendingTransfer(checklistId: string) {
+  return prisma.checklistTransfer.findFirst({
+    where: { checklist_id: checklistId, status: 'PENDING' },
+    include: pendingTransferInclude,
+  });
+}
+
+async function notifyChecklistUsers(
+  userIds: string[],
+  title: string,
+  message: string,
+  checklistId: string
+) {
+  const unique = [...new Set(userIds.filter(Boolean))];
+  if (unique.length === 0) return;
+
+  const link = `/checklists/${checklistId}`;
+  await prisma.appNotification.createMany({
+    data: unique.map((user_id) => ({
+      user_id,
+      title,
+      message,
+      link,
+    })),
+  });
+  try {
+    getIO().emit('new_notification');
+  } catch {
+    // socket may not be ready
+  }
+  await sendWebPushToUsers(unique, { title, body: message, url: link });
+}
+
+async function withPendingTransfer<T extends { id: string }>(checklist: T | null) {
+  if (!checklist) return null;
+  const pending_transfer = await findPendingTransfer(checklist.id);
+  return { ...checklist, pending_transfer };
+}
 
 export function normalizeChecklistColumnCount(value: unknown): number {
   const n = Number(value);
@@ -53,7 +106,7 @@ export const getTodayChecklist = async (req: AuthRequest, res: Response) => {
       }
     });
 
-    res.json(checklist);
+    res.json(await withPendingTransfer(checklist));
   } catch (error) {
     console.error('Error fetching today checklist', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -141,6 +194,13 @@ export const startChecklist = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Solo se puede iniciar un checklist en borrador' });
     }
 
+    const pendingTransfer = await findPendingTransfer(id);
+    if (pendingTransfer) {
+      return res.status(409).json({
+        error: 'Hay un traspaso pendiente en este checklist. No se puede iniciar hasta resolverlo.',
+      });
+    }
+
     if (existing.technician_id && existing.technician_id !== userId) {
       return res.status(409).json({
         error: `Este checklist ya fue iniciado por ${existing.technician?.name || 'otro técnico'}`,
@@ -150,27 +210,19 @@ export const startChecklist = async (req: AuthRequest, res: Response) => {
     if (existing.technician_id === userId) {
       const same = await prisma.dailyChecklist.findUnique({
         where: { id },
-        include: {
-          technician: { select: { name: true } },
-          leader: { select: { name: true } },
-          rows: { orderBy: { order: 'asc' } },
-        },
+        include: checklistDetailInclude,
       });
-      return res.json(same);
+      return res.json(await withPendingTransfer(same));
     }
 
     const checklist = await prisma.dailyChecklist.update({
       where: { id },
       data: { technician_id: userId },
-      include: {
-        technician: { select: { name: true } },
-        leader: { select: { name: true } },
-        rows: { orderBy: { order: 'asc' } },
-      },
+      include: checklistDetailInclude,
     });
 
     emitChecklists();
-    res.json(checklist);
+    res.json(await withPendingTransfer(checklist));
   } catch (error) {
     console.error('Error starting checklist', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -307,6 +359,11 @@ export const submitChecklist = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const pendingBeforeSubmit = await prisma.checklistTransfer.findMany({
+      where: { checklist_id: id, status: 'PENDING' },
+      select: { to_user_id: true, from_user_id: true },
+    });
+
     const checklist = await prisma.$transaction(async (tx) => {
       const cols = existing.column_count ?? DEFAULT_CHECKLIST_COLUMNS;
       for (const row of existing.rows) {
@@ -317,6 +374,13 @@ export const submitChecklist = async (req: AuthRequest, res: Response) => {
             data: { observations: 'N/A' },
           });
         }
+      }
+
+      if (pendingBeforeSubmit.length > 0) {
+        await tx.checklistTransfer.updateMany({
+          where: { checklist_id: id, status: 'PENDING' },
+          data: { status: 'CANCELLED', resolved_at: new Date() },
+        });
       }
 
       return tx.dailyChecklist.update({
@@ -333,8 +397,23 @@ export const submitChecklist = async (req: AuthRequest, res: Response) => {
       });
     });
 
+    if (pendingBeforeSubmit.length > 0) {
+      await notifyChecklistUsers(
+        [
+          ...new Set(
+            pendingBeforeSubmit
+              .flatMap((t) => [t.to_user_id, t.from_user_id])
+              .filter((uid) => uid !== userId)
+          ),
+        ],
+        'Traspaso de checklist cancelado',
+        'El checklist fue enviado y el traspaso pendiente se canceló.',
+        id
+      );
+    }
+
     emitChecklists();
-    res.json(checklist);
+    res.json(await withPendingTransfer(checklist));
   } catch (error) {
     console.error('Error submitting checklist', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -374,9 +453,19 @@ export const getChecklistHistory = async (req: AuthRequest, res: Response) => {
       include: {
         technician: { select: { name: true } },
         leader: { select: { name: true } },
+        transfers: {
+          where: { status: 'PENDING' },
+          take: 1,
+          include: pendingTransferInclude,
+        },
       }
     });
-    res.json(checklists);
+    res.json(
+      checklists.map(({ transfers, ...rest }) => ({
+        ...rest,
+        pending_transfer: transfers[0] || null,
+      }))
+    );
   } catch (error) {
     console.error('Error fetching checklist history', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -388,22 +477,326 @@ export const getChecklistById = async (req: AuthRequest, res: Response) => {
     const id = req.params.id as string;
     const checklist = await prisma.dailyChecklist.findUnique({
       where: { id },
-      include: {
-        technician: { select: { name: true } },
-        leader: { select: { name: true } },
-        rows: {
-          orderBy: { order: 'asc' }
-        }
-      }
+      include: checklistDetailInclude,
     });
     
     if (!checklist) {
       return res.status(404).json({ error: 'Checklist not found' });
     }
 
-    res.json(checklist);
+    res.json(await withPendingTransfer(checklist));
   } catch (error) {
     console.error('Error fetching checklist by id', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/** Inicia traspaso de responsabilidad (solo dueño, DRAFT reclamado, destino online). */
+export const transferChecklist = async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const userId = req.user?.userId;
+    const toUserId = typeof req.body?.to_user_id === 'string' ? req.body.to_user_id : '';
+    const note = typeof req.body?.note === 'string' ? req.body.note.trim().slice(0, 500) : undefined;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!toUserId) {
+      return res.status(400).json({ error: 'Indica el destinatario (to_user_id)' });
+    }
+    if (toUserId === userId) {
+      return res.status(400).json({ error: 'No puedes traspasarte el checklist a ti mismo' });
+    }
+
+    const existing = await prisma.dailyChecklist.findUnique({
+      where: { id },
+      include: { technician: { select: { name: true } } },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Checklist no encontrado' });
+    }
+    if (existing.status !== 'DRAFT') {
+      return res.status(400).json({ error: 'Solo se puede traspasar un checklist en borrador' });
+    }
+    if (!existing.technician_id) {
+      return res.status(403).json({ error: 'Debes iniciar el checklist antes de traspasarlo.' });
+    }
+    if (existing.technician_id !== userId) {
+      return res.status(403).json({
+        error: 'Solo el técnico responsable puede traspasar este checklist.',
+      });
+    }
+
+    const alreadyPending = await findPendingTransfer(id);
+    if (alreadyPending) {
+      return res.status(409).json({
+        error: 'Ya hay un traspaso pendiente. Cancélalo o espera la respuesta.',
+      });
+    }
+
+    const destination = await prisma.user.findUnique({
+      where: { id: toUserId },
+      select: { id: true, name: true, role: true, is_active: true, last_active: true },
+    });
+    if (!destination || !destination.is_active) {
+      return res.status(400).json({ error: 'El destinatario no existe o no está activo' });
+    }
+    if (destination.role !== 'TECNICO' && destination.role !== 'GESTIONADOR') {
+      return res.status(400).json({
+        error: 'Solo puedes traspasar a un TECNICO o GESTIONADOR activo',
+      });
+    }
+
+    const onlineSince = new Date(Date.now() - ONLINE_WINDOW_MS);
+    if (!destination.last_active || destination.last_active < onlineSince) {
+      return res.status(409).json({
+        error: `${destination.name} no está en línea. El traspaso solo se puede enviar a usuarios conectados.`,
+      });
+    }
+
+    const actor = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    const transfer = await prisma.checklistTransfer.create({
+      data: {
+        checklist_id: id,
+        from_user_id: userId,
+        to_user_id: toUserId,
+        status: 'PENDING',
+        ...(note ? { note } : {}),
+      },
+      include: pendingTransferInclude,
+    });
+
+    await notifyChecklistUsers(
+      [toUserId],
+      'Traspaso de checklist',
+      `${actor?.name || 'Un técnico'} te ofrece la responsabilidad del checklist. Ábrelo para aceptar o rechazar.`,
+      id
+    );
+
+    await writeAuditLog({
+      userId,
+      userName: actor?.name,
+      action: 'TRANSFER_CHECKLIST',
+      entity: 'checklist',
+      entityId: id,
+      summary: `Traspaso pendiente a ${destination.name}`,
+      meta: { transfer_id: transfer.id, to_user_id: toUserId, from_user_id: userId },
+    });
+
+    emitChecklists();
+    res.status(201).json(transfer);
+  } catch (error: any) {
+    if (error?.code === 'P2002') {
+      return res.status(409).json({
+        error: 'Ya hay un traspaso pendiente. Cancélalo o espera la respuesta.',
+      });
+    }
+    console.error('Error transferring checklist', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/** Destinatario acepta el traspaso y pasa a ser technician_id. */
+export const acceptChecklistTransfer = async (req: AuthRequest, res: Response) => {
+  try {
+    const transferId = req.params.id as string;
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const transfer = await prisma.checklistTransfer.findUnique({
+      where: { id: transferId },
+      include: {
+        ...pendingTransferInclude,
+        checklist: { select: { id: true, status: true, technician_id: true } },
+      },
+    });
+    if (!transfer) {
+      return res.status(404).json({ error: 'Traspaso no encontrado' });
+    }
+    if (transfer.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Este traspaso ya fue resuelto' });
+    }
+    if (transfer.to_user_id !== userId) {
+      return res.status(403).json({ error: 'Solo el destinatario puede aceptar este traspaso' });
+    }
+    if (transfer.checklist.status !== 'DRAFT') {
+      return res.status(400).json({ error: 'El checklist ya no está en borrador' });
+    }
+    if (transfer.checklist.technician_id !== transfer.from_user_id) {
+      return res.status(409).json({
+        error: 'El responsable del checklist cambió; el traspaso ya no es válido.',
+      });
+    }
+
+    const acceptor = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    const [, checklist] = await prisma.$transaction([
+      prisma.checklistTransfer.update({
+        where: { id: transferId },
+        data: { status: 'ACCEPTED', resolved_at: new Date() },
+      }),
+      prisma.dailyChecklist.update({
+        where: { id: transfer.checklist_id },
+        data: { technician_id: userId },
+        include: checklistDetailInclude,
+      }),
+    ]);
+
+    await notifyChecklistUsers(
+      [transfer.from_user_id],
+      'Traspaso de checklist aceptado',
+      `${acceptor?.name || 'El destinatario'} aceptó la responsabilidad del checklist.`,
+      transfer.checklist_id
+    );
+
+    await writeAuditLog({
+      userId,
+      userName: acceptor?.name,
+      action: 'ACCEPT_CHECKLIST_TRANSFER',
+      entity: 'checklist',
+      entityId: transfer.checklist_id,
+      summary: `Aceptó traspaso de ${transfer.from_user.name}`,
+      meta: { transfer_id: transferId, from_user_id: transfer.from_user_id, to_user_id: userId },
+    });
+
+    emitChecklists();
+    res.json(await withPendingTransfer(checklist));
+  } catch (error) {
+    console.error('Error accepting checklist transfer', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/** Destinatario rechaza el traspaso. */
+export const rejectChecklistTransfer = async (req: AuthRequest, res: Response) => {
+  try {
+    const transferId = req.params.id as string;
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const transfer = await prisma.checklistTransfer.findUnique({
+      where: { id: transferId },
+      include: pendingTransferInclude,
+    });
+    if (!transfer) {
+      return res.status(404).json({ error: 'Traspaso no encontrado' });
+    }
+    if (transfer.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Este traspaso ya fue resuelto' });
+    }
+    if (transfer.to_user_id !== userId) {
+      return res.status(403).json({ error: 'Solo el destinatario puede rechazar este traspaso' });
+    }
+
+    const rejector = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    await prisma.checklistTransfer.update({
+      where: { id: transferId },
+      data: { status: 'REJECTED', resolved_at: new Date() },
+    });
+
+    await notifyChecklistUsers(
+      [transfer.from_user_id],
+      'Traspaso de checklist rechazado',
+      `${rejector?.name || 'El destinatario'} rechazó la responsabilidad del checklist.`,
+      transfer.checklist_id
+    );
+
+    await writeAuditLog({
+      userId,
+      userName: rejector?.name,
+      action: 'REJECT_CHECKLIST_TRANSFER',
+      entity: 'checklist',
+      entityId: transfer.checklist_id,
+      summary: `Rechazó traspaso de ${transfer.from_user.name}`,
+      meta: { transfer_id: transferId },
+    });
+
+    emitChecklists();
+    const checklist = await prisma.dailyChecklist.findUnique({
+      where: { id: transfer.checklist_id },
+      include: checklistDetailInclude,
+    });
+    res.json(await withPendingTransfer(checklist));
+  } catch (error) {
+    console.error('Error rejecting checklist transfer', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/** Dueño cancela el traspaso pendiente. */
+export const cancelChecklistTransfer = async (req: AuthRequest, res: Response) => {
+  try {
+    const transferId = req.params.id as string;
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const transfer = await prisma.checklistTransfer.findUnique({
+      where: { id: transferId },
+      include: pendingTransferInclude,
+    });
+    if (!transfer) {
+      return res.status(404).json({ error: 'Traspaso no encontrado' });
+    }
+    if (transfer.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Este traspaso ya fue resuelto' });
+    }
+    if (transfer.from_user_id !== userId) {
+      return res.status(403).json({ error: 'Solo quien inició el traspaso puede cancelarlo' });
+    }
+
+    const actor = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    await prisma.checklistTransfer.update({
+      where: { id: transferId },
+      data: { status: 'CANCELLED', resolved_at: new Date() },
+    });
+
+    await notifyChecklistUsers(
+      [transfer.to_user_id],
+      'Traspaso de checklist cancelado',
+      `${actor?.name || 'El técnico'} canceló el traspaso del checklist.`,
+      transfer.checklist_id
+    );
+
+    await writeAuditLog({
+      userId,
+      userName: actor?.name,
+      action: 'CANCEL_CHECKLIST_TRANSFER',
+      entity: 'checklist',
+      entityId: transfer.checklist_id,
+      summary: `Canceló traspaso a ${transfer.to_user.name}`,
+      meta: { transfer_id: transferId },
+    });
+
+    emitChecklists();
+    const checklist = await prisma.dailyChecklist.findUnique({
+      where: { id: transfer.checklist_id },
+      include: checklistDetailInclude,
+    });
+    res.json(await withPendingTransfer(checklist));
+  } catch (error) {
+    console.error('Error cancelling checklist transfer', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

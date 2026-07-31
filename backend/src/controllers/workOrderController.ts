@@ -20,14 +20,15 @@ function calendarDaysBetween(from: Date, to: Date): number {
 }
 
 /**
- * Home indicators: which L1–L5 lines are stopped by open corrective WOs with
- * machine_stopped=true, days since the last such stoppage event (any status except ANULADO),
+ * Home indicators: which L1–L5 lines are stopped by open CORRECTIVO/PREVENTIVO WOs with
+ * machine_stopped=true, days since the last corrective stoppage event (any status except ANULADO),
  * and the all-time best streak (bestStreakDays).
  *
  * Streak definition (same filters for every event: CORRECTIVO + machine_stopped + L1–L5 + not ANULADO):
  * - A "stoppage event" is the created_at of such a work order.
  * - Completed streaks = calendar-day gaps between consecutive events (sorted ascending).
- * - Current streak = days from the latest event to now (0 if any L1–L5 line is currently stopped).
+ * - Current streak = days from the latest event to now (0 if any L1–L5 line is currently stopped
+ *   by an open CORRECTIVO WO — open PREVENTIVO stoppages appear on chips but do not reset the streak).
  * - bestStreakDays = max(completed gaps, current streak). We do NOT invent a gap before the
  *   first recorded event (no plant "start of history" date in data).
  */
@@ -39,6 +40,7 @@ export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): P
       { asset: { zone: { name: { in: lineNames, mode: 'insensitive' as const } } } },
     ];
 
+    // Streak / récord: historically corrective-only.
     const stoppageWhere = {
       maintenance_type: 'CORRECTIVO' as const,
       machine_stopped: true,
@@ -51,6 +53,7 @@ export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): P
       folio: true,
       title: true,
       status: true,
+      maintenance_type: true,
       created_at: true,
       asset: { select: { name: true, zone: { select: { name: true } } } },
       zone: { select: { name: true } },
@@ -59,7 +62,7 @@ export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): P
     const [openStopped, historicalStoppages] = await Promise.all([
       prisma.workOrder.findMany({
         where: {
-          maintenance_type: 'CORRECTIVO',
+          maintenance_type: { in: ['CORRECTIVO', 'PREVENTIVO'] },
           machine_stopped: true,
           status: { in: [...OPEN_WO_STATUSES] },
           OR: lineZoneOr,
@@ -86,11 +89,13 @@ export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): P
     const byLine = new Map<string, StoppedWo[]>();
     for (const line of PRODUCTION_LINES) byLine.set(line, []);
 
+    let currentlyStoppedCorrective = false;
     for (const wo of openStopped) {
       const line =
         resolveProductionLine(wo.zone?.name) ||
         resolveProductionLine(wo.asset?.zone?.name);
       if (!line) continue;
+      if (wo.maintenance_type === 'CORRECTIVO') currentlyStoppedCorrective = true;
       byLine.get(line)!.push({
         id: wo.id,
         folio: wo.folio,
@@ -120,8 +125,8 @@ export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): P
       created_at: string;
     } | null = null;
 
-    const currentlyStopped = stoppedLines.length > 0;
-    if (currentlyStopped) {
+    // Zero streak only for open corrective stoppages (not preventivo chip hits).
+    if (currentlyStoppedCorrective) {
       daysWithoutStoppage = 0;
     }
 
@@ -155,7 +160,7 @@ export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): P
         );
         if (gap > maxGap) maxGap = gap;
       }
-      // Include the open streak (last → now), already 0 when a line is currently stopped.
+      // Include the open streak (last → now), already 0 when a corrective line is currently stopped.
       const currentForBest = daysWithoutStoppage ?? 0;
       bestStreakDays = Math.max(maxGap, currentForBest);
     }

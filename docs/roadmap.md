@@ -85,7 +85,19 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.46.8 (Actualización: 31 de Julio de 2026)
+## 🚀 Versión Actual: v1.46.11 (Actualización: 31 de Julio de 2026)
+
+### Novedades en v1.46.11 (Traspaso de checklist + líneas paradas preventivo)
+- **Nuevo:** Checklist Diario — el técnico asignado puede **Traspasar** a otro; el destinatario **Acepta** o **Rechaza**; el emisor puede **Cancelar traspaso** mientras esté pendiente. Notificaciones in-app.
+- **Mejora:** En Inicio, **Líneas paradas** (L1–L5) incluye OT **PREVENTIVO** abiertas con paro de máquina (además de correctivas). La **racha** / récord siguen siendo solo correctivo.
+- **Docs:** Manual de usuario alineado con la versión de release.
+
+### Novedades en v1.46.10 (Inventario — Registrar movimiento por permisos)
+- **Corrección:** En el detalle del repuesto, el botón naranja **Registrar movimiento** ya no requiere `MANAGE_INVENTORY`: Técnico y Gestionador lo ven. El modal limita **Entrada (IN)** a quien tenga permiso de entradas (`REGISTER_INVENTORY_ENTRIES`); las salidas (OUT) quedan disponibles con acceso a Inventario.
+
+### Novedades en v1.46.9 (Checklist — imprimir solo finalizado + A4)
+- **Cambio:** Imprimir/PDF del Checklist Diario solo si está **COMPLETED** o **REVIEWED** (borrador: botón deshabilitado; Ctrl+P bloqueado con aviso).
+- **Mejora:** El PDF cabe en **una hoja A4 portrait** (tipografía/márgenes compactos + zoom print).
 
 ### Novedades en v1.46.8 (Inicio — Total recibidas)
 - **Mejora:** La tarjeta **Total recibidas** muestra la leyenda «Sin contar invalidadas» (el recuento ya excluía `ANULADO`).

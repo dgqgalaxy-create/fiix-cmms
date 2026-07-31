@@ -96,6 +96,8 @@ model User {
   push_subscriptions PushSubscription[]
   checklist_technician DailyChecklist[] @relation("ChecklistTechnician")
   checklist_leader DailyChecklist[] @relation("ChecklistLeader")
+  checklist_transfers_from ChecklistTransfer[] @relation("ChecklistTransferFrom")
+  checklist_transfers_to   ChecklistTransfer[] @relation("ChecklistTransferTo")
 
   pattern              TechnicianPattern?
   exceptions           TechnicianException[]
@@ -530,6 +532,13 @@ enum ChecklistStatus {
   REVIEWED
 }
 
+enum ChecklistTransferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
 model ChecklistActivity {
   id          String   @id @default(uuid()) @db.Uuid
   name        String
@@ -552,6 +561,25 @@ model DailyChecklist {
   updated_at      DateTime @updatedAt
 
   rows            DailyChecklistRow[]
+  transfers       ChecklistTransfer[]
+}
+
+/// Traspaso de responsabilidad de un checklist DRAFT reclamado.
+model ChecklistTransfer {
+  id           String                  @id @default(uuid()) @db.Uuid
+  checklist_id String                  @db.Uuid
+  checklist    DailyChecklist          @relation(fields: [checklist_id], references: [id], onDelete: Cascade)
+  from_user_id String                  @db.Uuid
+  from_user    User                    @relation("ChecklistTransferFrom", fields: [from_user_id], references: [id])
+  to_user_id   String                  @db.Uuid
+  to_user      User                    @relation("ChecklistTransferTo", fields: [to_user_id], references: [id])
+  status       ChecklistTransferStatus @default(PENDING)
+  note         String?
+  created_at   DateTime                @default(now())
+  resolved_at  DateTime?
+
+  @@index([checklist_id, status])
+  @@index([to_user_id, status])
 }
 
 model DailyChecklistRow {

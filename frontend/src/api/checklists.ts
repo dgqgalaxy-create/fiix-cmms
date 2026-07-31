@@ -17,6 +17,19 @@ export interface ChecklistRow {
   observations: string | null;
 }
 
+export interface ChecklistTransfer {
+  id: string;
+  checklist_id: string;
+  from_user_id: string;
+  to_user_id: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
+  note?: string | null;
+  created_at: string;
+  resolved_at?: string | null;
+  from_user?: { id: string; name: string };
+  to_user?: { id: string; name: string };
+}
+
 export interface DailyChecklist {
   id: string;
   date: string;
@@ -27,6 +40,7 @@ export interface DailyChecklist {
   leader_id?: string;
   leader?: { name: string };
   rows?: ChecklistRow[];
+  pending_transfer?: ChecklistTransfer | null;
 }
 
 export interface ChecklistConfig {
@@ -48,6 +62,26 @@ export const createTodayChecklist = async () => {
 export const startChecklist = async (id: string) => {
   const response = await api.post(`/checklists/${id}/start`);
   return response.data;
+};
+
+export const transferChecklist = async (id: string, to_user_id: string, note?: string) => {
+  const response = await api.post(`/checklists/${id}/transfer`, { to_user_id, note });
+  return response.data as ChecklistTransfer;
+};
+
+export const acceptChecklistTransfer = async (transferId: string) => {
+  const response = await api.post(`/checklists/transfers/${transferId}/accept`);
+  return response.data as DailyChecklist;
+};
+
+export const rejectChecklistTransfer = async (transferId: string) => {
+  const response = await api.post(`/checklists/transfers/${transferId}/reject`);
+  return response.data as DailyChecklist;
+};
+
+export const cancelChecklistTransfer = async (transferId: string) => {
+  const response = await api.post(`/checklists/transfers/${transferId}/cancel`);
+  return response.data as DailyChecklist;
 };
 
 export const updateChecklistRow = async (

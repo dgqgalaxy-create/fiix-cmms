@@ -3,6 +3,10 @@ import {
   getTodayChecklist, 
   createTodayChecklist,
   startChecklist,
+  transferChecklist,
+  acceptChecklistTransfer,
+  rejectChecklistTransfer,
+  cancelChecklistTransfer,
   updateChecklistRow, 
   submitChecklist, 
   reviewChecklist, 
@@ -37,7 +41,14 @@ router.delete('/activities/:id', requirePermission('MANAGE_CHECKLIST_CATALOG'), 
 router.get('/today', getTodayChecklist);
 router.post('/today', createTodayChecklist);
 router.get('/history', getChecklistHistory);
+
+// Traspasos (antes de /:id para no capturar "transfers" como id)
+router.post('/transfers/:id/accept', acceptChecklistTransfer);
+router.post('/transfers/:id/reject', rejectChecklistTransfer);
+router.post('/transfers/:id/cancel', cancelChecklistTransfer);
+
 router.post('/:id/start', startChecklist);
+router.post('/:id/transfer', transferChecklist);
 router.get('/:id', getChecklistById);
 router.put('/row/:rowId', updateChecklistRow);
 router.post('/:id/submit', submitChecklist);

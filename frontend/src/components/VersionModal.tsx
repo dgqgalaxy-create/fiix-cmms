@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.46.8";
+export const APP_VERSION = "1.46.11";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -29,6 +29,10 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Checklist Diario — el técnico asignado puede «Traspasar» a otro; el destinatario Acepta o Rechaza (también se puede cancelar el traspaso pendiente).",
+    "Mejora: En Inicio, «Líneas paradas» (L1–L5) incluye OT preventivas abiertas con paro de máquina, además de las correctivas; la racha sigue contando solo correctivo.",
+    "Corrección: En el detalle del repuesto, «Registrar movimiento» (naranja) ya no es solo Admin: Técnico y Gestionador lo ven; el modal limita Entrada (IN) a quien tenga permiso de entradas.",
+    "Mejora: Checklist Diario — Imprimir/PDF solo si está enviado/firmado o revisado; el PDF cabe en una hoja A4 vertical.",
     "Mejora: En Inicio, la tarjeta «Total recibidas» aclara con una leyenda breve que no incluye órdenes invalidadas.",
     "Nuevo: En tarjetas de OT, Admin/Gestionador puede tocar «Sin asignar» para abrir el detalle en asignación, o el icono de calendario para ir a Calendario listo para agendar esa orden.",
     "Mejora: Al crear, editar o asignar en masa una OT, la lista de personal incluye Gestionadores activos (además de Técnicos).",
@@ -88,6 +92,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Corrección: En OT ya En proceso o En espera, administradores y gestionadores (y quien no esté asignado) ya no ven Pausar/Finalizar/Reanudar; deben usar Unirme / Colaborar y luego sí operan.",
     "Nuevo: Inventario — ayudas ⓘ en Stock crítico / Excel / filtros; botones de escaneo y acciones de fila con área táctil más grande.",
     "Nuevo: Entradas de inventario (IN) también funcionan sin conexión (igual que las salidas OUT); se sincronizan al recuperar señal.",
+    "Corrección: En Órdenes, Asignar… abre con las OT desmarcadas; el usuario elige cuáles asignar.",
     "Nuevo: En Órdenes, Asignar… permite asignar técnicos a varias OT abiertas de una sola vez.",
     "Nuevo: En Inicio, panel Turno actual con conteo por técnico (pendientes / en proceso / en espera y SLA).",
     "Nuevo: En KPIs, periodo Semana pasada y franja de comparación Esta semana vs semana pasada (órdenes, finalizadas, MTTR, SLA, backlog).",

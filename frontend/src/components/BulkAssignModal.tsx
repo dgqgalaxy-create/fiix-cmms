@@ -29,7 +29,7 @@ export function BulkAssignModal({ isOpen, onClose, candidates, onDone }: Props) 
   useEffect(() => {
     if (!isOpen) return;
     setError(null);
-    setSelectedOrderIds(openCandidates.slice(0, 20).map((wo) => wo.id));
+    setSelectedOrderIds([]);
     setSelectedTechIds([]);
     setLoading(true);
     getUsers()

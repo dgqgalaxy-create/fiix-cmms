@@ -1424,7 +1424,9 @@ export const InventoryPage = () => {
         vendors={vendors}
         transactions={transactions}
         readOnly={!canManage}
-        onQuickTransaction={canManage ? handleOpenTransactionModal : undefined}
+        // OUT permitido a todos en Inventario; IN solo con REGISTER_INVENTORY_ENTRIES (TransactionModal).
+        // No atar a MANAGE_INVENTORY: Técnico/Gestionador deben ver «Registrar movimiento» en el detalle.
+        onQuickTransaction={handleOpenTransactionModal}
         itemList={selectedItem ? filteredItems : undefined}
         onNavigateItem={setSelectedItem}
         navigationPaused={isTransactionModalOpen}
