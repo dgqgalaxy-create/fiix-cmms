@@ -85,7 +85,10 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.46.3 (Actualización: 31 de Julio de 2026)
+## 🚀 Versión Actual: v1.46.4 (Actualización: 31 de Julio de 2026)
+
+### Novedades en v1.46.4 (Import CSV separado)
+- **Mejora:** Opciones de Desarrollador separa el import manual en **Inventario (6 CSV + zip)** y **Órdenes (1 CSV + zip)**. Pueden ejecutarse por separado; el motor conserva upsert y no borra los datos de la otra sección.
 
 ### Novedades en v1.46.3 (Fotos Google Drive + Telegram)
 - **Nuevo:** Casilla «Fotos desde Google Drive» en Opciones de Desarrollador (CSV y Sheets). Requiere `GOOGLE_DRIVE_API_KEY` + carpetas públicas. Prioridad: zip → Drive → `data/`.

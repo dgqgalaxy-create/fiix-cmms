@@ -558,15 +558,52 @@ export const DeveloperOptions = () => {
     setTimeout(() => setSuccessMsg(null), 6000);
   };
 
-  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportCSV = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    scope: 'inventory' | 'orders'
+  ) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const zipBytes = (itemImagesZip?.size || 0) + (workOrderImagesZip?.size || 0);
-    const hasZips = Boolean(itemImagesZip || workOrderImagesZip);
+    const selectedNames = Array.from(files, (file) => file.name);
+    if (scope === 'inventory') {
+      const required = ['Categories', 'Location', 'Vendors', 'Items', 'Users', 'Inventory'];
+      const missing = required.filter((token) => {
+        if (token === 'Items') {
+          return !selectedNames.some(
+            (name) =>
+              name.includes('Items') &&
+              !['Categories', 'Location', 'Vendors', 'Users', 'Inventory'].some((other) =>
+                name.includes(other)
+              )
+          );
+        }
+        return !selectedNames.some((name) => name.includes(token));
+      });
+      if (files.length !== 6 || missing.length > 0) {
+        setError(
+          `Inventario requiere sus 6 CSV (Categories, Location, Vendors, Items, Users e Inventory).${
+            missing.length > 0 ? ` Faltan: ${missing.join(', ')}.` : ''
+          }`
+        );
+        e.target.value = '';
+        return;
+      }
+    } else if (
+      files.length !== 1 ||
+      !selectedNames[0]?.includes('Solicitudes Mantenimiento')
+    ) {
+      setError('Órdenes requiere únicamente el CSV «Solicitudes Mantenimiento».');
+      e.target.value = '';
+      return;
+    }
+
+    const selectedZip = scope === 'inventory' ? itemImagesZip : workOrderImagesZip;
+    const zipBytes = selectedZip?.size || 0;
+    const hasZips = Boolean(selectedZip);
     if (zipBytes > IMPORT_BODY_MAX_BYTES) {
       setError(
-        `Los zips juntos pesan ${(zipBytes / (1024 * 1024)).toFixed(0)} MB; el máximo del body es ~${Math.round(IMPORT_BODY_MAX_BYTES / (1024 * 1024))} MB. Sube un zip por vez o usa http://HOST:3000 / SSH a data/.`
+        `El zip pesa ${(zipBytes / (1024 * 1024)).toFixed(0)} MB; el máximo del body es ~${Math.round(IMPORT_BODY_MAX_BYTES / (1024 * 1024))} MB. Usa http://HOST:3000 o copia las fotos a data/.`
       );
       e.target.value = '';
       return;
@@ -575,20 +612,20 @@ export const DeveloperOptions = () => {
     setUploadProgress(hasZips ? 0 : null);
     setLoadingMessage(
       hasZips
-        ? `Subiendo CSV + zip (${(zipBytes / (1024 * 1024)).toFixed(1)} MB). Por Tailscale puede tardar varios minutos...`
-        : 'Procesando archivos CSV. Por favor, no cierres esta ventana...'
+        ? `Subiendo ${scope === 'inventory' ? 'inventario' : 'órdenes'} + zip (${(zipBytes / (1024 * 1024)).toFixed(1)} MB). Por Tailscale puede tardar varios minutos...`
+        : `Procesando ${scope === 'inventory' ? 'los 6 CSV de inventario' : 'el CSV de órdenes'}. Por favor, no cierres esta ventana...`
     );
     setError(null);
     const formData = new FormData();
     for (let i = 0; i < files.length; i++) {
       formData.append('csvFiles', files[i]);
     }
-    if (itemImagesZip) {
+    if (scope === 'inventory' && itemImagesZip) {
       formData.append('itemImagesZip', itemImagesZip);
     }
     // El zip de OT va como csvFiles (no como workOrderImagesZip): backends viejos con
     // multer.fields([csvFiles, itemImagesZip]) rechazan campos desconocidos → Unexpected field.
-    if (workOrderImagesZip) {
+    if (scope === 'orders' && workOrderImagesZip) {
       formData.append('csvFiles', workOrderImagesZip, workOrderImagesZip.name);
     }
     if (useGoogleDrive) {
@@ -613,44 +650,17 @@ export const DeveloperOptions = () => {
       });
       setUploadProgress(100);
       const results = res.data.results;
-      let msg = `Archivos CSV procesados: ${results.categories} Categorías, ${results.locations} Ubicaciones, ${results.vendors} Proveedores, ${results.items} Repuestos, ${results.users} Usuarios, ${results.inventory} Movimientos, ${results.orders} Órdenes.`;
-      if (results.assets) {
-        msg += ` Activos (desde inventario ACTIVOS): ${results.assets.created} creados, ${results.assets.updated} actualizados`;
-        if (results.assets.skipped > 0) {
-          msg += `, ${results.assets.skipped} omitidos`;
-        }
-        msg += '.';
+      setSuccessMsg(
+        formatImportResultsMessage(
+          results,
+          scope === 'inventory' ? 'Inventario importado' : 'Órdenes importadas'
+        )
+      );
+      if (scope === 'inventory') {
+        setItemImagesZip(null);
+      } else {
+        setWorkOrderImagesZip(null);
       }
-      if (results.itemImages) {
-        msg += ` Fotos repuestos: ${results.itemImages.matched}`;
-        if (results.itemImages.assetsMatched > 0) {
-          msg += ` (también en Activos: ${results.itemImages.assetsMatched})`;
-        }
-        if (results.itemImages.missing > 0) {
-          msg += ` (${results.itemImages.missing} sin ítem coincidente)`;
-        }
-        if (results.itemImages.skipped > 0) {
-          msg += `, omitidas: ${results.itemImages.skipped}`;
-        }
-        msg += '.';
-      } else if (itemImagesZip) {
-        msg += ' (El zip de repuestos se subió pero no se reportaron fotos asignadas; revisa logs del servidor / unzip).';
-      }
-      if (results.workOrderImages) {
-        msg += ` Fotos OT: ${results.workOrderImages.matched} (antes ${results.workOrderImages.beforeAssigned}, después ${results.workOrderImages.afterAssigned})`;
-        if (results.workOrderImages.missing > 0) {
-          msg += `, sin archivo: ${results.workOrderImages.missing}`;
-        }
-        if (!results.workOrderImages.folderFound && results.workOrderImages.matched === 0) {
-          msg += ' — no se detectó zip ni carpeta data/Formulario Solicitudes_Images/.';
-        }
-        msg += '.';
-      } else if (workOrderImagesZip) {
-        msg += ' (El zip de órdenes se subió pero no se reportaron fotos; revisa logs / unzip).';
-      }
-      setSuccessMsg(msg);
-      setItemImagesZip(null);
-      setWorkOrderImagesZip(null);
       setTimeout(() => setSuccessMsg(null), 12000);
     } catch (err: unknown) {
       let detail = 'Error desconocido';
@@ -678,7 +688,9 @@ export const DeveloperOptions = () => {
       } else if (err instanceof Error) {
         detail = err.message;
       }
-      setError(`Fallo al importar archivos CSV: ${detail}`);
+      setError(
+        `Fallo al importar ${scope === 'inventory' ? 'inventario' : 'órdenes'}: ${detail}`
+      );
     } finally {
       setIsLoading(false);
       setLoadingMessage(null);
@@ -1008,37 +1020,38 @@ export const DeveloperOptions = () => {
                   </div>
                   <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">Carga inicial recomendada</span>
                 </div>
-                <h3 className="text-2xl font-black">Importar los 7 archivos CSV</h3>
+                <h3 className="text-2xl font-black">Importación CSV por separado</h3>
                 <p className="mt-2 max-w-xl text-sm leading-6 text-indigo-100">
-                  Selecciónalos juntos. El sistema los reconoce y procesa automáticamente según sus dependencias.
+                  Puedes importar primero inventario y después órdenes. Ambas operaciones usan upsert:
+                  actualizan coincidencias y no borran los datos de la otra sección.
                 </p>
                 <div className="mt-4 rounded-xl border border-white/15 bg-white/10 px-3.5 py-3 text-xs leading-5 text-indigo-50">
-                  <p className="font-bold text-white">Zips de fotos (opcionales)</p>
-                  <p className="mt-1">
-                    <strong>Repuestos:</strong> carpeta <code className="rounded bg-black/20 px-1 py-0.5">Items_Images/</code>{' '}
-                    (<code className="rounded bg-black/20 px-1 py-0.5">MTTO-0001.Image.163526.png</code>).
-                  </p>
-                  <p className="mt-1">
-                    <strong>Órdenes:</strong> <code className="rounded bg-black/20 px-1 py-0.5">Formulario Solicitudes_Images.zip</code>{' '}
-                    — solo se usan <em>FOTO ANTES</em> / <em>FOTO DESPUÉS</em> (las firmas se ignoran). Límite ~500&nbsp;MB c/u.
-                  </p>
+                  <p className="font-bold text-white">Dos operaciones independientes</p>
                   <p className="mt-2 text-indigo-100/90">
-                    <strong>Tailscale / 408:</strong> entra por <code className="rounded bg-black/20 px-1 py-0.5">http://HOST:3000</code>{' '}
-                    (sin nginx) o copia las carpetas al servidor (
-                    <code className="rounded bg-black/20 px-1 py-0.5">data/Items_Images/</code>,{' '}
-                    <code className="rounded bg-black/20 px-1 py-0.5">data/Formulario Solicitudes_Images/</code>
-                    ) y importa solo los CSV — las fotos se toman de ahí si no eliges zip.
+                    <strong>1. Inventario:</strong> 6 CSV + <code className="rounded bg-black/20 px-1">Items_Images.zip</code>.
+                    <br />
+                    <strong>2. Órdenes:</strong> 1 CSV de Solicitudes +{' '}
+                    <code className="rounded bg-black/20 px-1">Formulario Solicitudes_Images.zip</code>.
                   </p>
                 </div>
-                <div className="mt-5 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-                  {['Categorías', 'Ubicaciones', 'Proveedores', 'Repuestos', 'Usuarios', 'Inventario', 'Órdenes'].map((label, index) => (
-                    <div key={label} className="rounded-xl border border-white/10 bg-white/10 px-3 py-2.5">
-                      <span className="mr-1.5 font-black text-indigo-200">{index + 1}</span>{label}
+
+                <div className="mt-5 rounded-2xl border border-white/25 bg-white/10 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wider text-indigo-200">Paso 1</p>
+                      <h4 className="mt-0.5 text-lg font-black text-white">Inventario</h4>
                     </div>
-                  ))}
-                </div>
-                <div className="mt-5 flex w-full flex-col gap-1.5 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-indigo-50">
-                  <span className="font-bold text-white">Zip fotos de repuestos (opcional)</span>
+                    <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">6 CSV + zip</span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+                    {['Categories', 'Location', 'Vendors', 'Items', 'Users', 'Inventory'].map((label) => (
+                      <div key={label} className="rounded-lg border border-white/10 bg-black/10 px-2.5 py-2">
+                        {label}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex w-full flex-col gap-1.5 rounded-xl border border-white/15 bg-black/10 px-3 py-3 text-sm text-indigo-50">
+                  <span className="font-bold text-white">Items_Images.zip (opcional)</span>
                   <span className="text-xs text-indigo-100">
                     {itemImagesZip
                       ? `Seleccionado: ${itemImagesZip.name} (${(itemImagesZip.size / (1024 * 1024)).toFixed(1)} MB)`
@@ -1063,9 +1076,34 @@ export const DeveloperOptions = () => {
                       Quitar zip de repuestos
                     </button>
                   )}
+                  </div>
+                  <label className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-5 py-3.5 font-black text-indigo-700 shadow-sm transition hover:bg-indigo-50">
+                    <Upload size={18} /> Importar inventario (6 CSV + zip)
+                    <input
+                      type="file"
+                      accept=".csv"
+                      multiple
+                      onChange={(e) => void handleImportCSV(e, 'inventory')}
+                      className="hidden"
+                      disabled={isLoading}
+                    />
+                  </label>
                 </div>
-                <div className="mt-3 flex w-full flex-col gap-1.5 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-indigo-50">
-                  <span className="font-bold text-white">Zip fotos de órdenes (opcional)</span>
+
+                <div className="mt-4 rounded-2xl border border-white/25 bg-white/10 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wider text-indigo-200">Paso 2</p>
+                      <h4 className="mt-0.5 text-lg font-black text-white">Órdenes</h4>
+                    </div>
+                    <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">1 CSV + zip</span>
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-indigo-100">
+                    Selecciona solamente <strong>Solicitudes Mantenimiento</strong>. El zip empareja por FOLIO y
+                    las columnas FOTO ANTES / FOTO DESPUÉS.
+                  </p>
+                  <div className="mt-3 flex w-full flex-col gap-1.5 rounded-xl border border-white/15 bg-black/10 px-3 py-3 text-sm text-indigo-50">
+                  <span className="font-bold text-white">Formulario Solicitudes_Images.zip (opcional)</span>
                   <span className="text-xs text-indigo-100">
                     {workOrderImagesZip
                       ? `Seleccionado: ${workOrderImagesZip.name} (${(workOrderImagesZip.size / (1024 * 1024)).toFixed(1)} MB)`
@@ -1093,22 +1131,23 @@ export const DeveloperOptions = () => {
                       Quitar zip de órdenes
                     </button>
                   )}
+                  </div>
+                  <label className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-5 py-3.5 font-black text-indigo-700 shadow-sm transition hover:bg-indigo-50">
+                    <Upload size={18} /> Importar órdenes (1 CSV + zip)
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={(e) => void handleImportCSV(e, 'orders')}
+                      className="hidden"
+                      disabled={isLoading}
+                    />
+                  </label>
                 </div>
+
                 <p className="mt-3 text-[11px] leading-4 text-indigo-200/90">
                   Por Tailscale un zip grande puede tardar; si falla con 413/408, actualiza nginx o entra por{' '}
                   <code className="rounded bg-black/20 px-1">:3000</code>.
                 </p>
-                <label className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-5 py-3.5 font-black text-indigo-700 shadow-sm transition hover:bg-indigo-50 sm:w-fit">
-                  <Upload size={18} /> Seleccionar los CSV
-                  <input
-                    type="file"
-                    accept=".csv"
-                    multiple
-                    onChange={handleImportCSV}
-                    className="hidden"
-                    disabled={isLoading}
-                  />
-                </label>
               </div>
             </article>
 

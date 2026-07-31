@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.46.3";
+export const APP_VERSION = "1.46.4";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -29,6 +29,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: La importación manual se separa en dos operaciones seguras: Inventario (6 CSV + Items_Images.zip) y Órdenes (1 CSV + Formulario Solicitudes_Images.zip). Ambas usan upsert y pueden ejecutarse por separado.",
     "Nuevo: Fotos desde carpetas públicas de Google Drive en import CSV/Sheets (Opciones de Desarrollador) — casilla + GOOGLE_DRIVE_* en .env; prioridad zip > Drive > data/.",
     "Corrección: Con «Alertas por Telegram» desactivadas en Configuración ya no se envían mensajes (SLA, checklist, nuevas OT, ni el cron healthcheck.sh); el .env solo se usa como credencial si el interruptor está activo (o BD inaccesible en healthcheck).",
     "Cambio: El login ya no muestra siempre admin@fiix.com / password123; esas credenciales solo aparecen en el aviso tras vaciar la base de datos.",
