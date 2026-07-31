@@ -30,6 +30,9 @@ Un Sistema Computarizado de Gestión de Mantenimiento (CMMS / GMAO) self-hosted 
 - Seeds/importadores históricos: `backend/src/seed_*.ts`, herramientas en Opciones de desarrollador.
 - `docs/` guarda manual, roadmap, contexto y estrategia (markdown). Los PDF de planta, si existen, son referencia externa.
 
+## Próximo a implementar (ver detalle en `docs/roadmap.md`)
+- **Importación Google Sheets + Drive:** 2 spreadsheets (6+1 hojas, mismas columnas CSV) + 2 carpetas Drive planas (fotos inventario/OT). Botón bajo demanda + interruptor de auto-sync. Reutiliza el motor CSV actual; CSV/zip se mantienen. Requiere JSON de cuenta de servicio + IDs de sheets/carpetas.
+
 ## Tecnologías
 - **Frontend:** React, TypeScript, Tailwind CSS v4, Vite, Lucide, Socket.IO client, PWA (parcial).
 - **Backend:** Node.js 22+, Express, TypeScript, Prisma, PostgreSQL, Socket.IO, node-cron, Multer (`uploads/`).

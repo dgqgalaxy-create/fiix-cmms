@@ -3,6 +3,59 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 30 de Julio de 2026)*
 
+## 📌 Próxima implementación (acordado — pendiente de arrancar)
+
+### Importación desde Google Sheets + Drive (GTZ)
+
+**Estado:** Diseñado / no iniciado. Retomar cuando el usuario diga «adelante» / Fase 1.
+
+**Objetivo:** Importar los mismos datos que hoy llegan por CSV + zip, pero leyendo **Google Sheets** (tablas) y **Google Drive** (fotos), reutilizando la tubería actual de `POST /dev/import-csv` (upsert + orden Categorías → … → Órdenes).
+
+**Orígenes (confirmados por el usuario):**
+
+| Origen Google | Equivale a |
+|---------------|------------|
+| Spreadsheet A — **6 pestañas** | Categorías, Ubicaciones, Proveedores, Items, Usuarios, Inventario (mismas columnas que los CSV) |
+| Spreadsheet B — **1 pestaña** | Solicitudes / Órdenes (mismas columnas que el CSV) |
+| Carpeta Drive plana — inventario | Como `Items_Images.zip` / `data/Items_Images/` |
+| Carpeta Drive plana — órdenes | Como `Formulario Solicitudes_Images.zip` / carpeta de fotos OT |
+
+**UI (Opciones de Desarrollador):**
+
+1. **Botón «Importar ahora»** — bajo demanda (Sheets + Drive → mismo motor de import).
+2. **Interruptor «Actualización automática»** — ON/OFF a conveniencia.
+   - ON: cron en el servidor (horario configurable, p. ej. nocturno).
+   - OFF: solo el botón manual.
+3. Config guardada: IDs de 2 spreadsheets, IDs de 2 carpetas Drive, credencial Google, horario del auto-sync.
+4. **Conservar** importación CSV + zip como respaldo.
+
+**Credenciales / IDs (qué pedir al implementar):**
+
+1. **JSON de cuenta de servicio (Google Cloud):**
+   - Proyecto en [Google Cloud Console](https://console.cloud.google.com/).
+   - Activar **Google Sheets API** y **Google Drive API**.
+   - Crear **Cuenta de servicio** → Claves → Agregar clave → **JSON**.
+   - El JSON vive **solo en el servidor** (secreto; no en Git / no en el frontend).
+   - Compartir Sheets y carpetas Drive con el `client_email` del JSON (permiso **Lector**).
+2. **ID de spreadsheet:** en la URL  
+   `https://docs.google.com/spreadsheets/d/<<<ID>>>/edit`  
+   (un ID por cada uno de los 2 archivos).
+3. **ID de carpeta Drive:** en la URL  
+   `https://drive.google.com/drive/folders/<<<ID>>>`  
+   (un ID por carpeta de fotos inventario y otro por órdenes).
+
+**Fases sugeridas:**
+
+1. Auth + leer 2 Sheets + 2 carpetas → reutilizar import + botón «Importar ahora» + prueba.
+2. Interruptor auto + cron + logs / último resultado + no solapar imports.
+3. Pulido (progreso, errores, docs; avisar/respaldar antes de auto en producción).
+
+**Esfuerzo estimado:** ~2.5–3.5 semanas. No activar auto-sync en producción hasta 2–3 imports manuales OK.
+
+**Notas:** Miles de fotos por Drive pueden hacer lenta la primera corrida; luego optimizar (solo archivos nuevos). Auto-sync sobrescribe como un reimport CSV.
+
+---
+
 ## 🚀 Versión Actual: v1.45.3 (Actualización: 30 de Julio de 2026)
 
 ### Novedades en v1.45.3 (volumen alerta)
@@ -482,6 +535,7 @@ Este documento contiene la lista de módulos y características pendientes de de
 - [x] **Stock crítico accionable (v1.18.0):** Desde la tarjeta de Stock Crítico en Inventario, generar borradores de OC con ítems bajo mínimo en un clic (agrupados por proveedor).
 
 ## [ ] Mejoras Transversales Futuras (Backlog)
+- [ ] **Importación Google Sheets + Drive (próxima):** Ver sección «📌 Próxima implementación» arriba. 2 spreadsheets (6+1 hojas, mismas columnas CSV) + 2 carpetas Drive planas (fotos inventario/OT); botón bajo demanda + interruptor auto-sync; CSV/zip se conservan.
 - [x] **Migración de Órdenes e Inventario:** Importación exitosa de los archivos CSV históricos.
 - [ ] **Checklists avanzados y LOTO:** Pasos obligatorios dentro de la Orden de Trabajo y firmas de bloqueo de energías peligrosas.
 - [x] **Notificaciones y Escalamiento:** Recordatorios y escalamiento SLA por prioridad (respuesta, detenida, resolución) vía Telegram + in-app a gestores/admins (v1.14.0).
