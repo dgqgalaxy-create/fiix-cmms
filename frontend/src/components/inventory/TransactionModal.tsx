@@ -58,13 +58,14 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
         return;
       }
 
-      const amountValue = formData.type === 'IN' ? Math.abs(Number(formData.amount)) : -Math.abs(Number(formData.amount));
-      
-      if (amountValue === 0) {
+      const amountNum = Number(formData.amount);
+      if (!Number.isFinite(amountNum) || amountNum <= 0) {
         setError('La cantidad debe ser mayor a 0');
         setIsSubmitting(false);
         return;
       }
+
+      const amountValue = formData.type === 'IN' ? amountNum : -amountNum;
 
       // Entradas y salidas pueden encolarse offline (idempotencia por client_request_id).
       const clientRequestId =
@@ -213,9 +214,21 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
                     type="number"
                     required
                     step="any"
-                    min="0"
+                    min="0.01"
                     value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === '' || raw === '.') {
+                      setFormData({ ...formData, amount: raw });
+                      return;
+                    }
+                    const n = parseFloat(raw);
+                    if (!Number.isFinite(n) || n < 0) {
+                      setFormData({ ...formData, amount: '' });
+                      return;
+                    }
+                    setFormData({ ...formData, amount: raw });
+                  }}
                   className="w-full pl-8 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow font-mono text-lg"
                   placeholder="0"
                 />

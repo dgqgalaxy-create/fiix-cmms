@@ -404,6 +404,10 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
       res.status(400).json({ error: 'Faltan campos requeridos (item_id, amount, reason)' });
       return;
     }
+    if (transactionAmount === 0) {
+      res.status(400).json({ error: 'La cantidad debe ser distinta de 0' });
+      return;
+    }
 
     // Idempotencia offline: si ya se aplicó esta salida, devolver la misma tx.
     if (requestId) {

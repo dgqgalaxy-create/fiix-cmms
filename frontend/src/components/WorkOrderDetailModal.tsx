@@ -1213,7 +1213,19 @@ export const WorkOrderDetailModal = ({
                               placeholder="Cant."
                               className="w-full sm:w-24 px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white dark:bg-slate-900"
                               value={amountToAdd}
-                              onChange={(e) => setAmountToAdd(e.target.value)}
+                              onChange={(e) => {
+                                const raw = e.target.value;
+                                if (raw === '' || raw === '.') {
+                                  setAmountToAdd(raw);
+                                  return;
+                                }
+                                const n = parseFloat(raw);
+                                if (!Number.isFinite(n) || n < 0) {
+                                  setAmountToAdd('');
+                                  return;
+                                }
+                                setAmountToAdd(raw);
+                              }}
                             />
                             <button
                               type="button"
@@ -1222,6 +1234,10 @@ export const WorkOrderDetailModal = ({
                                 const itemObj = inventoryItems.find(i => i.id === selectedItemToAdd);
                                 if (!itemObj) return;
                                 const qty = parseFloat(amountToAdd);
+                                if (!Number.isFinite(qty) || qty <= 0) {
+                                  alert('La cantidad debe ser un número positivo mayor a 0.');
+                                  return;
+                                }
                                 if (qty > itemObj.stock) {
                                   alert(`No hay suficiente stock. Stock actual: ${itemObj.stock}`);
                                   return;

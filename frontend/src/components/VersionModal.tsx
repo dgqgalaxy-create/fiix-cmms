@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.46.12";
+export const APP_VERSION = "1.46.13";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "31 de Julio, 2026";
+  const updateDate = "1 de Agosto, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -29,6 +29,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Al registrar refacciones en una OT (y en movimientos/planes), la cantidad solo admite valores positivos; el API rechaza negativos o cero.",
     "Cambio: En el Manual (Opciones de Desarrollador), el encabezado del borrado destructivo pasa a «Zona de peligro» (se quitó la etiqueta inapropiada).",
     "Nuevo: Checklist Diario — el técnico asignado puede «Traspasar» a otro; el destinatario Acepta o Rechaza (también se puede cancelar el traspaso pendiente).",
     "Mejora: En Inicio, «Líneas paradas» (L1–L5) incluye OT preventivas abiertas con paro de máquina, además de las correctivas; la racha sigue contando solo correctivo.",

@@ -29,6 +29,16 @@ export const createMaintenancePlan = async (req: Request, res: Response) => {
       days_in_advance, is_active, required_items 
     } = req.body;
 
+    if (Array.isArray(required_items)) {
+      for (const item of required_items) {
+        const qty = Number(item.quantity_required);
+        if (!Number.isFinite(qty) || qty <= 0) {
+          res.status(400).json({ error: 'La cantidad de cada refacción del plan debe ser un número positivo mayor a 0.' });
+          return;
+        }
+      }
+    }
+
     // Calcular primera fecha de vencimiento
     const now = new Date();
     const next_due_date = new Date(now);
@@ -78,6 +88,16 @@ export const updateMaintenancePlan = async (req: Request, res: Response) => {
       title, description, frequency_type, frequency_value, 
       days_in_advance, is_active, required_items 
     } = req.body;
+
+    if (Array.isArray(required_items)) {
+      for (const item of required_items) {
+        const qty = Number(item.quantity_required);
+        if (!Number.isFinite(qty) || qty <= 0) {
+          res.status(400).json({ error: 'La cantidad de cada refacción del plan debe ser un número positivo mayor a 0.' });
+          return;
+        }
+      }
+    }
 
     // Check if we need to recalculate next_due_date based on new frequency
     // For simplicity, we just update it if frequency changes

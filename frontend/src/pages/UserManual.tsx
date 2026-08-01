@@ -277,7 +277,7 @@ export const UserManual = () => {
                     </div>
                     <div className="border border-slate-200 dark:border-slate-700 p-4 rounded-2xl">
                       <span className="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full text-xs font-bold mb-3 inline-block">FINALIZADO</span>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">El trabajo terminó. Antes de guardar puedes registrar <strong>repuestos a descontar</strong>; el stock baja al cerrar y el costo queda ligado a la OT.</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">El trabajo terminó. Antes de guardar puedes registrar <strong>repuestos a descontar</strong> (cantidad positiva &gt; 0); el stock baja al cerrar y el costo queda ligado a la OT.</p>
                     </div>
                   </div>
                 </div>

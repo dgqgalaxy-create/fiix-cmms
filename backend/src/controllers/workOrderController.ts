@@ -615,9 +615,11 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
         try {
           await prisma.$transaction(async (tx) => {
             for (const part of parsedUsedItems) {
-              if (!part.item_id || !part.amount) continue;
-              const amountToDeduct = Math.abs(Number(part.amount));
-              if (amountToDeduct <= 0) continue;
+              if (!part.item_id) continue;
+              const amountToDeduct = Number(part.amount);
+              if (!Number.isFinite(amountToDeduct) || amountToDeduct <= 0) {
+                throw new Error('La cantidad de cada refacción debe ser un número positivo mayor a 0.');
+              }
 
               const item = await tx.item.findUnique({ where: { id: part.item_id } });
               if (!item) {

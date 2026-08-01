@@ -95,7 +95,8 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
   };
 
   const handleAddItem = () => {
-    if (!newItemId || !newItemQty || Number(newItemQty) <= 0) return;
+    const qty = Number(newItemQty);
+    if (!newItemId || !newItemQty || !Number.isFinite(qty) || qty <= 0) return;
     
     const existing = formData.required_items?.find(i => i.item_id === newItemId);
     if (existing) {
@@ -297,7 +298,19 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
                       min="0.1"
                       step="0.1"
                       value={newItemQty}
-                      onChange={(e) => setNewItemQty(e.target.value)}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === '' || raw === '.') {
+                          setNewItemQty(raw);
+                          return;
+                        }
+                        const n = parseFloat(raw);
+                        if (!Number.isFinite(n) || n < 0) {
+                          setNewItemQty('');
+                          return;
+                        }
+                        setNewItemQty(raw);
+                      }}
                       className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none"
                     />
                   </div>
