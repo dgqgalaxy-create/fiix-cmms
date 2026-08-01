@@ -1421,7 +1421,9 @@ export const DeveloperOptions = () => {
                 <RefreshCw className="shrink-0 text-slate-500" size={20} />
                 <span>
                   <span className="block text-sm font-black text-slate-800 dark:text-white">Limpiar caché PWA</span>
-                  <span className="text-xs text-slate-500">Desregistra Service Workers, limpia Cache Storage y recarga el build.</span>
+                  <span className="text-xs text-slate-500">
+                    Úsalo cuando, tras un <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">./update.sh</code> o un aviso de nueva versión, la app sigue mostrando la versión vieja, pantallas rotas o botones que ya no existen. Desregistra el Service Worker, vacía la caché del navegador/PWA y recarga el build nuevo (también limpia localStorage de este sitio).
+                  </span>
                 </span>
               </button>
               <button

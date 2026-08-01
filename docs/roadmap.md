@@ -85,7 +85,10 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.47.2 (Actualización: 1 de Agosto de 2026)
+## 🚀 Versión Actual: v1.47.3 (Actualización: 1 de Agosto de 2026)
+
+### Novedades en v1.47.3 (Texto Limpiar caché PWA)
+- **Mejora:** En Herramientas locales se aclara cuándo usar **Limpiar caché PWA** (versión vieja tras update, UI rota o desactualizada).
 
 ### Novedades en v1.47.2 (Bitácora — Excel sin límite de retención)
 - **Aclare:** La bitácora de auditoría guarda todo el histórico en PostgreSQL (sin caducidad ni job de purga). La vista en pantalla sigue mostrando los últimos 50.
