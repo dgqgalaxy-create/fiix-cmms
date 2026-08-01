@@ -85,7 +85,11 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.47.1 (Actualización: 1 de Agosto de 2026)
+## 🚀 Versión Actual: v1.47.2 (Actualización: 1 de Agosto de 2026)
+
+### Novedades en v1.47.2 (Bitácora — Excel sin límite de retención)
+- **Aclare:** La bitácora de auditoría guarda todo el histórico en PostgreSQL (sin caducidad ni job de purga). La vista en pantalla sigue mostrando los últimos 50.
+- **Nuevo:** Descarga Excel (.xlsx) por periodo de fechas (día civil México) o histórico completo, en Opciones de Desarrollador (solo Admin).
 
 ### Novedades en v1.47.1 (Opciones de Desarrollador — respaldo compacto)
 - **Mejora:** «Respaldo del servidor» deja de estirarse con espacio vacío: ahora se apila con «Importar desde Google Sheets» en la columna derecha y los botones Crear/Restaurar comparten fila.

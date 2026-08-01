@@ -19,7 +19,9 @@ import {
   ScrollText,
   ChevronDown,
   Cloud,
+  Download,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import axios from '../api/axios';
 import { isAxiosError } from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -39,9 +41,13 @@ import { formatDateTime } from '../utils/dateUtils';
 type AuditLogRow = {
   id: string;
   created_at: string;
+  user_id?: string | null;
   user_name?: string | null;
   action: string;
+  entity: string;
+  entity_id?: string | null;
   summary: string;
+  meta?: unknown;
 };
 
 export const DeveloperOptions = () => {
@@ -118,6 +124,9 @@ export const DeveloperOptions = () => {
   const [auditLogs, setAuditLogs] = useState<AuditLogRow[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
+  const [auditFrom, setAuditFrom] = useState('');
+  const [auditTo, setAuditTo] = useState('');
+  const [auditExporting, setAuditExporting] = useState(false);
 
   /** Por archivo: alineado con multer. Nginx permite ~1100 MB de body (2 zips). */
   const ZIP_MAX_BYTES = 500 * 1024 * 1024;
@@ -139,6 +148,88 @@ export const DeveloperOptions = () => {
       setAuditLogs([]);
     } finally {
       setAuditLoading(false);
+    }
+  };
+
+  const handleExportAuditExcel = async (fullHistory: boolean) => {
+    if (!isAdmin) return;
+    if (!fullHistory && auditFrom && auditTo && auditFrom > auditTo) {
+      setAuditError('La fecha inicial no puede ser posterior a la final');
+      return;
+    }
+    setAuditExporting(true);
+    setAuditError(null);
+    try {
+      const params: { from?: string; to?: string } = {};
+      if (!fullHistory) {
+        if (auditFrom) params.from = auditFrom;
+        if (auditTo) params.to = auditTo;
+      }
+      const res = await axios.get('/audit/export', { params });
+      const payload = res.data as { from?: string | null; to?: string | null; count?: number; rows?: AuditLogRow[] };
+      const rows = Array.isArray(payload.rows) ? payload.rows : [];
+
+      const sheetRows = rows.map((row) => ({
+        Fecha: formatDateTime(row.created_at),
+        Usuario: row.user_name || '',
+        'Usuario ID': row.user_id || '',
+        Acción: row.action,
+        Entidad: row.entity,
+        'ID entidad': row.entity_id || '',
+        Resumen: row.summary,
+        Meta: row.meta != null ? JSON.stringify(row.meta) : '',
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(
+        sheetRows.length > 0
+          ? sheetRows
+          : [
+              {
+                Fecha: '',
+                Usuario: '',
+                'Usuario ID': '',
+                Acción: '',
+                Entidad: '',
+                'ID entidad': '',
+                Resumen: '(sin eventos en el periodo)',
+                Meta: '',
+              },
+            ]
+      );
+      ws['!cols'] = [
+        { wch: 20 },
+        { wch: 22 },
+        { wch: 36 },
+        { wch: 28 },
+        { wch: 14 },
+        { wch: 36 },
+        { wch: 50 },
+        { wch: 40 },
+      ];
+      XLSX.utils.book_append_sheet(wb, ws, 'Bitácora');
+
+      const fromLabel = fullHistory ? 'completo' : payload.from || auditFrom || 'inicio';
+      const toLabel = fullHistory ? 'completo' : payload.to || auditTo || 'hoy';
+      const stamp = new Date().toISOString().slice(0, 10);
+      const filename = fullHistory
+        ? `bitacora_auditoria_historico_${stamp}.xlsx`
+        : `bitacora_auditoria_${fromLabel}_${toLabel}_${stamp}.xlsx`;
+
+      XLSX.writeFile(wb, filename);
+      setSuccessMsg(
+        rows.length === 0
+          ? 'Excel generado sin eventos en el periodo seleccionado.'
+          : `Excel descargado: ${rows.length} evento(s) de auditoría.`
+      );
+    } catch (err) {
+      console.error(err);
+      const msg = isAxiosError(err)
+        ? (err.response?.data as { error?: string } | undefined)?.error || err.message
+        : 'No se pudo exportar la bitácora';
+      setAuditError(msg);
+    } finally {
+      setAuditExporting(false);
     }
   };
 
@@ -1458,7 +1549,7 @@ export const DeveloperOptions = () => {
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Auditoría</p>
                   <h2 className="mt-0.5 text-lg font-black text-slate-900 dark:text-white">Bitácora de auditoría</h2>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    Últimos 50 eventos (OT, inventario, permisos). Solo administradores.
+                    Histórico completo en base de datos (sin caducidad). En pantalla se muestran los últimos 50; puedes descargar Excel por periodo o todo el histórico.
                   </p>
                 </div>
               </div>
@@ -1469,7 +1560,46 @@ export const DeveloperOptions = () => {
             </button>
             {auditOpen && (
               <div className="border-t border-slate-100 px-4 pb-5 pt-3 dark:border-slate-800 sm:px-6">
-                <div className="mb-3 flex items-center justify-end">
+                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+                      Desde
+                      <input
+                        type="date"
+                        value={auditFrom}
+                        onChange={(e) => setAuditFrom(e.target.value)}
+                        className="mt-1 block w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white sm:w-40"
+                      />
+                    </label>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+                      Hasta
+                      <input
+                        type="date"
+                        value={auditTo}
+                        onChange={(e) => setAuditTo(e.target.value)}
+                        className="mt-1 block w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white sm:w-40"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => void handleExportAuditExcel(false)}
+                      disabled={auditExporting || (!auditFrom && !auditTo)}
+                      title={!auditFrom && !auditTo ? 'Elige al menos una fecha, o usa «Histórico completo»' : undefined}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      <Download size={14} />
+                      {auditExporting ? 'Generando…' : 'Excel del periodo'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleExportAuditExcel(true)}
+                      disabled={auditExporting}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                    >
+                      <FileSpreadsheet size={14} />
+                      Histórico completo
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={() => void fetchAuditLogs()}
@@ -1477,9 +1607,12 @@ export const DeveloperOptions = () => {
                     className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                   >
                     <RefreshCw size={14} className={auditLoading ? 'animate-spin' : ''} />
-                    Actualizar
+                    Actualizar vista
                   </button>
                 </div>
+                <p className="mb-3 text-[11px] leading-4 text-slate-500 dark:text-slate-400">
+                  Las fechas del Excel usan día civil de México. Si dejas vacío Desde o Hasta, el periodo se abre hacia ese extremo; «Histórico completo» ignora las fechas.
+                </p>
                 {auditError && (
                   <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
                     {auditError}

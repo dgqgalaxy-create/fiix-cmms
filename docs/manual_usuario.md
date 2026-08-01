@@ -1,5 +1,5 @@
 # Manual de Usuario - GTZ CMMS
-*(Versión 1.47.1 - 1 de Agosto, 2026)*
+*(Versión 1.47.2 - 1 de Agosto, 2026)*
 
 Este manual se mantiene alineado con cada release de la app (misma versión que `package.json` y el modal de novedades).
 
@@ -21,7 +21,7 @@ En celular, el temario del manual aparece como una barra horizontal deslizable. 
 - **Turno actual (Inicio):** Panel con conteo por técnico de OT abiertas (pendientes / en proceso / en espera y avisos SLA). Un toque lleva a Órdenes.
 - **Líneas paradas / racha (Inicio):** Chips L1–L5 por OT correctiva o preventiva abierta con paro de máquina; la racha y el **récord** siguen siendo solo correctivo (preventivos no reinician la racha).
 - **KPIs — comparar semanas:** Periodo **Semana pasada** y, al ver **Esta semana**, franja de comparación vs la semana anterior.
-- **Bitácora de auditoría:** Solo **Administrador**, en Opciones de Desarrollador: últimos eventos de cambios en OT, inventario y permisos.
+- **Bitácora de auditoría:** Solo **Administrador**, en Opciones de Desarrollador. El histórico se guarda **sin límite** en la base de datos. En pantalla verás los últimos 50 eventos; puedes **descargar Excel** filtrando por fechas (Desde/Hasta, día México) o el **histórico completo**.
 - **Tiempo real:** Los listados y catálogos se actualizan casi al momento cuando otro usuario crea, edita o elimina datos (órdenes, inventario, activos, compras, checklist, turnos, RCA, zonas, usuarios, etc.). No hace falta pulsar F5.
 - **Edición concurrente de OT:** Si abres una orden de trabajo, eres el editor. Quien abra la misma orden después la verá en **solo lectura** con el mensaje «En edición por {nombre}». Al cerrar el detalle (o si se pierde la conexión ~40 s), otro puede tomarla. Si dos intentan aceptar la misma orden a la vez, el segundo recibe un aviso de conflicto y debe recargar.
 - **Folios FOL-####:** Cada orden recibe un folio automático e inmutable (`FOL-0001`, `FOL-0002`…). No se edita. En importación CSV se usa la columna `FOLIO` (acepta `FOL-####` o el número).
