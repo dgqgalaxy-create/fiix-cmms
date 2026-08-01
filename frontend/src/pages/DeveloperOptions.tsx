@@ -1009,8 +1009,7 @@ export const DeveloperOptions = () => {
             <Database className="text-slate-300 dark:text-slate-700" size={26} />
           </div>
 
-          <div className="grid gap-5 lg:grid-cols-[1.35fr_1fr]">
-            <div className="grid gap-5">
+          <div className="grid gap-5 lg:grid-cols-[1.35fr_1fr] lg:items-start">
             <article className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-600 to-violet-700 p-6 text-white shadow-lg shadow-indigo-200/40 dark:border-indigo-800 dark:shadow-none sm:p-7">
               <div className="absolute -bottom-20 -right-12 h-56 w-56 rounded-full bg-white/10" />
               <div className="relative">
@@ -1151,6 +1150,7 @@ export const DeveloperOptions = () => {
               </div>
             </article>
 
+            <div className="grid content-start gap-5">
             <article className="relative overflow-hidden rounded-3xl border border-sky-200 bg-gradient-to-br from-sky-600 to-cyan-700 p-6 text-white shadow-lg shadow-sky-200/40 dark:border-sky-800 dark:shadow-none sm:p-7">
               <div className="absolute -bottom-16 -right-10 h-48 w-48 rounded-full bg-white/10" />
               <div className="relative">
@@ -1204,10 +1204,8 @@ export const DeveloperOptions = () => {
                 </button>
               </div>
             </article>
-            </div>
 
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
-              <article className="flex flex-col rounded-3xl border border-amber-200 bg-white p-5 shadow-sm dark:border-amber-900/60 dark:bg-slate-900">
+              <article className="rounded-3xl border border-amber-200 bg-white p-5 shadow-sm dark:border-amber-900/60 dark:bg-slate-900">
                 <div className="flex items-start gap-4">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
                     <Save size={21} />
@@ -1224,13 +1222,27 @@ export const DeveloperOptions = () => {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={handleBackupNow}
-                  disabled={isBackingUp || isLoading}
-                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-amber-700 disabled:opacity-50"
-                >
-                  <Save size={16} /> {isBackingUp ? 'Creando respaldo…' : 'Crear respaldo'}
-                </button>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <button
+                    onClick={handleBackupNow}
+                    disabled={isBackingUp || isLoading}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-amber-700 disabled:opacity-50"
+                  >
+                    <Save size={16} /> {isBackingUp ? 'Creando respaldo…' : 'Crear respaldo'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsRestoreModalOpen(true);
+                      setRestoreModalError(null);
+                      void loadServerBackups();
+                    }}
+                    disabled={isLoading || isRestoring || isBackingUp}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800 transition hover:bg-amber-100 disabled:opacity-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                  >
+                    <HardDrive size={16} /> Restaurar respaldo
+                  </button>
+                </div>
                 {(isBackingUp || backupProgress) && backupProgress && (
                   <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3 dark:border-amber-900/50 dark:bg-amber-950/30">
                     <div className="mb-1.5 flex items-center justify-between gap-2 text-xs font-bold text-amber-900 dark:text-amber-200">
@@ -1254,18 +1266,6 @@ export const DeveloperOptions = () => {
                     )}
                   </div>
                 )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsRestoreModalOpen(true);
-                    setRestoreModalError(null);
-                    void loadServerBackups();
-                  }}
-                  disabled={isLoading || isRestoring || isBackingUp}
-                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800 transition hover:bg-amber-100 disabled:opacity-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
-                >
-                  <HardDrive size={16} /> Restaurar respaldo
-                </button>
               </article>
             </div>
           </div>

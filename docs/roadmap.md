@@ -85,7 +85,10 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.47.0 (Actualización: 1 de Agosto de 2026)
+## 🚀 Versión Actual: v1.47.1 (Actualización: 1 de Agosto de 2026)
+
+### Novedades en v1.47.1 (Opciones de Desarrollador — respaldo compacto)
+- **Mejora:** «Respaldo del servidor» deja de estirarse con espacio vacío: ahora se apila con «Importar desde Google Sheets» en la columna derecha y los botones Crear/Restaurar comparten fila.
 
 ### Novedades en v1.47.0 (Checklist — Incumplimiento + continuación)
 - **Nuevo:** Autocierre a medianoche (México): checklists no enviados → **Incumplimiento** (bloqueados). Si faltaba el del día anterior, se crea vacío en Incumplimiento.

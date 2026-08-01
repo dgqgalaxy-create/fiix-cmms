@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.47.0";
+export const APP_VERSION = "1.47.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -29,6 +29,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: En Opciones de Desarrollador, la tarjeta «Respaldo del servidor» ya no se estira con espacio vacío a la derecha: se reacomodó junto a «Importar desde Google Sheets» y sus botones Crear/Restaurar van en una sola fila.",
     "Nuevo: Checklist Diario — al pasar el día (hora México) los no enviados pasan a Incumplimiento y quedan bloqueados. El técnico asignado puede solicitar continuar; solo un Administrador aprueba. Si no hay técnico, el Admin puede asignarlo (sigue en Incumplimiento).",
     "Corrección: Al registrar refacciones en una OT (y en movimientos/planes), la cantidad solo admite valores positivos; el API rechaza negativos o cero.",
     "Cambio: En el Manual (Opciones de Desarrollador), el encabezado del borrado destructivo pasa a «Zona de peligro» (se quitó la etiqueta inapropiada).",
