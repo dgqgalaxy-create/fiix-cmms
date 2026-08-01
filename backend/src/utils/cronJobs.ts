@@ -5,12 +5,26 @@ import { emitRefresh } from './socket';
 import { runBackup } from './backupService';
 import { runDbSelfCheck } from './dbHealthCheck';
 import { CHECKLIST_TZ, runChecklistReminderCheck } from './checklistReminder';
+import { runChecklistNonComplianceClose } from './checklistNonCompliance';
 
 // This cron job will run every day at 00:01
 export const initCronJobs = () => {
   cron.schedule('1 0 * * *', async () => {
     console.log('Running daily preventative maintenance check...');
     await checkAndGenerateMaintenanceOrders();
+  }, { timezone: CHECKLIST_TZ });
+
+  // Autocierre: checklists no enviados del día anterior → Incumplimiento (00:05 MX)
+  cron.schedule('5 0 * * *', async () => {
+    console.log('Running checklist non-compliance close...');
+    try {
+      const result = await runChecklistNonComplianceClose();
+      console.log(
+        `Checklist non-compliance: closed=${result.closed}, createdMissing=${result.createdMissing}`
+      );
+    } catch (error) {
+      console.error('Error in checklist non-compliance close:', error);
+    }
   }, { timezone: CHECKLIST_TZ });
 
   // Respaldo automático diario (BD + uploads) a las 2:15 AM; conserva los últimos 14 días.
@@ -72,6 +86,18 @@ export const initCronJobs = () => {
       })
       .catch((error) => console.error('Error in silent SLA backfill:', error));
   }, 8000);
+
+  // Arranque: catch-up de incumplimientos si el server estuvo apagado a medianoche
+  setTimeout(() => {
+    console.log('Running checklist non-compliance catch-up on startup...');
+    runChecklistNonComplianceClose()
+      .then((result) => {
+        console.log(
+          `Checklist non-compliance catch-up: closed=${result.closed}, createdMissing=${result.createdMissing}`
+        );
+      })
+      .catch((error) => console.error('Error in checklist non-compliance catch-up:', error));
+  }, 10000);
 };
 
 export const checkAndGenerateMaintenanceOrders = async () => {

@@ -1,5 +1,5 @@
 # Manual de Usuario - GTZ CMMS
-*(Versión 1.46.11 - 31 de Julio, 2026)*
+*(Versión 1.47.0 - 1 de Agosto, 2026)*
 
 Este manual se mantiene alineado con cada release de la app (misma versión que `package.json` y el modal de novedades).
 
@@ -48,7 +48,8 @@ Las actividades del Checklist ahora son más flexibles:
 - **Uso:** Simplemente haz clic en la línea correspondiente y teclea el valor numérico (ej. 45.5) o un texto corto. El sistema guardará la información tal como si fuese un check tradicional.
 - **Envío completo obligatorio:** No puedes firmar y enviar si falta algún check o lectura (número/texto) en alguna línea. Si marcas una **cruz (falla)** en una fila, la **observación de esa fila es obligatoria**. Con palomita o N/A, la observación vacía se rellena sola con **N/A** al enviar.
 - **Imprimir / PDF:** Solo cuando el checklist ya está **enviado/firmado** o **revisado** (no en borrador). El PDF se genera en **una hoja A4 vertical** con la matriz completa.
-- **Recordatorio Telegram:** Si el checklist del día no se crea o no se envía, el sistema avisa por Telegram en horario laboral (por defecto 10:00, 14:00 y 16:00, hora México). Así no se olvida: los días pasados ya no se pueden llenar.
+- **Incumplimiento (autocierre):** Al pasar la medianoche (hora México), si el checklist del día no se envió (o ni siquiera se creó), queda en estado **Incumplimiento** y **ya no se puede editar ni enviar**. Si no tenía técnico, un **Administrador** puede asignarle uno (el estado sigue en Incumplimiento). Solo el **técnico asignado** puede **Solicitar continuar**; un **Administrador** debe **Aprobar** (o Rechazar). Al aprobar se reabre en borrador para completarlo y enviarlo con normalidad.
+- **Recordatorio Telegram:** Si el checklist del día no se crea o no se envía, el sistema avisa por Telegram en horario laboral (por defecto 10:00, 14:00 y 16:00, hora México).
 - **Configuración:** Para restaurar el listado estándar (con temperaturas en Número y lecturas de agua en Texto), ve a Configuración → Catálogo de Checklist y pulsa **"Restaurar por Defecto"**.
 
 ## 2. Módulo Inventario: Mejoras y Restricciones

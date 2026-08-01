@@ -15,6 +15,7 @@ import {
   ArrowRightLeft,
   Loader2,
   Users,
+  Ban,
 } from 'lucide-react';
 import {
   getChecklistById,
@@ -26,10 +27,15 @@ import {
   acceptChecklistTransfer,
   rejectChecklistTransfer,
   cancelChecklistTransfer,
+  assignChecklistTechnician,
+  requestChecklistContinuation,
+  approveChecklistContinuation,
+  rejectChecklistContinuation,
+  cancelChecklistContinuation,
   getRowLineStatus,
 } from '../api/checklists';
 import type { DailyChecklist, ChecklistRow } from '../api/checklists';
-import { getOnlineUsers } from '../api/users';
+import { getOnlineUsers, getUsers } from '../api/users';
 import type { User } from '../api/users';
 import { useAuth } from '../context/AuthContext';
 import { parseDateOnly } from '../utils/dateUtils';
@@ -69,6 +75,11 @@ export default function ChecklistFormPage() {
   const [selectedTransferUserId, setSelectedTransferUserId] = useState<string | null>(null);
   const [transferError, setTransferError] = useState<string | null>(null);
   const [transferActionBusy, setTransferActionBusy] = useState(false);
+  const [assignCandidates, setAssignCandidates] = useState<User[]>([]);
+  const [selectedAssignUserId, setSelectedAssignUserId] = useState<string | null>(null);
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignSaving, setAssignSaving] = useState(false);
+  const [continuationBusy, setContinuationBusy] = useState(false);
 
   const fetchChecklist = async (checklistId: string, background = false) => {
     try {
@@ -103,11 +114,13 @@ export default function ChecklistFormPage() {
               ? {
                   ...prev,
                   pending_transfer: data.pending_transfer,
+                  pending_continuation: data.pending_continuation,
                   technician_id: data.technician_id,
                   technician: data.technician,
                   status: data.status,
                   leader_id: data.leader_id,
                   leader: data.leader,
+                  reopened_from_non_compliance: data.reopened_from_non_compliance,
                 }
               : data
           );
@@ -178,6 +191,21 @@ export default function ChecklistFormPage() {
   const isTransferOwner =
     !!pendingTransfer && pendingTransfer.from_user_id === userId;
 
+  const pendingContinuation =
+    checklist?.pending_continuation?.status === 'PENDING' ? checklist.pending_continuation : null;
+  const isAdmin = user?.role === 'ADMINISTRADOR';
+  const isNonCompliance = checklist?.status === 'NON_COMPLIANCE';
+  const canAssignTechnician =
+    !!isNonCompliance && isAdmin && !checklist?.technician_id;
+  const canRequestContinuation =
+    !!isNonCompliance &&
+    !!checklist?.technician_id &&
+    checklist.technician_id === userId &&
+    !pendingContinuation;
+  const canCancelContinuation =
+    !!pendingContinuation && pendingContinuation.requested_by_id === userId;
+  const canResolveContinuation = !!pendingContinuation && isAdmin;
+
   const isClaimedByMe =
     !!checklist &&
     checklist.status === 'DRAFT' &&
@@ -190,6 +218,36 @@ export default function ChecklistFormPage() {
     checklist.status === 'DRAFT' &&
     !!checklist.technician_id &&
     checklist.technician_id !== userId;
+
+  useEffect(() => {
+    if (!canAssignTechnician) {
+      setAssignCandidates([]);
+      setSelectedAssignUserId(null);
+      return;
+    }
+    let cancelled = false;
+    setAssignLoading(true);
+    getUsers()
+      .then((users) => {
+        if (cancelled) return;
+        setAssignCandidates(
+          users.filter(
+            (u) =>
+              u.is_active !== false &&
+              (u.role === 'TECNICO' || u.role === 'GESTIONADOR')
+          )
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setAssignCandidates([]);
+      })
+      .finally(() => {
+        if (!cancelled) setAssignLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [canAssignTechnician, checklist?.id]);
 
   const openTransferModal = async () => {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -293,6 +351,105 @@ export default function ChecklistFormPage() {
       await fetchChecklist(id);
     } finally {
       setTransferActionBusy(false);
+    }
+  };
+
+  const handleAssignTechnician = async () => {
+    if (!id || !selectedAssignUserId) {
+      alert('Selecciona un técnico para asignar');
+      return;
+    }
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      alert('Asignar técnico requiere conexión.');
+      return;
+    }
+    try {
+      setAssignSaving(true);
+      const data = await assignChecklistTechnician(id, selectedAssignUserId);
+      setChecklist(data);
+      setSelectedAssignUserId(null);
+    } catch (error: any) {
+      alert(error?.response?.data?.error || 'No se pudo asignar el técnico.');
+      await fetchChecklist(id);
+    } finally {
+      setAssignSaving(false);
+    }
+  };
+
+  const handleRequestContinuation = async () => {
+    if (!id) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      alert('Solicitar continuación requiere conexión.');
+      return;
+    }
+    if (!window.confirm('¿Solicitar al administrador continuar este checklist en incumplimiento?')) {
+      return;
+    }
+    try {
+      setContinuationBusy(true);
+      const request = await requestChecklistContinuation(id);
+      setChecklist((prev) => (prev ? { ...prev, pending_continuation: request } : prev));
+    } catch (error: any) {
+      alert(error?.response?.data?.error || 'No se pudo enviar la solicitud.');
+      await fetchChecklist(id);
+    } finally {
+      setContinuationBusy(false);
+    }
+  };
+
+  const handleApproveContinuation = async () => {
+    if (!pendingContinuation || !id) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      alert('Aprobar requiere conexión.');
+      return;
+    }
+    try {
+      setContinuationBusy(true);
+      const data = await approveChecklistContinuation(pendingContinuation.id);
+      setChecklist(data);
+    } catch (error: any) {
+      alert(error?.response?.data?.error || 'No se pudo aprobar la continuación.');
+      await fetchChecklist(id);
+    } finally {
+      setContinuationBusy(false);
+    }
+  };
+
+  const handleRejectContinuation = async () => {
+    if (!pendingContinuation || !id) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      alert('Rechazar requiere conexión.');
+      return;
+    }
+    if (!window.confirm('¿Rechazar la solicitud de continuación?')) return;
+    try {
+      setContinuationBusy(true);
+      const data = await rejectChecklistContinuation(pendingContinuation.id);
+      setChecklist(data);
+    } catch (error: any) {
+      alert(error?.response?.data?.error || 'No se pudo rechazar la solicitud.');
+      await fetchChecklist(id);
+    } finally {
+      setContinuationBusy(false);
+    }
+  };
+
+  const handleCancelContinuation = async () => {
+    if (!pendingContinuation || !id) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      alert('Cancelar requiere conexión.');
+      return;
+    }
+    if (!window.confirm('¿Cancelar tu solicitud de continuación?')) return;
+    try {
+      setContinuationBusy(true);
+      const data = await cancelChecklistContinuation(pendingContinuation.id);
+      setChecklist(data);
+    } catch (error: any) {
+      alert(error?.response?.data?.error || 'No se pudo cancelar la solicitud.');
+      await fetchChecklist(id);
+    } finally {
+      setContinuationBusy(false);
     }
   };
 
@@ -583,8 +740,143 @@ export default function ChecklistFormPage() {
               {isSaving ? 'Aprobando...' : 'Aprobar Checklist'}
             </button>
           )}
+
+          {canRequestContinuation && (
+            <button
+              type="button"
+              onClick={handleRequestContinuation}
+              disabled={continuationBusy}
+              className="flex items-center gap-2 bg-rose-600 text-white px-5 py-2.5 rounded-xl hover:bg-rose-700 transition-all font-medium shadow-sm disabled:opacity-60"
+            >
+              <Ban size={20} />
+              {continuationBusy ? 'Enviando...' : 'Solicitar continuar'}
+            </button>
+          )}
         </div>
       </div>
+
+      {isNonCompliance && (
+        <div
+          role="status"
+          className="print:hidden flex flex-col gap-3 rounded-xl border border-rose-300 bg-rose-50 p-4 text-rose-950 shadow-sm dark:border-rose-700/60 dark:bg-rose-950/40 dark:text-rose-100"
+        >
+          <div className="flex items-start gap-3">
+            <Ban className="mt-0.5 shrink-0 text-rose-600 dark:text-rose-400" size={20} />
+            <div className="min-w-0 flex-1 text-sm">
+              <p className="font-semibold">Incumplimiento — checklist cerrado</p>
+              <p className="mt-0.5 text-rose-800/90 dark:text-rose-300/90">
+                No se envió a tiempo. Quedó bloqueado. Solo el técnico asignado puede solicitar continuar;
+                un administrador debe aprobarlo.
+                {!checklist.technician_id
+                  ? ' Aún no hay técnico asignado: un administrador puede asignarlo abajo (el estado sigue en incumplimiento).'
+                  : ` Técnico: ${checklist.technician?.name || 'asignado'}.`}
+              </p>
+            </div>
+          </div>
+
+          {canAssignTechnician && (
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center pl-0 sm:pl-8">
+              <select
+                value={selectedAssignUserId || ''}
+                onChange={(e) => setSelectedAssignUserId(e.target.value || null)}
+                disabled={assignLoading || assignSaving}
+                className="flex-1 rounded-xl border border-rose-300 bg-white px-3 py-2 text-sm text-slate-800 dark:border-rose-700 dark:bg-slate-900 dark:text-slate-100"
+              >
+                <option value="">
+                  {assignLoading ? 'Cargando personal…' : 'Seleccionar técnico…'}
+                </option>
+                {assignCandidates.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.role})
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleAssignTechnician}
+                disabled={!selectedAssignUserId || assignSaving}
+                className="shrink-0 rounded-xl bg-rose-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-rose-800 disabled:opacity-60"
+              >
+                {assignSaving ? 'Asignando…' : 'Asignar técnico'}
+              </button>
+            </div>
+          )}
+
+          {canRequestContinuation && (
+            <div className="pl-0 sm:pl-8">
+              <button
+                type="button"
+                onClick={handleRequestContinuation}
+                disabled={continuationBusy}
+                className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-60"
+              >
+                {continuationBusy ? 'Enviando…' : 'Solicitar continuar'}
+              </button>
+            </div>
+          )}
+
+          {pendingContinuation && (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 pl-0 sm:pl-8 rounded-lg border border-orange-300/80 bg-orange-50/80 p-3 dark:border-orange-700/50 dark:bg-orange-950/30">
+              <div className="min-w-0 flex-1 text-sm text-orange-950 dark:text-orange-100">
+                <p className="font-semibold">Solicitud pendiente</p>
+                <p className="mt-0.5 text-orange-800/90 dark:text-orange-300/90">
+                  {pendingContinuation.requested_by?.name || 'El técnico'} pidió continuar.
+                  {canResolveContinuation
+                    ? ' Aprueba o rechaza como administrador.'
+                    : ' Esperando al administrador.'}
+                </p>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                {canCancelContinuation && (
+                  <button
+                    type="button"
+                    onClick={handleCancelContinuation}
+                    disabled={continuationBusy}
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                  >
+                    Cancelar solicitud
+                  </button>
+                )}
+                {canResolveContinuation && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleRejectContinuation}
+                      disabled={continuationBusy}
+                      className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                    >
+                      Rechazar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleApproveContinuation}
+                      disabled={continuationBusy}
+                      className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
+                    >
+                      {continuationBusy ? 'Procesando…' : 'Aprobar'}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {checklist.reopened_from_non_compliance && checklist.status === 'DRAFT' && (
+        <div
+          role="status"
+          className="print:hidden flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900 shadow-sm dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200"
+        >
+          <AlertTriangle className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" size={20} />
+          <div className="min-w-0 flex-1 text-sm">
+            <p className="font-semibold">Reabierto tras incumplimiento</p>
+            <p className="mt-0.5 text-amber-800/90 dark:text-amber-300/90">
+              Un administrador aprobó continuar. Completa y envía el checklist con normalidad.
+            </p>
+          </div>
+        </div>
+      )}
 
       {isUnclaimedDraft && (
         <div

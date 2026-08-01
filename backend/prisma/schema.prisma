@@ -98,6 +98,8 @@ model User {
   checklist_leader DailyChecklist[] @relation("ChecklistLeader")
   checklist_transfers_from ChecklistTransfer[] @relation("ChecklistTransferFrom")
   checklist_transfers_to   ChecklistTransfer[] @relation("ChecklistTransferTo")
+  checklist_continuation_requests ChecklistContinuationRequest[] @relation("ChecklistContinuationRequester")
+  checklist_continuation_resolutions ChecklistContinuationRequest[] @relation("ChecklistContinuationResolver")
 
   pattern              TechnicianPattern?
   exceptions           TechnicianException[]
@@ -530,11 +532,19 @@ enum ChecklistStatus {
   DRAFT
   COMPLETED
   REVIEWED
+  NON_COMPLIANCE
 }
 
 enum ChecklistTransferStatus {
   PENDING
   ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum ChecklistContinuationStatus {
+  PENDING
+  APPROVED
   REJECTED
   CANCELLED
 }
@@ -557,11 +567,14 @@ model DailyChecklist {
   leader          User?    @relation("ChecklistLeader", fields: [leader_id], references: [id])
   status          ChecklistStatus @default(DRAFT)
   column_count    Int      @default(5)
+  non_compliance_at DateTime?
+  reopened_from_non_compliance Boolean @default(false)
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
 
   rows            DailyChecklistRow[]
   transfers       ChecklistTransfer[]
+  continuation_requests ChecklistContinuationRequest[]
 }
 
 /// Traspaso de responsabilidad de un checklist DRAFT reclamado.
@@ -580,6 +593,24 @@ model ChecklistTransfer {
 
   @@index([checklist_id, status])
   @@index([to_user_id, status])
+}
+
+/// Solicitud del técnico asignado para continuar un checklist en incumplimiento (aprueba solo Admin).
+model ChecklistContinuationRequest {
+  id              String                       @id @default(uuid()) @db.Uuid
+  checklist_id    String                       @db.Uuid
+  checklist       DailyChecklist               @relation(fields: [checklist_id], references: [id], onDelete: Cascade)
+  requested_by_id String                       @db.Uuid
+  requested_by    User                         @relation("ChecklistContinuationRequester", fields: [requested_by_id], references: [id])
+  status          ChecklistContinuationStatus  @default(PENDING)
+  note            String?
+  resolved_by_id  String?                      @db.Uuid
+  resolved_by     User?                        @relation("ChecklistContinuationResolver", fields: [resolved_by_id], references: [id])
+  created_at      DateTime                     @default(now())
+  resolved_at     DateTime?
+
+  @@index([checklist_id, status])
+  @@index([requested_by_id, status])
 }
 
 model DailyChecklistRow {

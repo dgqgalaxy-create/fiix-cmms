@@ -85,7 +85,11 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.46.11 (Actualización: 31 de Julio de 2026)
+## 🚀 Versión Actual: v1.47.0 (Actualización: 1 de Agosto de 2026)
+
+### Novedades en v1.47.0 (Checklist — Incumplimiento + continuación)
+- **Nuevo:** Autocierre a medianoche (México): checklists no enviados → **Incumplimiento** (bloqueados). Si faltaba el del día anterior, se crea vacío en Incumplimiento.
+- **Nuevo:** Admin puede asignar técnico sin cambiar el estado; el técnico asignado solicita continuar; solo Admin aprueba/rechaza; al aprobar se reabre en borrador.
 
 ### Novedades en v1.46.11 (Traspaso de checklist + líneas paradas preventivo)
 - **Nuevo:** Checklist Diario — el técnico asignado puede **Traspasar** a otro; el destinatario **Acepta** o **Rechaza**; el emisor puede **Cancelar traspaso** mientras esté pendiente. Notificaciones in-app.

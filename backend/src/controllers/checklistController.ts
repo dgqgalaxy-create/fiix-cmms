@@ -19,6 +19,11 @@ const pendingTransferInclude = {
   to_user: { select: { id: true, name: true } },
 } as const;
 
+const pendingContinuationInclude = {
+  requested_by: { select: { id: true, name: true } },
+  resolved_by: { select: { id: true, name: true } },
+} as const;
+
 const checklistDetailInclude = {
   technician: { select: { name: true } },
   leader: { select: { name: true } },
@@ -29,6 +34,13 @@ async function findPendingTransfer(checklistId: string) {
   return prisma.checklistTransfer.findFirst({
     where: { checklist_id: checklistId, status: 'PENDING' },
     include: pendingTransferInclude,
+  });
+}
+
+async function findPendingContinuation(checklistId: string) {
+  return prisma.checklistContinuationRequest.findFirst({
+    where: { checklist_id: checklistId, status: 'PENDING' },
+    include: pendingContinuationInclude,
   });
 }
 
@@ -58,10 +70,21 @@ async function notifyChecklistUsers(
   await sendWebPushToUsers(unique, { title, body: message, url: link });
 }
 
-async function withPendingTransfer<T extends { id: string }>(checklist: T | null) {
+async function activeAdminIds(): Promise<string[]> {
+  const admins = await prisma.user.findMany({
+    where: { role: 'ADMINISTRADOR', is_active: true },
+    select: { id: true },
+  });
+  return admins.map((a) => a.id);
+}
+
+async function withPendingExtras<T extends { id: string }>(checklist: T | null) {
   if (!checklist) return null;
-  const pending_transfer = await findPendingTransfer(checklist.id);
-  return { ...checklist, pending_transfer };
+  const [pending_transfer, pending_continuation] = await Promise.all([
+    findPendingTransfer(checklist.id),
+    findPendingContinuation(checklist.id),
+  ]);
+  return { ...checklist, pending_transfer, pending_continuation };
 }
 
 export function normalizeChecklistColumnCount(value: unknown): number {
@@ -106,7 +129,7 @@ export const getTodayChecklist = async (req: AuthRequest, res: Response) => {
       }
     });
 
-    res.json(await withPendingTransfer(checklist));
+    res.json(await withPendingExtras(checklist));
   } catch (error) {
     console.error('Error fetching today checklist', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -190,6 +213,11 @@ export const startChecklist = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Checklist no encontrado' });
     }
 
+    if (existing.status === 'NON_COMPLIANCE') {
+      return res.status(400).json({
+        error: 'Este checklist está en incumplimiento. Un administrador debe asignar técnico y aprobar la solicitud de continuación.',
+      });
+    }
     if (existing.status !== 'DRAFT') {
       return res.status(400).json({ error: 'Solo se puede iniciar un checklist en borrador' });
     }
@@ -212,7 +240,7 @@ export const startChecklist = async (req: AuthRequest, res: Response) => {
         where: { id },
         include: checklistDetailInclude,
       });
-      return res.json(await withPendingTransfer(same));
+      return res.json(await withPendingExtras(same));
     }
 
     const checklist = await prisma.dailyChecklist.update({
@@ -222,7 +250,7 @@ export const startChecklist = async (req: AuthRequest, res: Response) => {
     });
 
     emitChecklists();
-    res.json(await withPendingTransfer(checklist));
+    res.json(await withPendingExtras(checklist));
   } catch (error) {
     console.error('Error starting checklist', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -251,6 +279,12 @@ export const updateChecklistRow = async (req: AuthRequest, res: Response) => {
       return;
     }
 
+    if (existing.checklist.status === 'NON_COMPLIANCE') {
+      res.status(400).json({
+        error: 'Checklist en incumplimiento: no se puede editar hasta que un administrador apruebe la continuación.',
+      });
+      return;
+    }
     if (existing.checklist.status !== 'DRAFT') {
       res.status(400).json({ error: 'El checklist ya no es editable' });
       return;
@@ -331,6 +365,11 @@ export const submitChecklist = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Checklist no encontrado' });
     }
 
+    if (existing.status === 'NON_COMPLIANCE') {
+      return res.status(400).json({
+        error: 'Checklist en incumplimiento: solicita continuar y espera aprobación del administrador.',
+      });
+    }
     if (existing.status !== 'DRAFT') {
       return res.status(400).json({ error: 'El checklist ya fue enviado o revisado' });
     }
@@ -413,7 +452,7 @@ export const submitChecklist = async (req: AuthRequest, res: Response) => {
     }
 
     emitChecklists();
-    res.json(await withPendingTransfer(checklist));
+    res.json(await withPendingExtras(checklist));
   } catch (error) {
     console.error('Error submitting checklist', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -429,12 +468,20 @@ export const reviewChecklist = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    const existing = await prisma.dailyChecklist.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Checklist no encontrado' });
+    }
+    if (existing.status !== 'COMPLETED') {
+      return res.status(400).json({ error: 'Solo se puede aprobar un checklist ya enviado' });
+    }
+
     const checklist = await prisma.dailyChecklist.update({
       where: { id },
-      data: { 
+      data: {
         status: 'REVIEWED',
-        leader_id: userId
-      }
+        leader_id: userId,
+      },
     });
 
     emitChecklists();
@@ -458,12 +505,18 @@ export const getChecklistHistory = async (req: AuthRequest, res: Response) => {
           take: 1,
           include: pendingTransferInclude,
         },
-      }
+        continuation_requests: {
+          where: { status: 'PENDING' },
+          take: 1,
+          include: pendingContinuationInclude,
+        },
+      },
     });
     res.json(
-      checklists.map(({ transfers, ...rest }) => ({
+      checklists.map(({ transfers, continuation_requests, ...rest }) => ({
         ...rest,
         pending_transfer: transfers[0] || null,
+        pending_continuation: continuation_requests[0] || null,
       }))
     );
   } catch (error) {
@@ -484,7 +537,7 @@ export const getChecklistById = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Checklist not found' });
     }
 
-    res.json(await withPendingTransfer(checklist));
+    res.json(await withPendingExtras(checklist));
   } catch (error) {
     console.error('Error fetching checklist by id', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -515,6 +568,9 @@ export const transferChecklist = async (req: AuthRequest, res: Response) => {
     });
     if (!existing) {
       return res.status(404).json({ error: 'Checklist no encontrado' });
+    }
+    if (existing.status === 'NON_COMPLIANCE') {
+      return res.status(400).json({ error: 'No se puede traspasar un checklist en incumplimiento' });
     }
     if (existing.status !== 'DRAFT') {
       return res.status(400).json({ error: 'Solo se puede traspasar un checklist en borrador' });
@@ -670,7 +726,7 @@ export const acceptChecklistTransfer = async (req: AuthRequest, res: Response) =
     });
 
     emitChecklists();
-    res.json(await withPendingTransfer(checklist));
+    res.json(await withPendingExtras(checklist));
   } catch (error) {
     console.error('Error accepting checklist transfer', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -732,7 +788,7 @@ export const rejectChecklistTransfer = async (req: AuthRequest, res: Response) =
       where: { id: transfer.checklist_id },
       include: checklistDetailInclude,
     });
-    res.json(await withPendingTransfer(checklist));
+    res.json(await withPendingExtras(checklist));
   } catch (error) {
     console.error('Error rejecting checklist transfer', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -794,9 +850,391 @@ export const cancelChecklistTransfer = async (req: AuthRequest, res: Response) =
       where: { id: transfer.checklist_id },
       include: checklistDetailInclude,
     });
-    res.json(await withPendingTransfer(checklist));
+    res.json(await withPendingExtras(checklist));
   } catch (error) {
     console.error('Error cancelling checklist transfer', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/** Admin asigna técnico a un checklist en incumplimiento sin responsable. Status no cambia. */
+export const assignChecklistTechnician = async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const userId = req.user?.userId;
+    const technicianId =
+      typeof req.body?.technician_id === 'string' ? req.body.technician_id : '';
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (req.user?.role !== 'ADMINISTRADOR') {
+      return res.status(403).json({ error: 'Solo un administrador puede asignar el técnico' });
+    }
+    if (!technicianId) {
+      return res.status(400).json({ error: 'Indica technician_id' });
+    }
+
+    const existing = await prisma.dailyChecklist.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Checklist no encontrado' });
+    }
+    if (existing.status !== 'NON_COMPLIANCE') {
+      return res.status(400).json({
+        error: 'Solo se puede asignar técnico en un checklist en incumplimiento',
+      });
+    }
+    if (existing.technician_id) {
+      return res.status(409).json({
+        error: 'Este checklist ya tiene técnico asignado',
+      });
+    }
+
+    const technician = await prisma.user.findUnique({
+      where: { id: technicianId },
+      select: { id: true, name: true, role: true, is_active: true },
+    });
+    if (!technician || !technician.is_active) {
+      return res.status(400).json({ error: 'El técnico no existe o no está activo' });
+    }
+    if (technician.role !== 'TECNICO' && technician.role !== 'GESTIONADOR') {
+      return res.status(400).json({
+        error: 'Solo puedes asignar a un TECNICO o GESTIONADOR activo',
+      });
+    }
+
+    const actor = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    const checklist = await prisma.dailyChecklist.update({
+      where: { id },
+      data: { technician_id: technicianId },
+      include: checklistDetailInclude,
+    });
+
+    await notifyChecklistUsers(
+      [technicianId],
+      'Checklist en incumplimiento asignado',
+      `Se te asignó el checklist del día en incumplimiento. Puedes solicitar continuar para completarlo.`,
+      id
+    );
+
+    await writeAuditLog({
+      userId,
+      userName: actor?.name,
+      action: 'ASSIGN_CHECKLIST_TECHNICIAN',
+      entity: 'checklist',
+      entityId: id,
+      summary: `Asignó técnico ${technician.name} a checklist en incumplimiento`,
+      meta: { technician_id: technicianId },
+    });
+
+    emitChecklists();
+    res.json(await withPendingExtras(checklist));
+  } catch (error) {
+    console.error('Error assigning checklist technician', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/** Técnico asignado solicita continuar un checklist en incumplimiento. */
+export const requestChecklistContinuation = async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const userId = req.user?.userId;
+    const note = typeof req.body?.note === 'string' ? req.body.note.trim().slice(0, 500) : undefined;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const existing = await prisma.dailyChecklist.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Checklist no encontrado' });
+    }
+    if (existing.status !== 'NON_COMPLIANCE') {
+      return res.status(400).json({
+        error: 'Solo se puede solicitar continuar un checklist en incumplimiento',
+      });
+    }
+    if (!existing.technician_id) {
+      return res.status(403).json({
+        error: 'Este checklist no tiene técnico asignado. Un administrador debe asignarlo primero.',
+      });
+    }
+    if (existing.technician_id !== userId) {
+      return res.status(403).json({
+        error: 'Solo el técnico asignado puede solicitar continuar este checklist',
+      });
+    }
+
+    const alreadyPending = await findPendingContinuation(id);
+    if (alreadyPending) {
+      return res.status(409).json({
+        error: 'Ya hay una solicitud de continuación pendiente',
+      });
+    }
+
+    const actor = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    const request = await prisma.checklistContinuationRequest.create({
+      data: {
+        checklist_id: id,
+        requested_by_id: userId,
+        status: 'PENDING',
+        ...(note ? { note } : {}),
+      },
+      include: pendingContinuationInclude,
+    });
+
+    const adminIds = await activeAdminIds();
+    await notifyChecklistUsers(
+      adminIds.filter((aid) => aid !== userId),
+      'Solicitud de continuación de checklist',
+      `${actor?.name || 'Un técnico'} solicita continuar un checklist en incumplimiento. Ábrelo para aprobar o rechazar.`,
+      id
+    );
+
+    await writeAuditLog({
+      userId,
+      userName: actor?.name,
+      action: 'REQUEST_CHECKLIST_CONTINUATION',
+      entity: 'checklist',
+      entityId: id,
+      summary: 'Solicitó continuar checklist en incumplimiento',
+      meta: { request_id: request.id },
+    });
+
+    emitChecklists();
+    res.status(201).json(request);
+  } catch (error: any) {
+    if (error?.code === 'P2002') {
+      return res.status(409).json({
+        error: 'Ya hay una solicitud de continuación pendiente',
+      });
+    }
+    console.error('Error requesting checklist continuation', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/** Admin aprueba continuación → reabre como DRAFT. */
+export const approveChecklistContinuation = async (req: AuthRequest, res: Response) => {
+  try {
+    const requestId = req.params.id as string;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (req.user?.role !== 'ADMINISTRADOR') {
+      return res.status(403).json({ error: 'Solo un administrador puede aprobar la continuación' });
+    }
+
+    const request = await prisma.checklistContinuationRequest.findUnique({
+      where: { id: requestId },
+      include: {
+        ...pendingContinuationInclude,
+        checklist: {
+          select: { id: true, status: true, technician_id: true },
+        },
+      },
+    });
+    if (!request) {
+      return res.status(404).json({ error: 'Solicitud no encontrada' });
+    }
+    if (request.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Esta solicitud ya fue resuelta' });
+    }
+    if (request.checklist.status !== 'NON_COMPLIANCE') {
+      return res.status(400).json({ error: 'El checklist ya no está en incumplimiento' });
+    }
+
+    const actor = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    const [, checklist] = await prisma.$transaction([
+      prisma.checklistContinuationRequest.update({
+        where: { id: requestId },
+        data: {
+          status: 'APPROVED',
+          resolved_by_id: userId,
+          resolved_at: new Date(),
+        },
+      }),
+      prisma.dailyChecklist.update({
+        where: { id: request.checklist_id },
+        data: {
+          status: 'DRAFT',
+          reopened_from_non_compliance: true,
+        },
+        include: checklistDetailInclude,
+      }),
+    ]);
+
+    await notifyChecklistUsers(
+      [request.requested_by_id],
+      'Continuación de checklist aprobada',
+      `${actor?.name || 'Un administrador'} aprobó continuar el checklist. Ya puedes editarlo y enviarlo.`,
+      request.checklist_id
+    );
+
+    await writeAuditLog({
+      userId,
+      userName: actor?.name,
+      action: 'APPROVE_CHECKLIST_CONTINUATION',
+      entity: 'checklist',
+      entityId: request.checklist_id,
+      summary: `Aprobó continuación solicitada por ${request.requested_by.name}`,
+      meta: { request_id: requestId },
+    });
+
+    emitChecklists();
+    res.json(await withPendingExtras(checklist));
+  } catch (error) {
+    console.error('Error approving checklist continuation', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/** Admin rechaza continuación. */
+export const rejectChecklistContinuation = async (req: AuthRequest, res: Response) => {
+  try {
+    const requestId = req.params.id as string;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (req.user?.role !== 'ADMINISTRADOR') {
+      return res.status(403).json({ error: 'Solo un administrador puede rechazar la continuación' });
+    }
+
+    const request = await prisma.checklistContinuationRequest.findUnique({
+      where: { id: requestId },
+      include: pendingContinuationInclude,
+    });
+    if (!request) {
+      return res.status(404).json({ error: 'Solicitud no encontrada' });
+    }
+    if (request.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Esta solicitud ya fue resuelta' });
+    }
+
+    const actor = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    await prisma.checklistContinuationRequest.update({
+      where: { id: requestId },
+      data: {
+        status: 'REJECTED',
+        resolved_by_id: userId,
+        resolved_at: new Date(),
+      },
+    });
+
+    await notifyChecklistUsers(
+      [request.requested_by_id],
+      'Continuación de checklist rechazada',
+      `${actor?.name || 'Un administrador'} rechazó la solicitud de continuar el checklist.`,
+      request.checklist_id
+    );
+
+    await writeAuditLog({
+      userId,
+      userName: actor?.name,
+      action: 'REJECT_CHECKLIST_CONTINUATION',
+      entity: 'checklist',
+      entityId: request.checklist_id,
+      summary: `Rechazó continuación de ${request.requested_by.name}`,
+      meta: { request_id: requestId },
+    });
+
+    emitChecklists();
+    const checklist = await prisma.dailyChecklist.findUnique({
+      where: { id: request.checklist_id },
+      include: checklistDetailInclude,
+    });
+    res.json(await withPendingExtras(checklist));
+  } catch (error) {
+    console.error('Error rejecting checklist continuation', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/** Solicitante cancela su petición de continuación. */
+export const cancelChecklistContinuation = async (req: AuthRequest, res: Response) => {
+  try {
+    const requestId = req.params.id as string;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const request = await prisma.checklistContinuationRequest.findUnique({
+      where: { id: requestId },
+      include: pendingContinuationInclude,
+    });
+    if (!request) {
+      return res.status(404).json({ error: 'Solicitud no encontrada' });
+    }
+    if (request.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Esta solicitud ya fue resuelta' });
+    }
+    if (request.requested_by_id !== userId) {
+      return res.status(403).json({ error: 'Solo quien solicitó puede cancelar' });
+    }
+
+    const actor = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    await prisma.checklistContinuationRequest.update({
+      where: { id: requestId },
+      data: {
+        status: 'CANCELLED',
+        resolved_by_id: userId,
+        resolved_at: new Date(),
+      },
+    });
+
+    const adminIds = await activeAdminIds();
+    await notifyChecklistUsers(
+      adminIds.filter((aid) => aid !== userId),
+      'Solicitud de continuación cancelada',
+      `${actor?.name || 'El técnico'} canceló la solicitud de continuar el checklist.`,
+      request.checklist_id
+    );
+
+    await writeAuditLog({
+      userId,
+      userName: actor?.name,
+      action: 'CANCEL_CHECKLIST_CONTINUATION',
+      entity: 'checklist',
+      entityId: request.checklist_id,
+      summary: 'Canceló solicitud de continuación',
+      meta: { request_id: requestId },
+    });
+
+    emitChecklists();
+    const checklist = await prisma.dailyChecklist.findUnique({
+      where: { id: request.checklist_id },
+      include: checklistDetailInclude,
+    });
+    res.json(await withPendingExtras(checklist));
+  } catch (error) {
+    console.error('Error cancelling checklist continuation', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

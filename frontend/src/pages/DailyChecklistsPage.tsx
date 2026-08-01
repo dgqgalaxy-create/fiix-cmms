@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ClipboardCheck, Plus, CheckCircle, Clock, AlertCircle, ChevronUp, ChevronDown, ChevronRight, ArrowRightLeft } from 'lucide-react';
+import { ClipboardCheck, Plus, CheckCircle, Clock, AlertCircle, ChevronUp, ChevronDown, ChevronRight, ArrowRightLeft, Ban } from 'lucide-react';
 import { getChecklistHistory, getTodayChecklist, createTodayChecklist } from '../api/checklists';
 import type { DailyChecklist } from '../api/checklists';
 import { parseDateOnly } from '../utils/dateUtils';
@@ -20,6 +20,7 @@ export default function DailyChecklistsPage() {
   const userId = user?.userId;
 
   const draftActionLabel = (checklist: DailyChecklist) => {
+    if (checklist.status === 'NON_COMPLIANCE') return 'Ver';
     if (checklist.status !== 'DRAFT') return 'Ver Detalles';
     if (checklist.technician_id && checklist.technician_id === userId) return 'Continuar';
     return 'Ver';
@@ -77,9 +78,24 @@ export default function DailyChecklistsPage() {
         return <span className={`inline-flex items-center text-blue-600 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-300 ${pad} rounded-full text-[11px] font-medium`}><AlertCircle className="w-3 h-3 mr-1" /> Faltan Firmas</span>;
       case 'REVIEWED':
         return <span className={`inline-flex items-center text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300 ${pad} rounded-full text-[11px] font-medium`}><CheckCircle className="w-3 h-3 mr-1" /> Revisado</span>;
+      case 'NON_COMPLIANCE':
+        return <span className={`inline-flex items-center text-rose-700 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300 ${pad} rounded-full text-[11px] font-medium`}><Ban className="w-3 h-3 mr-1" /> Incumplimiento</span>;
       default:
         return null;
     }
+  };
+
+  const continuationBadge = (checklist: DailyChecklist, compact = false) => {
+    if (checklist.pending_continuation?.status !== 'PENDING') return null;
+    const pad = compact ? 'px-2 py-0.5' : 'px-3 py-1';
+    return (
+      <span
+        className={`inline-flex items-center text-orange-700 bg-orange-50 dark:bg-orange-950/40 dark:text-orange-300 ${pad} rounded-full text-[11px] font-medium`}
+        title="Solicitud de continuación pendiente de aprobación del administrador"
+      >
+        {compact ? 'Solicitud' : 'Espera aprobación'}
+      </span>
+    );
   };
 
   const transferBadge = (checklist: DailyChecklist, compact = false) => {
@@ -185,6 +201,7 @@ export default function DailyChecklistsPage() {
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-1 shrink-0 max-w-[50%]">
                   {transferBadge(checklist, true)}
+                  {continuationBadge(checklist, true)}
                   {getStatusBadge(checklist.status, true)}
                   <ChevronRight size={16} className="text-slate-400" />
                 </div>
@@ -238,6 +255,7 @@ export default function DailyChecklistsPage() {
                       <div className="flex flex-wrap items-center gap-1.5">
                         {getStatusBadge(checklist.status)}
                         {transferBadge(checklist)}
+                        {continuationBadge(checklist)}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">

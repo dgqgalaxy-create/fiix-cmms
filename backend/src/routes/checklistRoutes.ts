@@ -7,6 +7,11 @@ import {
   acceptChecklistTransfer,
   rejectChecklistTransfer,
   cancelChecklistTransfer,
+  assignChecklistTechnician,
+  requestChecklistContinuation,
+  approveChecklistContinuation,
+  rejectChecklistContinuation,
+  cancelChecklistContinuation,
   updateChecklistRow, 
   submitChecklist, 
   reviewChecklist, 
@@ -21,7 +26,7 @@ import {
   reorderActivities,
   restoreDefaultActivities
 } from '../controllers/checklistController';
-import { authenticate, requirePermission } from '../middlewares/authMiddleware';
+import { authenticate, requirePermission, requireRole } from '../middlewares/authMiddleware';
 
 const router = Router();
 
@@ -47,8 +52,15 @@ router.post('/transfers/:id/accept', acceptChecklistTransfer);
 router.post('/transfers/:id/reject', rejectChecklistTransfer);
 router.post('/transfers/:id/cancel', cancelChecklistTransfer);
 
+// Continuación tras incumplimiento
+router.post('/continuation-requests/:id/approve', requireRole(['ADMINISTRADOR']), approveChecklistContinuation);
+router.post('/continuation-requests/:id/reject', requireRole(['ADMINISTRADOR']), rejectChecklistContinuation);
+router.post('/continuation-requests/:id/cancel', cancelChecklistContinuation);
+
 router.post('/:id/start', startChecklist);
 router.post('/:id/transfer', transferChecklist);
+router.post('/:id/assign-technician', requireRole(['ADMINISTRADOR']), assignChecklistTechnician);
+router.post('/:id/request-continuation', requestChecklistContinuation);
 router.get('/:id', getChecklistById);
 router.put('/row/:rowId', updateChecklistRow);
 router.post('/:id/submit', submitChecklist);

@@ -30,17 +30,33 @@ export interface ChecklistTransfer {
   to_user?: { id: string; name: string };
 }
 
+export interface ChecklistContinuationRequest {
+  id: string;
+  checklist_id: string;
+  requested_by_id: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+  note?: string | null;
+  resolved_by_id?: string | null;
+  created_at: string;
+  resolved_at?: string | null;
+  requested_by?: { id: string; name: string };
+  resolved_by?: { id: string; name: string } | null;
+}
+
 export interface DailyChecklist {
   id: string;
   date: string;
-  status: 'DRAFT' | 'COMPLETED' | 'REVIEWED';
+  status: 'DRAFT' | 'COMPLETED' | 'REVIEWED' | 'NON_COMPLIANCE';
   column_count?: number;
   technician_id?: string | null;
   technician?: { name: string } | null;
   leader_id?: string;
   leader?: { name: string };
+  non_compliance_at?: string | null;
+  reopened_from_non_compliance?: boolean;
   rows?: ChecklistRow[];
   pending_transfer?: ChecklistTransfer | null;
+  pending_continuation?: ChecklistContinuationRequest | null;
 }
 
 export interface ChecklistConfig {
@@ -81,6 +97,31 @@ export const rejectChecklistTransfer = async (transferId: string) => {
 
 export const cancelChecklistTransfer = async (transferId: string) => {
   const response = await api.post(`/checklists/transfers/${transferId}/cancel`);
+  return response.data as DailyChecklist;
+};
+
+export const assignChecklistTechnician = async (id: string, technician_id: string) => {
+  const response = await api.post(`/checklists/${id}/assign-technician`, { technician_id });
+  return response.data as DailyChecklist;
+};
+
+export const requestChecklistContinuation = async (id: string, note?: string) => {
+  const response = await api.post(`/checklists/${id}/request-continuation`, { note });
+  return response.data as ChecklistContinuationRequest;
+};
+
+export const approveChecklistContinuation = async (requestId: string) => {
+  const response = await api.post(`/checklists/continuation-requests/${requestId}/approve`);
+  return response.data as DailyChecklist;
+};
+
+export const rejectChecklistContinuation = async (requestId: string) => {
+  const response = await api.post(`/checklists/continuation-requests/${requestId}/reject`);
+  return response.data as DailyChecklist;
+};
+
+export const cancelChecklistContinuation = async (requestId: string) => {
+  const response = await api.post(`/checklists/continuation-requests/${requestId}/cancel`);
   return response.data as DailyChecklist;
 };
 
