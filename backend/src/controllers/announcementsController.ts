@@ -187,7 +187,8 @@ export const markAnnouncementSeen = async (req: AuthRequest, res: Response) => {
       update: {},
     });
 
-    emitNotes();
+    // No emitir refresh_notes: cada vista disparaba recargas en todos los clientes
+    // (y en PWA podía interrumpir la vista de la foto). El badge se actualiza en el cliente.
     res.json({ ok: true });
   } catch (error) {
     console.error('markAnnouncementSeen', error);

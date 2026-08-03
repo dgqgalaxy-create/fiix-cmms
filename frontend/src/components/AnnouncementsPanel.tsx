@@ -25,8 +25,11 @@ export function AnnouncementsPanel({ isAdmin, onChanged }: Props) {
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [expandedReaders, setExpandedReaders] = useState<string | null>(null);
+  const [zoomSrc, setZoomSrc] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const markedRef = useRef<Set<string>>(new Set());
+  const onChangedRef = useRef(onChanged);
+  onChangedRef.current = onChanged;
 
   const load = async () => {
     try {
@@ -54,28 +57,45 @@ export function AnnouncementsPanel({ isAdmin, onChanged }: Props) {
     return;
   }, [image, preview]);
 
-  // Al ver la lista, marcar no leídos como vistos
+  // Al ver la lista, marcar no leídos como vistos (sin remount ni socket storm)
   useEffect(() => {
     const unread = items.filter((a) => a.is_active && !a.seen_by_me);
-    unread.forEach((a) => {
-      if (markedRef.current.has(a.id)) return;
-      markedRef.current.add(a.id);
-      void markAnnouncementSeen(a.id)
-        .then(() => {
-          setItems((prev) =>
-            prev.map((x) =>
-              x.id === a.id
-                ? { ...x, seen_by_me: true, seen_count: x.seen_count + (x.seen_by_me ? 0 : 1) }
-                : x
-            )
-          );
-          onChanged?.();
+    if (unread.length === 0) return;
+
+    let cancelled = false;
+    const ids = unread.filter((a) => !markedRef.current.has(a.id)).map((a) => a.id);
+    if (ids.length === 0) return;
+
+    ids.forEach((id) => markedRef.current.add(id));
+
+    void (async () => {
+      const okIds: string[] = [];
+      await Promise.all(
+        ids.map(async (id) => {
+          try {
+            await markAnnouncementSeen(id);
+            okIds.push(id);
+          } catch {
+            markedRef.current.delete(id);
+          }
         })
-        .catch(() => {
-          markedRef.current.delete(a.id);
-        });
-    });
-  }, [items, onChanged]);
+      );
+      if (cancelled || okIds.length === 0) return;
+      const ok = new Set(okIds);
+      setItems((prev) =>
+        prev.map((x) =>
+          ok.has(x.id) && !x.seen_by_me
+            ? { ...x, seen_by_me: true, seen_count: x.seen_count + 1 }
+            : x
+        )
+      );
+      onChangedRef.current?.();
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [items]);
 
   const handlePublish = async () => {
     if (!title.trim()) {
@@ -96,7 +116,7 @@ export function AnnouncementsPanel({ isAdmin, onChanged }: Props) {
       setPreview(null);
       if (fileRef.current) fileRef.current.value = '';
       await load();
-      onChanged?.();
+      onChangedRef.current?.();
     } catch (err: any) {
       setError(err?.response?.data?.error || 'No se pudo publicar el aviso');
     } finally {
@@ -109,7 +129,7 @@ export function AnnouncementsPanel({ isAdmin, onChanged }: Props) {
     try {
       await deleteAnnouncement(id);
       await load();
-      onChanged?.();
+      onChangedRef.current?.();
     } catch (err: any) {
       setError(err?.response?.data?.error || 'No se pudo eliminar');
     }
@@ -223,13 +243,19 @@ export function AnnouncementsPanel({ isAdmin, onChanged }: Props) {
                 >
                   <div className="flex items-start gap-3">
                     {src && (
-                      <a href={src} target="_blank" rel="noreferrer" className="shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setZoomSrc(src)}
+                        className="shrink-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                        title="Ampliar foto"
+                        aria-label="Ampliar foto del aviso"
+                      >
                         <img
                           src={src}
                           alt=""
                           className="h-16 w-16 sm:h-20 sm:w-20 rounded-lg object-cover border border-slate-200 dark:border-slate-700"
                         />
-                      </a>
+                      </button>
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -297,6 +323,31 @@ export function AnnouncementsPanel({ isAdmin, onChanged }: Props) {
             })
         )}
       </div>
+
+      {zoomSrc && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setZoomSrc(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Vista ampliada del aviso"
+        >
+          <button
+            type="button"
+            onClick={() => setZoomSrc(null)}
+            className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+            aria-label="Cerrar"
+          >
+            <XIcon size={22} />
+          </button>
+          <img
+            src={zoomSrc}
+            alt="Foto del aviso"
+            className="max-h-[92vh] max-w-[96vw] object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

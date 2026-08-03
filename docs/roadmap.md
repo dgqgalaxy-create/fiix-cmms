@@ -85,7 +85,10 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.52.0 (Actualización: 3 de Agosto de 2026)
+## 🚀 Versión Actual: v1.52.1 (Actualización: 3 de Agosto de 2026)
+
+### Novedades en v1.52.1
+- **Corrección:** Avisos con foto — zoom dentro de la app (sin `target=_blank` que en PWA abre y cierra); marcar visto ya no dispara recarga global por socket.
 
 ### Novedades en v1.52.0 (Avisos globales)
 - **Nuevo:** Pestaña **Avisos** en Notas y pendientes — visibles para todos; solo Admin crea (con foto opcional).

@@ -974,7 +974,7 @@ export default function NotesPage() {
       )}
 
       {tab === 'avisos' && (
-        <AnnouncementsPanel isAdmin={isAdmin} onChanged={() => void refreshUnreadAvisos()} />
+        <AnnouncementsPanel isAdmin={isAdmin} onChanged={refreshUnreadAvisos} />
       )}
 
       {completeTask && (
