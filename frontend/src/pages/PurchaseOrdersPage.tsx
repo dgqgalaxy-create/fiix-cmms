@@ -28,6 +28,7 @@ export const PurchaseOrdersPage = () => {
       const data = await getPurchaseOrders();
       setOrders(data);
       setFilteredOrders(data);
+      setSelectedOrder((prev) => (prev ? data.find((o) => o.id === prev.id) ?? prev : null));
     } catch (error) {
       console.error('Error fetching purchase orders:', error);
     } finally {
@@ -289,8 +290,7 @@ export const PurchaseOrdersPage = () => {
           isOpen={!!selectedOrder}
           onClose={() => setSelectedOrder(null)}
           onUpdate={() => {
-            fetchOrders();
-            setSelectedOrder(null);
+            fetchOrders(true);
           }}
         />
       )}

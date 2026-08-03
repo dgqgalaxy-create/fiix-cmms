@@ -206,6 +206,12 @@ export const createOperationalTask = async (req: AuthRequest, res: Response) => 
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
+    if (req.user?.role !== 'ADMINISTRADOR' && req.user?.role !== 'GESTIONADOR') {
+      return res.status(403).json({
+        error: 'Solo Administradores y Gestionadores pueden crear pendientes operativos',
+      });
+    }
+
     const title = typeof req.body?.title === 'string' ? req.body.title.trim() : '';
     if (!title) return res.status(400).json({ error: 'El título es obligatorio' });
 
@@ -315,22 +321,58 @@ export const updateOperationalTask = async (req: AuthRequest, res: Response) => 
 
     const existing = await prisma.operationalTask.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: 'Pendiente no encontrado' });
-    if (existing.created_by_id !== userId && existing.assignee_id !== userId) {
-      return res.status(403).json({ error: 'No puedes editar este pendiente' });
+
+    const isCreator = existing.created_by_id === userId;
+    const isAssignee = existing.assignee_id === userId;
+    const isManager =
+      req.user?.role === 'ADMINISTRADOR' || req.user?.role === 'GESTIONADOR';
+    if (!isCreator && !isAssignee) {
+      return res.status(403).json({ error: 'No puedes modificar este pendiente' });
+    }
+
+    const wantsContentEdit =
+      typeof req.body?.title === 'string' ||
+      req.body?.body !== undefined ||
+      req.body?.due_at !== undefined ||
+      (typeof req.body?.assignee_id === 'string' && req.body.assignee_id) ||
+      typeof req.body?.priority === 'string' ||
+      req.body?.work_order_id !== undefined ||
+      req.body?.asset_id !== undefined ||
+      (typeof req.body?.status === 'string' &&
+        (req.body.status === 'OPEN' || req.body.status === 'CANCELLED')) ||
+      (req.body?.completion_note !== undefined &&
+        typeof req.body?.status !== 'string');
+
+    const wantsComplete =
+      typeof req.body?.status === 'string' && req.body.status === 'DONE';
+
+    // Solo Admin/Gestionador (creador) editan. Técnicos y asignados solo pueden completar.
+    if (wantsContentEdit && !(isCreator && isManager)) {
+      return res.status(403).json({
+        error: 'Solo el Administrador o Gestionador que creó el pendiente puede editarlo',
+      });
+    }
+    if (wantsComplete && !isCreator && !isAssignee) {
+      return res.status(403).json({ error: 'No puedes completar este pendiente' });
+    }
+    if (!wantsComplete && !(isCreator && isManager)) {
+      return res.status(403).json({
+        error: 'Solo el creador (Admin/Gestionador) puede editar este pendiente',
+      });
     }
 
     const data: Record<string, unknown> = {};
 
-    if (typeof req.body?.title === 'string') {
+    if (isCreator && isManager && typeof req.body?.title === 'string') {
       const title = req.body.title.trim();
       if (!title) return res.status(400).json({ error: 'El título es obligatorio' });
       data.title = title.slice(0, 200);
     }
-    if (req.body?.body !== undefined) {
+    if (isCreator && isManager && req.body?.body !== undefined) {
       data.body =
         typeof req.body.body === 'string' ? req.body.body.trim().slice(0, 4000) || null : null;
     }
-    if (req.body?.due_at !== undefined) {
+    if (isCreator && isManager && req.body?.due_at !== undefined) {
       const dueAt = parseOptionalDate(req.body.due_at);
       if (req.body.due_at !== null && req.body.due_at !== '' && dueAt === undefined) {
         return res.status(400).json({ error: 'Fecha de vencimiento inválida' });
@@ -340,10 +382,7 @@ export const updateOperationalTask = async (req: AuthRequest, res: Response) => 
         data.reminded_at = null;
       }
     }
-    if (typeof req.body?.assignee_id === 'string' && req.body.assignee_id) {
-      if (existing.created_by_id !== userId) {
-        return res.status(403).json({ error: 'Solo quien creó el pendiente puede reasignarlo' });
-      }
+    if (isCreator && isManager && typeof req.body?.assignee_id === 'string' && req.body.assignee_id) {
       const assignee = await prisma.user.findUnique({
         where: { id: req.body.assignee_id },
         select: { id: true, is_active: true },
@@ -353,10 +392,10 @@ export const updateOperationalTask = async (req: AuthRequest, res: Response) => 
       }
       data.assignee_id = assignee.id;
     }
-    if (typeof req.body?.priority === 'string') {
+    if (isCreator && isManager && typeof req.body?.priority === 'string') {
       data.priority = req.body.priority === 'ALTA' ? 'ALTA' : 'NORMAL';
     }
-    if (req.body?.work_order_id !== undefined) {
+    if (isCreator && isManager && req.body?.work_order_id !== undefined) {
       if (req.body.work_order_id === null || req.body.work_order_id === '') {
         data.work_order_id = null;
       } else if (typeof req.body.work_order_id === 'string') {
@@ -368,7 +407,7 @@ export const updateOperationalTask = async (req: AuthRequest, res: Response) => 
         data.work_order_id = wo.id;
       }
     }
-    if (req.body?.asset_id !== undefined) {
+    if (isCreator && isManager && req.body?.asset_id !== undefined) {
       if (req.body.asset_id === null || req.body.asset_id === '') {
         data.asset_id = null;
       } else if (typeof req.body.asset_id === 'string') {
@@ -385,6 +424,11 @@ export const updateOperationalTask = async (req: AuthRequest, res: Response) => 
       if (!['OPEN', 'DONE', 'CANCELLED'].includes(status)) {
         return res.status(400).json({ error: 'Estado inválido' });
       }
+      if ((status === 'OPEN' || status === 'CANCELLED') && !(isCreator && isManager)) {
+        return res.status(403).json({
+          error: 'Solo el Administrador o Gestionador creador puede reabrir o cancelar',
+        });
+      }
       data.status = status;
       if (status === 'DONE') {
         data.completed_at = new Date();
@@ -400,7 +444,12 @@ export const updateOperationalTask = async (req: AuthRequest, res: Response) => 
       } else {
         data.completed_at = null;
       }
-    } else if (req.body?.completion_note !== undefined && existing.status === 'DONE') {
+    } else if (
+      isCreator &&
+      isManager &&
+      req.body?.completion_note !== undefined &&
+      existing.status === 'DONE'
+    ) {
       data.completion_note =
         typeof req.body.completion_note === 'string'
           ? req.body.completion_note.trim().slice(0, 1000) || null
@@ -449,6 +498,9 @@ export const deleteOperationalTask = async (req: AuthRequest, res: Response) => 
     if (!existing) return res.status(404).json({ error: 'Pendiente no encontrado' });
     if (existing.created_by_id !== userId && req.user?.role !== 'ADMINISTRADOR') {
       return res.status(403).json({ error: 'Solo el creador o un admin puede eliminarlo' });
+    }
+    if (req.user?.role !== 'ADMINISTRADOR' && req.user?.role !== 'GESTIONADOR') {
+      return res.status(403).json({ error: 'Los técnicos no pueden eliminar pendientes' });
     }
 
     await prisma.operationalTask.delete({ where: { id } });
@@ -502,8 +554,13 @@ export const snoozeOperationalTask = async (req: AuthRequest, res: Response) => 
 
     const existing = await prisma.operationalTask.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: 'Pendiente no encontrado' });
-    if (existing.created_by_id !== userId && existing.assignee_id !== userId) {
-      return res.status(403).json({ error: 'No puedes posponer este pendiente' });
+    if (existing.created_by_id !== userId) {
+      return res.status(403).json({
+        error: 'Solo quien creó el pendiente puede posponerlo. El asignado solo puede verlo o completarlo.',
+      });
+    }
+    if (req.user?.role !== 'ADMINISTRADOR' && req.user?.role !== 'GESTIONADOR') {
+      return res.status(403).json({ error: 'Los técnicos no pueden posponer pendientes' });
     }
     if (existing.status !== 'OPEN') {
       return res.status(400).json({ error: 'Solo se posponen pendientes abiertos' });

@@ -394,6 +394,9 @@ export const UserManual = () => {
                     <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                       Al crear una refacción defines un <strong>Stock Mínimo</strong>. Cuando el stock llega a ese nivel (o baja), la tarjeta superior de <strong>Stock Crítico</strong> muestra la cantidad. Un clic en la tarjeta filtra la lista de repuestos; con permiso de compras, el botón <strong>Generar borrador OC</strong> crea Órdenes de Compra en estado Borrador (una por proveedor, con la cantidad faltante para volver al mínimo). Los ítems sin proveedor se omiten y se te avisan. Luego revisas y avanzas el flujo en <strong>Órdenes de Compra</strong>.
                     </p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                      En una OC, el <strong>costo unitario</strong> se precarga del inventario. Solo un <strong>Administrador</strong> puede cambiarlo en la compra (y al guardarlo también actualiza el catálogo). Solo un Admin <strong>aprueba</strong> borradores (el Gestionador no se autoaprueba); si el Admin crea la OC, queda aprobada de una vez. Tras salir de borrador el precio de la OC queda <strong>congelado</strong> (no cambia si luego actualizas el costo en inventario). Desde la lista de la OC puedes tocar el código o nombre del ítem para abrir su ficha. En borradores, usa <strong>Actualizar precios del inventario</strong> si acabas de corregir un precio en el catálogo.
+                    </p>
                   </div>
 
                   <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">

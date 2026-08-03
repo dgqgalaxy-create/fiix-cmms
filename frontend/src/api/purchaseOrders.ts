@@ -12,6 +12,15 @@ export interface PurchaseOrderItem {
     internal_code: string;
     name: string;
     uom: string;
+    purchase_cost?: number | null;
+    description?: string | null;
+    image_url?: string | null;
+    category_id?: string | null;
+    vendor_id?: string | null;
+    location_id?: string | null;
+    stock?: number;
+    minimum_inventory?: number;
+    is_active?: boolean;
   };
 }
 
@@ -71,5 +80,14 @@ export const updatePurchaseOrderStatus = async (
   const body: { status: string; received_items?: ReceivedItemPayload[] } = { status };
   if (received_items) body.received_items = received_items;
   const { data } = await api.patch(`/purchase-orders/${id}/status`, body);
+  return data;
+};
+
+/** Solo borradores: refresca unit_cost desde inventario, o Admin ajusta costos (y catálogo). */
+export const updatePurchaseOrderLineCosts = async (
+  id: string,
+  payload: { sync_from_inventory?: boolean; items?: { id: string; unit_cost: number }[] }
+): Promise<PurchaseOrder> => {
+  const { data } = await api.patch(`/purchase-orders/${id}/line-costs`, payload);
   return data;
 };

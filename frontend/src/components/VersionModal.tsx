@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.49.0";
+export const APP_VERSION = "1.50.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -30,6 +30,12 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Aclare: En OC aprobada/enviada/recibida/cancelada el costo unitario queda congelado (no se actualiza al cambiar el precio en inventario); solo en borrador se puede sincronizar.",
+    "Cambio: Órdenes de compra — solo un Administrador puede aprobar. El Gestionador crea en borrador (sin autoaprobar); el Admin crea ya aprobada.",
+    "Cambio: Pendientes operativos — solo Admin y Gestionador pueden crear/editar/eliminar; los técnicos asignados solo los ven y pueden completarlos.",
+    "Mejora: En pendientes asignados, solo el creador puede editar/posponer/reabrir; el asignado ve el pendiente (etiqueta «Solo lectura») y puede completarlo.",
+    "Mejora: En Notas y pendientes, un aviso bajo las pestañas aclara que las notas son solo tuyas y los pendientes los ven quien los crea y el asignado.",
+    "Mejora: Órdenes de compra — el costo unitario se precarga del inventario; solo Administrador puede cambiarlo (y al hacerlo actualiza el catálogo). Desde la OC puedes abrir el detalle del artículo, editarlo y, en borradores, sincronizar precios con «Actualizar precios del inventario».",
     "Mejora: Notas y pendientes — editar, filtros (míos/asignados/creados), vencidos/próximos, prioridad Alta, comentario al completar, reabrir, posponer +1 h / mañana, tarjeta en Inicio, badge en el menú y acceso rápido desde el detalle de OT.",
     "Nuevo: Notas personales (privadas) y pendientes operativos asignables — menú «Notas y pendientes»; vínculo opcional a OT (folio) o activo; recordatorio con fecha (in-app + push). Cualquier usuario puede crear/asignar pendientes.",
     "Mejora: En Herramientas locales, «Limpiar caché PWA» ahora explica cuándo usarlo (versión vieja tras update, pantallas rotas o UI desactualizada).",

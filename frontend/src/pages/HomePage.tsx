@@ -742,7 +742,7 @@ export const HomePage = () => {
 
       <div className="flex flex-col xl:flex-row gap-4 mb-6 sm:mb-8">
         <div className="flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-6 gap-3 sm:gap-4">
-          <SummaryCard title="Total recibidas" value={totalRecibidas} icon={<LayoutDashboard />} color="slate" emphasized hint="Sin contar invalidadas" detail={(summaryStartDate && summaryEndDate) ? `${summaryStartDate} — ${summaryEndDate}` : 'Histórico completo'} />
+          <SummaryCard title="Total recibidas" value={totalRecibidas} icon={<LayoutDashboard />} color="slate" emphasized hint="Sin contar invalidadas" detail={(summaryStartDate && summaryEndDate) ? `${summaryStartDate} — ${summaryEndDate}` : 'Histórico completo'} onClick={() => navigate('/dashboard?tab=all')} />
           <SummaryCard title="Pendientes" value={summary.PENDIENTE || 0} icon={<Clock />} color="amber" onClick={() => goToStatus('PENDIENTE')} detail={
             <div className="flex flex-wrap gap-1">
               {urgentCount > 0 && <span className="bg-rose-600 text-white px-1.5 py-0.5 rounded-sm">{urgentCount} URG</span>}

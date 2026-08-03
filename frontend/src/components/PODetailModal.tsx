@@ -1,10 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar, Package, ArrowRight, Loader2, CheckCircle2, User, Building2, Printer } from 'lucide-react';
-import { type PurchaseOrder, updatePurchaseOrderStatus } from '../api/purchaseOrders';
+import { X, Calendar, Package, ArrowRight, Loader2, CheckCircle2, User, Building2, Printer, RefreshCw } from 'lucide-react';
+import {
+  type PurchaseOrder,
+  updatePurchaseOrderStatus,
+  updatePurchaseOrderLineCosts,
+} from '../api/purchaseOrders';
 import { useAuth } from '../context/AuthContext';
 import { formatDate, formatDateOnly } from '../utils/dateUtils';
 import { formatCurrency } from '../utils/currency';
+import { ItemModal } from './inventory/ItemModal';
+import {
+  getCategories,
+  getLocations,
+  getVendors,
+  getItems,
+  type Item,
+  type ItemCategory,
+  type ItemLocation,
+  type Vendor,
+} from '../api/inventory';
 
 interface PODetailModalProps {
   order: PurchaseOrder;
@@ -18,9 +33,30 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
   const [error, setError] = useState('');
   const [receivingMode, setReceivingMode] = useState(false);
   const [receivedQty, setReceivedQty] = useState<Record<string, string>>({});
-  const { user } = useAuth();
+  const [draftCosts, setDraftCosts] = useState<Record<string, string>>({});
+  const [itemModalOpen, setItemModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [categories, setCategories] = useState<ItemCategory[]>([]);
+  const [locations, setLocations] = useState<ItemLocation[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const { user, hasPermission } = useAuth();
 
   const isManagerOrAdmin = user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR';
+  const isAdmin = user?.role === 'ADMINISTRADOR';
+  const canEditInventory = hasPermission('MANAGE_INVENTORY');
+  const isDraft = order.status === 'BORRADOR';
+  const isClosed = order.status === 'RECIBIDA' || order.status === 'CANCELADA';
+  const priceFrozen = !isDraft;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const initial: Record<string, string> = {};
+    for (const oi of order.items) {
+      initial[oi.id] = String(oi.unit_cost);
+    }
+    setDraftCosts(initial);
+    setError('');
+  }, [isOpen, order]);
 
   const startReceiving = () => {
     const initial: Record<string, string> = {};
@@ -36,6 +72,82 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
     setReceivingMode(false);
     setReceivedQty({});
     setError('');
+  };
+
+  const openItemDetail = async (itemId: string) => {
+    setError('');
+    try {
+      const [cats, locs, vends, allItems] = await Promise.all([
+        categories.length ? Promise.resolve(categories) : getCategories(),
+        locations.length ? Promise.resolve(locations) : getLocations(),
+        vendors.length ? Promise.resolve(vendors) : getVendors(),
+        getItems(),
+      ]);
+      if (!categories.length) setCategories(cats);
+      if (!locations.length) setLocations(locs);
+      if (!vendors.length) setVendors(vends);
+      const found = allItems.find((i) => i.id === itemId);
+      if (!found) {
+        setError('No se encontró el artículo en inventario');
+        return;
+      }
+      setSelectedItem(found);
+      setItemModalOpen(true);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al abrir el artículo');
+    }
+  };
+
+  const handleItemSaved = async () => {
+    setItemModalOpen(false);
+    setSelectedItem(null);
+    if (isDraft) {
+      try {
+        await updatePurchaseOrderLineCosts(order.id, { sync_from_inventory: true });
+      } catch (err: any) {
+        setError(err.response?.data?.error || 'No se pudieron sincronizar los precios del borrador');
+      }
+    }
+    onUpdate();
+  };
+
+  const handleRefreshCosts = async () => {
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await updatePurchaseOrderLineCosts(order.id, { sync_from_inventory: true });
+      onUpdate();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al actualizar precios desde inventario');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveAdminCosts = async () => {
+    const payload: { id: string; unit_cost: number }[] = [];
+    for (const oi of order.items) {
+      const cost = Number(draftCosts[oi.id]);
+      if (!Number.isFinite(cost) || cost < 0) {
+        setError(`Costo inválido en ${oi.item?.internal_code || oi.item?.name || 'ítem'}`);
+        return;
+      }
+      if (cost !== oi.unit_cost) payload.push({ id: oi.id, unit_cost: cost });
+    }
+    if (payload.length === 0) {
+      setError('No hay cambios de costo por guardar');
+      return;
+    }
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await updatePurchaseOrderLineCosts(order.id, { items: payload });
+      onUpdate();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al guardar costos');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handlePrint = () => {
@@ -104,7 +216,15 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
 
   if (!isOpen) return null;
 
-  const totalOrdered = order.items.reduce((sum, item) => sum + item.quantity * item.unit_cost, 0);
+  const displayUnitCost = (oi: (typeof order.items)[0]) => {
+    if (isDraft && isAdmin) {
+      const n = Number(draftCosts[oi.id]);
+      return Number.isFinite(n) ? n : oi.unit_cost;
+    }
+    return oi.unit_cost;
+  };
+
+  const totalOrdered = order.items.reduce((sum, item) => sum + item.quantity * displayUnitCost(item), 0);
 
   const effectiveReceivedQty = (oi: (typeof order.items)[0]): number | null => {
     if (receivingMode) {
@@ -125,6 +245,13 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
 
   const showReceivedCol = receivingMode || order.status === 'RECIBIDA';
   const showReceivedTotals = showReceivedCol;
+  const catalogMismatch = isDraft
+    ? order.items.some((oi) => {
+        const catalog = oi.item?.purchase_cost;
+        if (catalog == null) return oi.unit_cost === 0;
+        return Number(catalog) !== Number(oi.unit_cost);
+      })
+    : false;
 
   const renderStatusStepper = () => {
     const steps = ['BORRADOR', 'APROBADA', 'ENVIADA', 'RECIBIDA'];
@@ -333,10 +460,52 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
             </div>
           </div>
 
-          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
-            <Package size={20} className="text-emerald-600 dark:text-emerald-400" />
-            Ítems Solicitados
-          </h3>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <Package size={20} className="text-emerald-600 dark:text-emerald-400" />
+              Ítems Solicitados
+            </h3>
+            {isDraft && (
+              <div className="flex flex-wrap gap-2 print:hidden">
+                <button
+                  type="button"
+                  onClick={handleRefreshCosts}
+                  disabled={isSubmitting}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-60"
+                  title="Copia el costo actual del catálogo a cada línea del borrador"
+                >
+                  <RefreshCw size={14} className={isSubmitting ? 'animate-spin' : ''} />
+                  Actualizar precios del inventario
+                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={handleSaveAdminCosts}
+                    disabled={isSubmitting}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
+                    title="Guarda los costos editados y los aplica al catálogo"
+                  >
+                    Guardar costos (catálogo)
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {catalogMismatch && (
+            <div className="mb-4 p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 text-sm dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+              Hay líneas cuyo costo no coincide con el inventario (o el catálogo no tiene precio).
+              Toca el artículo para editarlo, o usa <strong>Actualizar precios del inventario</strong>.
+            </div>
+          )}
+
+          {priceFrozen && (
+            <div className="mb-4 p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-sm dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300">
+              {isClosed
+                ? 'Precio congelado: esta orden ya está cerrada. El costo unitario es el de la compra y no cambia si actualizas el precio en inventario.'
+                : 'Precio congelado: al salir de borrador el costo de la OC ya no se actualiza desde inventario (queda el de la compra).'}
+            </div>
+          )}
 
           <div className="bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             <table className="w-full text-left text-sm">
@@ -359,10 +528,29 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                 {order.items.map((oi) => {
                   const receivedDisplay = effectiveReceivedQty(oi);
                   const draftReceived = Number(receivedQty[oi.id]);
+                  const unit = displayUnitCost(oi);
                   return (
                     <tr key={oi.id} className="bg-white dark:bg-slate-900">
-                      <td className="px-4 py-3 font-medium text-slate-500 dark:text-slate-400">{oi.item?.internal_code}</td>
-                      <td className="px-4 py-3 font-bold text-slate-800 dark:text-slate-100">{oi.item?.name}</td>
+                      <td className="px-4 py-3 font-medium text-slate-500 dark:text-slate-400">
+                        <button
+                          type="button"
+                          onClick={() => openItemDetail(oi.item_id)}
+                          className="text-left hover:text-emerald-600 dark:hover:text-emerald-400 underline-offset-2 hover:underline"
+                          title="Ver / editar artículo en inventario"
+                        >
+                          {oi.item?.internal_code}
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 font-bold text-slate-800 dark:text-slate-100">
+                        <button
+                          type="button"
+                          onClick={() => openItemDetail(oi.item_id)}
+                          className="text-left hover:text-emerald-600 dark:hover:text-emerald-400 underline-offset-2 hover:underline"
+                          title="Ver / editar artículo en inventario"
+                        >
+                          {oi.item?.name}
+                        </button>
+                      </td>
                       <td className="px-4 py-3 text-right">{oi.quantity} {oi.item?.uom}</td>
                       {showReceivedCol && (
                         <td className="px-4 py-3 text-right">
@@ -388,9 +576,33 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                           )}
                         </td>
                       )}
-                      <td className="px-4 py-3 text-right">{formatCurrency(oi.unit_cost)}</td>
+                      <td className="px-4 py-3 text-right">
+                        {isDraft && isAdmin ? (
+                          <input
+                            type="number"
+                            min={0}
+                            step="any"
+                            value={draftCosts[oi.id] ?? ''}
+                            onChange={(e) =>
+                              setDraftCosts((prev) => ({ ...prev, [oi.id]: e.target.value }))
+                            }
+                            className="w-28 ml-auto block rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 text-right"
+                          />
+                        ) : (
+                          <span className="inline-flex flex-col items-end gap-0.5">
+                            <span>{formatCurrency(unit)}</span>
+                            {priceFrozen &&
+                              oi.item?.purchase_cost != null &&
+                              Number(oi.item.purchase_cost) !== Number(oi.unit_cost) && (
+                                <span className="text-[10px] font-medium text-slate-400">
+                                  Catálogo hoy: {formatCurrency(oi.item.purchase_cost)}
+                                </span>
+                              )}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-right font-medium text-slate-700 dark:text-slate-200">
-                        {formatCurrency(oi.quantity * oi.unit_cost)}
+                        {formatCurrency(oi.quantity * unit)}
                       </td>
                       {showReceivedCol && (
                         <td className="px-4 py-3 text-right font-medium text-emerald-800 dark:text-emerald-300">
@@ -459,7 +671,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
             {receivingMode ? 'Volver' : 'Cerrar'}
           </button>
 
-          {!receivingMode && order.status === 'BORRADOR' && isManagerOrAdmin && (
+          {!receivingMode && order.status === 'BORRADOR' && isAdmin && (
             <button
               onClick={() => handleUpdateStatus('APROBADA')}
               disabled={isSubmitting}
@@ -467,6 +679,11 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
             >
               {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : 'Aprobar Orden'}
             </button>
+          )}
+          {!receivingMode && order.status === 'BORRADOR' && !isAdmin && isManagerOrAdmin && (
+            <p className="text-xs text-amber-700 dark:text-amber-300 self-center px-2">
+              Esperando aprobación de un Administrador
+            </p>
           )}
 
           {!receivingMode && order.status === 'APROBADA' && (
@@ -502,6 +719,21 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
       </div>
     </div>
     {createPortal(printSheet, document.body)}
+    {selectedItem && (
+      <ItemModal
+        isOpen={itemModalOpen}
+        onClose={() => {
+          setItemModalOpen(false);
+          setSelectedItem(null);
+        }}
+        onSaved={handleItemSaved}
+        item={selectedItem}
+        categories={categories}
+        locations={locations}
+        vendors={vendors}
+        readOnly={!canEditInventory}
+      />
+    )}
     </>
   );
 };

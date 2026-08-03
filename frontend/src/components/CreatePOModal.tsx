@@ -4,6 +4,7 @@ import { createPurchaseOrder } from '../api/purchaseOrders';
 import { getVendors, getItems, type Vendor, type Item } from '../api/inventory';
 import { BACKEND_URL } from '../api/axios';
 import { formatCurrency } from '../utils/currency';
+import { useAuth } from '../context/AuthContext';
 
 interface CreatePOModalProps {
   isOpen: boolean;
@@ -12,6 +13,8 @@ interface CreatePOModalProps {
 }
 
 export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps) => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMINISTRADOR';
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [items, setItems] = useState<Item[]>([]);
 
@@ -199,7 +202,12 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
             </div>
 
             <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Ítems a Pedir</h3>
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1">Ítems a Pedir</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                {isAdmin
+                  ? 'El costo unitario se precarga del inventario. Si lo cambias, al crear la orden también se actualiza en el catálogo. Como Administrador, la orden queda aprobada al crearla (sin paso extra).'
+                  : 'El costo unitario se toma del inventario y solo un Administrador puede modificarlo. La orden queda en borrador hasta que un Administrador la apruebe.'}
+              </p>
 
               <div className="relative mb-4" ref={searchBoxRef}>
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10 top-0 h-12">
@@ -341,15 +349,25 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
                               />
                             </td>
                             <td className="px-4 py-3">
-                              <input
-                                type="number"
-                                min="0"
-                                step="any"
-                                required
-                                value={oi.unit_cost}
-                                onChange={(e) => updateOrderItem(index, 'unit_cost', Number(e.target.value))}
-                                className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
-                              />
+                              {isAdmin ? (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="any"
+                                  required
+                                  value={oi.unit_cost}
+                                  onChange={(e) => updateOrderItem(index, 'unit_cost', Number(e.target.value))}
+                                  className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                                  title="Al guardar, este costo también actualiza el catálogo del ítem"
+                                />
+                              ) : (
+                                <span
+                                  className="block px-2 py-1.5 text-slate-700 dark:text-slate-200"
+                                  title="Solo un Administrador puede cambiar el costo; se toma del inventario"
+                                >
+                                  {formatCurrency(oi.unit_cost)}
+                                </span>
+                              )}
                             </td>
                             <td className="px-4 py-3 text-right font-medium text-slate-700 dark:text-slate-200">
                               {formatCurrency(oi.quantity * oi.unit_cost)}
@@ -403,7 +421,7 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
             disabled={isSubmitting}
             className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 dark:bg-emerald-500 text-white font-medium hover:bg-emerald-700 dark:hover:bg-emerald-400 rounded-xl transition-all shadow-sm shadow-emerald-200 dark:shadow-emerald-900/30 disabled:opacity-70"
           >
-            {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : 'Crear Orden'}
+            {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : isAdmin ? 'Crear y aprobar' : 'Crear borrador'}
           </button>
         </div>
       </div>

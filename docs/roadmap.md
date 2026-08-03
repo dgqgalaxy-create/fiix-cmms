@@ -85,7 +85,13 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.49.0 (Actualización: 3 de Agosto de 2026)
+## 🚀 Versión Actual: v1.50.0 (Actualización: 3 de Agosto de 2026)
+
+### Novedades en v1.50.0 (OC — costos desde inventario + ficha del ítem)
+- **Mejora:** Costo unitario precargado del catálogo; solo Admin lo edita en la compra (y lo guarda en el ítem).
+- **Nuevo:** Desde líneas de la OC se abre el detalle del artículo; en borradores, botón para sincronizar precios con inventario.
+- **Cambio (Notas):** Solo Admin/Gestionador crean y editan pendientes; técnicos asignados solo completan.
+- **Cambio (OC):** Solo Admin aprueba; Gestionador no autoaprueba; Admin crea ya aprobada.
 
 ### Novedades en v1.49.0 (Notas — mejoras de uso diario)
 - **Mejora:** Edición, filtros, vencidos/próximos, prioridad Alta, comentario al completar, reabrir, snooze (+1 h / mañana).

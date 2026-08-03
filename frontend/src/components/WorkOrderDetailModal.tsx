@@ -649,7 +649,7 @@ export const WorkOrderDetailModal = ({
                 </button>
               </>
             )}
-            {workOrder && (
+            {workOrder && (user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR') && (
               <button
                 type="button"
                 title="Crear pendiente ligado a esta OT"

@@ -68,6 +68,8 @@ function dueTone(iso?: string | null): 'overdue' | 'soon' | 'ok' | 'none' {
 export default function NotesPage() {
   const { user } = useAuth();
   const userId = user?.userId;
+  const canManageTasks =
+    user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR';
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<Tab>(() =>
     searchParams.get('tab') === 'tasks' ? 'tasks' : 'notes'
@@ -139,8 +141,9 @@ export default function NotesPage() {
     if (userId && !taskAssignee) setTaskAssignee(userId);
   }, [userId, taskAssignee]);
 
-  // Prefill from OT detail (?tab=tasks&wo=&folio=)
+  // Prefill from OT detail (?tab=tasks&wo=&folio=) — solo Admin/Gestionador
   useEffect(() => {
+    if (!canManageTasks) return;
     const wo = searchParams.get('wo');
     const folio = searchParams.get('folio');
     const title = searchParams.get('title');
@@ -151,6 +154,13 @@ export default function NotesPage() {
       if (title && !taskTitle) setTaskTitle(`Seguimiento: ${title}`);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (canManageTasks) return;
+    if (searchParams.get('tab') === 'tasks' || searchParams.get('wo')) {
+      setTab('tasks');
+    }
+  }, [canManageTasks, searchParams]);
 
   useSocketRefresh('refresh_notes', () => void load(true));
 
@@ -234,6 +244,10 @@ export default function NotesPage() {
   };
 
   const handleSaveTask = async () => {
+    if (!canManageTasks) {
+      setError('Solo Administradores y Gestionadores pueden crear o editar pendientes');
+      return;
+    }
     if (!taskTitle.trim()) {
       setError('Escribe un título para el pendiente');
       return;
@@ -272,6 +286,10 @@ export default function NotesPage() {
   };
 
   const startEditTask = (task: OperationalTask) => {
+    if (!canManageTasks || task.created_by_id !== userId) {
+      setError('Solo el Administrador o Gestionador que creó el pendiente puede editarlo');
+      return;
+    }
     setEditingTask(task);
     setTaskTitle(task.title);
     setTaskBody(task.body || '');
@@ -323,7 +341,7 @@ export default function NotesPage() {
             <span className="truncate">Notas y pendientes</span>
           </h1>
           <p className="mt-0.5 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            Privadas + operativos. Recordatorios in-app y push.
+            Notas solo tuyas · Pendientes visibles para quien los crea y a quien se asignan
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -372,6 +390,16 @@ export default function NotesPage() {
           Pendientes ({openTasksCount})
         </button>
       </div>
+
+      {tab === 'notes' ? (
+        <p className="rounded-lg border border-amber-200/80 bg-amber-50/80 px-2.5 py-1.5 text-[11px] sm:text-xs font-medium text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+          Solo tú ves estas notas. Nadie más en el equipo puede leerlas.
+        </p>
+      ) : (
+        <p className="rounded-lg border border-emerald-200/80 bg-emerald-50/80 px-2.5 py-1.5 text-[11px] sm:text-xs font-medium text-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200">
+          Solo Admin y Gestionador crean y editan pendientes. Los técnicos asignados solo los ven y pueden completarlos.
+        </p>
+      )}
 
       {error && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
@@ -583,6 +611,7 @@ export default function NotesPage() {
           </div>
 
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+            {canManageTasks ? (
             <article className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
@@ -720,8 +749,13 @@ export default function NotesPage() {
                 {saving ? 'Guardando…' : editingTask ? 'Guardar cambios' : 'Crear pendiente'}
               </button>
             </article>
+            ) : (
+              <article className="rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-300 lg:col-span-1">
+                Como técnico solo ves los pendientes que te asignan y puedes completarlos. No puedes crearlos ni editarlos.
+              </article>
+            )}
 
-            <div className="space-y-1.5 sm:space-y-2">
+            <div className={`space-y-1.5 sm:space-y-2 ${canManageTasks ? '' : 'lg:col-span-1'}`}>
               {loading && tasks.length === 0 ? (
                 <p className="text-sm text-slate-400 py-6 text-center">Cargando…</p>
               ) : tasks.length === 0 ? (
@@ -730,6 +764,9 @@ export default function NotesPage() {
                 tasks.map((task) => {
                   const tone = dueTone(task.due_at);
                   const done = task.status !== 'OPEN';
+                  const isCreator = task.created_by_id === userId;
+                  const isAssignee = task.assignee_id === userId;
+                  const canEditTask = canManageTasks && isCreator;
                   return (
                     <article
                       key={task.id}
@@ -741,6 +778,11 @@ export default function NotesPage() {
                             {task.priority === 'ALTA' && (
                               <span className="rounded bg-rose-600 px-1.5 py-0.5 text-[10px] font-black uppercase text-white">
                                 Alta
+                              </span>
+                            )}
+                            {!canEditTask && isAssignee && (
+                              <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold uppercase text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                                Solo lectura
                               </span>
                             )}
                             <p
@@ -800,52 +842,58 @@ export default function NotesPage() {
                         <div className="flex shrink-0 flex-wrap justify-end gap-0.5">
                           {task.status === 'OPEN' && (
                             <>
-                              <button
-                                type="button"
-                                title="Editar"
-                                onClick={() => startEditTask(task)}
-                                className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"
-                              >
-                                <Pencil size={15} />
-                              </button>
-                              <button
-                                type="button"
-                                title="+1 hora"
-                                onClick={() =>
-                                  void snoozeOperationalTask(task.id, '1h' as SnoozeMode).then(() =>
-                                    load(true)
-                                  )
-                                }
-                                className="rounded-lg p-1.5 text-amber-700 hover:bg-amber-50"
-                              >
-                                <AlarmClock size={15} />
-                              </button>
-                              <button
-                                type="button"
-                                title="Mañana 9:00"
-                                onClick={() =>
-                                  void snoozeOperationalTask(task.id, 'tomorrow').then(() =>
-                                    load(true)
-                                  )
-                                }
-                                className="rounded-lg px-1.5 py-1 text-[10px] font-bold text-amber-800"
-                              >
-                                +1d
-                              </button>
-                              <button
-                                type="button"
-                                title="Completar"
-                                onClick={() => {
-                                  setCompleteTask(task);
-                                  setCompletionNote('');
-                                }}
-                                className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
-                              >
-                                <Check size={15} />
-                              </button>
+                              {canEditTask && (
+                                <>
+                                  <button
+                                    type="button"
+                                    title="Editar"
+                                    onClick={() => startEditTask(task)}
+                                    className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                  >
+                                    <Pencil size={15} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    title="+1 hora"
+                                    onClick={() =>
+                                      void snoozeOperationalTask(task.id, '1h' as SnoozeMode).then(() =>
+                                        load(true)
+                                      )
+                                    }
+                                    className="rounded-lg p-1.5 text-amber-700 hover:bg-amber-50"
+                                  >
+                                    <AlarmClock size={15} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    title="Mañana 9:00"
+                                    onClick={() =>
+                                      void snoozeOperationalTask(task.id, 'tomorrow').then(() =>
+                                        load(true)
+                                      )
+                                    }
+                                    className="rounded-lg px-1.5 py-1 text-[10px] font-bold text-amber-800"
+                                  >
+                                    +1d
+                                  </button>
+                                </>
+                              )}
+                              {(canEditTask || isAssignee) && (
+                                <button
+                                  type="button"
+                                  title="Completar"
+                                  onClick={() => {
+                                    setCompleteTask(task);
+                                    setCompletionNote('');
+                                  }}
+                                  className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
+                                >
+                                  <Check size={15} />
+                                </button>
+                              )}
                             </>
                           )}
-                          {task.status === 'DONE' && (
+                          {task.status === 'DONE' && canEditTask && (
                             <button
                               type="button"
                               title="Reabrir"
@@ -859,7 +907,7 @@ export default function NotesPage() {
                               <RotateCcw size={15} />
                             </button>
                           )}
-                          {(task.created_by_id === userId || user?.role === 'ADMINISTRADOR') && (
+                          {(canEditTask || (canManageTasks && user?.role === 'ADMINISTRADOR')) && (
                             <button
                               type="button"
                               title="Eliminar"

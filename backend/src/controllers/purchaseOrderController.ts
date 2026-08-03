@@ -31,37 +31,196 @@ export const createPurchaseOrder = async (req: AuthRequest, res: Response): Prom
   try {
     const { vendor_id, expected_date, items } = req.body;
     const user_id = req.user?.userId;
+    const isAdmin = req.user?.role === 'ADMINISTRADOR';
 
     if (!user_id || !vendor_id || !items || !Array.isArray(items) || items.length === 0) {
       res.status(400).json({ error: 'Faltan datos obligatorios (proveedor e ítems)' });
       return;
     }
 
-    const order = await prisma.purchaseOrder.create({
-      data: {
-        vendor_id,
-        created_by_id: user_id,
-        // yyyy-MM-dd del <input type="date">: local noon (no UTC midnight → día anterior en MX)
-        expected_date: expected_date ? parseDateInput(expected_date) : null,
-        items: {
-          create: items.map((i: any) => ({
-            item_id: i.item_id,
-            quantity: i.quantity,
-            unit_cost: i.unit_cost || 0
-          }))
-        }
-      },
-      include: {
-        vendor: true,
-        items: { include: { item: true } }
+    const itemIds = [...new Set(items.map((i: any) => String(i.item_id || '')).filter(Boolean))];
+    if (itemIds.length !== items.length) {
+      res.status(400).json({ error: 'Hay líneas sin ítem válido' });
+      return;
+    }
+
+    const catalog = await prisma.item.findMany({
+      where: { id: { in: itemIds } },
+      select: { id: true, purchase_cost: true },
+    });
+    const byId = new Map(catalog.map((c) => [c.id, c]));
+    if (catalog.length !== itemIds.length) {
+      res.status(400).json({ error: 'Uno o más ítems no existen en inventario' });
+      return;
+    }
+
+    const lineData: { item_id: string; quantity: number; unit_cost: number; syncCost?: number }[] = [];
+    for (const raw of items) {
+      const item_id = String(raw.item_id);
+      const quantity = Number(raw.quantity);
+      if (!Number.isFinite(quantity) || quantity <= 0) {
+        res.status(400).json({ error: 'La cantidad de cada línea debe ser mayor a 0' });
+        return;
       }
+      const catalogCost = byId.get(item_id)?.purchase_cost ?? 0;
+      let unit_cost = catalogCost;
+      if (isAdmin) {
+        const clientCost = Number(raw.unit_cost);
+        if (Number.isFinite(clientCost) && clientCost >= 0) {
+          unit_cost = clientCost;
+        }
+      }
+      lineData.push({
+        item_id,
+        quantity,
+        unit_cost,
+        syncCost: isAdmin && unit_cost !== catalogCost ? unit_cost : undefined,
+      });
+    }
+
+    const order = await prisma.$transaction(async (tx) => {
+      for (const line of lineData) {
+        if (line.syncCost !== undefined) {
+          await tx.item.update({
+            where: { id: line.item_id },
+            data: { purchase_cost: line.syncCost },
+          });
+        }
+      }
+      return tx.purchaseOrder.create({
+        data: {
+          vendor_id,
+          created_by_id: user_id,
+          // Admin crea ya aprobada (sin paso de aprobación). Gestionador queda en borrador.
+          status: isAdmin ? 'APROBADA' : 'BORRADOR',
+          expected_date: expected_date ? parseDateInput(expected_date) : null,
+          items: {
+            create: lineData.map(({ item_id, quantity, unit_cost }) => ({
+              item_id,
+              quantity,
+              unit_cost,
+            })),
+          },
+        },
+        include: {
+          vendor: true,
+          items: { include: { item: true } },
+        },
+      });
     });
 
     emitRefresh('refresh_purchase_orders');
+    emitRefresh('refresh_inventory');
     res.status(201).json(order);
   } catch (error) {
     console.error('Error creating purchase order:', error);
     res.status(500).json({ error: 'Error al crear la orden de compra' });
+  }
+};
+
+/**
+ * Actualiza costos unitarios de un borrador:
+ * - sync_from_inventory: toma purchase_cost actual del catálogo (cualquier rol con compras).
+ * - items[{id, unit_cost}]: solo Admin; además guarda el nuevo costo en el ítem de inventario.
+ */
+export const updatePurchaseOrderLineCosts = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const user_id = req.user?.userId;
+    const isAdmin = req.user?.role === 'ADMINISTRADOR';
+    const syncFromInventory = Boolean(req.body?.sync_from_inventory);
+    const itemsPayload = Array.isArray(req.body?.items) ? req.body.items : null;
+
+    if (!user_id) {
+      res.status(401).json({ error: 'No autorizado' });
+      return;
+    }
+
+    const order = await prisma.purchaseOrder.findUnique({
+      where: { id },
+      include: {
+        items: { include: { item: { select: { id: true, purchase_cost: true } } } },
+      },
+    });
+
+    if (!order) {
+      res.status(404).json({ error: 'Orden de compra no encontrada' });
+      return;
+    }
+    if (order.status !== 'BORRADOR') {
+      res.status(400).json({
+        error:
+          order.status === 'RECIBIDA' || order.status === 'CANCELADA'
+            ? 'Esta orden ya está cerrada: el precio de compra quedó congelado y no cambia aunque actualices el inventario'
+            : 'Solo se pueden actualizar precios en órdenes en borrador. Aprobadas/enviadas mantienen el costo congelado de la compra',
+      });
+      return;
+    }
+
+    if (!syncFromInventory && !itemsPayload) {
+      res.status(400).json({ error: 'Indica sync_from_inventory o items con unit_cost' });
+      return;
+    }
+
+    if (itemsPayload && !isAdmin) {
+      res.status(403).json({
+        error: 'Solo un Administrador puede modificar el costo unitario de la compra',
+      });
+      return;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      if (syncFromInventory) {
+        for (const line of order.items) {
+          const cost = line.item?.purchase_cost ?? 0;
+          await tx.purchaseOrderItem.update({
+            where: { id: line.id },
+            data: { unit_cost: cost },
+          });
+        }
+        return;
+      }
+
+      for (const raw of itemsPayload as any[]) {
+        const lineId = String(raw.id || '');
+        const unit_cost = Number(raw.unit_cost);
+        if (!lineId || !Number.isFinite(unit_cost) || unit_cost < 0) {
+          throw Object.assign(new Error('Costo unitario inválido'), { status: 400 });
+        }
+        const line = order.items.find((i) => i.id === lineId);
+        if (!line) {
+          throw Object.assign(new Error('Línea no pertenece a esta orden'), { status: 400 });
+        }
+        await tx.purchaseOrderItem.update({
+          where: { id: lineId },
+          data: { unit_cost },
+        });
+        await tx.item.update({
+          where: { id: line.item_id },
+          data: { purchase_cost: unit_cost },
+        });
+      }
+    });
+
+    const updated = await prisma.purchaseOrder.findUnique({
+      where: { id },
+      include: {
+        vendor: true,
+        created_by: { select: { id: true, name: true, email: true, role: true } },
+        items: { include: { item: true } },
+      },
+    });
+
+    emitRefresh('refresh_purchase_orders');
+    emitRefresh('refresh_inventory');
+    res.json(updated);
+  } catch (error: any) {
+    if (error?.status === 400) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    console.error('Error updating PO line costs:', error);
+    res.status(500).json({ error: 'Error al actualizar los costos de la orden' });
   }
 };
 
@@ -163,12 +322,18 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
       return;
     }
 
-    // Only Admin and Gestionador can approve or receive
-    if (req.user?.role !== 'ADMINISTRADOR' && req.user?.role !== 'GESTIONADOR') {
-      if (status === 'APROBADA' || status === 'RECIBIDA') {
-        res.status(403).json({ error: 'No tienes permisos para aprobar o recibir órdenes de compra' });
-        return;
-      }
+    // Solo Admin aprueba. Gestionador no puede autoaprobar ni aprobar borradores ajenos.
+    if (status === 'APROBADA' && req.user?.role !== 'ADMINISTRADOR') {
+      res.status(403).json({
+        error: 'Solo un Administrador puede aprobar órdenes de compra',
+      });
+      return;
+    }
+
+    // Admin y Gestionador pueden recibir; Técnico no.
+    if (status === 'RECIBIDA' && req.user?.role !== 'ADMINISTRADOR' && req.user?.role !== 'GESTIONADOR') {
+      res.status(403).json({ error: 'No tienes permisos para recibir órdenes de compra' });
+      return;
     }
 
     const existingOrder = await prisma.purchaseOrder.findUnique({
