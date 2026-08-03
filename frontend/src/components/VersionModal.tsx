@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.52.1";
+export const APP_VERSION = "1.52.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -30,6 +30,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Al tocar «Aceptar orden» el botón azul ya no se queda igual: pasa a «Orden aceptada — confirma con Guardar» (y lo mismo para Pausar / Finalizar / Reanudar) para poder seguir el flujo sin parecer que no funcionó.",
     "Corrección: Avisos con foto — al tocar la imagen se amplía dentro de la app (ya no abre/cierra una pestaña en la PWA). Marcar como visto ya no recarga a todos los usuarios.",
     "Nuevo: Avisos globales en Notas y pendientes — visibles para todos; solo Admin publica (con foto opcional). Al abrirlos se marcan como vistos; el Admin ve quién ya los leyó (contador y lista).",
     "Corrección: Costos históricos congelados — al cerrar una OT (y en movimientos de inventario/recepción OC) se guarda el unit_cost del momento; OT/KPI/activo ya no releen el precio actual del catálogo. Migración one-shot rellena consumos OT viejos null/0 desde el catálogo una sola vez.",

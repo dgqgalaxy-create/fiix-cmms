@@ -1423,7 +1423,8 @@ export const WorkOrderDetailModal = ({
             ) : (
               <>
             <div className="grid grid-cols-2 gap-2">
-              {workOrder.status === 'PENDIENTE' && (
+              {/* Usar status local: si no, al tocar Aceptar el badge pasa a En proceso pero el botón sigue ahí. */}
+              {workOrder.status === 'PENDIENTE' && status === 'PENDIENTE' && (
                 <button
                   type="button"
                   onClick={() => {
@@ -1439,7 +1440,21 @@ export const WorkOrderDetailModal = ({
                   <PlayCircle size={18} /> Aceptar orden
                 </button>
               )}
-              {workOrder.status === 'EN_PROCESO' && isAssignedToMe && (
+              {workOrder.status === 'PENDIENTE' && status === 'EN_PROCESO' && (
+                <div className="col-span-2 rounded-xl border border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-950/40 px-3 py-3 space-y-2">
+                  <p className="text-sm font-bold text-sky-800 dark:text-sky-200 flex items-center justify-center gap-2">
+                    <CheckCircle2 size={18} /> Orden aceptada — confirma con Guardar
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setStatus('PENDIENTE')}
+                    className="w-full text-center text-[11px] font-semibold text-sky-700 dark:text-sky-300 underline"
+                  >
+                    Deshacer aceptación
+                  </button>
+                </div>
+              )}
+              {workOrder.status === 'EN_PROCESO' && isAssignedToMe && status === 'EN_PROCESO' && (
                 <>
                   <button
                     type="button"
@@ -1472,7 +1487,35 @@ export const WorkOrderDetailModal = ({
                   </button>
                 </>
               )}
-              {workOrder.status === 'EN_ESPERA' && isAssignedToMe && (
+              {workOrder.status === 'EN_PROCESO' && isAssignedToMe && status === 'EN_ESPERA' && (
+                <div className="col-span-2 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40 px-3 py-3 space-y-2">
+                  <p className="text-sm font-bold text-amber-800 dark:text-amber-200 text-center">
+                    Pausar — escribe el motivo y pulsa Guardar
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setStatus('EN_PROCESO')}
+                    className="w-full text-center text-[11px] font-semibold text-amber-700 dark:text-amber-300 underline"
+                  >
+                    Deshacer pausa
+                  </button>
+                </div>
+              )}
+              {workOrder.status === 'EN_PROCESO' && isAssignedToMe && status === 'FINALIZADO' && (
+                <div className="col-span-2 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40 px-3 py-3 space-y-2">
+                  <p className="text-sm font-bold text-emerald-800 dark:text-emerald-200 text-center">
+                    Finalizar — completa evidencia y firmas, luego Guardar
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setStatus('EN_PROCESO')}
+                    className="w-full text-center text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 underline"
+                  >
+                    Deshacer finalizar
+                  </button>
+                </div>
+              )}
+              {workOrder.status === 'EN_ESPERA' && isAssignedToMe && status === 'EN_ESPERA' && (
                 <button
                   type="button"
                   onClick={() => {
@@ -1487,6 +1530,20 @@ export const WorkOrderDetailModal = ({
                 >
                   <PlayCircle size={18} /> Reanudar
                 </button>
+              )}
+              {workOrder.status === 'EN_ESPERA' && isAssignedToMe && status === 'EN_PROCESO' && (
+                <div className="col-span-2 rounded-xl border border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-950/40 px-3 py-3 space-y-2">
+                  <p className="text-sm font-bold text-sky-800 dark:text-sky-200 flex items-center justify-center gap-2">
+                    <CheckCircle2 size={18} /> Reanudación lista — confirma con Guardar
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setStatus('EN_ESPERA')}
+                    className="w-full text-center text-[11px] font-semibold text-sky-700 dark:text-sky-300 underline"
+                  >
+                    Deshacer reanudación
+                  </button>
+                </div>
               )}
             </div>
             {quickActionNextStep && (
