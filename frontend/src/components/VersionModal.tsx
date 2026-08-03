@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.47.3";
+export const APP_VERSION = "1.49.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "1 de Agosto, 2026";
+  const updateDate = "3 de Agosto, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -25,10 +25,13 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Directorio y Solicitantes",
     "KPIs y Metas",
     "Checklist Diario",
+    "Notas y pendientes",
     "Calendario de Horarios y Turnos (Roster)",
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Notas y pendientes — editar, filtros (míos/asignados/creados), vencidos/próximos, prioridad Alta, comentario al completar, reabrir, posponer +1 h / mañana, tarjeta en Inicio, badge en el menú y acceso rápido desde el detalle de OT.",
+    "Nuevo: Notas personales (privadas) y pendientes operativos asignables — menú «Notas y pendientes»; vínculo opcional a OT (folio) o activo; recordatorio con fecha (in-app + push). Cualquier usuario puede crear/asignar pendientes.",
     "Mejora: En Herramientas locales, «Limpiar caché PWA» ahora explica cuándo usarlo (versión vieja tras update, pantallas rotas o UI desactualizada).",
     "Nuevo: Bitácora de auditoría — el histórico se conserva sin límite en BD; puedes descargar Excel por periodo (fechas México) o el histórico completo (Opciones de Desarrollador, solo Admin).",
     "Mejora: En Opciones de Desarrollador, la tarjeta «Respaldo del servidor» ya no se estira con espacio vacío a la derecha: se reacomodó junto a «Importar desde Google Sheets» y sus botones Crear/Restaurar van en una sola fila.",

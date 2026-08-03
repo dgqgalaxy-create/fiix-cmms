@@ -12,6 +12,7 @@ const SECTIONS = [
   { id: 'roles', title: 'Roles y Permisos', icon: <Shield size={18} /> },
   { id: 'users', title: 'Gestión de Personal', icon: <Users size={18} /> },
   { id: 'checklists', title: 'Checklist Diario', icon: <FileText size={18} /> },
+  { id: 'notes', title: 'Notas y pendientes', icon: <Bell size={18} /> },
   { id: 'roster', title: 'Horarios y Turnos', icon: <Clock size={18} /> },
 ];
 
@@ -594,6 +595,34 @@ export const UserManual = () => {
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                       En <strong>Configuración → Catálogo de Checklist</strong>, cada pregunta tiene un selector para el tipo de respuesta: <strong>Check</strong> (OK/Falla/N/A), <strong>Número</strong> o <strong>Texto</strong>. Además puedes definir el <strong>número de columnas</strong> (máquinas L1…Ln, hasta 12). Si agregas una línea, sube ese número y el próximo checklist diario ya la incluirá.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeSection === 'notes' && (
+              <div className="space-y-8 md:animate-in md:fade-in md:slide-in-from-bottom-4 md:duration-500">
+                <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
+                  <div className="p-3 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl">
+                    <Bell size={28} />
+                  </div>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white">Notas y pendientes</h2>
+                </div>
+                <p className="text-lg text-slate-600 dark:text-slate-400">
+                  En el menú lateral encontrarás <strong>Notas y pendientes</strong> para no perder seguimientos del día a día.
+                </p>
+                <div className="space-y-6 mt-6">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3">Mis notas (privadas)</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Solo tú las ves. Puedes poner un <strong>recordatorio</strong> con fecha/hora; al llegar te avisa en la app y por push del dispositivo.
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3">Pendientes operativos</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Cualquier usuario puede crearlos y asignarlos a otro. Opcionalmente ligas un <strong>folio de OT</strong> o un <strong>código de activo</strong>. Al asignar y al vencer la fecha, el responsable recibe aviso in-app + push (no Telegram).
                     </p>
                   </div>
                 </div>

@@ -20,6 +20,7 @@ import {
   VolumeX,
   Wrench,
   XCircle,
+  StickyNote,
 } from 'lucide-react';
 import {
   Bar,
@@ -38,6 +39,7 @@ import {
 } from 'recharts';
 import { getLineStoppageStatus, getWorkOrders, getWorkOrdersSummary } from '../api/workOrders';
 import type { LineStoppageStatus, ProductionLine, WorkOrder } from '../api/workOrders';
+import { getNotesSummary, type NotesSummary } from '../api/notes';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { useAuth } from '../context/AuthContext';
@@ -74,6 +76,7 @@ export const HomePage = () => {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [summary, setSummary] = useState<Record<string, number>>({});
   const [lineStoppage, setLineStoppage] = useState<LineStoppageStatus | null>(null);
+  const [notesSummary, setNotesSummary] = useState<NotesSummary | null>(null);
   const [summaryStartDate, setSummaryStartDate] = useState('');
   const [summaryEndDate, setSummaryEndDate] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -98,14 +101,16 @@ export const HomePage = () => {
   const fetchDashboard = async (backgroundFetch = false) => {
     try {
       if (!backgroundFetch) setIsLoading(true);
-      const [orders, summaryData, stoppageData] = await Promise.all([
+      const [orders, summaryData, stoppageData, notesData] = await Promise.all([
         getWorkOrders(),
         getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined),
         getLineStoppageStatus(),
+        getNotesSummary().catch(() => null),
       ]);
       setWorkOrders(orders);
       setSummary(summaryData);
       setLineStoppage(stoppageData);
+      if (notesData) setNotesSummary(notesData);
     } catch (error) {
       console.error('Error fetching dashboard summary', error);
     } finally {
@@ -124,6 +129,7 @@ export const HomePage = () => {
   }, []);
 
   useSocketRefresh('refresh_work_orders', () => fetchDashboard(true));
+  useSocketRefresh('refresh_notes', () => fetchDashboard(true));
 
   useEffect(() => {
     const fetchSummary = async () => {
@@ -524,6 +530,33 @@ export const HomePage = () => {
           )}
         </div>
       </section>
+
+      <button
+        type="button"
+        onClick={() => navigate('/notes')}
+        className="mb-6 w-full text-left rounded-2xl border border-amber-200/90 bg-gradient-to-br from-white via-amber-50/50 to-orange-50/40 p-3 sm:p-4 shadow-sm transition hover:border-amber-300 dark:border-amber-900/50 dark:from-slate-900 dark:via-amber-950/20 dark:to-orange-950/15"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+              <StickyNote size={20} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                Notas y pendientes
+              </p>
+              <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                {notesSummary
+                  ? `${notesSummary.open_total} abierto${notesSummary.open_total === 1 ? '' : 's'} · ${notesSummary.open_notes} nota${notesSummary.open_notes === 1 ? '' : 's'} · ${notesSummary.open_tasks_assigned} asignado${notesSummary.open_tasks_assigned === 1 ? '' : 's'} a ti`
+                  : 'Abre tus notas personales y pendientes operativos'}
+              </p>
+            </div>
+          </div>
+          <span className="shrink-0 rounded-full bg-amber-500 px-2.5 py-1 text-xs font-black tabular-nums text-white">
+            {notesSummary?.open_total ?? '—'}
+          </span>
+        </div>
+      </button>
 
       {isControlRoomRole && (
         <section className="mb-6 rounded-2xl border border-rose-200/80 bg-rose-50/40 p-3 sm:p-4 dark:border-rose-900/50 dark:bg-rose-950/20">

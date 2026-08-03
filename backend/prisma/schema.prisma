@@ -100,6 +100,9 @@ model User {
   checklist_transfers_to   ChecklistTransfer[] @relation("ChecklistTransferTo")
   checklist_continuation_requests ChecklistContinuationRequest[] @relation("ChecklistContinuationRequester")
   checklist_continuation_resolutions ChecklistContinuationRequest[] @relation("ChecklistContinuationResolver")
+  personal_notes PersonalNote[]
+  operational_tasks_created OperationalTask[] @relation("OperationalTaskCreator")
+  operational_tasks_assigned OperationalTask[] @relation("OperationalTaskAssignee")
 
   pattern              TechnicianPattern?
   exceptions           TechnicianException[]
@@ -194,6 +197,7 @@ model Asset {
 
   work_orders     WorkOrder[]
   maintenance_plans MaintenancePlan[]
+  operational_tasks OperationalTask[]
 }
 
 model WorkOrder {
@@ -253,6 +257,7 @@ model WorkOrder {
 
   sla_events          WorkOrderSlaEvent[]
   inventory_transactions InventoryTransaction[]
+  operational_tasks   OperationalTask[]
 }
 
 model KPIGoal {
@@ -641,4 +646,62 @@ model AuditLog {
   entity_id  String?
   summary    String
   meta       Json?
+}
+
+/// Notas personales privadas (solo el dueño las ve).
+model PersonalNote {
+  id          String    @id @default(uuid()) @db.Uuid
+  user_id     String    @db.Uuid
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  title       String
+  body        String?
+  remind_at   DateTime?
+  reminded_at DateTime?
+  is_done     Boolean   @default(false)
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  @@index([user_id, is_done])
+  @@index([remind_at])
+}
+
+enum OperationalTaskStatus {
+  OPEN
+  DONE
+  CANCELLED
+}
+
+enum OperationalTaskPriority {
+  NORMAL
+  ALTA
+}
+
+/// Pendientes operativos asignables (ligados opcionalmente a OT o activo).
+model OperationalTask {
+  id            String                @id @default(uuid()) @db.Uuid
+  title         String
+  body          String?
+  created_by_id String                @db.Uuid
+  created_by    User                  @relation("OperationalTaskCreator", fields: [created_by_id], references: [id])
+  assignee_id   String                @db.Uuid
+  assignee      User                  @relation("OperationalTaskAssignee", fields: [assignee_id], references: [id])
+  work_order_id String?               @db.Uuid
+  work_order    WorkOrder?            @relation(fields: [work_order_id], references: [id], onDelete: SetNull)
+  asset_id      String?               @db.Uuid
+  asset         Asset?                @relation(fields: [asset_id], references: [id], onDelete: SetNull)
+  due_at        DateTime?
+  reminded_at   DateTime?
+  priority      OperationalTaskPriority @default(NORMAL)
+  status        OperationalTaskStatus @default(OPEN)
+  completed_at  DateTime?
+  completion_note String?
+  created_at    DateTime              @default(now())
+  updated_at    DateTime              @updatedAt
+
+  @@index([assignee_id, status])
+  @@index([created_by_id, status])
+  @@index([due_at])
+  @@index([work_order_id])
+  @@index([asset_id])
+  @@index([priority, status])
 }

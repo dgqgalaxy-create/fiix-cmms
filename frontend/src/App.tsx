@@ -38,6 +38,7 @@ const UserManual = lazy(() => import('./pages/UserManual').then((m) => ({ defaul
 const DailyChecklistsPage = lazy(() => import('./pages/DailyChecklistsPage'));
 const ChecklistFormPage = lazy(() => import('./pages/ChecklistFormPage'));
 const RosterPage = lazy(() => import('./pages/RosterPage').then((m) => ({ default: m.RosterPage })));
+const NotesPage = lazy(() => import('./pages/NotesPage'));
 
 function PageFallback() {
   return (
@@ -219,6 +220,17 @@ function App() {
                 </Layout>
               </ProtectedRoute>
             } 
+          />
+
+          <Route
+            path="/notes"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <NotesPage />
+                </Layout>
+              </ProtectedRoute>
+            }
           />
           
           <Route

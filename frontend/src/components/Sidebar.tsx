@@ -1,12 +1,14 @@
-import { LayoutDashboard, Database, LogOut, Users, Activity, Shield, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone } from 'lucide-react';
+import { LayoutDashboard, Database, LogOut, Users, Activity, Shield, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { VersionModal, APP_VERSION } from './VersionModal';
 import { OnlineUsersBadge } from './common/OnlineUsersBadge';
 import { updateMyPreferences } from '../api/users';
 import { canUseTechnicianMobileUi, isTechnicianMobileUiPrefOn } from '../hooks/useTechnicianMobileShell';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { getNotesSummary } from '../api/notes';
+import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import {
   DndContext,
   closestCenter,
@@ -28,6 +30,7 @@ interface NavItem {
   name: string;
   path: string;
   icon: JSX.Element;
+  badge?: number;
 }
 
 const SortableNavItem = ({ item, isActive, isEditMode, onClose }: { item: NavItem, isActive: boolean, isEditMode: boolean, onClose: () => void }) => {
@@ -46,6 +49,13 @@ const SortableNavItem = ({ item, isActive, isEditMode, onClose }: { item: NavIte
     zIndex: isDragging ? 10 : 1,
   };
 
+  const badgeEl =
+    item.badge && item.badge > 0 ? (
+      <span className="ml-auto shrink-0 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white min-w-[1.25rem] text-center">
+        {item.badge > 99 ? '99+' : item.badge}
+      </span>
+    ) : null;
+
   return (
     <div ref={setNodeRef} style={style} className={`flex items-center gap-2 ${isDragging ? 'opacity-50' : ''}`}>
       {isEditMode ? (
@@ -56,7 +66,8 @@ const SortableNavItem = ({ item, isActive, isEditMode, onClose }: { item: NavIte
         >
           <GripVertical size={16} className="text-slate-500" />
           {item.icon}
-          {item.name}
+          <span className="truncate flex-1">{item.name}</span>
+          {badgeEl}
         </div>
       ) : (
         <Link
@@ -69,7 +80,8 @@ const SortableNavItem = ({ item, isActive, isEditMode, onClose }: { item: NavIte
           }`}
         >
           {item.icon}
-          {item.name}
+          <span className="truncate flex-1">{item.name}</span>
+          {badgeEl}
         </Link>
       )}
     </div>
@@ -83,11 +95,28 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [orderedItems, setOrderedItems] = useState<NavItem[]>([]);
+  const [notesBadge, setNotesBadge] = useState(0);
+
+  const refreshNotesBadge = useCallback(async () => {
+    try {
+      const s = await getNotesSummary();
+      setNotesBadge(s.open_tasks_assigned + s.open_notes);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshNotesBadge();
+  }, [refreshNotesBadge, user?.id]);
+
+  useSocketRefresh('refresh_notes', refreshNotesBadge);
 
   useEffect(() => {
     const availableItems: NavItem[] = [
       { name: 'Inicio', path: '/home', icon: <Home size={20} /> },
       { name: 'Órdenes de Trabajo', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
+      { name: 'Notas y pendientes', path: '/notes', icon: <StickyNote size={20} />, badge: notesBadge },
       { name: 'Activos', path: '/assets', icon: <Database size={20} /> },
       { name: 'Inventario', path: '/inventory', icon: <Package size={20} /> },
       { name: 'Checklist Diario', path: '/checklists', icon: <ClipboardCheck size={20} /> },
@@ -137,7 +166,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     });
 
     setOrderedItems(ordered);
-  }, [user, hasPermission]);
+  }, [user, hasPermission, notesBadge]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

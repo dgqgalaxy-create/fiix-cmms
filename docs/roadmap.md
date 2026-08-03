@@ -85,7 +85,15 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.47.3 (Actualización: 1 de Agosto de 2026)
+## 🚀 Versión Actual: v1.49.0 (Actualización: 3 de Agosto de 2026)
+
+### Novedades en v1.49.0 (Notas — mejoras de uso diario)
+- **Mejora:** Edición, filtros, vencidos/próximos, prioridad Alta, comentario al completar, reabrir, snooze (+1 h / mañana).
+- **Nuevo:** Tarjeta resumen en Inicio, badge en el menú lateral y acceso «Crear pendiente» desde el detalle de OT.
+
+### Novedades en v1.48.0 (Notas personales + pendientes operativos)
+- **Nuevo:** Menú **Notas y pendientes**: notas privadas con recordatorio opcional; pendientes asignables a cualquier usuario, con folio OT / código de activo opcionales.
+- **Avisos:** al asignar y al vencer la fecha → in-app + push (sin Telegram). Cron cada 5 min.
 
 ### Novedades en v1.47.3 (Texto Limpiar caché PWA)
 - **Mejora:** En Herramientas locales se aclara cuándo usar **Limpiar caché PWA** (versión vieja tras update, UI rota o desactualizada).

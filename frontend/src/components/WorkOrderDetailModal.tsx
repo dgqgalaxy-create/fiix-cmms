@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, ChevronDown, CheckCircle2, Users, PauseCircle, PlayCircle, ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, ChevronDown, CheckCircle2, Users, PauseCircle, PlayCircle, ChevronLeft, ChevronRight, ZoomIn, StickyNote } from 'lucide-react';
 import type { WorkOrder } from '../api/workOrders';
 import { getWorkOrderById } from '../api/workOrders';
 import { useAuth } from '../context/AuthContext';
@@ -87,6 +88,7 @@ export const WorkOrderDetailModal = ({
   onNavigateWorkOrder,
   initialFocus,
 }: Props) => {
+  const navigate = useNavigate();
   const { user, hasPermission } = useAuth();
   const { canEdit, remoteEditorName } = useWorkOrderPresence(workOrder?.id, isOpen);
   const isTechMobileShell = useTechnicianMobileShell();
@@ -646,6 +648,27 @@ export const WorkOrderDetailModal = ({
                   <ChevronRight size={20} />
                 </button>
               </>
+            )}
+            {workOrder && (
+              <button
+                type="button"
+                title="Crear pendiente ligado a esta OT"
+                aria-label="Crear pendiente"
+                onClick={() => {
+                  const folio = formatWorkOrderFolio(workOrder.folio);
+                  const params = new URLSearchParams({
+                    tab: 'tasks',
+                    wo: workOrder.id,
+                    folio,
+                    title: `Seguimiento OT ${folio}`,
+                  });
+                  onClose();
+                  navigate(`/notes?${params.toString()}`);
+                }}
+                className="p-2 text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-full transition-colors"
+              >
+                <StickyNote size={20} />
+              </button>
             )}
             <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
               <X size={20} />

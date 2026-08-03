@@ -6,6 +6,7 @@ import { runBackup } from './backupService';
 import { runDbSelfCheck } from './dbHealthCheck';
 import { CHECKLIST_TZ, runChecklistReminderCheck } from './checklistReminder';
 import { runChecklistNonComplianceClose } from './checklistNonCompliance';
+import { runNotesReminders } from './notesReminders';
 
 // This cron job will run every day at 00:01
 export const initCronJobs = () => {
@@ -55,6 +56,18 @@ export const initCronJobs = () => {
       console.error('Error in checklist reminder:', error);
     }
   }, { timezone: CHECKLIST_TZ });
+
+  // Recordatorios de notas personales y pendientes operativos (in-app + push)
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      const result = await runNotesReminders();
+      if (result.notes > 0 || result.tasks > 0) {
+        console.log(`Notes reminders: notes=${result.notes}, tasks=${result.tasks}`);
+      }
+    } catch (error) {
+      console.error('Error in notes reminders:', error);
+    }
+  });
 
   // SLA reminders / escalations every 15 minutes (con digest si hay muchos)
   cron.schedule('*/15 * * * *', async () => {
