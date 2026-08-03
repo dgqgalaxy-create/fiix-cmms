@@ -428,12 +428,16 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
     // Usamos una transacción de Prisma para asegurar que el stock se descuente o sume de manera segura
     const [transaction, item] = await prisma.$transaction(async (tx) => {
       // Validar si es una salida que excede el stock
-      if (transactionAmount < 0) {
-        const currentItem = await tx.item.findUnique({ where: { id: item_id } });
-        if (!currentItem || currentItem.stock < Math.abs(transactionAmount)) {
-          throw new Error('INSUFFICIENT_STOCK');
-        }
+      const currentItem = await tx.item.findUnique({ where: { id: item_id } });
+      if (!currentItem) {
+        throw new Error('ITEM_NOT_FOUND');
       }
+      if (transactionAmount < 0 && currentItem.stock < Math.abs(transactionAmount)) {
+        throw new Error('INSUFFICIENT_STOCK');
+      }
+
+      // Snapshot del costo de catálogo al momento del movimiento (histórico congelado).
+      const snappedCost = currentItem.purchase_cost ?? 0;
 
       // 1. Crear el registro en el historial
       const newTx = await tx.inventoryTransaction.create({
@@ -442,6 +446,7 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
           user_id,
           amount: transactionAmount,
           reason,
+          unit_cost: snappedCost,
           ...(requestId ? { client_request_id: requestId } : {}),
         }
       });
@@ -474,6 +479,10 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
   } catch (error: any) {
     if (error.message === 'INSUFFICIENT_STOCK') {
       res.status(400).json({ error: 'Inventario insuficiente. No es posible retirar una cantidad mayor a las existencias actuales.' });
+      return;
+    }
+    if (error.message === 'ITEM_NOT_FOUND') {
+      res.status(404).json({ error: 'Artículo no encontrado' });
       return;
     }
     // Carrera: dos syncs con el mismo client_request_id

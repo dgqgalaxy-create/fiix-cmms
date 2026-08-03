@@ -634,7 +634,7 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
                   item_id: part.item_id,
                   user_id: userId,
                   work_order_id: id,
-                  unit_cost: item.purchase_cost,
+                  unit_cost: item.purchase_cost ?? 0,
                   amount: -amountToDeduct,
                   reason: `Consumo OT ${folioLabel}`,
                 },

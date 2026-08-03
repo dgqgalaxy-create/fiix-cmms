@@ -414,6 +414,7 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
                 item_id: orderItem.item_id,
                 user_id: user_id,
                 amount: receivedQty,
+                unit_cost: orderItem.unit_cost,
                 reason: `Recepción de Orden de Compra PO-${existingOrder.folio} (pedido: ${orderItem.quantity}, recibido: ${receivedQty})`,
                 created_at: receivedAt!,
               },

@@ -85,7 +85,13 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.50.0 (Actualización: 3 de Agosto de 2026)
+## 🚀 Versión Actual: v1.51.0 (Actualización: 3 de Agosto de 2026)
+
+### Novedades en v1.51.0 (Costos históricos congelados)
+- **Corrección:** OT / KPI / activo usan solo el `unit_cost` guardado al consumir; ya no releen el catálogo.
+- **Al cerrar OT:** siempre se guarda un número (`purchase_cost` o `0`).
+- **Migración one-shot:** rellena consumos OT viejos null/0 desde el catálogo una sola vez.
+- **Extra:** movimientos manuales y recepción de OC también guardan `unit_cost` snapshot.
 
 ### Novedades en v1.50.0 (OC — costos desde inventario + ficha del ítem)
 - **Mejora:** Costo unitario precargado del catálogo; solo Admin lo edita en la compra (y lo guarda en el ítem).
