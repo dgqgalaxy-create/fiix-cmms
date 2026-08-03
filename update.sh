@@ -200,6 +200,18 @@ chmod +x "${APP_DIR}/scripts/ensure-vapid-env.sh" 2>/dev/null || true
 npx prisma generate
 # --accept-data-loss: cambios de schema (p. ej. unique nuevo) no deben abortar el deploy.
 npx prisma db push --accept-data-loss
+# One-shot: congelar unit_cost de consumos OT históricos (null/0 → catálogo). Solo una vez por servidor.
+FREEZE_COST_MARKER="${APP_DIR}/backend/data/.freeze_wo_parts_unit_cost_v151"
+if [ ! -f "${FREEZE_COST_MARKER}" ]; then
+  info "Backfill one-shot: congelar costos de refacciones OT (v1.51.0)..."
+  mkdir -p "${APP_DIR}/backend/data"
+  if npx prisma db execute --file "${APP_DIR}/backend/prisma/migrations/20260803160000_freeze_wo_parts_unit_cost/migration.sql"; then
+    touch "${FREEZE_COST_MARKER}"
+    ok "Backfill de costos OT aplicado"
+  else
+    warn "No se pudo aplicar backfill de costos OT (se reintentará en el próximo update.sh)"
+  fi
+fi
 info "Compilando backend (dist/)..."
 npm run build
 if [ ! -f "${APP_DIR}/backend/dist/index.js" ]; then
