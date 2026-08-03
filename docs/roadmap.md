@@ -85,7 +85,12 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.52.2 (Actualización: 3 de Agosto de 2026)
+## 🚀 Versión Actual: v1.53.0 (Actualización: 3 de Agosto de 2026)
+
+### Novedades en v1.53.0
+- **Nuevo:** UOM en Configuración (siempre visible para Admin) + `qty_mode` Enteros/Decimales por ítem (validado en movimientos/OT/OC).
+- **Mejora:** OT móvil — «Aceptar y continuar» con auto-guardado (sin confirm extra si hay foto Antes; al subir la foto también guarda).
+- **Mejora:** Stock crítico en Inicio; borradores OC omiten ítems ya en OC abiertas; etiqueta del botón más clara.
 
 ### Novedades en v1.52.2
 - **Corrección:** Tras «Aceptar orden» (móvil) el botón azul se reemplaza por confirmación + Guardar; igual patrón en Pausar / Finalizar / Reanudar.

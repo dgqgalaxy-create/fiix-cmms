@@ -7,6 +7,7 @@ import { ImageSearchModal } from '../inventory/ImageSearchModal';
 import type { Item, ItemCategory, ItemLocation, Vendor, InventoryTransaction } from '../../api/inventory';
 import { BACKEND_URL } from '../../api/axios';
 import { formatDateTime } from '../../utils/dateUtils';
+import { qtyStep, isInvalidQty, type QtyMode } from '../../utils/qtyMode';
 
 interface Props {
   isOpen: boolean;
@@ -53,7 +54,8 @@ export const ItemModal = ({
     stock: '0',
     minimum_inventory: '',
     is_active: true,
-    uom: 'PIEZAS'
+    uom: 'PIEZAS',
+    qty_mode: 'INTEGER' as QtyMode,
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -161,6 +163,7 @@ export const ItemModal = ({
         stock: item.stock?.toString() || '0',
         minimum_inventory: item.minimum_inventory?.toString() || '0',
         uom: item.uom || 'PIEZAS',
+        qty_mode: (item.qty_mode === 'DECIMAL' ? 'DECIMAL' : 'INTEGER') as QtyMode,
         is_active: item.is_active,
       });
       setImagePreview(item.image_url ? `${BACKEND_URL}${item.image_url}` : null);
@@ -177,7 +180,8 @@ export const ItemModal = ({
         stock: '0',
         minimum_inventory: '',
         is_active: true,
-        uom: 'PIEZAS'
+        uom: 'PIEZAS',
+        qty_mode: 'INTEGER',
       });
       setImagePreview(null);
     }
@@ -205,6 +209,21 @@ export const ItemModal = ({
         setError('El stock mínimo debe ser mayor a 0');
         setIsSubmitting(false);
         return;
+      }
+
+      const minErr = isInvalidQty(formData.minimum_inventory, formData.qty_mode, { allowZero: true });
+      if (minErr) {
+        setError(`Stock mínimo: ${minErr}`);
+        setIsSubmitting(false);
+        return;
+      }
+      if (!item) {
+        const stockErr = isInvalidQty(formData.stock || '0', formData.qty_mode, { allowZero: true });
+        if (stockErr) {
+          setError(`Stock inicial: ${stockErr}`);
+          setIsSubmitting(false);
+          return;
+        }
       }
 
       if (!item && Number(formData.stock) < 0) {
@@ -440,7 +459,7 @@ export const ItemModal = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Costo ($)</label>
                   <input
@@ -459,11 +478,9 @@ export const ItemModal = ({
                   </label>
                   <input
                     type="number"
-                    step="0.01"
+                    step={qtyStep(formData.qty_mode)}
                     min="0"
                     required
-                    // En alta: cantidad inicial → movimiento «Levantamiento de inventario».
-                    // En edición: solo lectura; el stock cambia con entradas/salidas.
                     disabled={!!item || readOnly}
                     value={formData.stock}
                     onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
@@ -485,7 +502,7 @@ export const ItemModal = ({
                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Stock Mínimo</label>
                   <input
                     type="number"
-                    step="any"
+                    step={qtyStep(formData.qty_mode)}
                     min="0"
                     required
                     disabled={readOnly}
@@ -500,14 +517,34 @@ export const ItemModal = ({
                     required
                     disabled={readOnly}
                     value={formData.uom}
-                    onChange={(e) => setFormData({ ...formData, uom: e.target.value })}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      const u = uoms.find((x) => x.name === name);
+                      setFormData({
+                        ...formData,
+                        uom: name,
+                        qty_mode: (u?.default_qty_mode === 'DECIMAL' ? 'DECIMAL' : 'INTEGER') as QtyMode,
+                      });
+                    }}
                     className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
                   >
                     {uoms.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
-                    {/* Fallback si la uom actual no está en la lista pero existe en BD */}
                     {formData.uom && !uoms.find(u => u.name === formData.uom) && (
                       <option value={formData.uom}>{formData.uom}</option>
                     )}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Cantidades</label>
+                  <select
+                    disabled={readOnly}
+                    value={formData.qty_mode}
+                    onChange={(e) => setFormData({ ...formData, qty_mode: e.target.value as QtyMode })}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
+                    title="Enteros (piezas) o decimales (litros, kg…)"
+                  >
+                    <option value="INTEGER">Enteros</option>
+                    <option value="DECIMAL">Decimales</option>
                   </select>
                 </div>
               </div>

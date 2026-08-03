@@ -401,6 +401,9 @@ export const InventoryPage = () => {
       if (result.skipped_no_vendor.length > 0) {
         message += `\n\nOmitidos sin proveedor (${result.skipped_no_vendor.length}):\n${result.skipped_no_vendor.map((i) => `- ${i.internal_code} ${i.name}`).join('\n')}`;
       }
+      if (result.skipped_already_on_po && result.skipped_already_on_po.length > 0) {
+        message += `\n\nYa estaban en OC abierta (${result.skipped_already_on_po.length}):\n${result.skipped_already_on_po.map((i) => `- ${i.internal_code} ${i.name}`).join('\n')}`;
+      }
       message += '\n\n¿Ir a Órdenes de Compra para revisarlos?';
       if (confirm(message)) {
         navigate('/purchase-orders');
@@ -1258,10 +1261,10 @@ export const InventoryPage = () => {
                     className="inline-flex h-10 w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-rose-700 disabled:opacity-60"
                   >
                     {isCreatingDrafts ? <Loader2 size={16} className="animate-spin" /> : <ShoppingCart size={16} />}
-                    <span className="sm:hidden">Generar OC</span>
-                    <span className="hidden sm:inline">Generar borrador OC</span>
+                    <span className="sm:hidden">Borrador OC</span>
+                    <span className="hidden sm:inline">Crear borrador OC desde críticos</span>
                   </button>
-                  <InfoTip text="Crea borradores de Orden de Compra (uno por proveedor) con la cantidad faltante para llegar al mínimo." label="Ayuda: borrador OC" />
+                  <InfoTip text="Crea borradores de Orden de Compra (uno por proveedor) con la cantidad faltante para llegar al mínimo. Omite ítems sin proveedor o que ya estén en una OC abierta." label="Ayuda: borrador OC" />
                 </div>
               )}
             </div>

@@ -87,14 +87,29 @@ export const getUoms = async (req: Request, res: Response) => {
 
 export const createUom = async (req: Request, res: Response) => {
   try {
-    const { name } = req.body;
+    const { name, default_qty_mode } = req.body;
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      res.status(400).json({ error: 'El nombre es obligatorio' });
+      return;
+    }
+    const mode =
+      default_qty_mode === 'DECIMAL' || default_qty_mode === 'INTEGER'
+        ? default_qty_mode
+        : 'INTEGER';
     const uom = await prisma.unitOfMeasure.create({
-      data: { name: name.toUpperCase() }
+      data: {
+        name: name.trim().toUpperCase(),
+        default_qty_mode: mode,
+      },
     });
     emitRefresh('refresh_settings');
     emitRefresh('refresh_inventory');
     res.json(uom);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'P2002') {
+      res.status(400).json({ error: 'Esa unidad de medida ya existe' });
+      return;
+    }
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

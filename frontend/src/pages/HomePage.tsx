@@ -21,6 +21,8 @@ import {
   Wrench,
   XCircle,
   StickyNote,
+  Package,
+  ShoppingCart,
 } from 'lucide-react';
 import {
   Bar,
@@ -40,6 +42,7 @@ import {
 import { getLineStoppageStatus, getWorkOrders, getWorkOrdersSummary } from '../api/workOrders';
 import type { LineStoppageStatus, ProductionLine, WorkOrder } from '../api/workOrders';
 import { getNotesSummary, type NotesSummary } from '../api/notes';
+import { getInventorySummary, type InventorySummary } from '../api/inventory';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { useAuth } from '../context/AuthContext';
@@ -72,11 +75,12 @@ function pickMessage(list: string[], seed = Date.now()): string {
 
 export const HomePage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [summary, setSummary] = useState<Record<string, number>>({});
   const [lineStoppage, setLineStoppage] = useState<LineStoppageStatus | null>(null);
   const [notesSummary, setNotesSummary] = useState<NotesSummary | null>(null);
+  const [inventorySummary, setInventorySummary] = useState<InventorySummary | null>(null);
   const [summaryStartDate, setSummaryStartDate] = useState('');
   const [summaryEndDate, setSummaryEndDate] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -101,16 +105,18 @@ export const HomePage = () => {
   const fetchDashboard = async (backgroundFetch = false) => {
     try {
       if (!backgroundFetch) setIsLoading(true);
-      const [orders, summaryData, stoppageData, notesData] = await Promise.all([
+      const [orders, summaryData, stoppageData, notesData, invData] = await Promise.all([
         getWorkOrders(),
         getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined),
         getLineStoppageStatus(),
         getNotesSummary().catch(() => null),
+        getInventorySummary().catch(() => null),
       ]);
       setWorkOrders(orders);
       setSummary(summaryData);
       setLineStoppage(stoppageData);
       if (notesData) setNotesSummary(notesData);
+      if (invData) setInventorySummary(invData);
     } catch (error) {
       console.error('Error fetching dashboard summary', error);
     } finally {
@@ -130,6 +136,8 @@ export const HomePage = () => {
 
   useSocketRefresh('refresh_work_orders', () => fetchDashboard(true));
   useSocketRefresh('refresh_notes', () => fetchDashboard(true));
+  useSocketRefresh('refresh_inventory', () => fetchDashboard(true));
+  useSocketRefresh('refresh_purchase_orders', () => fetchDashboard(true));
 
   useEffect(() => {
     const fetchSummary = async () => {
@@ -530,6 +538,41 @@ export const HomePage = () => {
           )}
         </div>
       </section>
+
+      {(inventorySummary?.low_stock_count ?? 0) > 0 && (
+        <button
+          type="button"
+          onClick={() => navigate('/inventory?filter=low_stock')}
+          className="mb-4 w-full text-left rounded-2xl border border-rose-200/90 bg-gradient-to-br from-white via-rose-50/60 to-orange-50/30 p-3 sm:p-4 shadow-sm transition hover:border-rose-300 dark:border-rose-900/50 dark:from-slate-900 dark:via-rose-950/25 dark:to-orange-950/10"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
+                <Package size={20} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300">
+                  Stock crítico
+                </p>
+                <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                  {inventorySummary!.low_stock_count} artículo
+                  {inventorySummary!.low_stock_count === 1 ? '' : 's'} al mínimo o inferior
+                </p>
+                <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                  {hasPermission('MANAGE_PURCHASES')
+                    ? 'Toca para verlos en Inventario y generar borradores de OC'
+                    : 'Toca para verlos en Inventario'}
+                </p>
+              </div>
+            </div>
+            {hasPermission('MANAGE_PURCHASES') && (
+              <span className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-rose-600 px-2.5 py-1.5 text-[11px] font-bold text-white">
+                <ShoppingCart size={14} /> OC
+              </span>
+            )}
+          </div>
+        </button>
+      )}
 
       <button
         type="button"

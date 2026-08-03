@@ -9,6 +9,7 @@ import { parseDateInput } from '../utils/parseDateInput';
 import { writeAuditLog } from '../utils/auditLog';
 import { PRODUCTION_LINES, resolveProductionLine } from '../utils/assetSection';
 import { resolvePartsUnitCost } from '../utils/resolvePartsUnitCost';
+import { parseQty } from '../utils/qtyMode';
 
 const OPEN_WO_STATUSES = ['PENDIENTE', 'EN_PROCESO', 'EN_ESPERA'] as const;
 
@@ -616,15 +617,20 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
           await prisma.$transaction(async (tx) => {
             for (const part of parsedUsedItems) {
               if (!part.item_id) continue;
-              const amountToDeduct = Number(part.amount);
-              if (!Number.isFinite(amountToDeduct) || amountToDeduct <= 0) {
-                throw new Error('La cantidad de cada refacción debe ser un número positivo mayor a 0.');
-              }
 
               const item = await tx.item.findUnique({ where: { id: part.item_id } });
               if (!item) {
                 throw new Error(`Repuesto no encontrado (${part.item_id})`);
               }
+
+              const amountParsed = parseQty(part.amount, item.qty_mode, {
+                fieldLabel: `La cantidad de "${item.name}"`,
+              });
+              if (!amountParsed.ok) {
+                throw new Error(amountParsed.error);
+              }
+              const amountToDeduct = amountParsed.value;
+
               if (item.stock < amountToDeduct) {
                 throw new Error(`Stock insuficiente de "${item.name}". Disponible: ${item.stock} ${item.uom}`);
               }

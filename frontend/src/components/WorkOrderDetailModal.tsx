@@ -23,6 +23,7 @@ import { formatDate, formatDateTime } from '../utils/dateUtils';
 import { formatCurrency } from '../utils/currency';
 import { resolvePartsUnitCost } from '../utils/resolvePartsUnitCost';
 import { InfoTip } from './common/InfoTip';
+import { qtyStep, isInvalidQty } from '../utils/qtyMode';
 
 const STATUS_LABELS: Record<string, string> = {
   PENDIENTE: 'Pendiente',
@@ -97,6 +98,8 @@ export const WorkOrderDetailModal = ({
   const finalizeSectionRef = useRef<HTMLDivElement>(null);
   const assignSectionRef = useRef<HTMLDivElement>(null);
   const pendingAutoSaveRef = useRef(false);
+  const skipConfirmRef = useRef(false);
+  const awaitPhotoThenSaveRef = useRef(false);
 
   const [liveWorkOrder, setLiveWorkOrder] = useState<WorkOrder | null>(workOrder);
   const [status, setStatus] = useState<string>('');
@@ -122,7 +125,7 @@ export const WorkOrderDetailModal = ({
   const [assignedTechniciansIds, setAssignedTechniciansIds] = useState<string[]>([]);
 
   const [inventoryItems, setInventoryItems] = useState<Item[]>([]);
-  const [usedItems, setUsedItems] = useState<{item_id: string, name: string, amount: number, uom: string, max_stock: number}[]>([]);
+  const [usedItems, setUsedItems] = useState<{item_id: string, name: string, amount: number, uom: string, max_stock: number, qty_mode?: string}[]>([]);
   const [selectedItemToAdd, setSelectedItemToAdd] = useState<string>('');
   const [itemSearchText, setItemSearchText] = useState<string>('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -182,6 +185,8 @@ export const WorkOrderDetailModal = ({
   useEffect(() => {
     if (!isOpen) {
       pendingAutoSaveRef.current = false;
+      skipConfirmRef.current = false;
+      awaitPhotoThenSaveRef.current = false;
       setZoomSrc(null);
     }
   }, [isOpen, workOrder?.id]);
@@ -297,12 +302,20 @@ export const WorkOrderDetailModal = ({
   }, [isOpen, user]);
 
   useEffect(() => {
-    if (!isOpen || !workOrder || !pendingAutoSaveRef.current || isSubmitting || !canEdit) return;
+    if (!isOpen || !workOrder || isSubmitting || !canEdit) return;
     if (status !== 'EN_PROCESO') return;
-    if (!workOrder.before_image_url && !beforeImage) return;
     if (status === workOrder.status) return;
+    const hasPhoto = !!(workOrder.before_image_url || beforeImage);
+    if (!hasPhoto) return;
+
+    const shouldAuto =
+      pendingAutoSaveRef.current ||
+      (awaitPhotoThenSaveRef.current && workOrder.status === 'PENDIENTE');
+    if (!shouldAuto) return;
 
     pendingAutoSaveRef.current = false;
+    awaitPhotoThenSaveRef.current = false;
+    skipConfirmRef.current = true;
     const timer = window.setTimeout(() => {
       const form = document.getElementById('update-wo-form') as HTMLFormElement | null;
       form?.requestSubmit();
@@ -436,9 +449,11 @@ export const WorkOrderDetailModal = ({
     if (status === workOrder.status) return null;
     if (status === 'EN_PROCESO') {
       if (beforeImage || workOrder.before_image_url) {
-        return 'Siguiente paso: pulsa Guardar para confirmar (aceptar o reanudar).';
+        return workOrder.status === 'PENDIENTE' || workOrder.status === 'EN_ESPERA'
+          ? 'Guardando automáticamente…'
+          : 'Siguiente paso: pulsa Guardar para confirmar.';
       }
-      return 'Siguiente paso: sube la foto Antes y pulsa Guardar.';
+      return 'Siguiente paso: sube la foto Antes (se guardará solo).';
     }
     if (status === 'EN_ESPERA') {
       if (holdReason?.trim()) return 'Siguiente paso: pulsa Guardar para pausar la orden.';
@@ -453,7 +468,12 @@ export const WorkOrderDetailModal = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!window.confirm("¿Estás seguro de que deseas guardar los cambios realizados en esta orden?")) {
+    const skipConfirm = skipConfirmRef.current;
+    skipConfirmRef.current = false;
+    if (
+      !skipConfirm &&
+      !window.confirm('¿Estás seguro de que deseas guardar los cambios realizados en esta orden?')
+    ) {
       return;
     }
 
@@ -1231,7 +1251,7 @@ export const WorkOrderDetailModal = ({
                             </div>
                             <input
                               type="number"
-                              step="0.01"
+                              step={qtyStep(inventoryItems.find((i) => i.id === selectedItemToAdd)?.qty_mode)}
                               min="0.01"
                               placeholder="Cant."
                               className="w-full sm:w-24 px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white dark:bg-slate-900"
@@ -1257,8 +1277,9 @@ export const WorkOrderDetailModal = ({
                                 const itemObj = inventoryItems.find(i => i.id === selectedItemToAdd);
                                 if (!itemObj) return;
                                 const qty = parseFloat(amountToAdd);
-                                if (!Number.isFinite(qty) || qty <= 0) {
-                                  alert('La cantidad debe ser un número positivo mayor a 0.');
+                                const qtyErr = isInvalidQty(qty, itemObj.qty_mode);
+                                if (qtyErr) {
+                                  alert(qtyErr);
                                   return;
                                 }
                                 if (qty > itemObj.stock) {
@@ -1270,7 +1291,8 @@ export const WorkOrderDetailModal = ({
                                   name: itemObj.name,
                                   amount: qty,
                                   uom: itemObj.uom,
-                                  max_stock: itemObj.stock
+                                  max_stock: itemObj.stock,
+                                  qty_mode: itemObj.qty_mode,
                                 }]);
                                 setSelectedItemToAdd('');
                                 setItemSearchText('');
@@ -1431,23 +1453,33 @@ export const WorkOrderDetailModal = ({
                     setStatus('EN_PROCESO');
                     if (workOrder.before_image_url) {
                       pendingAutoSaveRef.current = true;
+                      skipConfirmRef.current = true;
                     } else {
+                      awaitPhotoThenSaveRef.current = true;
                       setTimeout(() => evidenceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
                     }
                   }}
                   className="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-sm font-bold text-white shadow-sm active:scale-[0.98]"
                 >
-                  <PlayCircle size={18} /> Aceptar orden
+                  <PlayCircle size={18} /> Aceptar y continuar
                 </button>
               )}
               {workOrder.status === 'PENDIENTE' && status === 'EN_PROCESO' && (
                 <div className="col-span-2 rounded-xl border border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-950/40 px-3 py-3 space-y-2">
                   <p className="text-sm font-bold text-sky-800 dark:text-sky-200 flex items-center justify-center gap-2">
-                    <CheckCircle2 size={18} /> Orden aceptada — confirma con Guardar
+                    <CheckCircle2 size={18} />{' '}
+                    {beforeImage || workOrder.before_image_url
+                      ? 'Guardando aceptación…'
+                      : 'Sube la foto Antes — se guardará solo'}
                   </p>
                   <button
                     type="button"
-                    onClick={() => setStatus('PENDIENTE')}
+                    onClick={() => {
+                      setStatus('PENDIENTE');
+                      awaitPhotoThenSaveRef.current = false;
+                      pendingAutoSaveRef.current = false;
+                      skipConfirmRef.current = false;
+                    }}
                     className="w-full text-center text-[11px] font-semibold text-sky-700 dark:text-sky-300 underline"
                   >
                     Deshacer aceptación
@@ -1522,6 +1554,7 @@ export const WorkOrderDetailModal = ({
                     setStatus('EN_PROCESO');
                     if (workOrder.before_image_url) {
                       pendingAutoSaveRef.current = true;
+                      skipConfirmRef.current = true;
                     } else {
                       setTimeout(() => evidenceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
                     }

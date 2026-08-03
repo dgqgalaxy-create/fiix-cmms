@@ -244,10 +244,29 @@ export const createDraftsFromLowStock = async (req: AuthRequest, res: Response):
       return;
     }
 
+    // Evitar duplicar líneas ya presentes en OC abiertas (borrador/aprobada/enviada)
+    const openPoLines = await prisma.purchaseOrderItem.findMany({
+      where: {
+        purchase_order: { status: { in: ['BORRADOR', 'APROBADA', 'ENVIADA'] } },
+        item_id: { in: critical.map((c) => c.id) },
+      },
+      select: { item_id: true },
+    });
+    const alreadyOnOpenPo = new Set(openPoLines.map((l) => l.item_id));
+
+    const skippedAlreadyOnPo: Array<{ id: string; internal_code: string; name: string }> = [];
     const skippedNoVendor: Array<{ id: string; internal_code: string; name: string }> = [];
     const byVendor = new Map<string, typeof critical>();
 
     for (const item of critical) {
+      if (alreadyOnOpenPo.has(item.id)) {
+        skippedAlreadyOnPo.push({
+          id: item.id,
+          internal_code: item.internal_code,
+          name: item.name,
+        });
+        continue;
+      }
       if (!item.vendor_id) {
         skippedNoVendor.push({
           id: item.id,
@@ -263,8 +282,12 @@ export const createDraftsFromLowStock = async (req: AuthRequest, res: Response):
 
     if (byVendor.size === 0) {
       res.status(400).json({
-        error: 'Los ítems en stock crítico no tienen proveedor asignado. Asigna proveedor en el catálogo e intenta de nuevo.',
+        error:
+          skippedAlreadyOnPo.length > 0 && skippedNoVendor.length === 0
+            ? 'Todos los ítems críticos ya están en una OC abierta (borrador/aprobada/enviada).'
+            : 'Los ítems en stock crítico no tienen proveedor asignado o ya están en OC abiertas. Revisa el catálogo e intenta de nuevo.',
         skipped_no_vendor: skippedNoVendor,
+        skipped_already_on_po: skippedAlreadyOnPo,
       });
       return;
     }
@@ -278,11 +301,17 @@ export const createDraftsFromLowStock = async (req: AuthRequest, res: Response):
             created_by_id: user_id,
             status: 'BORRADOR',
             items: {
-              create: items.map((item) => ({
-                item_id: item.id,
-                quantity: Math.max(item.minimum_inventory - item.stock, 1),
-                unit_cost: item.purchase_cost ?? 0,
-              })),
+              create: items.map((item) => {
+                let qty = Math.max(item.minimum_inventory - item.stock, 1);
+                if (item.qty_mode === 'INTEGER') {
+                  qty = Math.max(Math.ceil(qty), 1);
+                }
+                return {
+                  item_id: item.id,
+                  quantity: qty,
+                  unit_cost: item.purchase_cost ?? 0,
+                };
+              }),
             },
           },
           include: {
@@ -299,10 +328,11 @@ export const createDraftsFromLowStock = async (req: AuthRequest, res: Response):
     res.status(201).json({
       created,
       skipped_no_vendor: skippedNoVendor,
+      skipped_already_on_po: skippedAlreadyOnPo,
       summary: {
         drafts: created.length,
         items_included: created.reduce((sum, o) => sum + o.items.length, 0),
-        items_skipped: skippedNoVendor.length,
+        items_skipped: skippedNoVendor.length + skippedAlreadyOnPo.length,
       },
     });
   } catch (error) {

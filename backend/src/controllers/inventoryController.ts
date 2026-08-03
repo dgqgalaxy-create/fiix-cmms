@@ -5,6 +5,7 @@ import { imageSearch } from '@mudbill/duckduckgo-images-api';
 import axios from 'axios';
 import { emitRefresh } from '../utils/socket';
 import { writeAuditLog } from '../utils/auditLog';
+import { parseQty } from '../utils/qtyMode';
 
 // ==========================================
 // ITEM CATEGORY
@@ -201,17 +202,32 @@ export const createItem = async (req: Request, res: Response): Promise<void> => 
   try {
     const { 
       name, description, category_id, vendor_id, location_id,
-      purchase_cost, stock, minimum_inventory, is_active, uom
+      purchase_cost, stock, minimum_inventory, is_active, uom, qty_mode
     } = req.body;
     const user_id = (req as any).user?.userId as string | undefined;
 
-    const initialStock = stock !== undefined && stock !== '' ? parseFloat(stock) : 0;
-    if (isNaN(initialStock) || initialStock < 0) {
-      res.status(400).json({ error: 'El stock inicial debe ser un número mayor o igual a 0' });
+    const mode = qty_mode === 'DECIMAL' ? 'DECIMAL' : 'INTEGER';
+    const stockParsed = parseQty(stock !== undefined && stock !== '' ? stock : 0, mode, {
+      allowZero: true,
+      fieldLabel: 'El stock inicial',
+    });
+    if (!stockParsed.ok) {
+      res.status(400).json({ error: stockParsed.error });
       return;
     }
+    const initialStock = stockParsed.value;
     if (initialStock > 0 && !user_id) {
       res.status(401).json({ error: 'Sesión requerida para registrar stock inicial' });
+      return;
+    }
+
+    const minParsed = parseQty(
+      minimum_inventory !== undefined && minimum_inventory !== '' ? minimum_inventory : 0,
+      mode,
+      { allowZero: true, fieldLabel: 'El stock mínimo' }
+    );
+    if (!minParsed.ok) {
+      res.status(400).json({ error: minParsed.error });
       return;
     }
 
@@ -224,9 +240,10 @@ export const createItem = async (req: Request, res: Response): Promise<void> => 
       purchase_cost: purchase_cost ? parseFloat(purchase_cost) : null,
       // El stock solo se aplica vía movimiento (levantamiento); nunca se escribe a ciegas.
       stock: 0,
-      minimum_inventory: minimum_inventory ? parseFloat(minimum_inventory) : 0,
+      minimum_inventory: minParsed.value,
       is_active: is_active === undefined ? true : (is_active === 'true' || is_active === true),
-      uom: uom || 'PIEZAS'
+      uom: uom || 'PIEZAS',
+      qty_mode: mode,
     };
 
     if (category_id) itemData.category = { connect: { id: category_id } };
@@ -300,16 +317,35 @@ export const updateItem = async (req: Request, res: Response): Promise<void> => 
     const id = req.params.id as string;
     const { 
       name, description, category_id, vendor_id, location_id,
-      purchase_cost, minimum_inventory, is_active, uom
+      purchase_cost, minimum_inventory, is_active, uom, qty_mode
     } = req.body;
+
+    const existing = await prisma.item.findUnique({ where: { id }, select: { qty_mode: true } });
+    if (!existing) {
+      res.status(404).json({ error: 'Artículo no encontrado' });
+      return;
+    }
+    const mode =
+      qty_mode === 'DECIMAL' || qty_mode === 'INTEGER' ? qty_mode : existing.qty_mode;
 
     const itemData: any = {};
     if (name) itemData.name = name;
     if (description !== undefined) itemData.description = description || null;
     if (purchase_cost !== undefined) itemData.purchase_cost = purchase_cost ? parseFloat(purchase_cost) : null;
-    if (minimum_inventory !== undefined) itemData.minimum_inventory = parseFloat(minimum_inventory);
+    if (minimum_inventory !== undefined) {
+      const minParsed = parseQty(minimum_inventory, mode, {
+        allowZero: true,
+        fieldLabel: 'El stock mínimo',
+      });
+      if (!minParsed.ok) {
+        res.status(400).json({ error: minParsed.error });
+        return;
+      }
+      itemData.minimum_inventory = minParsed.value;
+    }
     if (is_active !== undefined) itemData.is_active = is_active === 'true' || is_active === true;
     if (uom) itemData.uom = uom;
+    if (qty_mode === 'DECIMAL' || qty_mode === 'INTEGER') itemData.qty_mode = qty_mode;
 
     if (category_id !== undefined) itemData.category = category_id ? { connect: { id: category_id } } : { disconnect: true };
     if (vendor_id !== undefined) itemData.vendor = vendor_id ? { connect: { id: vendor_id } } : { disconnect: true };
@@ -394,18 +430,13 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
     const { item_id, amount, reason, client_request_id } = req.body;
     const user_id = (req as any).user.userId; // Tomamos el ID del usuario autenticado
 
-    const transactionAmount = parseFloat(amount);
     const requestId =
       typeof client_request_id === 'string' && client_request_id.trim()
         ? client_request_id.trim().slice(0, 64)
         : null;
 
-    if (!item_id || isNaN(transactionAmount) || !reason) {
+    if (!item_id || amount === undefined || amount === '' || !reason) {
       res.status(400).json({ error: 'Faltan campos requeridos (item_id, amount, reason)' });
-      return;
-    }
-    if (transactionAmount === 0) {
-      res.status(400).json({ error: 'La cantidad debe ser distinta de 0' });
       return;
     }
 
@@ -432,6 +463,19 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
       if (!currentItem) {
         throw new Error('ITEM_NOT_FOUND');
       }
+
+      const signedRaw = parseFloat(amount);
+      if (!Number.isFinite(signedRaw) || signedRaw === 0) {
+        throw new Error('La cantidad debe ser distinta de 0');
+      }
+      const absParsed = parseQty(Math.abs(signedRaw), currentItem.qty_mode, {
+        fieldLabel: 'La cantidad',
+      });
+      if (!absParsed.ok) {
+        throw new Error(absParsed.error);
+      }
+      const transactionAmount = signedRaw < 0 ? -absParsed.value : absParsed.value;
+
       if (transactionAmount < 0 && currentItem.stock < Math.abs(transactionAmount)) {
         throw new Error('INSUFFICIENT_STOCK');
       }
@@ -483,6 +527,14 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
     }
     if (error.message === 'ITEM_NOT_FOUND') {
       res.status(404).json({ error: 'Artículo no encontrado' });
+      return;
+    }
+    if (typeof error.message === 'string' && error.message.includes('enteros')) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    if (typeof error.message === 'string' && error.message.includes('cantidad')) {
+      res.status(400).json({ error: error.message });
       return;
     }
     // Carrera: dos syncs con el mismo client_request_id

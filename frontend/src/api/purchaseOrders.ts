@@ -58,6 +58,7 @@ export const createPurchaseOrder = async (orderData: { vendor_id: string; expect
 export interface LowStockDraftResult {
   created: PurchaseOrder[];
   skipped_no_vendor: Array<{ id: string; internal_code: string; name: string }>;
+  skipped_already_on_po?: Array<{ id: string; internal_code: string; name: string }>;
   summary: {
     drafts: number;
     items_included: number;

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Trash2, Loader2, Scale } from 'lucide-react';
 import { getUoms, createUom, deleteUom } from '../api/settings';
 import type { UnitOfMeasure } from '../api/settings';
+import type { QtyMode } from '../utils/qtyMode';
 
 export const UomCatalogue = () => {
   const [uoms, setUoms] = useState<UnitOfMeasure[]>([]);
@@ -9,6 +10,8 @@ export const UomCatalogue = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState('');
+  const [newMode, setNewMode] = useState<QtyMode>('INTEGER');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUoms();
@@ -19,8 +22,8 @@ export const UomCatalogue = () => {
       setIsLoading(true);
       const data = await getUoms();
       setUoms(data);
-    } catch (error) {
-      console.error('Error fetching UOMs:', error);
+    } catch (err) {
+      console.error('Error fetching UOMs:', err);
     } finally {
       setIsLoading(false);
     }
@@ -30,12 +33,14 @@ export const UomCatalogue = () => {
     if (!newName.trim()) return;
     try {
       setIsSaving(true);
-      const newUom = await createUom(newName);
-      setUoms([...uoms, newUom].sort((a, b) => a.name.localeCompare(b.name)));
+      setError(null);
+      const created = await createUom(newName.trim(), newMode);
+      setUoms([...uoms, created].sort((a, b) => a.name.localeCompare(b.name)));
       setNewName('');
+      setNewMode('INTEGER');
       setIsCreating(false);
-    } catch (error) {
-      console.error('Error creating UOM:', error);
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'No se pudo crear la unidad');
     } finally {
       setIsSaving(false);
     }
@@ -45,9 +50,9 @@ export const UomCatalogue = () => {
     if (!confirm('¿Estás seguro de eliminar esta unidad de medida?')) return;
     try {
       await deleteUom(id);
-      setUoms(uoms.filter(u => u.id !== id));
-    } catch (error) {
-      console.error('Error deleting UOM:', error);
+      setUoms(uoms.filter((u) => u.id !== id));
+    } catch (err) {
+      console.error('Error deleting UOM:', err);
     }
   };
 
@@ -68,7 +73,7 @@ export const UomCatalogue = () => {
             Unidades de Medida
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Gestiona las unidades utilizadas en el inventario.
+            Gestiona las unidades del inventario. El modo por defecto se sugiere al crear un artículo (puedes cambiarlo por ítem).
           </p>
         </div>
         <button
@@ -80,10 +85,16 @@ export const UomCatalogue = () => {
           Añadir Unidad
         </button>
       </div>
-      
+
       <div className="p-6">
+        {error && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+            {error}
+          </div>
+        )}
+
         {isCreating && (
-          <div className="mb-6 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex gap-3 items-center">
+          <div className="mb-6 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row gap-3 sm:items-center">
             <input
               type="text"
               autoFocus
@@ -93,6 +104,15 @@ export const UomCatalogue = () => {
               onChange={(e) => setNewName(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
             />
+            <select
+              value={newMode}
+              onChange={(e) => setNewMode(e.target.value as QtyMode)}
+              className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm"
+              title="Modo de cantidad sugerido"
+            >
+              <option value="INTEGER">Enteros</option>
+              <option value="DECIMAL">Decimales</option>
+            </select>
             <button
               onClick={handleCreate}
               disabled={!newName.trim() || isSaving}
@@ -111,13 +131,14 @@ export const UomCatalogue = () => {
 
         <div className="space-y-3">
           {uoms.map((uom) => (
-            <div 
+            <div
               key={uom.id}
               className="group flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-emerald-200 dark:hover:border-emerald-800/50 transition-colors"
             >
-              <div className="flex items-center gap-4">
-                <span className="font-semibold text-slate-700 dark:text-slate-200">
-                  {uom.name}
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="font-semibold text-slate-700 dark:text-slate-200">{uom.name}</span>
+                <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                  {(uom.default_qty_mode || 'INTEGER') === 'DECIMAL' ? 'Decimales' : 'Enteros'}
                 </span>
               </div>
 

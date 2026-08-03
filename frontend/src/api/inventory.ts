@@ -46,6 +46,7 @@ export interface Item {
   minimum_inventory: number;
   is_active: boolean;
   uom: string;
+  qty_mode?: 'INTEGER' | 'DECIMAL';
 }
 
 export interface InventoryTransaction {

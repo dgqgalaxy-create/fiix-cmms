@@ -300,12 +300,9 @@ export const SettingsPage = () => {
             {isAdmin && navBtn('sla', 'SLA', <Timer size={18} />)}
             {navBtn('appearance', 'Apariencia', <Palette size={18} />)}
             {isAdmin && navBtn('developer', 'Opciones de Desarrollador', <Code size={18} />)}
-            {isAdmin && hasPermission('MANAGE_CHECKLIST_CATALOG') && (
-              <>
-                {navBtn('checklist_catalogue', 'Catálogo de Checklist', <ListChecks size={18} />)}
-                {navBtn('uom', 'Unidades de Medida', <Scale size={18} />)}
-              </>
-            )}
+            {isAdmin && hasPermission('MANAGE_CHECKLIST_CATALOG') &&
+              navBtn('checklist_catalogue', 'Catálogo de Checklist', <ListChecks size={18} />)}
+            {isAdmin && navBtn('uom', 'Unidades de Medida', <Scale size={18} />)}
             {isAdmin && hasPermission('MANAGE_PERMISSIONS') &&
               navBtn('permissions', 'Roles y Permisos', <Shield size={18} />)}
           </div>

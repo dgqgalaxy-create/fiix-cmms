@@ -3,6 +3,7 @@ import { X, ArrowRightLeft } from 'lucide-react';
 import { createTransaction } from '../../api/inventory';
 import type { Item } from '../../api/inventory';
 import { useAuth } from '../../context/AuthContext';
+import { qtyStep, isInvalidQty } from '../../utils/qtyMode';
 
 interface Props {
   isOpen: boolean;
@@ -61,6 +62,13 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
       const amountNum = Number(formData.amount);
       if (!Number.isFinite(amountNum) || amountNum <= 0) {
         setError('La cantidad debe ser mayor a 0');
+        setIsSubmitting(false);
+        return;
+      }
+      const itemForQty = items.find((i) => i.id === formData.item_id);
+      const qtyErr = isInvalidQty(amountNum, itemForQty?.qty_mode);
+      if (qtyErr) {
+        setError(qtyErr);
         setIsSubmitting(false);
         return;
       }
@@ -213,8 +221,8 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
                   <input
                     type="number"
                     required
-                    step="any"
-                    min="0.01"
+                    step={qtyStep(selectedItem?.qty_mode)}
+                    min={selectedItem?.qty_mode === 'DECIMAL' ? '0.01' : '1'}
                     value={formData.amount}
                   onChange={(e) => {
                     const raw = e.target.value;
@@ -233,6 +241,9 @@ export const TransactionModal = ({ isOpen, onClose, onSaved, items, defaultItemI
                   placeholder="0"
                 />
               </div>
+              {selectedItem?.qty_mode !== 'DECIMAL' && (
+                <p className="mt-1 text-[10px] text-slate-400">Este artículo solo admite cantidades enteras</p>
+              )}
             </div>
 
             <div>
