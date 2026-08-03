@@ -1,5 +1,5 @@
 # Manual de Usuario - GTZ CMMS
-*(Versión 1.51.0 - 3 de Agosto, 2026)*
+*(Versión 1.52.0 - 3 de Agosto, 2026)*
 
 Este manual se mantiene alineado con cada release de la app (misma versión que `package.json` y el modal de novedades).
 
@@ -23,6 +23,7 @@ En celular, el temario del manual aparece como una barra horizontal deslizable. 
 - **KPIs — comparar semanas:** Periodo **Semana pasada** y, al ver **Esta semana**, franja de comparación vs la semana anterior.
 - **Costos congelados (histórico):** Al **finalizar una OT**, el costo de cada refacción se guarda en ese momento (`unit_cost`) y ya no cambia si después actualizas el precio en inventario. Lo mismo aplica a movimientos de inventario y a la recepción de OC. Los totales de OT, KPIs de costos y gastos de activo usan ese snapshot (no el catálogo “de hoy”). `0` = se cerró sin precio de catálogo o costo cero; un precio positivo = el que tenía el repuesto al consumirse.
 - **Órdenes de compra — costos y aprobación:** Al crear o en un borrador, el **costo unitario** se toma del inventario. Solo un **Administrador** puede modificarlo en la compra; si lo cambia, también se guarda en el artículo del catálogo. El Gestionador ve el precio precargado (solo lectura). **Aprobación:** solo un **Administrador** aprueba borradores; el Gestionador no puede autoaprobarse. Si un Admin crea la OC, queda **aprobada de inmediato**. **Precio congelado:** en aprobada/enviada/recibida/cancelada el costo de la OC ya no se actualiza si cambias el precio en inventario (queda el de esa compra; el catálogo puede mostrar otro precio “hoy”). En el detalle puedes tocar el código/nombre del ítem para abrir su ficha. En borradores: **Actualizar precios del inventario**.
+- **Avisos globales:** En **Notas y pendientes → Avisos**. Los ve todo el equipo. Solo un **Administrador** puede publicar (título, mensaje y foto opcional). Al abrir la pestaña se marcan como vistos; el Admin ve **Visto por X/Y** y la lista de personas. Push/in-app al publicar.
 - **Notas y pendientes:** En el menú lateral (con contador de abiertos) y tarjeta en **Inicio**. **Mis notas** son privadas (solo tú). **Pendientes operativos** solo los crean/editan **Administrador** y **Gestionador** (pueden asignarlos a técnicos u otros). El **técnico** asignado solo los ve y puede **completarlos** (sin editar ni eliminar). Ligados opcionalmente a OT o activo. Recordatorio: in-app + push (no Telegram).
 - **Bitácora de auditoría:** Solo **Administrador**, en Opciones de Desarrollador. El histórico se guarda **sin límite** en la base de datos. En pantalla verás los últimos 50 eventos; puedes **descargar Excel** filtrando por fechas (Desde/Hasta, día México) o el **histórico completo**.
 - **Tiempo real:** Los listados y catálogos se actualizan casi al momento cuando otro usuario crea, edita o elimina datos (órdenes, inventario, activos, compras, checklist, turnos, RCA, zonas, usuarios, etc.). No hace falta pulsar F5.

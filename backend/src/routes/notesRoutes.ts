@@ -13,6 +13,13 @@ import {
   snoozeOperationalTask,
   notesSummary,
 } from '../controllers/notesController';
+import {
+  listAnnouncements,
+  createAnnouncement,
+  markAnnouncementSeen,
+  deleteAnnouncement,
+  announcementUpload,
+} from '../controllers/announcementsController';
 
 const router = Router();
 
@@ -31,5 +38,14 @@ router.post('/tasks', createOperationalTask);
 router.put('/tasks/:id', updateOperationalTask);
 router.post('/tasks/:id/snooze', snoozeOperationalTask);
 router.delete('/tasks/:id', deleteOperationalTask);
+
+router.get('/announcements', listAnnouncements);
+router.post(
+  '/announcements',
+  announcementUpload.fields([{ name: 'image', maxCount: 1 }]),
+  createAnnouncement
+);
+router.post('/announcements/:id/seen', markAnnouncementSeen);
+router.delete('/announcements/:id', deleteAnnouncement);
 
 export default router;

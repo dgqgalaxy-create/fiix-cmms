@@ -85,7 +85,11 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.51.0 (Actualización: 3 de Agosto de 2026)
+## 🚀 Versión Actual: v1.52.0 (Actualización: 3 de Agosto de 2026)
+
+### Novedades en v1.52.0 (Avisos globales)
+- **Nuevo:** Pestaña **Avisos** en Notas y pendientes — visibles para todos; solo Admin crea (con foto opcional).
+- **Nuevo:** Lecturas: al verlos se marcan; el Admin ve quién ya los leyó (contador y nombres).
 
 ### Novedades en v1.51.0 (Costos históricos congelados)
 - **Corrección:** OT / KPI / activo usan solo el `unit_cost` guardado al consumir; ya no releen el catálogo.

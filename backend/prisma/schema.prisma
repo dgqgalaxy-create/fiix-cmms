@@ -103,6 +103,8 @@ model User {
   personal_notes PersonalNote[]
   operational_tasks_created OperationalTask[] @relation("OperationalTaskCreator")
   operational_tasks_assigned OperationalTask[] @relation("OperationalTaskAssignee")
+  announcements_created GlobalAnnouncement[] @relation("AnnouncementCreator")
+  announcement_reads GlobalAnnouncementRead[]
 
   pattern              TechnicianPattern?
   exceptions           TechnicianException[]
@@ -704,4 +706,34 @@ model OperationalTask {
   @@index([work_order_id])
   @@index([asset_id])
   @@index([priority, status])
+}
+
+/// Avisos globales visibles para todos; solo Admin crea. Lecturas por usuario.
+model GlobalAnnouncement {
+  id            String                   @id @default(uuid()) @db.Uuid
+  title         String
+  body          String?
+  image_url     String?
+  created_by_id String                   @db.Uuid
+  created_by    User                     @relation("AnnouncementCreator", fields: [created_by_id], references: [id])
+  is_active     Boolean                  @default(true)
+  created_at    DateTime                 @default(now())
+  updated_at    DateTime                 @updatedAt
+  reads         GlobalAnnouncementRead[]
+
+  @@index([is_active, created_at])
+  @@index([created_by_id])
+}
+
+model GlobalAnnouncementRead {
+  id               String             @id @default(uuid()) @db.Uuid
+  announcement_id  String             @db.Uuid
+  announcement     GlobalAnnouncement @relation(fields: [announcement_id], references: [id], onDelete: Cascade)
+  user_id          String             @db.Uuid
+  user             User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  seen_at          DateTime           @default(now())
+
+  @@unique([announcement_id, user_id])
+  @@index([user_id])
+  @@index([announcement_id])
 }

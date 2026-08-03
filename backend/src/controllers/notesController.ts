@@ -625,25 +625,29 @@ function computeSnoozeAt(mode: string): Date | null {
   return null;
 }
 
+import { countUnreadAnnouncements } from './announcementsController';
+
 /** Resumen para badges / Inicio */
 export const notesSummary = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const [openNotes, openTasksAssigned, openTasksCreated] = await Promise.all([
+    const [openNotes, openTasksAssigned, openTasksCreated, unreadAnnouncements] = await Promise.all([
       prisma.personalNote.count({ where: { user_id: userId, is_done: false } }),
       prisma.operationalTask.count({ where: { assignee_id: userId, status: 'OPEN' } }),
       prisma.operationalTask.count({
         where: { created_by_id: userId, status: 'OPEN', NOT: { assignee_id: userId } },
       }),
+      countUnreadAnnouncements(userId),
     ]);
 
     res.json({
       open_notes: openNotes,
       open_tasks_assigned: openTasksAssigned,
       open_tasks_created: openTasksCreated,
-      open_total: openNotes + openTasksAssigned,
+      unread_announcements: unreadAnnouncements,
+      open_total: openNotes + openTasksAssigned + unreadAnnouncements,
     });
   } catch (error) {
     console.error('notesSummary', error);

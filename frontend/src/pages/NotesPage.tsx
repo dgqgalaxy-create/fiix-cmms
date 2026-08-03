@@ -14,6 +14,7 @@ import {
   AlarmClock,
   RotateCcw,
   X as XIcon,
+  Megaphone,
 } from 'lucide-react';
 import {
   listPersonalNotes,
@@ -27,6 +28,7 @@ import {
   deleteOperationalTask,
   snoozeOperationalTask,
   searchNotesLinks,
+  getNotesSummary,
   type PersonalNote,
   type OperationalTask,
   type TaskScope,
@@ -37,8 +39,9 @@ import { getUsers, type User } from '../api/users';
 import { useAuth } from '../context/AuthContext';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatDateTime } from '../utils/dateUtils';
+import { AnnouncementsPanel } from '../components/AnnouncementsPanel';
 
-type Tab = 'notes' | 'tasks';
+type Tab = 'notes' | 'tasks' | 'avisos';
 
 function fromLocalInputValue(local: string): string | null {
   if (!local.trim()) return null;
@@ -70,10 +73,15 @@ export default function NotesPage() {
   const userId = user?.userId;
   const canManageTasks =
     user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR';
+  const isAdmin = user?.role === 'ADMINISTRADOR';
   const [searchParams, setSearchParams] = useSearchParams();
-  const [tab, setTab] = useState<Tab>(() =>
-    searchParams.get('tab') === 'tasks' ? 'tasks' : 'notes'
-  );
+  const [tab, setTab] = useState<Tab>(() => {
+    const t = searchParams.get('tab');
+    if (t === 'tasks') return 'tasks';
+    if (t === 'avisos') return 'avisos';
+    return 'notes';
+  });
+  const [unreadAvisos, setUnreadAvisos] = useState(0);
   const [includeDone, setIncludeDone] = useState(false);
   const [taskScope, setTaskScope] = useState<TaskScope>('mine');
   const [notes, setNotes] = useState<PersonalNote[]>([]);
@@ -106,6 +114,15 @@ export default function NotesPage() {
   const [completeTask, setCompleteTask] = useState<OperationalTask | null>(null);
   const [completionNote, setCompletionNote] = useState('');
 
+  const refreshUnreadAvisos = useCallback(async () => {
+    try {
+      const s = await getNotesSummary();
+      setUnreadAvisos(s.unread_announcements || 0);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const load = useCallback(
     async (background = false) => {
       try {
@@ -117,6 +134,7 @@ export default function NotesPage() {
         ]);
         setNotes(n);
         setTasks(t);
+        await refreshUnreadAvisos();
       } catch (err: any) {
         console.error(err);
         setError(err?.response?.data?.error || 'No se pudo cargar notas/pendientes');
@@ -124,7 +142,7 @@ export default function NotesPage() {
         if (!background) setLoading(false);
       }
     },
-    [includeDone, taskScope]
+    [includeDone, taskScope, refreshUnreadAvisos]
   );
 
   useEffect(() => {
@@ -341,7 +359,7 @@ export default function NotesPage() {
             <span className="truncate">Notas y pendientes</span>
           </h1>
           <p className="mt-0.5 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            Notas solo tuyas · Pendientes visibles para quien los crea y a quien se asignan
+            Notas privadas · Pendientes · Avisos globales del equipo
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -389,9 +407,33 @@ export default function NotesPage() {
         >
           Pendientes ({openTasksCount})
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            setTab('avisos');
+            setSearchParams((prev) => {
+              const next = new URLSearchParams(prev);
+              next.set('tab', 'avisos');
+              return next;
+            });
+          }}
+          className={`shrink-0 px-3 py-2 text-xs sm:text-sm font-bold border-b-2 -mb-px inline-flex items-center gap-1 ${
+            tab === 'avisos'
+              ? 'border-sky-500 text-sky-700 dark:text-sky-300'
+              : 'border-transparent text-slate-500'
+          }`}
+        >
+          <Megaphone size={14} />
+          Avisos
+          {unreadAvisos > 0 && (
+            <span className="ml-0.5 rounded-full bg-sky-500 px-1.5 py-0.5 text-[10px] font-black text-white tabular-nums">
+              {unreadAvisos > 99 ? '99+' : unreadAvisos}
+            </span>
+          )}
+        </button>
       </div>
 
-      {tab === 'notes' ? (
+      {tab === 'avisos' ? null : tab === 'notes' ? (
         <p className="rounded-lg border border-amber-200/80 bg-amber-50/80 px-2.5 py-1.5 text-[11px] sm:text-xs font-medium text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
           Solo tú ves estas notas. Nadie más en el equipo puede leerlas.
         </p>
@@ -929,6 +971,10 @@ export default function NotesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {tab === 'avisos' && (
+        <AnnouncementsPanel isAdmin={isAdmin} onChanged={() => void refreshUnreadAvisos()} />
       )}
 
       {completeTask && (

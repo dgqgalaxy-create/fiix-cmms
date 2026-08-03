@@ -547,8 +547,12 @@ export const HomePage = () => {
               </p>
               <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
                 {notesSummary
-                  ? `${notesSummary.open_total} abierto${notesSummary.open_total === 1 ? '' : 's'} · ${notesSummary.open_notes} nota${notesSummary.open_notes === 1 ? '' : 's'} · ${notesSummary.open_tasks_assigned} asignado${notesSummary.open_tasks_assigned === 1 ? '' : 's'} a ti`
-                  : 'Abre tus notas personales y pendientes operativos'}
+                  ? `${notesSummary.open_total} abierto${notesSummary.open_total === 1 ? '' : 's'} · ${notesSummary.open_notes} nota${notesSummary.open_notes === 1 ? '' : 's'} · ${notesSummary.open_tasks_assigned} asignado${notesSummary.open_tasks_assigned === 1 ? '' : 's'} a ti${
+                      notesSummary.unread_announcements
+                        ? ` · ${notesSummary.unread_announcements} aviso${notesSummary.unread_announcements === 1 ? '' : 's'}`
+                        : ''
+                    }`
+                  : 'Abre tus notas, pendientes y avisos globales'}
               </p>
             </div>
           </div>

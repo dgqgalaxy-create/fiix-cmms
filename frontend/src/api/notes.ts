@@ -41,7 +41,24 @@ export interface NotesSummary {
   open_notes: number;
   open_tasks_assigned: number;
   open_tasks_created: number;
+  unread_announcements: number;
   open_total: number;
+}
+
+export interface GlobalAnnouncement {
+  id: string;
+  title: string;
+  body?: string | null;
+  image_url?: string | null;
+  created_by_id: string;
+  created_by?: { id: string; name: string };
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  seen_by_me: boolean;
+  seen_count: number;
+  audience_count: number;
+  readers?: { id: string; name: string; role: string; seen_at: string }[];
 }
 
 export type SnoozeMode = '1h' | 'tomorrow';
@@ -49,6 +66,34 @@ export type SnoozeMode = '1h' | 'tomorrow';
 export const getNotesSummary = async (): Promise<NotesSummary> => {
   const res = await api.get('/notes/summary');
   return res.data;
+};
+
+export const listAnnouncements = async (includeInactive = false): Promise<GlobalAnnouncement[]> => {
+  const res = await api.get('/notes/announcements', {
+    params: includeInactive ? { include_inactive: '1' } : undefined,
+  });
+  return res.data;
+};
+
+export const createAnnouncement = async (data: {
+  title: string;
+  body?: string;
+  image?: File | null;
+}): Promise<GlobalAnnouncement> => {
+  const form = new FormData();
+  form.append('title', data.title);
+  if (data.body) form.append('body', data.body);
+  if (data.image) form.append('image', data.image);
+  const res = await api.post('/notes/announcements', form);
+  return res.data;
+};
+
+export const markAnnouncementSeen = async (id: string): Promise<void> => {
+  await api.post(`/notes/announcements/${id}/seen`);
+};
+
+export const deleteAnnouncement = async (id: string): Promise<void> => {
+  await api.delete(`/notes/announcements/${id}`);
 };
 
 export const listPersonalNotes = async (includeDone = false): Promise<PersonalNote[]> => {

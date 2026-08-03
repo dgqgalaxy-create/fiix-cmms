@@ -100,7 +100,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   const refreshNotesBadge = useCallback(async () => {
     try {
       const s = await getNotesSummary();
-      setNotesBadge(s.open_tasks_assigned + s.open_notes);
+      setNotesBadge(s.open_tasks_assigned + s.open_notes + (s.unread_announcements || 0));
     } catch {
       /* ignore */
     }
