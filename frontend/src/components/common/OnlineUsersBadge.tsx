@@ -24,21 +24,21 @@ export const OnlineUsersBadge = () => {
   }, []);
 
   return (
-    <div className="relative mb-4">
+    <div className="relative mb-2">
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-2 bg-slate-800/50 hover:bg-slate-800 rounded-xl transition-colors text-sm font-medium text-slate-300"
+        className="w-full flex items-center justify-between px-2.5 py-1.5 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-colors text-xs font-medium text-slate-300"
       >
-        <div className="flex items-center gap-2">
-          <Users size={16} />
+        <div className="flex items-center gap-1.5">
+          <Users size={14} />
           <span>Usuarios en línea</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="relative flex h-2 w-2">
+          <span className="relative flex h-1.5 w-1.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
           </span>
-          <span className="text-xs font-bold text-emerald-400">{onlineUsers.length}</span>
+          <span className="text-[11px] font-bold text-emerald-400">{onlineUsers.length}</span>
         </div>
       </button>
 

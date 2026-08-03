@@ -125,3 +125,40 @@ export const deleteUom = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
+export const updateUom = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const { name, default_qty_mode } = req.body;
+    const data: { name?: string; default_qty_mode?: 'INTEGER' | 'DECIMAL' } = {};
+
+    if (typeof name === 'string' && name.trim()) {
+      data.name = name.trim().toUpperCase();
+    }
+    if (default_qty_mode === 'DECIMAL' || default_qty_mode === 'INTEGER') {
+      data.default_qty_mode = default_qty_mode;
+    }
+    if (Object.keys(data).length === 0) {
+      res.status(400).json({ error: 'Nada que actualizar' });
+      return;
+    }
+
+    const uom = await prisma.unitOfMeasure.update({
+      where: { id },
+      data,
+    });
+    emitRefresh('refresh_settings');
+    emitRefresh('refresh_inventory');
+    res.json(uom);
+  } catch (error: any) {
+    if (error?.code === 'P2002') {
+      res.status(400).json({ error: 'Esa unidad de medida ya existe' });
+      return;
+    }
+    if (error?.code === 'P2025') {
+      res.status(404).json({ error: 'Unidad no encontrada' });
+      return;
+    }
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};

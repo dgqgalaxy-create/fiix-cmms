@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Loader2, Scale } from 'lucide-react';
-import { getUoms, createUom, deleteUom } from '../api/settings';
+import { getUoms, createUom, updateUom, deleteUom } from '../api/settings';
 import type { UnitOfMeasure } from '../api/settings';
 import type { QtyMode } from '../utils/qtyMode';
 
@@ -8,6 +8,7 @@ export const UomCatalogue = () => {
   const [uoms, setUoms] = useState<UnitOfMeasure[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [savingId, setSavingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [newMode, setNewMode] = useState<QtyMode>('INTEGER');
@@ -46,6 +47,30 @@ export const UomCatalogue = () => {
     }
   };
 
+  const handleModeChange = async (id: string, default_qty_mode: QtyMode) => {
+    const prev = uoms.find((u) => u.id === id);
+    if (!prev || (prev.default_qty_mode || 'INTEGER') === default_qty_mode) return;
+
+    setUoms((list) =>
+      list.map((u) => (u.id === id ? { ...u, default_qty_mode } : u))
+    );
+    try {
+      setSavingId(id);
+      setError(null);
+      const updated = await updateUom(id, { default_qty_mode });
+      setUoms((list) => list.map((u) => (u.id === id ? updated : u)));
+    } catch (err: any) {
+      setUoms((list) =>
+        list.map((u) =>
+          u.id === id ? { ...u, default_qty_mode: prev.default_qty_mode } : u
+        )
+      );
+      setError(err?.response?.data?.error || 'No se pudo actualizar el modo');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('¿Estás seguro de eliminar esta unidad de medida?')) return;
     try {
@@ -73,7 +98,7 @@ export const UomCatalogue = () => {
             Unidades de Medida
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Gestiona las unidades del inventario. El modo por defecto se sugiere al crear un artículo (puedes cambiarlo por ítem).
+            Gestiona las unidades del inventario. Puedes cambiar Enteros/Decimales en cualquier momento; al crear un artículo se sugiere este modo (luego se puede ajustar por ítem).
           </p>
         </div>
         <button
@@ -133,16 +158,26 @@ export const UomCatalogue = () => {
           {uoms.map((uom) => (
             <div
               key={uom.id}
-              className="group flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-emerald-200 dark:hover:border-emerald-800/50 transition-colors"
+              className="group flex items-center justify-between gap-3 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-emerald-200 dark:hover:border-emerald-800/50 transition-colors"
             >
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-3 flex-wrap min-w-0 flex-1">
                 <span className="font-semibold text-slate-700 dark:text-slate-200">{uom.name}</span>
-                <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                  {(uom.default_qty_mode || 'INTEGER') === 'DECIMAL' ? 'Decimales' : 'Enteros'}
-                </span>
+                <select
+                  value={uom.default_qty_mode || 'INTEGER'}
+                  disabled={savingId === uom.id}
+                  onChange={(e) => void handleModeChange(uom.id, e.target.value as QtyMode)}
+                  className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 disabled:opacity-60"
+                  title="Modo de cantidad sugerido al usar esta unidad"
+                >
+                  <option value="INTEGER">Enteros</option>
+                  <option value="DECIMAL">Decimales</option>
+                </select>
+                {savingId === uom.id && (
+                  <Loader2 size={14} className="animate-spin text-emerald-600" />
+                )}
               </div>
 
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => handleDelete(uom.id)}
                   className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors"

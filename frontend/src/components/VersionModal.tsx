@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.53.0";
+export const APP_VERSION = "1.53.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -30,6 +30,9 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: En Unidades de Medida el Admin puede editar Enteros/Decimales de cada unidad (no solo al crear).",
+    "Mejora: Menú lateral más compacto (menos espacio vertical) para ver más opciones a la vez.",
+    "Corrección: El backend local ya no falla al registrar movimientos de inventario (variable de cantidad).",
     "Nuevo: Unidades de medida en Configuración (Admin) con modo Enteros/Decimales sugerido; en cada artículo eliges si las cantidades son enteras o decimales (movimientos, OT y OC respetan la regla).",
     "Mejora: En móvil, «Aceptar y continuar» guarda solo si ya hay foto Antes (sin diálogo extra); si falta la foto, al subirla se guarda automáticamente.",
     "Mejora: Stock crítico — tarjeta en Inicio; borradores OC no duplican ítems ya en OC abiertas; botón «Crear borrador OC desde críticos».",

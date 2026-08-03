@@ -21,6 +21,14 @@ export const createUom = async (
   return response.data;
 };
 
+export const updateUom = async (
+  id: string,
+  data: { name?: string; default_qty_mode?: QtyMode }
+): Promise<UnitOfMeasure> => {
+  const response = await api.patch(`/settings/uom/${id}`, data);
+  return response.data;
+};
+
 export const deleteUom = async (id: string): Promise<{ success: boolean }> => {
   const response = await api.delete(`/settings/uom/${id}`);
   return response.data;

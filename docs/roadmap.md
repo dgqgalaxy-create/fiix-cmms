@@ -85,7 +85,12 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.53.0 (Actualización: 3 de Agosto de 2026)
+## 🚀 Versión Actual: v1.53.1 (Actualización: 3 de Agosto de 2026)
+
+### Novedades en v1.53.1
+- **Mejora:** UOM — editar Enteros/Decimales en unidades existentes.
+- **Mejora:** Menú lateral más denso/compacto.
+- **Corrección:** Fallo al registrar movimientos de inventario (backend).
 
 ### Novedades en v1.53.0
 - **Nuevo:** UOM en Configuración (siempre visible para Admin) + `qty_mode` Enteros/Decimales por ítem (validado en movimientos/OT/OC).

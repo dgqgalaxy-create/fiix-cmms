@@ -60,11 +60,11 @@ const SortableNavItem = ({ item, isActive, isEditMode, onClose }: { item: NavIte
     <div ref={setNodeRef} style={style} className={`flex items-center gap-2 ${isDragging ? 'opacity-50' : ''}`}>
       {isEditMode ? (
         <div 
-          className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium bg-slate-800/40 hover:bg-slate-800 text-slate-300 w-full cursor-grab border border-dashed border-slate-700/50"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors font-medium text-sm bg-slate-800/40 hover:bg-slate-800 text-slate-300 w-full cursor-grab border border-dashed border-slate-700/50"
           {...attributes} 
           {...listeners}
         >
-          <GripVertical size={16} className="text-slate-500" />
+          <GripVertical size={14} className="text-slate-500 shrink-0" />
           {item.icon}
           <span className="truncate flex-1">{item.name}</span>
           {badgeEl}
@@ -73,7 +73,7 @@ const SortableNavItem = ({ item, isActive, isEditMode, onClose }: { item: NavIte
         <Link
           to={item.path}
           onClick={onClose}
-          className={`flex-1 flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium ${
+          className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors font-medium text-sm ${
             isActive 
               ? 'bg-emerald-600/20 text-emerald-400' 
               : 'hover:bg-slate-800 hover:text-white'
@@ -114,31 +114,31 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   useEffect(() => {
     const availableItems: NavItem[] = [
-      { name: 'Inicio', path: '/home', icon: <Home size={20} /> },
-      { name: 'Órdenes de Trabajo', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
-      { name: 'Notas y pendientes', path: '/notes', icon: <StickyNote size={20} />, badge: notesBadge },
-      { name: 'Activos', path: '/assets', icon: <Database size={20} /> },
-      { name: 'Inventario', path: '/inventory', icon: <Package size={20} /> },
-      { name: 'Checklist Diario', path: '/checklists', icon: <ClipboardCheck size={20} /> },
-      { name: 'Horarios', path: '/roster', icon: <Clock size={20} /> },
-      { name: 'Calendario', path: '/calendar', icon: <Calendar size={20} /> },
-      { name: 'KPIs y Metas', path: '/kpis', icon: <Activity size={20} /> },
+      { name: 'Inicio', path: '/home', icon: <Home size={16} /> },
+      { name: 'Órdenes de Trabajo', path: '/dashboard', icon: <LayoutDashboard size={16} /> },
+      { name: 'Notas y pendientes', path: '/notes', icon: <StickyNote size={16} />, badge: notesBadge },
+      { name: 'Activos', path: '/assets', icon: <Database size={16} /> },
+      { name: 'Inventario', path: '/inventory', icon: <Package size={16} /> },
+      { name: 'Checklist Diario', path: '/checklists', icon: <ClipboardCheck size={16} /> },
+      { name: 'Horarios', path: '/roster', icon: <Clock size={16} /> },
+      { name: 'Calendario', path: '/calendar', icon: <Calendar size={16} /> },
+      { name: 'KPIs y Metas', path: '/kpis', icon: <Activity size={16} /> },
     ];
 
     if (hasPermission('MANAGE_PURCHASES')) {
-      availableItems.push({ name: 'Compras', path: '/purchase-orders', icon: <ShoppingCart size={20} /> });
+      availableItems.push({ name: 'Compras', path: '/purchase-orders', icon: <ShoppingCart size={16} /> });
     }
     if (hasPermission('MANAGE_MAINTENANCE_PLANS')) {
-      availableItems.push({ name: 'Planes Preventivos', path: '/maintenance-plans', icon: <CalendarClock size={20} /> });
+      availableItems.push({ name: 'Planes Preventivos', path: '/maintenance-plans', icon: <CalendarClock size={16} /> });
     }
     if (hasPermission('MANAGE_USERS')) {
-      availableItems.push({ name: 'Personal', path: '/users', icon: <Users size={20} /> });
+      availableItems.push({ name: 'Personal', path: '/users', icon: <Users size={16} /> });
     }
     if (hasPermission('VIEW_RCA')) {
-      availableItems.push({ name: 'Árbol de Fallas', path: '/rca', icon: <GitBranch size={20} /> });
+      availableItems.push({ name: 'Árbol de Fallas', path: '/rca', icon: <GitBranch size={16} /> });
     }
     if (hasPermission('VIEW_SETTINGS')) {
-      availableItems.push({ name: 'Configuración', path: '/settings', icon: <Settings size={20} /> });
+      availableItems.push({ name: 'Configuración', path: '/settings', icon: <Settings size={16} /> });
     }
 
     // Apply saved order
@@ -227,33 +227,33 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
       <aside className={`print:hidden w-64 bg-slate-900 dark:bg-slate-950 text-slate-300 flex flex-col h-screen max-h-dvh fixed top-0 left-0 z-40 transition-transform duration-300 ease-in-out md:translate-x-0 border-r border-transparent dark:border-slate-800 overflow-y-auto ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <div className="p-6 flex flex-col items-center justify-center border-b border-slate-800 relative">
-          <div className="flex flex-col items-center gap-2">
-            <img src="/lpet.png" alt="GTZ Logo" className="h-14 object-contain" />
-            <span className="font-bold text-lg text-slate-300 tracking-widest uppercase">CMMS MTTO</span>
+        <div className="px-3 pt-3 pb-2 flex flex-col items-center justify-center border-b border-slate-800 relative shrink-0">
+          <div className="flex flex-col items-center gap-1">
+            <img src="/lpet.png" alt="GTZ Logo" className="h-10 object-contain" />
+            <span className="font-bold text-sm text-slate-300 tracking-widest uppercase">CMMS MTTO</span>
           </div>
-          <button onClick={onClose} className="md:hidden absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors" title="Cerrar menú">
-            <X size={20} />
+          <button onClick={onClose} className="md:hidden absolute top-2 right-2 p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors" title="Cerrar menú">
+            <X size={18} />
           </button>
         </div>
 
-        <div className="px-4 pt-4 pb-2 flex justify-end">
+        <div className="px-3 pt-2 pb-1 flex justify-end shrink-0">
           <button 
             onClick={toggleEditMode}
-            className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+            className={`flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md transition-colors ${
               isEditMode ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
             }`}
             title={isEditMode ? "Guardar orden" : "Reorganizar menú"}
           >
             {isEditMode ? (
-              <><Check size={14} /> Listo</>
+              <><Check size={12} /> Listo</>
             ) : (
-              <><Settings2 size={14} /> Reorganizar</>
+              <><Settings2 size={12} /> Reorganizar</>
             )}
           </button>
         </div>
 
-        <nav className="flex-1 px-4 pb-6 space-y-2 overflow-y-auto">
+        <nav className="flex-1 px-2.5 pb-3 space-y-0.5 overflow-y-auto min-h-0">
           <DndContext 
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -276,11 +276,11 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
           </DndContext>
         </nav>
 
-        <div className="p-4 border-t border-slate-800 shrink-0">
-          <div className="px-4 py-3 bg-slate-800/50 rounded-2xl mb-4">
-            <p className="text-sm font-semibold text-white">{user?.name || 'Usuario'}</p>
-            <p className="text-xs text-blue-400 font-medium truncate">{user?.email}</p>
-            <p className="text-[10px] uppercase tracking-wider text-slate-500 mt-2">{user?.role}</p>
+        <div className="p-2.5 border-t border-slate-800 shrink-0">
+          <div className="px-2.5 py-2 bg-slate-800/50 rounded-xl mb-2">
+            <p className="text-xs font-semibold text-white truncate">{user?.name || 'Usuario'}</p>
+            <p className="text-[11px] text-blue-400 font-medium truncate">{user?.email}</p>
+            <p className="text-[9px] uppercase tracking-wider text-slate-500 mt-1">{user?.role}</p>
           </div>
           
           <OnlineUsersBadge />
@@ -289,48 +289,48 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
             <button
               type="button"
               onClick={() => void toggleTechnicianMobileUi()}
-              className={`mb-3 w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+              className={`mb-2 w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 techMobileUiOn
                   ? 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25'
                   : 'bg-slate-800/60 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
               }`}
               title="Preferencia de tu cuenta: interfaz móvil en celular"
             >
-              <span className="inline-flex items-center gap-2 min-w-0">
-                <Smartphone size={16} className="shrink-0" />
+              <span className="inline-flex items-center gap-1.5 min-w-0">
+                <Smartphone size={14} className="shrink-0" />
                 <span className="truncate text-left">Interfaz móvil</span>
               </span>
               <span
-                className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
+                className={`relative inline-flex h-4 w-7 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
                   techMobileUiOn ? 'bg-emerald-500' : 'bg-slate-600'
                 }`}
                 aria-hidden
               >
                 <span
-                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${
-                    techMobileUiOn ? 'translate-x-4' : 'translate-x-0'
+                  className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow transition ${
+                    techMobileUiOn ? 'translate-x-3' : 'translate-x-0'
                   }`}
                 />
               </span>
             </button>
           )}
 
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-1.5 mb-2">
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="flex items-center justify-center flex-1 gap-2 px-4 py-3 text-sm font-medium text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-xl transition-colors"
+              className="flex items-center justify-center flex-1 gap-1.5 px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-lg transition-colors"
               title={theme === 'dark' ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
             >
-              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
               {theme === 'dark' ? 'Claro' : 'Oscuro'}
             </button>
 
             <button 
               onClick={logout}
-              className="flex items-center justify-center flex-1 gap-2 px-4 py-3 text-sm font-medium text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-xl transition-colors"
+              className="flex items-center justify-center flex-1 gap-1.5 px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors"
               title="Cerrar Sesión"
             >
-              <LogOut size={18} />
+              <LogOut size={15} />
               Salir
             </button>
           </div>
@@ -338,10 +338,10 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
           <button
             type="button"
             onClick={() => setIsVersionModalOpen(true)}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2.5 text-xs font-bold text-emerald-300 hover:bg-slate-800 hover:text-emerald-200 transition-colors"
+            className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-2 py-1.5 text-[11px] font-bold text-emerald-300 hover:bg-slate-800 hover:text-emerald-200 transition-colors"
             title="Versión, novedades y manual"
           >
-            <Info size={14} />
+            <Info size={12} />
             v{APP_VERSION} · Info y Manual
           </button>
         </div>
