@@ -4,7 +4,7 @@ import { MessageSquare, X } from 'lucide-react';
 import { socket } from '../api/socket';
 import { useAuth } from '../context/AuthContext';
 import type { ChatMessage } from '../api/chat';
-import { showIncomingChatSystemNotification, vibrateChatAlert } from '../utils/chatNotify';
+import { showIncomingChatSystemNotification, vibrateChatAlert, playChatNotifySound } from '../utils/chatNotify';
 
 type ToastItem = {
   key: string;
@@ -89,7 +89,8 @@ export function ChatMessageToast() {
       const key = msgId;
       const link = `/messages?c=${payload.conversation_id}`;
 
-      // WhatsApp-like: vibrar siempre; si la app está oculta, también notificación del sistema
+      // WhatsApp-like: sonido + vibrar; si la app está oculta, también notificación del sistema
+      playChatNotifySound();
       vibrateChatAlert();
       void showIncomingChatSystemNotification({
         title: author,

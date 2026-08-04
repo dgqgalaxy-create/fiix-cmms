@@ -32,6 +32,8 @@ self.addEventListener('push', (event) => {
     data: { url },
     tag,
     renotify: true,
+    // Sonido del canal de notificaciones del SO (no silenciar)
+    silent: false,
     // Patrón tipo chat (ms): vibra — pausa — vibra
     vibrate: Array.isArray(data.vibrate) ? data.vibrate : [200, 100, 200],
     timestamp: Date.now(),

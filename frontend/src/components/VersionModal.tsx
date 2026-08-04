@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.5";
+export const APP_VERSION = "1.56.6";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Mensajes — tono de notificación al llegar un mensaje (además de vibración); el push del sistema usa el sonido del teléfono.",
     "Corrección: El banner de mensaje nuevo ya no aparece duplicado (dedupe del mismo mensaje; si la app está abierta no se muestra también el push del sistema).",
     "Mejora: Mensajes en PWA móvil — vibración al llegar aviso; push del sistema con patrón de vibración; si la app está en segundo plano también intenta notificación local.",
     "Nuevo: Al recibir un mensaje aparece un banner arriba a la derecha (entra con zoom y a los 5 s se oculta hacia la derecha); tocarlo abre el chat.",
