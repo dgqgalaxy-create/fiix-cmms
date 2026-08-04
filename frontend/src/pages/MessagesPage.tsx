@@ -27,10 +27,11 @@ import {
   type ChatConversation,
   type ChatMessage,
 } from '../api/chat';
-import { socket } from '../api/socket';
+import { socket, ensureSocketConnected } from '../api/socket';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatDateTime } from '../utils/dateUtils';
 import { useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
+import { MessageTicks } from '../components/MessageTicks';
 
 type ComposeMode = null | 'direct' | 'group';
 
@@ -146,6 +147,13 @@ export default function MessagesPage() {
 
     const onMsg = (payload: { conversation_id: string; message: ChatMessage }) => {
       if (!payload?.conversation_id || !payload.message) return;
+      const myId = user?.id || user?.userId;
+      if (payload.message.author_id && myId && payload.message.author_id !== myId) {
+        socket.emit('chat_delivered', {
+          conversation_id: payload.conversation_id,
+          message_id: payload.message.id,
+        });
+      }
       if (payload.conversation_id === activeId) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === payload.message.id)) return prev;
@@ -156,13 +164,45 @@ export default function MessagesPage() {
       void loadConversations();
     };
 
+    const onReceipt = (payload: {
+      conversation_id: string;
+      message_id: string;
+      receipt_status: ChatMessage['receipt_status'];
+    }) => {
+      if (!payload?.message_id || !payload.receipt_status) return;
+      if (payload.conversation_id !== activeId) return;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === payload.message_id ? { ...m, receipt_status: payload.receipt_status } : m
+        )
+      );
+    };
+
     socket.on('chat_message', onMsg);
     socket.on('chat_message_deleted', upsertDeleted);
+    socket.on('chat_receipt', onReceipt);
     return () => {
       socket.off('chat_message', onMsg);
       socket.off('chat_message_deleted', upsertDeleted);
+      socket.off('chat_receipt', onReceipt);
     };
-  }, [activeId, loadConversations]);
+  }, [activeId, loadConversations, user?.id, user?.userId]);
+
+  // Al volver a la app (móvil): reconectar socket y refrescar hilo
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      ensureSocketConnected();
+      void loadConversations();
+      if (activeId) void loadThread(activeId);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    socket.on('connect', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      socket.off('connect', onVisible);
+    };
+  }, [activeId, loadConversations, loadThread]);
 
   const openConversation = (id: string) => {
     setActiveId(id);
@@ -191,14 +231,42 @@ export default function MessagesPage() {
     if (!activeId || (!body.trim() && !file)) return;
     setSending(true);
     setError(null);
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: ChatMessage = {
+      id: tempId,
+      conversation_id: activeId,
+      author_id: user?.id || user?.userId || '',
+      author: user?.name
+        ? { id: user.id || user.userId || '', name: user.name, role: user.role || '' }
+        : undefined,
+      body: body.trim() || (file ? `(archivo) ${file.name}` : ''),
+      attachment_url: null,
+      attachment_name: file?.name || null,
+      created_at: new Date().toISOString(),
+      receipt_status: 'sending',
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    const pendingBody = body.trim();
+    const pendingFile = file;
+    setBody('');
+    setFile(null);
+    if (fileRef.current) fileRef.current.value = '';
     try {
-      const msg = await sendChatMessage(activeId, { body: body.trim(), attachment: file });
-      setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
-      setBody('');
-      setFile(null);
-      if (fileRef.current) fileRef.current.value = '';
+      const msg = await sendChatMessage(activeId, { body: pendingBody, attachment: pendingFile });
+      setMessages((prev) => {
+        const withoutTemp = prev.filter((m) => m.id !== tempId);
+        if (withoutTemp.some((m) => m.id === msg.id)) {
+          return withoutTemp.map((m) =>
+            m.id === msg.id ? { ...msg, receipt_status: msg.receipt_status || 'sent' } : m
+          );
+        }
+        return [...withoutTemp, { ...msg, receipt_status: msg.receipt_status || 'sent' }];
+      });
       await loadConversations();
     } catch (err: any) {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setBody(pendingBody);
+      setFile(pendingFile);
       setError(err?.response?.data?.error || 'No se pudo enviar');
     } finally {
       setSending(false);
@@ -548,6 +616,12 @@ export default function MessagesPage() {
                             }`}
                           >
                             <span>{formatDateTime(m.created_at)}</span>
+                            {mine && !deleted && (
+                              <MessageTicks
+                                status={m.receipt_status || 'sent'}
+                                onMineBubble
+                              />
+                            )}
                             {canDelete && (
                               <button
                                 type="button"

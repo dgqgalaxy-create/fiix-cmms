@@ -68,7 +68,13 @@ export function ChatMessageToast() {
       if (payload.message.is_deleted) return;
 
       const msgId = payload.message.id;
-      if (!msgId || !claimToastSlot(msgId)) return;
+      if (!msgId) return;
+
+      // ACK de entrega (también si estás en el hilo; MessagesPage puede ACK de nuevo sin daño)
+      socket.emit('chat_delivered', {
+        conversation_id: payload.conversation_id,
+        message_id: msgId,
+      });
 
       const path = locationRef.current.pathname;
       const search = locationRef.current.search;
@@ -76,6 +82,8 @@ export function ChatMessageToast() {
       if (path.startsWith('/messages') && search.includes(`c=${payload.conversation_id}`)) {
         return;
       }
+
+      if (!claimToastSlot(msgId)) return;
 
       const author = payload.message.author?.name || 'Nuevo mensaje';
       const raw = (payload.message.body || '').trim();

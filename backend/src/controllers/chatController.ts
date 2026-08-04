@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import multer from 'multer';
 import prisma from '../config/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
@@ -48,6 +49,8 @@ const authorSelect = { id: true, name: true, role: true };
 /** Ventana para que el autor oculte su mensaje (soft-delete). */
 const AUTHOR_DELETE_WINDOW_MS = 10 * 60 * 1000;
 
+export type ReceiptStatus = 'sent' | 'delivered' | 'read';
+
 async function assertParticipant(conversationId: string, userId: string) {
   return prisma.chatParticipant.findUnique({
     where: {
@@ -56,10 +59,27 @@ async function assertParticipant(conversationId: string, userId: string) {
   });
 }
 
+function computeReceiptStatus(
+  otherUserIds: string[],
+  receipts: Array<{ user_id: string; delivered_at: Date | null; read_at: Date | null }>
+): ReceiptStatus {
+  if (otherUserIds.length === 0) return 'sent';
+  const byUser = new Map(receipts.map((r) => [r.user_id, r]));
+  const allRead = otherUserIds.every((uid) => Boolean(byUser.get(uid)?.read_at));
+  if (allRead) return 'read';
+  const allDelivered = otherUserIds.every((uid) => {
+    const r = byUser.get(uid);
+    return Boolean(r?.delivered_at || r?.read_at);
+  });
+  if (allDelivered) return 'delivered';
+  return 'sent';
+}
+
 /** Respuesta pública: si está oculto, no se envía texto ni adjunto. */
-function presentMessage(m: any) {
+function presentMessage(m: any, receipt_status?: ReceiptStatus) {
   if (!m) return m;
   const is_deleted = Boolean(m.deleted_at);
+  const status = receipt_status ?? (m.receipt_status as ReceiptStatus | undefined) ?? 'sent';
   if (is_deleted) {
     return {
       id: m.id,
@@ -72,6 +92,7 @@ function presentMessage(m: any) {
       created_at: m.created_at,
       deleted_at: m.deleted_at,
       is_deleted: true,
+      receipt_status: status,
     };
   }
   return {
@@ -85,6 +106,7 @@ function presentMessage(m: any) {
     created_at: m.created_at,
     deleted_at: null,
     is_deleted: false,
+    receipt_status: status,
   };
 }
 
@@ -149,6 +171,40 @@ function serializeConversation(
     last_message: lastMessagePreview(lastMessage),
     unread_count: unreadCount,
   };
+}
+
+async function otherParticipantIds(conversationId: string, authorId: string) {
+  const parts = await prisma.chatParticipant.findMany({
+    where: { conversation_id: conversationId, user_id: { not: authorId } },
+    select: { user_id: true },
+  });
+  return parts.map((p) => p.user_id);
+}
+
+async function statusForMessage(
+  messageId: string,
+  conversationId: string,
+  authorId: string
+): Promise<ReceiptStatus> {
+  const others = await otherParticipantIds(conversationId, authorId);
+  const receipts = await prisma.chatMessageReceipt.findMany({
+    where: { message_id: messageId, user_id: { in: others } },
+    select: { user_id: true, delivered_at: true, read_at: true },
+  });
+  return computeReceiptStatus(others, receipts);
+}
+
+function emitReceiptUpdate(
+  authorId: string,
+  conversationId: string,
+  messageId: string,
+  receipt_status: ReceiptStatus
+) {
+  emitToUser(authorId, 'chat_receipt', {
+    conversation_id: conversationId,
+    message_id: messageId,
+    receipt_status,
+  });
 }
 
 export const getChatUnreadSummary = async (req: AuthRequest, res: Response) => {
@@ -374,7 +430,10 @@ export const listMessages = async (req: AuthRequest, res: Response) => {
 
     const messages = await prisma.chatMessage.findMany({
       where: { conversation_id: id },
-      include: { author: { select: authorSelect } },
+      include: {
+        author: { select: authorSelect },
+        receipts: { select: { user_id: true, delivered_at: true, read_at: true } },
+      },
       orderBy: { created_at: 'desc' },
       take,
       ...(cursor
@@ -382,7 +441,26 @@ export const listMessages = async (req: AuthRequest, res: Response) => {
         : {}),
     });
 
-    res.json(messages.reverse().map(presentMessage));
+    const othersByAuthor = new Map<string, string[]>();
+    const allOthers = await prisma.chatParticipant.findMany({
+      where: { conversation_id: id },
+      select: { user_id: true },
+    });
+    const participantIds = allOthers.map((p) => p.user_id);
+
+    const presented = messages.reverse().map((m) => {
+      const others =
+        othersByAuthor.get(m.author_id) ||
+        participantIds.filter((uid) => uid !== m.author_id);
+      othersByAuthor.set(m.author_id, others);
+      const status =
+        m.author_id === userId
+          ? computeReceiptStatus(others, m.receipts)
+          : ('sent' as ReceiptStatus);
+      return presentMessage(m, status);
+    });
+
+    res.json(presented);
   } catch (error) {
     console.error('listMessages', error);
     res.status(500).json({ error: 'Error al listar mensajes' });
@@ -436,14 +514,25 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
       select: { user_id: true },
     });
 
-    const presented = presentMessage(message);
+    const others = participants.map((p) => p.user_id).filter((uid) => uid !== userId);
+    if (others.length > 0) {
+      await prisma.chatMessageReceipt.createMany({
+        data: others.map((uid) => ({
+          id: randomUUID(),
+          message_id: message.id,
+          user_id: uid,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    const presented = presentMessage(message, 'sent');
     const payload = { conversation_id: id, message: presented };
     for (const p of participants) {
       emitToUser(p.user_id, 'chat_message', payload);
       emitToUser(p.user_id, 'refresh_chat');
     }
 
-    const others = participants.map((p) => p.user_id).filter((uid) => uid !== userId);
     if (others.length > 0) {
       const title = 'Nuevo mensaje';
       const preview = message.body.slice(0, 120);
@@ -540,12 +629,57 @@ export const markConversationRead = async (req: AuthRequest, res: Response) => {
     const part = await assertParticipant(id, userId);
     if (!part) return res.status(403).json({ error: 'No perteneces a esta conversación' });
 
+    const now = new Date();
     await prisma.chatParticipant.update({
       where: {
         conversation_id_user_id: { conversation_id: id, user_id: userId },
       },
-      data: { last_read_at: new Date() },
+      data: { last_read_at: now },
     });
+
+    // Marcar leídos (y entregados) solo mensajes ajenos aún no leídos por este usuario
+    const othersMessages = await prisma.chatMessage.findMany({
+      where: {
+        conversation_id: id,
+        author_id: { not: userId },
+        deleted_at: null,
+        OR: [
+          { receipts: { none: { user_id: userId } } },
+          { receipts: { some: { user_id: userId, read_at: null } } },
+        ],
+      },
+      select: { id: true, author_id: true },
+    });
+
+    for (const msg of othersMessages) {
+      await prisma.chatMessageReceipt.upsert({
+        where: {
+          message_id_user_id: { message_id: msg.id, user_id: userId },
+        },
+        create: {
+          id: randomUUID(),
+          message_id: msg.id,
+          user_id: userId,
+          delivered_at: now,
+          read_at: now,
+        },
+        update: {
+          read_at: now,
+          delivered_at: now,
+        },
+      });
+    }
+
+    // Notificar a cada autor el nuevo estado agregado
+    const authorIds = [...new Set(othersMessages.map((m) => m.author_id))];
+    for (const authorId of authorIds) {
+      const authored = othersMessages.filter((m) => m.author_id === authorId);
+      for (const msg of authored) {
+        const status = await statusForMessage(msg.id, id, authorId);
+        emitReceiptUpdate(authorId, id, msg.id, status);
+      }
+    }
+
     emitToUser(userId, 'refresh_chat');
     res.json({ ok: true });
   } catch (error) {
@@ -553,3 +687,51 @@ export const markConversationRead = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Error al marcar como leído' });
   }
 };
+
+/**
+ * ACK de entrega (socket): el destinatario confirma que recibió el mensaje en vivo.
+ */
+export async function ackChatMessageDelivered(
+  userId: string,
+  conversationId: string,
+  messageId: string
+): Promise<void> {
+  const part = await assertParticipant(conversationId, userId);
+  if (!part) return;
+
+  const msg = await prisma.chatMessage.findFirst({
+    where: { id: messageId, conversation_id: conversationId },
+    select: { id: true, author_id: true },
+  });
+  if (!msg || msg.author_id === userId) return;
+
+  const now = new Date();
+  const existing = await prisma.chatMessageReceipt.findUnique({
+    where: {
+      message_id_user_id: { message_id: messageId, user_id: userId },
+    },
+  });
+
+  if (existing?.delivered_at) {
+    // Ya entregado; si ya está leído no hace falta reemitir
+    return;
+  }
+
+  await prisma.chatMessageReceipt.upsert({
+    where: {
+      message_id_user_id: { message_id: messageId, user_id: userId },
+    },
+    create: {
+      id: randomUUID(),
+      message_id: messageId,
+      user_id: userId,
+      delivered_at: now,
+    },
+    update: {
+      delivered_at: now,
+    },
+  });
+
+  const status = await statusForMessage(messageId, conversationId, msg.author_id);
+  emitReceiptUpdate(msg.author_id, conversationId, messageId, status);
+}

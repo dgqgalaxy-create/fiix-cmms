@@ -18,6 +18,8 @@ export interface ChatMessage {
   created_at: string;
   deleted_at?: string | null;
   is_deleted?: boolean;
+  /** Solo relevante en mensajes propios: enviado / entregado / leído */
+  receipt_status?: 'sending' | 'sent' | 'delivered' | 'read';
 }
 
 export interface ChatConversation {

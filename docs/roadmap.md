@@ -85,7 +85,11 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.56.6 (Actualización: 4 de Agosto de 2026)
+## 🚀 Versión Actual: v1.56.7 (Actualización: 4 de Agosto de 2026)
+
+### Novedades en v1.56.7
+- **Nuevo:** Palomitas de estado en mensajes propios (enviado / entregado / leído), tipo WhatsApp.
+- **Mejora:** Reconexión del chat al volver a la app en móvil.
 
 ### Novedades en v1.56.6
 - **Mejora:** Mensajes — tono de notificación al llegar un mensaje (además de vibración); push del sistema con sonido del teléfono.

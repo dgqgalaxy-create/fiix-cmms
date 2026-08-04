@@ -7,8 +7,10 @@ function createSocket(token?: string | null): Socket {
   return io(BACKEND_URL, {
     autoConnect: !!token,
     reconnection: true,
-    reconnectionAttempts: 10,
-    reconnectionDelay: 2000,
+    // Móvil: el SO corta el WebSocket al suspender; no agotar intentos
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 8000,
     auth: token ? { token } : {},
   });
 }
@@ -31,6 +33,27 @@ export function setSocketAuth(token: string | null) {
   } else {
     socketInstance.disconnect();
   }
+}
+
+/** Reconectar si hay sesión y el socket está caído (vuelta a la app / red). */
+export function ensureSocketConnected() {
+  if (!socketInstance) return;
+  const token =
+    typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+  if (!token) return;
+  socketInstance.auth = { token };
+  if (!socketInstance.connected) {
+    socketInstance.connect();
+  }
+}
+
+if (typeof window !== 'undefined') {
+  const wake = () => {
+    if (document.visibilityState === 'visible') ensureSocketConnected();
+  };
+  window.addEventListener('online', () => ensureSocketConnected());
+  document.addEventListener('visibilitychange', wake);
+  window.addEventListener('pageshow', () => ensureSocketConnected());
 }
 
 socket.on('connect_error', (err) => {

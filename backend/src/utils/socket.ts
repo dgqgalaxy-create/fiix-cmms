@@ -195,6 +195,19 @@ export const initSocket = (server: http.Server) => {
       if (payload?.workOrderId) heartbeatWorkOrder(socket, payload.workOrderId);
     });
 
+    socket.on(
+      'chat_delivered',
+      (payload: { conversation_id?: string; message_id?: string }) => {
+        const u = getSocketUser(socket);
+        if (!u?.userId || !payload?.conversation_id || !payload?.message_id) return;
+        void import('../controllers/chatController')
+          .then(({ ackChatMessageDelivered }) =>
+            ackChatMessageDelivered(u.userId, payload.conversation_id!, payload.message_id!)
+          )
+          .catch((err) => console.error('[Socket.io] chat_delivered', err));
+      }
+    );
+
     socket.on('disconnect', () => {
       removeSocketFromAllRooms(socket.id);
       console.log(`[Socket.io] Desconectado: ${socket.id}`);
