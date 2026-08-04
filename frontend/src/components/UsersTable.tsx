@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { User } from '../api/users';
-import { Pencil, Shield, Wrench, User as UserIcon, ChevronUp, ChevronDown } from 'lucide-react';
+import { Pencil, Shield, Wrench, User as UserIcon, ChevronUp, ChevronDown, Eye } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 
 interface Props {
@@ -13,6 +13,7 @@ const getRoleIcon = (role: string) => {
     case 'ADMINISTRADOR': return <Shield size={16} />;
     case 'GESTIONADOR': return <UserIcon size={16} />;
     case 'TECNICO': return <Wrench size={16} />;
+    case 'OBSERVADOR': return <Eye size={16} />;
     default: return <UserIcon size={16} />;
   }
 };
@@ -22,6 +23,7 @@ const getRoleColor = (role: string) => {
     case 'ADMINISTRADOR': return 'bg-red-100 text-red-700 border-red-200';
     case 'GESTIONADOR': return 'bg-blue-100 text-blue-700 border-blue-200';
     case 'TECNICO': return 'bg-amber-100 text-amber-700 border-amber-200';
+    case 'OBSERVADOR': return 'bg-violet-100 text-violet-700 border-violet-200';
     default: return 'bg-slate-100 text-slate-700 border-slate-200';
   }
 };

@@ -45,12 +45,61 @@ export const chatUpload = multer({
 const userSelect = { id: true, name: true, role: true, is_active: true };
 const authorSelect = { id: true, name: true, role: true };
 
+/** Ventana para que el autor oculte su mensaje (soft-delete). */
+const AUTHOR_DELETE_WINDOW_MS = 10 * 60 * 1000;
+
 async function assertParticipant(conversationId: string, userId: string) {
   return prisma.chatParticipant.findUnique({
     where: {
       conversation_id_user_id: { conversation_id: conversationId, user_id: userId },
     },
   });
+}
+
+/** Respuesta pública: si está oculto, no se envía texto ni adjunto. */
+function presentMessage(m: any) {
+  if (!m) return m;
+  const is_deleted = Boolean(m.deleted_at);
+  if (is_deleted) {
+    return {
+      id: m.id,
+      conversation_id: m.conversation_id,
+      author_id: m.author_id,
+      author: m.author,
+      body: '',
+      attachment_url: null,
+      attachment_name: null,
+      created_at: m.created_at,
+      deleted_at: m.deleted_at,
+      is_deleted: true,
+    };
+  }
+  return {
+    id: m.id,
+    conversation_id: m.conversation_id,
+    author_id: m.author_id,
+    author: m.author,
+    body: m.body,
+    attachment_url: m.attachment_url,
+    attachment_name: m.attachment_name,
+    created_at: m.created_at,
+    deleted_at: null,
+    is_deleted: false,
+  };
+}
+
+function lastMessagePreview(m: any | null) {
+  if (!m) return null;
+  const presented = presentMessage(m);
+  return {
+    id: presented.id,
+    body: presented.is_deleted ? 'Mensaje eliminado' : presented.body,
+    author_id: presented.author_id,
+    author: presented.author,
+    created_at: presented.created_at,
+    attachment_url: presented.attachment_url,
+    is_deleted: presented.is_deleted,
+  };
 }
 
 async function findDirectConversation(userA: string, userB: string) {
@@ -97,16 +146,7 @@ function serializeConversation(
       last_read_at: p.last_read_at,
       user: p.user,
     })),
-    last_message: lastMessage
-      ? {
-          id: lastMessage.id,
-          body: lastMessage.body,
-          author_id: lastMessage.author_id,
-          author: lastMessage.author,
-          created_at: lastMessage.created_at,
-          attachment_url: lastMessage.attachment_url,
-        }
-      : null,
+    last_message: lastMessagePreview(lastMessage),
     unread_count: unreadCount,
   };
 }
@@ -126,6 +166,7 @@ export const getChatUnreadSummary = async (req: AuthRequest, res: Response) => {
         where: {
           conversation_id: p.conversation_id,
           author_id: { not: userId },
+          deleted_at: null,
           ...(p.last_read_at ? { created_at: { gt: p.last_read_at } } : {}),
         },
       });
@@ -166,6 +207,7 @@ export const listConversations = async (req: AuthRequest, res: Response) => {
           where: {
             conversation_id: p.conversation_id,
             author_id: { not: userId },
+            deleted_at: null,
             ...(p.last_read_at ? { created_at: { gt: p.last_read_at } } : {}),
           },
         });
@@ -340,7 +382,7 @@ export const listMessages = async (req: AuthRequest, res: Response) => {
         : {}),
     });
 
-    res.json(messages.reverse());
+    res.json(messages.reverse().map(presentMessage));
   } catch (error) {
     console.error('listMessages', error);
     res.status(500).json({ error: 'Error al listar mensajes' });
@@ -394,7 +436,8 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
       select: { user_id: true },
     });
 
-    const payload = { conversation_id: id, message };
+    const presented = presentMessage(message);
+    const payload = { conversation_id: id, message: presented };
     for (const p of participants) {
       emitToUser(p.user_id, 'chat_message', payload);
       emitToUser(p.user_id, 'refresh_chat');
@@ -425,10 +468,64 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    res.status(201).json(message);
+    res.status(201).json(presented);
   } catch (error: any) {
     console.error('sendMessage', error);
     res.status(500).json({ error: error?.message || 'Error al enviar mensaje' });
+  }
+};
+
+/** Soft-delete: solo el autor, dentro de 10 minutos. No hay UI de Admin para leer el contenido. */
+export const softDeleteMessage = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const conversationId = req.params.id as string;
+    const messageId = req.params.messageId as string;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const part = await assertParticipant(conversationId, userId);
+    if (!part) return res.status(403).json({ error: 'No perteneces a esta conversación' });
+
+    const msg = await prisma.chatMessage.findFirst({
+      where: { id: messageId, conversation_id: conversationId },
+      include: { author: { select: authorSelect } },
+    });
+    if (!msg) return res.status(404).json({ error: 'Mensaje no encontrado' });
+    if (msg.author_id !== userId) {
+      return res.status(403).json({ error: 'Solo puedes eliminar tus propios mensajes' });
+    }
+    if (msg.deleted_at) {
+      return res.json(presentMessage(msg));
+    }
+
+    const ageMs = Date.now() - new Date(msg.created_at).getTime();
+    if (ageMs > AUTHOR_DELETE_WINDOW_MS) {
+      return res.status(400).json({
+        error: 'Solo puedes eliminar el mensaje durante los primeros 10 minutos',
+      });
+    }
+
+    const updated = await prisma.chatMessage.update({
+      where: { id: messageId },
+      data: { deleted_at: new Date() },
+      include: { author: { select: authorSelect } },
+    });
+
+    const presented = presentMessage(updated);
+    const participants = await prisma.chatParticipant.findMany({
+      where: { conversation_id: conversationId },
+      select: { user_id: true },
+    });
+    const payload = { conversation_id: conversationId, message: presented };
+    for (const p of participants) {
+      emitToUser(p.user_id, 'chat_message_deleted', payload);
+      emitToUser(p.user_id, 'refresh_chat');
+    }
+
+    res.json(presented);
+  } catch (error) {
+    console.error('softDeleteMessage', error);
+    res.status(500).json({ error: 'Error al eliminar el mensaje' });
   }
 };
 

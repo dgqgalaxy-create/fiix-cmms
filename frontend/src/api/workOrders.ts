@@ -76,6 +76,14 @@ export interface WorkOrder {
     };
   }>;
   parts_cost_total?: number;
+  comments_count?: number;
+  latest_comment?: {
+    id: string;
+    body: string;
+    created_at: string;
+    has_attachment?: boolean;
+    author?: { id: string; name: string };
+  } | null;
 }
 
 export const getWorkOrders = async (): Promise<WorkOrder[]> => {

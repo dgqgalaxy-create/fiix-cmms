@@ -91,7 +91,7 @@ export const WorkOrderDetailModal = ({
   initialFocus,
 }: Props) => {
   const navigate = useNavigate();
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, canWriteOps } = useAuth();
   const { canEdit, remoteEditorName } = useWorkOrderPresence(workOrder?.id, isOpen);
   const isTechMobileShell = useTechnicianMobileShell();
   const evidenceRef = useRef<HTMLDivElement>(null);
@@ -328,7 +328,7 @@ export const WorkOrderDetailModal = ({
 
   const displayWO = liveWorkOrder || workOrder;
   const isClosed = displayWO.status === 'FINALIZADO' || displayWO.status === 'ANULADO';
-  const isReadOnly = isClosed || !canEdit;
+  const isReadOnly = isClosed || !canEdit || !canWriteOps || !hasPermission('EDIT_WORK_ORDERS');
   const myUserId = (user as any)?.userId || (user as any)?.id || '';
   const assigneeList = displayWO.assigned_technicians || workOrder.assigned_technicians || [];
   const isAssignedToMe = !!myUserId && assigneeList.some((t) => t.id === myUserId);
@@ -1424,7 +1424,7 @@ export const WorkOrderDetailModal = ({
                 <WorkOrderCommentsPanel
                   workOrderId={workOrder.id}
                   isOpen={isOpen}
-                  canWrite={!isClosed}
+                  canWrite={!isClosed && canWriteOps}
                   onZoomImage={(src) => setZoomSrc(src)}
                 />
               </div>

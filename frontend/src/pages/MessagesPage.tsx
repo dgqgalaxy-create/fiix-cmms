@@ -8,6 +8,7 @@ import {
   Paperclip,
   Plus,
   Send,
+  Trash2,
   Users,
   X as XIcon,
 } from 'lucide-react';
@@ -19,6 +20,8 @@ import {
   createGroupConversation,
   listMessages,
   sendChatMessage,
+  softDeleteChatMessage,
+  canAuthorSoftDelete,
   markConversationRead,
   chatAttachmentUrl,
   type ChatConversation,
@@ -27,11 +30,13 @@ import {
 import { socket } from '../api/socket';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatDateTime } from '../utils/dateUtils';
+import { useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
 
 type ComposeMode = null | 'direct' | 'group';
 
 export default function MessagesPage() {
   const { user } = useAuth();
+  const isTechMobileShell = useTechnicianMobileShell();
   const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(searchParams.get('c'));
@@ -48,6 +53,8 @@ export default function MessagesPage() {
   const [groupTitle, setGroupTitle] = useState('');
   const [groupIds, setGroupIds] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [nowTick, setNowTick] = useState(() => Date.now());
   const [mobileShowThread, setMobileShowThread] = useState(Boolean(searchParams.get('c')));
   const [zoomSrc, setZoomSrc] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -89,6 +96,11 @@ export default function MessagesPage() {
     void loadConversations();
   }, [loadConversations]);
 
+  useEffect(() => {
+    const t = window.setInterval(() => setNowTick(Date.now()), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
+
   useSocketRefresh('refresh_chat', loadConversations);
 
   useEffect(() => {
@@ -118,6 +130,20 @@ export default function MessagesPage() {
   }, [messages.length]);
 
   useEffect(() => {
+    const upsertDeleted = (payload: { conversation_id: string; message: ChatMessage }) => {
+      if (!payload?.conversation_id || !payload.message) return;
+      if (payload.conversation_id === activeId) {
+        setMessages((prev) => {
+          const idx = prev.findIndex((m) => m.id === payload.message.id);
+          if (idx === -1) return [...prev, payload.message];
+          const next = [...prev];
+          next[idx] = payload.message;
+          return next;
+        });
+      }
+      void loadConversations();
+    };
+
     const onMsg = (payload: { conversation_id: string; message: ChatMessage }) => {
       if (!payload?.conversation_id || !payload.message) return;
       if (payload.conversation_id === activeId) {
@@ -129,9 +155,12 @@ export default function MessagesPage() {
       }
       void loadConversations();
     };
+
     socket.on('chat_message', onMsg);
+    socket.on('chat_message_deleted', upsertDeleted);
     return () => {
       socket.off('chat_message', onMsg);
+      socket.off('chat_message_deleted', upsertDeleted);
     };
   }, [activeId, loadConversations]);
 
@@ -140,6 +169,22 @@ export default function MessagesPage() {
     setMobileShowThread(true);
     setSearchParams({ c: id });
     setCompose(null);
+  };
+
+  const handleSoftDelete = async (message: ChatMessage) => {
+    if (!activeId || !canAuthorSoftDelete(message, user?.id)) return;
+    if (!window.confirm('¿Eliminar este mensaje? Quedará como «Mensaje eliminado».')) return;
+    setDeletingId(message.id);
+    setError(null);
+    try {
+      const updated = await softDeleteChatMessage(activeId, message.id);
+      setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+      await loadConversations();
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'No se pudo eliminar el mensaje');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const handleSend = async () => {
@@ -197,7 +242,13 @@ export default function MessagesPage() {
   };
 
   return (
-    <div className="flex h-[calc(100dvh-5.5rem)] min-h-[420px] flex-col gap-3">
+    <div
+      className={`flex min-h-[320px] flex-col gap-3 ${
+        isTechMobileShell
+          ? 'h-[calc(100dvh-11.5rem)] md:h-[calc(100dvh-5.5rem)]'
+          : 'h-[calc(100dvh-5.5rem)]'
+      }`}
+    >
       <div className="flex items-center justify-between gap-2 px-0.5">
         <div>
           <h1 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
@@ -423,7 +474,10 @@ export default function MessagesPage() {
                 ) : (
                   messages.map((m) => {
                     const mine = m.author_id === user?.id;
-                    const att = chatAttachmentUrl(m.attachment_url);
+                    const deleted = Boolean(m.is_deleted);
+                    const canDelete = canAuthorSoftDelete(m, user?.id);
+                    void nowTick; // re-eval ventana 10 min
+                    const att = deleted ? null : chatAttachmentUrl(m.attachment_url);
                     const img =
                       att &&
                       (m.attachment_url?.match(/\.(png|jpe?g|gif|webp)$/i) ||
@@ -435,52 +489,82 @@ export default function MessagesPage() {
                       >
                         <div
                           className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
-                            mine
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100'
+                            deleted
+                              ? 'bg-slate-50 text-slate-400 italic dark:bg-slate-800/50 dark:text-slate-500'
+                              : mine
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100'
                           }`}
                         >
-                          {!mine && (
+                          {!mine && !deleted && (
                             <p className="mb-0.5 text-[10px] font-bold opacity-70">
                               {m.author?.name || 'Usuario'}
                             </p>
                           )}
-                          {m.body && !m.body.startsWith('(archivo)') && (
-                            <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                          {deleted ? (
+                            <p className="text-xs not-italic font-medium">Mensaje eliminado</p>
+                          ) : (
+                            <>
+                              {m.body && !m.body.startsWith('(archivo)') && (
+                                <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                              )}
+                              {att && img && (
+                                <button
+                                  type="button"
+                                  onClick={() => setZoomSrc(att)}
+                                  className="mt-1 block overflow-hidden rounded-lg"
+                                >
+                                  <img
+                                    src={att}
+                                    alt={m.attachment_name || 'Adjunto'}
+                                    className="max-h-48 max-w-full object-cover"
+                                  />
+                                </button>
+                              )}
+                              {att && !img && (
+                                <a
+                                  href={att}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className={`mt-1 inline-flex items-center gap-1 text-xs font-semibold underline ${
+                                    mine
+                                      ? 'text-emerald-50'
+                                      : 'text-emerald-700 dark:text-emerald-300'
+                                  }`}
+                                >
+                                  <Paperclip size={12} />
+                                  {m.attachment_name || 'Archivo'}
+                                </a>
+                              )}
+                            </>
                           )}
-                          {att && img && (
-                            <button
-                              type="button"
-                              onClick={() => setZoomSrc(att)}
-                              className="mt-1 block overflow-hidden rounded-lg"
-                            >
-                              <img
-                                src={att}
-                                alt={m.attachment_name || 'Adjunto'}
-                                className="max-h-48 max-w-full object-cover"
-                              />
-                            </button>
-                          )}
-                          {att && !img && (
-                            <a
-                              href={att}
-                              target="_blank"
-                              rel="noreferrer"
-                              className={`mt-1 inline-flex items-center gap-1 text-xs font-semibold underline ${
-                                mine ? 'text-emerald-50' : 'text-emerald-700 dark:text-emerald-300'
-                              }`}
-                            >
-                              <Paperclip size={12} />
-                              {m.attachment_name || 'Archivo'}
-                            </a>
-                          )}
-                          <p
-                            className={`mt-1 text-[10px] ${
-                              mine ? 'text-emerald-100' : 'text-slate-400'
+                          <div
+                            className={`mt-1 flex items-center gap-2 text-[10px] ${
+                              deleted
+                                ? 'text-slate-400'
+                                : mine
+                                  ? 'text-emerald-100'
+                                  : 'text-slate-400'
                             }`}
                           >
-                            {formatDateTime(m.created_at)}
-                          </p>
+                            <span>{formatDateTime(m.created_at)}</span>
+                            {canDelete && (
+                              <button
+                                type="button"
+                                disabled={deletingId === m.id}
+                                onClick={() => void handleSoftDelete(m)}
+                                className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 font-semibold text-emerald-50/90 hover:bg-emerald-700/50 disabled:opacity-50"
+                                title="Eliminar (hasta 10 min)"
+                              >
+                                {deletingId === m.id ? (
+                                  <Loader2 size={11} className="animate-spin" />
+                                ) : (
+                                  <Trash2 size={11} />
+                                )}
+                                Eliminar
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );

@@ -52,11 +52,39 @@ export const requireRole = (roles: string[]) => {
   };
 };
 
+/**
+ * Bloquea mutaciones para OBSERVADOR (solo consulta + Mensajes).
+ * No aplicar en /api/chat ni en lecturas / preferencias / notificaciones vistas.
+ */
+export const requireWritable = (req: AuthRequest, res: Response, next: NextFunction): void => {
+  if (!req.user) {
+    res.status(401).json({ error: 'No autenticado' });
+    return;
+  }
+  if (req.user.role === 'OBSERVADOR') {
+    res.status(403).json({
+      error: 'Tu perfil (Observador) solo permite consultar y usar Mensajes',
+    });
+    return;
+  }
+  next();
+};
+
 export const requirePermission = (permission: string) => {
   return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     if (!req.user) {
       res.status(401).json({ error: 'No autenticado' });
       return;
+    }
+
+    if (req.user.role === 'OBSERVADOR') {
+      const readOk = permission === 'VIEW_ALL_WORK_ORDERS' || permission === 'VIEW_RCA';
+      if (!readOk) {
+        res.status(403).json({
+          error: 'Tu perfil (Observador) solo permite consultar y usar Mensajes',
+        });
+        return;
+      }
     }
 
     try {

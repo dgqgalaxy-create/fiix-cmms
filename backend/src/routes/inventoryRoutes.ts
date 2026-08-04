@@ -8,7 +8,7 @@ import {
   getInventorySummary,
   searchImages, proxyImage
 } from '../controllers/inventoryController';
-import { authenticate, requirePermission } from '../middlewares/authMiddleware';
+import { authenticate, requirePermission, requireWritable } from '../middlewares/authMiddleware';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
@@ -45,32 +45,32 @@ router.get('/images/search', authenticate, requirePermission('MANAGE_INVENTORY')
 router.get('/images/proxy', authenticate, requirePermission('MANAGE_INVENTORY'), proxyImage);
 
 router.get('/categories', getCategories);
-router.post('/categories', requirePermission('MANAGE_INVENTORY'), createCategory);
-router.patch('/categories/:id', requirePermission('MANAGE_INVENTORY'), updateCategory);
-router.delete('/categories/:id', requirePermission('MANAGE_INVENTORY'), deleteCategory);
+router.post('/categories', requireWritable, requirePermission('MANAGE_INVENTORY'), createCategory);
+router.patch('/categories/:id', requireWritable, requirePermission('MANAGE_INVENTORY'), updateCategory);
+router.delete('/categories/:id', requireWritable, requirePermission('MANAGE_INVENTORY'), deleteCategory);
 
 router.get('/locations', getLocations);
-router.post('/locations', requirePermission('MANAGE_INVENTORY'), createLocation);
-router.patch('/locations/:id', requirePermission('MANAGE_INVENTORY'), updateLocation);
-router.delete('/locations/:id', requirePermission('MANAGE_INVENTORY'), deleteLocation);
+router.post('/locations', requireWritable, requirePermission('MANAGE_INVENTORY'), createLocation);
+router.patch('/locations/:id', requireWritable, requirePermission('MANAGE_INVENTORY'), updateLocation);
+router.delete('/locations/:id', requireWritable, requirePermission('MANAGE_INVENTORY'), deleteLocation);
 
 router.get('/vendors', getVendors);
-router.post('/vendors', requirePermission('MANAGE_INVENTORY'), createVendor);
-router.patch('/vendors/:id', requirePermission('MANAGE_INVENTORY'), updateVendor);
-router.delete('/vendors/:id', requirePermission('MANAGE_INVENTORY'), deleteVendor);
+router.post('/vendors', requireWritable, requirePermission('MANAGE_INVENTORY'), createVendor);
+router.patch('/vendors/:id', requireWritable, requirePermission('MANAGE_INVENTORY'), updateVendor);
+router.delete('/vendors/:id', requireWritable, requirePermission('MANAGE_INVENTORY'), deleteVendor);
 
 // ==========================================
 // RUTAS DE REPUESTOS (ITEMS)
 // ==========================================
 router.get('/items', getItems);
-router.post('/items', requirePermission('MANAGE_INVENTORY'), upload.fields([{ name: 'image', maxCount: 1 }]), createItem);
-router.patch('/items/:id', requirePermission('MANAGE_INVENTORY'), upload.fields([{ name: 'image', maxCount: 1 }]), updateItem);
+router.post('/items', requireWritable, requirePermission('MANAGE_INVENTORY'), upload.fields([{ name: 'image', maxCount: 1 }]), createItem);
+router.patch('/items/:id', requireWritable, requirePermission('MANAGE_INVENTORY'), upload.fields([{ name: 'image', maxCount: 1 }]), updateItem);
 
 // ==========================================
 // RUTAS DE TRANSACCIONES E HISTORIAL
 // ==========================================
 router.get('/transactions', getTransactions);
 // Los técnicos también pueden registrar salidas al usar repuestos
-router.post('/transactions', createTransaction);
+router.post('/transactions', requireWritable, createTransaction);
 
 export default router;

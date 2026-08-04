@@ -9,6 +9,7 @@ import {
   addGroupParticipants,
   listMessages,
   sendMessage,
+  softDeleteMessage,
   markConversationRead,
 } from '../controllers/chatController';
 
@@ -27,6 +28,7 @@ router.post(
   chatUpload.fields([{ name: 'attachment', maxCount: 1 }]),
   sendMessage
 );
+router.delete('/conversations/:id/messages/:messageId', softDeleteMessage);
 router.post('/conversations/:id/read', markConversationRead);
 
 export default router;

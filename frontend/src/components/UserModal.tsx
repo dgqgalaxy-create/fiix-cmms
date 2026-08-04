@@ -168,8 +168,9 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
                 disabled={user?.id === currentUser?.userId} // Don't allow changing your own role easily
               >
                 <option value="TECNICO">TÉCNICO (Solo puede ver y atender sus órdenes)</option>
-                <option value="GESTIONADOR">GESTIONADOR (Crea órdenes y asigan a técnicos)</option>
+                <option value="GESTIONADOR">GESTIONADOR (Crea órdenes y asigna a técnicos)</option>
                 <option value="ADMINISTRADOR">ADMINISTRADOR (Control total del sistema)</option>
+                <option value="OBSERVADOR">OBSERVADOR (Solo consulta + Mensajes; sin editar)</option>
               </select>
             </div>
 

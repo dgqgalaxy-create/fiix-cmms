@@ -58,7 +58,8 @@ const isChecklistPrintable = (status: DailyChecklist['status'] | undefined) =>
 export default function ChecklistFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { hasPermission, user } = useAuth();
+  const { hasPermission, user, canWriteOps } = useAuth();
+  const isAdmin = user?.role === 'ADMINISTRADOR';
   const userId = user?.userId;
 
   const [checklist, setChecklist] = useState<DailyChecklist | null>(null);
@@ -193,7 +194,6 @@ export default function ChecklistFormPage() {
 
   const pendingContinuation =
     checklist?.pending_continuation?.status === 'PENDING' ? checklist.pending_continuation : null;
-  const isAdmin = user?.role === 'ADMINISTRADOR';
   const isNonCompliance = checklist?.status === 'NON_COMPLIANCE';
   const canAssignTechnician =
     !!isNonCompliance && isAdmin && !checklist?.technician_id;
@@ -653,11 +653,11 @@ export default function ChecklistFormPage() {
     return <div className="p-8 text-center text-slate-500 dark:text-slate-400">Cargando formato...</div>;
   }
 
-  const isEditable = isClaimedByMe;
+  const isEditable = isClaimedByMe && canWriteOps;
   const isPendingReview = checklist.status === 'COMPLETED';
-  const canReview = isPendingReview && hasPermission('APPROVE_CHECKLIST');
+  const canReview = isPendingReview && hasPermission('APPROVE_CHECKLIST') && canWriteOps;
   const canPrint = isChecklistPrintable(checklist.status);
-  const canTransfer = isClaimedByMe && !pendingTransfer;
+  const canTransfer = isClaimedByMe && !pendingTransfer && canWriteOps;
   const columnCount = Math.max(1, checklist.column_count || 5);
   const lineNumbers = Array.from({ length: columnCount }, (_, i) => i + 1);
   const missingCellCount = incompleteMissing.reduce((n, m) => n + m.missingLines.length, 0);
@@ -697,7 +697,7 @@ export default function ChecklistFormPage() {
             <span className="hidden md:inline">Imprimir / PDF</span>
           </button>
 
-          {isUnclaimedDraft && (
+          {isUnclaimedDraft && canWriteOps && (
             <button
               onClick={handleStartChecklist}
               disabled={isStarting}
@@ -886,9 +886,12 @@ export default function ChecklistFormPage() {
           <div className="min-w-0 flex-1 text-sm">
             <p className="font-semibold">Checklist sin asignar</p>
             <p className="mt-0.5 text-emerald-800/90 dark:text-emerald-300/90">
-              Puedes revisarlo en solo lectura. Pulsa «Iniciar checklist» para reclamarlo y poder editarlo o enviarlo.
+              {canWriteOps
+                ? 'Puedes revisarlo en solo lectura. Pulsa «Iniciar checklist» para reclamarlo y poder editarlo o enviarlo.'
+                : 'Como Observador solo puedes consultarlo (sin iniciar ni editar).'}
             </p>
           </div>
+          {canWriteOps && (
           <button
             type="button"
             onClick={handleStartChecklist}
@@ -897,6 +900,7 @@ export default function ChecklistFormPage() {
           >
             {isStarting ? 'Iniciando...' : 'Iniciar checklist'}
           </button>
+          )}
         </div>
       )}
 

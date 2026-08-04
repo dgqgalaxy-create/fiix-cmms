@@ -16,6 +16,8 @@ export interface ChatMessage {
   attachment_url?: string | null;
   attachment_name?: string | null;
   created_at: string;
+  deleted_at?: string | null;
+  is_deleted?: boolean;
 }
 
 export interface ChatConversation {
@@ -38,6 +40,7 @@ export interface ChatConversation {
     author?: { id: string; name: string; role: string };
     created_at: string;
     attachment_url?: string | null;
+    is_deleted?: boolean;
   } | null;
   unread_count: number;
 }
@@ -94,6 +97,23 @@ export const sendChatMessage = async (
   if (data.attachment) form.append('attachment', data.attachment);
   const res = await api.post(`/chat/conversations/${conversationId}/messages`, form);
   return res.data;
+};
+
+export const softDeleteChatMessage = async (
+  conversationId: string,
+  messageId: string
+): Promise<ChatMessage> => {
+  const res = await api.delete(`/chat/conversations/${conversationId}/messages/${messageId}`);
+  return res.data;
+};
+
+/** Ventana en cliente (alineada con el backend: 10 minutos). */
+export const AUTHOR_DELETE_WINDOW_MS = 10 * 60 * 1000;
+
+export const canAuthorSoftDelete = (message: ChatMessage, myUserId?: string | null) => {
+  if (!myUserId || message.author_id !== myUserId || message.is_deleted) return false;
+  const age = Date.now() - new Date(message.created_at).getTime();
+  return age >= 0 && age <= AUTHOR_DELETE_WINDOW_MS;
 };
 
 export const markConversationRead = async (conversationId: string): Promise<void> => {

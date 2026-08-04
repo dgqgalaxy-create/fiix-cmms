@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { WorkOrder } from '../api/workOrders';
-import { Clock, CheckCircle2, AlertCircle, Wrench, Calendar, MapPin, Tag, User, ChevronUp, ChevronDown, Camera } from 'lucide-react';
+import { Clock, CheckCircle2, AlertCircle, Wrench, Calendar, MapPin, Tag, User, ChevronUp, ChevronDown, Camera, MessageSquare } from 'lucide-react';
 import { SlaBadge } from './SlaBadge';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { BACKEND_URL } from '../api/axios';
@@ -41,6 +41,20 @@ const formatFriendlyDate = (dateString: string) => {
   } catch(e) {
     return '-';
   }
+};
+
+const commentPreview = (wo: WorkOrder) => {
+  const n = wo.comments_count || 0;
+  if (n <= 0 || !wo.latest_comment) return null;
+  const author = wo.latest_comment.author?.name?.split(' ')[0] || 'Alguien';
+  const body = (wo.latest_comment.body || '').trim();
+  const text =
+    body && !body.startsWith('(archivo)')
+      ? body
+      : wo.latest_comment.has_attachment
+        ? 'Adjunto'
+        : 'Comentario';
+  return { n, author, text };
 };
 
 export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onScheduleClick }: Props) => {
@@ -128,6 +142,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
       <div className="wo-print-cards block xl:hidden print:hidden flex flex-col gap-3">
         {sortedWorkOrders.map((wo) => {
           const cardPhotoUrl = wo.request_image_url || wo.before_image_url;
+          const comment = commentPreview(wo);
           return (
         <div 
           key={wo.id} 
@@ -165,6 +180,16 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                     <Camera size={12} />
                   </span>
                 )}
+
+                {comment && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full border border-sky-200/90 bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-800 dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-200"
+                    title={`${comment.n} comentario${comment.n === 1 ? '' : 's'}`}
+                  >
+                    <MessageSquare size={11} />
+                    {comment.n}
+                  </span>
+                )}
                 
                 {wo.priority === 'URGENTE' && (
                   <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100 uppercase tracking-widest flex items-center gap-1">
@@ -197,6 +222,19 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                 <p className="text-slate-500 dark:text-slate-400 dark:text-slate-300 text-sm line-clamp-2 leading-relaxed mt-0.5">
                   {wo.description}
                 </p>
+              )}
+              {comment && (
+                <div className="mt-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-sky-700/80 dark:text-sky-400/80">
+                    Comentarios ({comment.n})…
+                  </p>
+                  <p className="mt-0.5 flex items-start gap-1.5 text-[11px] text-sky-800/90 dark:text-sky-300/90 line-clamp-2">
+                    <MessageSquare size={12} className="mt-0.5 shrink-0 opacity-70" />
+                    <span>
+                      <span className="font-semibold">{comment.author}:</span> {comment.text}
+                    </span>
+                  </p>
+                </div>
               )}
             </div>
 
@@ -331,6 +369,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50 print:divide-slate-300">
               {sortedWorkOrders.map((wo) => {
                 const rowPhotoUrl = wo.request_image_url || wo.before_image_url;
+                const comment = commentPreview(wo);
                 return (
                 <tr
                   key={wo.id} 
@@ -356,6 +395,15 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                           <Camera size={11} /> Foto
                         </span>
                       )}
+                      {comment && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full border border-sky-200/90 bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-800 dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-200 print:hidden"
+                          title={`${comment.n} comentario${comment.n === 1 ? '' : 's'}`}
+                        >
+                          <MessageSquare size={11} />
+                          {comment.n}
+                        </span>
+                      )}
                       {wo.priority === 'URGENTE' && (
                         <span className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-0.5 print:px-0.5 print:py-0 rounded text-[10px] print:text-[8px] font-bold border border-red-100 dark:border-red-800 uppercase tracking-widest flex items-center gap-1 print:gap-0 print:[&_svg]:hidden">
                           <AlertCircle size={10} /> Urgente
@@ -378,6 +426,19 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                           </>
                         )}
                       </div>
+                      {comment && (
+                        <div className="mt-1 print:hidden">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-sky-700/80 dark:text-sky-400/80">
+                            Comentarios ({comment.n})…
+                          </p>
+                          <p className="mt-0.5 flex items-start gap-1 text-[11px] text-sky-800 dark:text-sky-300 line-clamp-1">
+                            <MessageSquare size={11} className="mt-0.5 shrink-0 opacity-70" />
+                            <span>
+                              <span className="font-semibold">{comment.author}:</span> {comment.text}
+                            </span>
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 align-top print:hidden">

@@ -23,7 +23,7 @@ import { InfoTip } from '../components/common/InfoTip';
 
 export const InventoryPage = () => {
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, canWriteOps } = useAuth();
   const canManage = hasPermission('MANAGE_INVENTORY');
   const canManagePurchases = hasPermission('MANAGE_PURCHASES');
   const canUseScanner = hasPermission('USE_QR_SCANNER');
@@ -1429,7 +1429,7 @@ export const InventoryPage = () => {
         readOnly={!canManage}
         // OUT permitido a todos en Inventario; IN solo con REGISTER_INVENTORY_ENTRIES (TransactionModal).
         // No atar a MANAGE_INVENTORY: Técnico/Gestionador deben ver «Registrar movimiento» en el detalle.
-        onQuickTransaction={handleOpenTransactionModal}
+        onQuickTransaction={canWriteOps ? handleOpenTransactionModal : undefined}
         itemList={selectedItem ? filteredItems : undefined}
         onNavigateItem={setSelectedItem}
         navigationPaused={isTransactionModalOpen}

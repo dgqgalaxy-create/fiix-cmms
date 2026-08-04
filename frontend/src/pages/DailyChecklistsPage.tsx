@@ -16,7 +16,7 @@ export default function DailyChecklistsPage() {
   const [sortField, setSortField] = useState<'date' | 'technician' | 'leader' | 'status'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, canWriteOps } = useAuth();
   const userId = user?.userId;
 
   const draftActionLabel = (checklist: DailyChecklist) => {
@@ -156,6 +156,7 @@ export default function DailyChecklistsPage() {
         </div>
 
         {!todayChecklist ? (
+          canWriteOps ? (
           <button
             onClick={handleCreateToday}
             className="shrink-0 flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-2 sm:px-5 sm:py-2.5 rounded-lg sm:rounded-xl hover:bg-emerald-700 transition-all text-sm font-medium shadow-sm"
@@ -164,6 +165,7 @@ export default function DailyChecklistsPage() {
             <span className="sm:hidden">Hoy</span>
             <span className="hidden sm:inline">Crear Checklist de Hoy</span>
           </button>
+          ) : null
         ) : (
           <button
             onClick={() => navigate(`/checklists/${todayChecklist.id}`)}

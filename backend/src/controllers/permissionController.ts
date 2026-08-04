@@ -75,6 +75,29 @@ const defaultPermissions: Record<Role, any> = {
     MANAGE_RCA: false,
     VIEW_SETTINGS: false,
   },
+  OBSERVADOR: {
+    MANAGE_USERS: false,
+    MANAGE_ASSETS: false,
+    MANAGE_ZONES: false,
+    MANAGE_KPIS: false,
+    CREATE_WORK_ORDERS: false,
+    EDIT_WORK_ORDERS: false,
+    DELETE_WORK_ORDERS: false,
+    MANAGE_PERMISSIONS: false,
+    MANAGE_INVENTORY: false,
+    MANAGE_MAINTENANCE_PLANS: false,
+    VIEW_ALL_WORK_ORDERS: true,
+    MANAGE_CALENDAR: false,
+    USE_QR_SCANNER: false,
+    APPROVE_CHECKLIST: false,
+    MANAGE_CHECKLIST_CATALOG: false,
+    MANAGE_PURCHASES: false,
+    REGISTER_INVENTORY_ENTRIES: false,
+    MANAGE_SHIFTS: false,
+    VIEW_RCA: true,
+    MANAGE_RCA: false,
+    VIEW_SETTINGS: false,
+  },
 };
 
 const getOrCreatePermissions = async (role: Role) => {
@@ -159,10 +182,23 @@ export const updateRolePermissions = async (req: AuthRequest, res: Response): Pr
       return;
     }
 
+    // Observador: solo lectura; no se pueden otorgar permisos de escritura desde la UI.
+    let nextPerms = permissions as Record<string, boolean>;
+    if (role === Role.OBSERVADOR) {
+      const defaults = defaultPermissions.OBSERVADOR;
+      nextPerms = { ...defaults };
+      if (typeof permissions.VIEW_ALL_WORK_ORDERS === 'boolean') {
+        nextPerms.VIEW_ALL_WORK_ORDERS = permissions.VIEW_ALL_WORK_ORDERS;
+      }
+      if (typeof permissions.VIEW_RCA === 'boolean') {
+        nextPerms.VIEW_RCA = permissions.VIEW_RCA;
+      }
+    }
+
     const updated = await prisma.rolePermission.upsert({
       where: { role },
-      update: { permissions },
-      create: { role, permissions },
+      update: { permissions: nextPerms },
+      create: { role, permissions: nextPerms },
     });
 
     const actorId = req.user?.userId;

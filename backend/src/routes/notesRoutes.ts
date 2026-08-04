@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middlewares/authMiddleware';
+import { requireWritable } from '../middlewares/authMiddleware';
 import {
   listPersonalNotes,
   createPersonalNote,
@@ -28,24 +29,25 @@ router.use(authenticate);
 router.get('/summary', notesSummary);
 
 router.get('/personal', listPersonalNotes);
-router.post('/personal', createPersonalNote);
-router.put('/personal/:id', updatePersonalNote);
-router.post('/personal/:id/snooze', snoozePersonalNote);
-router.delete('/personal/:id', deletePersonalNote);
+router.post('/personal', requireWritable, createPersonalNote);
+router.put('/personal/:id', requireWritable, updatePersonalNote);
+router.post('/personal/:id/snooze', requireWritable, snoozePersonalNote);
+router.delete('/personal/:id', requireWritable, deletePersonalNote);
 
 router.get('/tasks', listOperationalTasks);
-router.post('/tasks', createOperationalTask);
-router.put('/tasks/:id', updateOperationalTask);
-router.post('/tasks/:id/snooze', snoozeOperationalTask);
-router.delete('/tasks/:id', deleteOperationalTask);
+router.post('/tasks', requireWritable, createOperationalTask);
+router.put('/tasks/:id', requireWritable, updateOperationalTask);
+router.post('/tasks/:id/snooze', requireWritable, snoozeOperationalTask);
+router.delete('/tasks/:id', requireWritable, deleteOperationalTask);
 
 router.get('/announcements', listAnnouncements);
 router.post(
   '/announcements',
+  requireWritable,
   announcementUpload.fields([{ name: 'image', maxCount: 1 }]),
   createAnnouncement
 );
 router.post('/announcements/:id/seen', markAnnouncementSeen);
-router.delete('/announcements/:id', deleteAnnouncement);
+router.delete('/announcements/:id', requireWritable, deleteAnnouncement);
 
 export default router;

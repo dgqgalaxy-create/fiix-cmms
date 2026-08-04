@@ -69,10 +69,11 @@ function dueTone(iso?: string | null): 'overdue' | 'soon' | 'ok' | 'none' {
 }
 
 export default function NotesPage() {
-  const { user } = useAuth();
-  const userId = user?.userId;
+  const { user, canWriteOps } = useAuth();
+  const userId = user?.id || user?.userId;
   const canManageTasks =
-    user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR';
+    canWriteOps &&
+    (user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR');
   const isAdmin = user?.role === 'ADMINISTRADOR';
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<Tab>(() => {
@@ -453,6 +454,7 @@ export default function NotesPage() {
 
       {tab === 'notes' && (
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+          {canWriteOps ? (
           <article className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
@@ -505,8 +507,13 @@ export default function NotesPage() {
               {saving ? 'Guardando…' : editingNote ? 'Guardar cambios' : 'Guardar nota'}
             </button>
           </article>
+          ) : (
+            <article className="rounded-2xl border border-violet-200 bg-violet-50/60 p-3 sm:p-4 text-sm text-violet-900 dark:border-violet-900/40 dark:bg-violet-950/30 dark:text-violet-200">
+              Como Observador puedes consultar avisos y pendientes asignados, pero no crear ni editar notas.
+            </article>
+          )}
 
-          <div className="space-y-1.5 sm:space-y-2">
+          <div className={`space-y-1.5 sm:space-y-2 ${canWriteOps ? '' : 'lg:col-span-2'}`}>
             {loading && notes.length === 0 ? (
               <p className="text-sm text-slate-400 py-6 text-center">Cargando…</p>
             ) : notes.length === 0 ? (
@@ -550,7 +557,7 @@ export default function NotesPage() {
                         )}
                       </div>
                       <div className="flex shrink-0 flex-wrap justify-end gap-0.5">
-                        {!note.is_done && (
+                        {canWriteOps && !note.is_done && (
                           <>
                             <button
                               type="button"
@@ -594,7 +601,7 @@ export default function NotesPage() {
                             </button>
                           </>
                         )}
-                        {note.is_done && (
+                        {canWriteOps && note.is_done && (
                           <button
                             type="button"
                             title="Reabrir"
@@ -608,6 +615,7 @@ export default function NotesPage() {
                             <RotateCcw size={15} />
                           </button>
                         )}
+                        {canWriteOps && (
                         <button
                           type="button"
                           title="Eliminar"
@@ -619,6 +627,7 @@ export default function NotesPage() {
                         >
                           <Trash2 size={15} />
                         </button>
+                        )}
                       </div>
                     </div>
                   </article>

@@ -229,15 +229,41 @@ export const getWorkOrders = async (req: AuthRequest, res: Response): Promise<vo
         zone: { select: { id: true, name: true } },
         created_by: { select: { id: true, name: true } },
         assigned_technicians: { select: { id: true, name: true } },
+        _count: { select: { comments: true } },
+        comments: {
+          orderBy: { created_at: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            body: true,
+            created_at: true,
+            attachment_url: true,
+            author: { select: { id: true, name: true } },
+          },
+        },
       },
       orderBy: { created_at: 'desc' },
     });
 
     const { sla_policy } = await getSlaSettings();
-    const withSla = workOrders.map((wo) => ({
-      ...wo,
-      sla: computeWorkOrderSla(wo, sla_policy),
-    }));
+    const withSla = workOrders.map((wo) => {
+      const { _count, comments, ...rest } = wo;
+      const latest = comments[0] || null;
+      return {
+        ...rest,
+        comments_count: _count.comments,
+        latest_comment: latest
+          ? {
+              id: latest.id,
+              body: latest.body,
+              created_at: latest.created_at,
+              has_attachment: Boolean(latest.attachment_url),
+              author: latest.author,
+            }
+          : null,
+        sla: computeWorkOrderSla(wo, sla_policy),
+      };
+    });
     res.json(withSla);
   } catch (error) {
     console.error(error);

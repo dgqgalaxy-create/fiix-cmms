@@ -85,7 +85,20 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.54.0 (Actualización: 4 de Agosto de 2026)
+## 🚀 Versión Actual: v1.56.1 (Actualización: 4 de Agosto de 2026)
+
+### Novedades en v1.56.1
+- **Mejora:** Listado de OT — contador de comentarios + preview del más reciente en tarjetas/tabla.
+
+### Novedades en v1.56.0
+- **Nuevo:** Rol **Observador** — consulta operativa (Inicio, OT, activos, inventario, etc.) + Mensajes; sin crear/editar/eliminar. Mutaciones bloqueadas en API (`requireWritable`); chat permitido.
+
+### Novedades en v1.55.0
+- **Nuevo:** Soft-delete de mensajes propios (10 min) → «Mensaje eliminado»; sin panel Admin ni lectura de chats ajenos.
+- **Corrección (1.54.1):** Compositor de Mensajes encima de la barra inferior en interfaz móvil.
+
+### Novedades en v1.54.1
+- **Corrección:** Mensajes en interfaz móvil — el compositor queda encima de la barra inferior (Mis OT / Escanear / Inventario / Inicio).
 
 ### Novedades en v1.54.0
 - **Nuevo:** Comentarios en detalle de OT (lectura/escritura para quien pueda abrirla; adjuntos; socket en vivo).
@@ -679,6 +692,7 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 - [x] **Gestión con Códigos QR:** Escaneo físico en máquinas para abrir historiales y escaneo en estantes para el control rápido de refacciones (incluye galería si no hay HTTPS).
 - [x] **Árbol de Fallas (RCA):** Clasificación Problema → Causa → Solución para Pareto; al cerrar correctivas es **opcional**.
 - [x] **Calendario de Carga de Trabajo / Turnos (Roster):** Vista interactiva para gestionar y asignar turnos, días festivos y faltas del personal (Completado en v1.7.3).
+- [x] **Rol Observador (v1.56.0):** Solo consulta + Mensajes; mutaciones bloqueadas en API.
 - [x] **Mensajería interna (v1.54.0):** Comentarios en OT; chat 1:1 y grupos ad-hoc con adjuntos; avisos con formulario colapsado.
 - [ ] **Portal de Contratistas:** Acceso limitado para proveedores externos donde puedan reportar sus trabajos sin ver datos sensibles.
 - [ ] **Multiplanta / Multisítio:** Segregación de información para empresas con múltiples fábricas con un dashboard corporativo global.

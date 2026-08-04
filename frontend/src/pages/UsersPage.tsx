@@ -113,7 +113,7 @@ export const UsersPage = () => {
     filteredUsers = filteredUsers.filter(u => u.name.toLowerCase().includes(term));
   }
 
-  const roleValue = { 'ADMINISTRADOR': 3, 'GESTIONADOR': 2, 'TECNICO': 1 };
+  const roleValue = { 'ADMINISTRADOR': 4, 'GESTIONADOR': 3, 'TECNICO': 2, 'OBSERVADOR': 1 };
   filteredUsers.sort((a, b) => (roleValue[b.role as keyof typeof roleValue] || 0) - (roleValue[a.role as keyof typeof roleValue] || 0));
 
   return (

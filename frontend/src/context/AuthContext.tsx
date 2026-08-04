@@ -23,6 +23,10 @@ interface AuthContextType {
   login: (token: string, userData?: any) => void;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
+  /** Perfil Observador: solo consulta + Mensajes. */
+  isObserver: boolean;
+  /** Puede crear/editar/eliminar datos operativos (false para Observador). */
+  canWriteOps: boolean;
   updateUserPreferences: (prefs: any) => void;
   clearMustChangePassword: () => void;
 }
@@ -158,6 +162,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(prev => prev ? { ...prev, must_change_password: false } : prev);
   };
 
+  const isObserver = user?.role === 'OBSERVADOR';
+  const canWriteOps = !!user && user.role !== 'OBSERVADOR';
+
   return (
     <AuthContext.Provider
       value={{
@@ -168,6 +175,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         login,
         logout,
         hasPermission,
+        isObserver,
+        canWriteOps,
         updateUserPreferences,
         clearMustChangePassword,
       }}

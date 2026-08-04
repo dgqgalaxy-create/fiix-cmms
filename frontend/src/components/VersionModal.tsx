@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.54.0";
+export const APP_VERSION = "1.56.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,10 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: En Órdenes de Trabajo, cada tarjeta/fila muestra cuántos comentarios tiene y un adelanto del más reciente.",
+    "Nuevo: Rol Observador — solo consulta operativa + Mensajes (sin crear/editar/eliminar). Ideal para gerentes de otras áreas o auditores.",
+    "Nuevo: En Mensajes puedes eliminar tus propios mensajes durante los primeros 10 minutos (quedan como «Mensaje eliminado»; el Admin no lee chats ajenos ni ve el contenido oculto en la app).",
+    "Corrección: En interfaz móvil, el cuadro para escribir mensajes queda encima de la barra inferior (Mis OT / Escanear / …), no oculto detrás.",
     "Nuevo: Comentarios en el detalle de OT — quien pueda abrir la orden puede leer y escribir (texto + adjunto); actualización en vivo.",
     "Nuevo: Mensajes internos — chat 1:1 y grupos ad-hoc con adjuntos; badge de no leídos en el menú; notificaciones in-app y push.",
     "Mejora: Avisos globales — el formulario de publicación queda oculto detrás del botón «Nuevo aviso global».",

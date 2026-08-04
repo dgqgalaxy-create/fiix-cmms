@@ -134,16 +134,29 @@ export const PermissionsPage = () => {
         {rolePermissions.map((rp) => (
           <div key={rp.role} className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
             <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 flex justify-between items-center gap-3">
-              <div className="min-w-0 flex items-center gap-3">
+              <div className="min-w-0 flex flex-col gap-0.5">
                 <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 truncate" title={rp.role}>{rp.role}</h3>
-                {savingRole === rp.role && <Loader2 size={16} className="animate-spin text-emerald-600 dark:text-emerald-400" />}
+                {rp.role === 'OBSERVADOR' && (
+                  <p className="text-[11px] text-violet-700 dark:text-violet-300 font-medium">
+                    Solo consulta + Mensajes. Las mutaciones están bloqueadas en el servidor.
+                  </p>
+                )}
               </div>
+              {savingRole === rp.role && <Loader2 size={16} className="animate-spin text-emerald-600 dark:text-emerald-400" />}
             </div>
             <div className="p-2 flex-1">
               {AVAILABLE_PERMISSIONS.map((perm) => {
                 const isEnabled = !!rp.permissions[perm.key];
                 // Evitar que el administrador se quite sus propios permisos vitales
-                const isLocked = rp.role === 'ADMINISTRADOR' && (perm.key === 'MANAGE_PERMISSIONS' || perm.key === 'MANAGE_USERS');
+                const isLockedAdmin =
+                  rp.role === 'ADMINISTRADOR' &&
+                  (perm.key === 'MANAGE_PERMISSIONS' || perm.key === 'MANAGE_USERS');
+                // Observador: solo se pueden ajustar permisos de consulta
+                const isLockedObserver =
+                  rp.role === 'OBSERVADOR' &&
+                  perm.key !== 'VIEW_ALL_WORK_ORDERS' &&
+                  perm.key !== 'VIEW_RCA';
+                const isLocked = isLockedAdmin || isLockedObserver;
                 
                 return (
                   <div key={perm.key} className="p-2.5 sm:p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl sm:rounded-2xl transition-colors flex items-start justify-between gap-4">
