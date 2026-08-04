@@ -468,8 +468,8 @@ export default function MessagesPage() {
                     <Loader2 className="animate-spin text-slate-400" size={22} />
                   </div>
                 ) : messages.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-slate-400">
-                    Escribe el primer mensaje.
+                  <p className="pointer-events-none select-none py-10 text-center text-sm font-medium text-slate-400 dark:text-slate-500">
+                    Sin mensajes
                   </p>
                 ) : (
                   messages.map((m) => {

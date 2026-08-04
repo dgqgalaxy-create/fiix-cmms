@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.1";
+export const APP_VERSION = "1.56.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: En Mensajes, un chat vacío muestra «Sin mensajes» (sin invitar a escribir en el área del hilo; el cuadro de abajo sigue para redactar).",
     "Mejora: En Órdenes de Trabajo, cada tarjeta/fila muestra cuántos comentarios tiene y un adelanto del más reciente.",
     "Nuevo: Rol Observador — solo consulta operativa + Mensajes (sin crear/editar/eliminar). Ideal para gerentes de otras áreas o auditores.",
     "Nuevo: En Mensajes puedes eliminar tus propios mensajes durante los primeros 10 minutos (quedan como «Mensaje eliminado»; el Admin no lee chats ajenos ni ve el contenido oculto en la app).",
