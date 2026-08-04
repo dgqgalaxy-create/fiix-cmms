@@ -1,7 +1,11 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
-import { getVapidPublicKey, isWebPushConfigured } from '../utils/webPush';
+import {
+  getVapidPublicKey,
+  isWebPushConfigured,
+  pruneDuplicatePushSubsForDevice,
+} from '../utils/webPush';
 
 export const getMyNotifications = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -130,6 +134,9 @@ export const subscribePush = async (req: AuthRequest, res: Response): Promise<vo
         user_agent: userAgent,
       },
     });
+
+    // Evita 2 toasts en Windows (Chrome + PWA / suscripciones viejas del mismo PC)
+    await pruneDuplicatePushSubsForDevice(userId, endpoint, userAgent);
 
     res.json({ ok: true, id: sub.id });
   } catch (error) {

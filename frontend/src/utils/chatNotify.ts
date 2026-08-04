@@ -1,8 +1,10 @@
 /** Vibración corta tipo chat (Android / algunos navegadores). */
-export function vibrateChatAlert() {
+export const CHAT_VIBRATE_PATTERN = [400, 120, 400, 120, 400];
+
+export function vibrateChatAlert(pattern: number[] = CHAT_VIBRATE_PATTERN) {
   try {
     if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-      navigator.vibrate([180, 70, 180]);
+      navigator.vibrate(pattern);
     }
   } catch {
     /* ignore */
@@ -81,7 +83,7 @@ export async function showIncomingChatSystemNotification(opts: IncomingChatNotif
     renotify: true,
     silent: false,
     data: { url: opts.url },
-    vibrate: [200, 100, 200],
+    vibrate: CHAT_VIBRATE_PATTERN,
   };
 
   try {

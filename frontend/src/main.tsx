@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { registerSW } from 'virtual:pwa-register'
+import { vibrateChatAlert } from './utils/chatNotify'
 
 // autoUpdate + skipWaiting/clientsClaim: al desplegar, el SW nuevo toma control.
 // onNeedRefresh: avisa a UpdateBanner; si el soft-update falla, el banner hace hard reload
@@ -31,6 +32,16 @@ updateSW = registerSW({
     }
   },
 })
+
+// Push en segundo plano: el SW pide vibrar (Android suele ignorar vibrate de la notificación)
+if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    const data = event.data as { type?: string; pattern?: number[] } | undefined
+    if (data?.type === 'fiix-vibrate') {
+      vibrateChatAlert(Array.isArray(data.pattern) ? data.pattern : undefined)
+    }
+  })
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

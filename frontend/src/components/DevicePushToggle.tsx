@@ -111,8 +111,9 @@ export function DevicePushToggle({ className = '', compact = false }: Props) {
           {!compact && (
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
               Avisos del sistema aunque la app esté en segundo plano (mensajes, OT, SLA…).
-              Actívalo aquí. En Android vibra al llegar el aviso. Requiere HTTPS. En iPhone:
-              instala en Inicio e iOS 16.4+.
+              Actívalo aquí. Requiere HTTPS. En iPhone: instala en Inicio e iOS 16.4+.
+              En Android, si suena pero no vibra: Ajustes → Apps → esta app (o Chrome) →
+              Notificaciones → activa «Vibrar» / «Vibración» en el canal de avisos.
             </p>
           )}
         </div>

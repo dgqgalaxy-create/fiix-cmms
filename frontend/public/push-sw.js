@@ -3,9 +3,14 @@
  * Handlers Web Push para el service worker generado por vite-plugin-pwa
  * (importado vía workbox.importScripts).
  *
- * En Android (PWA instalada) `vibrate` hace vibrar al mostrar la notificación.
- * iOS suele ignorar vibrate; ahí manda el permiso + app en Inicio.
+ * Vibración:
+ * - `vibrate` en showNotification: Android moderno a menudo lo ignora (manda el canal del SO).
+ * - Si hay una pestaña/PWA en segundo plano, pedimos vibrar con postMessage + navigator.vibrate.
+ * - Con la app totalmente cerrada, el usuario debe tener «Vibrar» activo en
+ *   Ajustes → Apps → [GTZ CMMS o Chrome] → Notificaciones.
  */
+var DEFAULT_VIBRATE = [400, 120, 400, 120, 400];
+
 self.addEventListener('push', (event) => {
   let data = { title: 'GTZ CMMS', body: 'Nueva notificación', url: '/home', tag: 'fiix-cmms' };
   try {
@@ -25,30 +30,28 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'GTZ CMMS';
   const url = data.url || '/home';
   const tag = data.tag || url || 'fiix-cmms';
+  const vibrate = Array.isArray(data.vibrate) && data.vibrate.length > 0 ? data.vibrate : DEFAULT_VIBRATE;
   const options = {
     body: data.body || '',
     icon: '/icono_app.jpg',
     badge: '/icono_app.jpg',
-    data: { url },
+    data: { url, vibrate },
     tag,
     renotify: true,
-    // Sonido del canal de notificaciones del SO (no silenciar)
+    // Misma etiqueta → Windows/Chrome reemplaza en lugar de apilar duplicados
     silent: false,
-    // Patrón tipo chat (ms): vibra — pausa — vibra
-    vibrate: Array.isArray(data.vibrate) ? data.vibrate : [200, 100, 200],
+    vibrate,
     timestamp: Date.now(),
   };
 
   event.waitUntil(
     (async () => {
-      // Si la PWA ya está abierta y en primer plano, el banner in-app basta
-      // (evita doble aviso: toast + notificación del sistema).
       try {
         const clientList = await clients.matchAll({
           type: 'window',
           includeUncontrolled: true,
         });
-        const appOpen = clientList.some((client) => {
+        const appFocused = clientList.some((client) => {
           if (!client.url || !client.url.startsWith(self.location.origin)) return false;
           if (client.focused) return true;
           if (typeof client.visibilityState === 'string' && client.visibilityState === 'visible') {
@@ -56,7 +59,19 @@ self.addEventListener('push', (event) => {
           }
           return false;
         });
-        if (appOpen) return;
+        // Primer plano: banner in-app (y su propia vibración)
+        if (appFocused) return;
+
+        // App en segundo plano (aún hay cliente): forzar vibración vía página
+        for (const client of clientList) {
+          if (client.url && client.url.startsWith(self.location.origin)) {
+            try {
+              client.postMessage({ type: 'fiix-vibrate', pattern: vibrate });
+            } catch {
+              /* ignore */
+            }
+          }
+        }
       } catch {
         /* si falla el check, mostrar push igual */
       }

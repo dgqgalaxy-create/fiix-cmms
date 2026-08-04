@@ -511,7 +511,7 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
         body: `${message.author.name}: ${preview}`,
         url: link,
         tag: `chat-${id}`,
-        vibrate: [200, 100, 200],
+        vibrate: [400, 120, 400, 120, 400],
       });
     }
 

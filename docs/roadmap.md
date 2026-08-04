@@ -85,7 +85,13 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.56.10 (Actualización: 4 de Agosto de 2026)
+## 🚀 Versión Actual: v1.56.12 (Actualización: 4 de Agosto de 2026)
+
+### Novedades en v1.56.12
+- **Corrección:** Push duplicado en Windows (2 toasts) — se elimina la suscripción vieja del mismo PC (Chrome + PWA).
+
+### Novedades en v1.56.11
+- **Mejora:** Push Android — vibración más fuerte; si la PWA sigue en memoria vibra también por la app. Con app cerrada depende del interruptor «Vibrar» del sistema.
 
 ### Novedades en v1.56.10
 - **Corrección:** En interfaz móvil, el menú lateral ya no queda oculto detrás de la barra Mis OT / Escanear / Inventario / Inicio.

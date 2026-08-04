@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.10";
+export const APP_VERSION = "1.56.12";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: En Windows ya no salen 2 toasts push a la vez (Chrome + PWA / suscripciones duplicadas del mismo PC); se deja una por tipo de dispositivo.",
+    "Mejora: Push en Android — patrón de vibración más fuerte; si la PWA está en segundo plano también vibra por la app. Si solo suena y no vibra con la app cerrada, activa Vibrar en Ajustes → Apps → Notificaciones.",
     "Corrección: En interfaz móvil, el menú lateral ya no queda tapado por la barra inferior (Mis OT / Escanear / …); se puede ver y usar hasta el final (usuarios en línea, tema, salir).",
     "Corrección: «Usuarios en línea» cuenta también quien tiene el socket conectado (no solo el heartbeat) y se actualiza cada 15 s.",
     "Corrección: Entrega de mensajes en vivo fuera de Mensajes — el ACK de «entregado» ya no falla; palomitas pasan a ✓✓ aunque el otro esté en otro módulo.",
