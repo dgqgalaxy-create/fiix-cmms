@@ -52,6 +52,9 @@ export function UpdateBanner() {
   const hardReload = useCallback(async (deployed: string) => {
     setUpdating(true);
     try {
+      // Permitir reintento aunque un hard reload previo no haya avanzado de versión
+      // (p. ej. deploy falló a medias y dist sigue viejo).
+      sessionStorage.removeItem(RELOAD_ONCE_KEY);
       sessionStorage.setItem(HARD_RELOAD_ONCE_KEY, deployed);
     } catch {
       /* ignore */

@@ -200,7 +200,7 @@ export const initSocket = (server: http.Server) => {
       (payload: { conversation_id?: string; message_id?: string }) => {
         const u = getSocketUser(socket);
         if (!u?.userId || !payload?.conversation_id || !payload?.message_id) return;
-        void import('../controllers/chatController')
+        void import('../controllers/chatController.js')
           .then(({ ackChatMessageDelivered }) =>
             ackChatMessageDelivered(u.userId, payload.conversation_id!, payload.message_id!)
           )

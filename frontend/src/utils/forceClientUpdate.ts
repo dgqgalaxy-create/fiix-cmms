@@ -24,6 +24,6 @@ export async function forceClientUpdate(deployedVersion?: string): Promise<void>
 
   const v = (deployedVersion || '').trim() || String(Date.now());
   const url = new URL(window.location.href);
-  url.searchParams.set('_fiix_v', v);
+  url.searchParams.set('_fiix_v', `${v}-${Date.now()}`);
   window.location.replace(url.toString());
 }

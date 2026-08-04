@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.7";
+export const APP_VERSION = "1.56.8";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: El despliegue ya no falla al compilar el socket de chat (import ESM); el botón «Recargar ahora» reintenta limpiar caché aunque un intento previo no avanzó.",
     "Nuevo: En Mensajes, tus mensajes muestran palomitas tipo WhatsApp (enviando / enviado / entregado / leído); al pasar el cursor o mantener verás la palabra.",
     "Mejora: El chat se reconecta al volver a la app en móvil (menos necesidad de «actualizar» para ver mensajes nuevos).",
     "Mejora: Mensajes — tono de notificación al llegar un mensaje (además de vibración); el push del sistema usa el sonido del teléfono.",

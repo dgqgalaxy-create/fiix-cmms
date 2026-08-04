@@ -85,7 +85,10 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.56.7 (Actualización: 4 de Agosto de 2026)
+## 🚀 Versión Actual: v1.56.8 (Actualización: 4 de Agosto de 2026)
+
+### Novedades en v1.56.8
+- **Corrección:** Compilación del backend (import ESM en socket de chat) y reintento del banner «Recargar ahora».
 
 ### Novedades en v1.56.7
 - **Nuevo:** Palomitas de estado en mensajes propios (enviado / entregado / leído), tipo WhatsApp.
