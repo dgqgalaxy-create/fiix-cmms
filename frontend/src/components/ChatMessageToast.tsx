@@ -16,6 +16,21 @@ type ToastItem = {
 
 const SHOW_MS = 5000;
 const EXIT_MS = 320;
+/** Evita banner duplicado si el socket entrega el mismo mensaje dos veces. */
+const DEDUPE_MS = 15_000;
+/** Deduplicación a nivel módulo (sobrevive remounts / listeners dobles). */
+const recentToastIds = new Map<string, number>();
+
+function claimToastSlot(msgId: string): boolean {
+  const now = Date.now();
+  const last = recentToastIds.get(msgId);
+  if (last != null && now - last < DEDUPE_MS) return false;
+  recentToastIds.set(msgId, now);
+  for (const [id, ts] of recentToastIds) {
+    if (now - ts > DEDUPE_MS) recentToastIds.delete(id);
+  }
+  return true;
+}
 
 /**
  * Banner superior derecha para mensajes de chat entrantes:
@@ -29,6 +44,8 @@ export function ChatMessageToast() {
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const locationRef = useRef(location);
   locationRef.current = location;
+  const myIdRef = useRef<string | undefined>(undefined);
+  myIdRef.current = user?.id || user?.userId;
 
   const dismiss = (key: string) => {
     setToasts((prev) =>
@@ -42,13 +59,16 @@ export function ChatMessageToast() {
   };
 
   useEffect(() => {
-    const myId = user?.id || user?.userId;
-    if (!myId) return;
+    if (!myIdRef.current) return;
 
     const onMsg = (payload: { conversation_id: string; message: ChatMessage }) => {
       if (!payload?.conversation_id || !payload.message) return;
-      if (payload.message.author_id === myId) return;
+      const myId = myIdRef.current;
+      if (!myId || payload.message.author_id === myId) return;
       if (payload.message.is_deleted) return;
+
+      const msgId = payload.message.id;
+      if (!msgId || !claimToastSlot(msgId)) return;
 
       const path = locationRef.current.pathname;
       const search = locationRef.current.search;
@@ -66,7 +86,7 @@ export function ChatMessageToast() {
             ? 'Envió un archivo'
             : 'Nuevo mensaje';
 
-      const key = `${payload.message.id}-${Date.now()}`;
+      const key = msgId;
       const link = `/messages?c=${payload.conversation_id}`;
 
       // WhatsApp-like: vibrar siempre; si la app está oculta, también notificación del sistema
@@ -80,16 +100,19 @@ export function ChatMessageToast() {
 
       // Banner in-app solo si la pantalla está visible
       if (document.visibilityState === 'visible') {
-        setToasts((prev) => [
-          ...prev.slice(-2),
-          {
-            key,
-            conversationId: payload.conversation_id,
-            title: author,
-            body,
-            leaving: false,
-          },
-        ]);
+        setToasts((prev) => {
+          if (prev.some((t) => t.key === key)) return prev;
+          return [
+            ...prev.slice(-2),
+            {
+              key,
+              conversationId: payload.conversation_id,
+              title: author,
+              body,
+              leaving: false,
+            },
+          ];
+        });
         const hideTimer = setTimeout(() => dismiss(key), SHOW_MS);
         timersRef.current.set(key, hideTimer);
       }
@@ -101,7 +124,9 @@ export function ChatMessageToast() {
       timersRef.current.forEach((t) => clearTimeout(t));
       timersRef.current.clear();
     };
-  }, [user?.id, user?.userId]);
+    // Solo re-suscribir cuando hay sesión; myId va por ref para no duplicar listeners
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Boolean(user?.id || user?.userId)]);
 
   if (toasts.length === 0) return null;
 

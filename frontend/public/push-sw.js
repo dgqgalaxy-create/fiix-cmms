@@ -37,7 +37,30 @@ self.addEventListener('push', (event) => {
     timestamp: Date.now(),
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    (async () => {
+      // Si la PWA ya está abierta y en primer plano, el banner in-app basta
+      // (evita doble aviso: toast + notificación del sistema).
+      try {
+        const clientList = await clients.matchAll({
+          type: 'window',
+          includeUncontrolled: true,
+        });
+        const appOpen = clientList.some((client) => {
+          if (!client.url || !client.url.startsWith(self.location.origin)) return false;
+          if (client.focused) return true;
+          if (typeof client.visibilityState === 'string' && client.visibilityState === 'visible') {
+            return true;
+          }
+          return false;
+        });
+        if (appOpen) return;
+      } catch {
+        /* si falla el check, mostrar push igual */
+      }
+      await self.registration.showNotification(title, options);
+    })()
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {

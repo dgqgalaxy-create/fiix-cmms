@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "1.56.4",
+  "version": "1.56.5",
   "description": "",
   "engines": {
     "node": ">=22"

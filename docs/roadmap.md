@@ -85,7 +85,10 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.56.4 (Actualización: 4 de Agosto de 2026)
+## 🚀 Versión Actual: v1.56.5 (Actualización: 4 de Agosto de 2026)
+
+### Novedades en v1.56.5
+- **Corrección:** El banner de mensaje nuevo ya no sale duplicado; con la app abierta solo se muestra el banner in-app (el push del sistema queda para segundo plano).
 
 ### Novedades en v1.56.4
 - **Mejora:** Push de mensajes en PWA — vibración + notificación de sistema más fiable en móvil (Android).
