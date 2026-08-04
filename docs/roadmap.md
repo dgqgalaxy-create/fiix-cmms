@@ -85,7 +85,13 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.56.2 (Actualización: 4 de Agosto de 2026)
+## 🚀 Versión Actual: v1.56.4 (Actualización: 4 de Agosto de 2026)
+
+### Novedades en v1.56.4
+- **Mejora:** Push de mensajes en PWA — vibración + notificación de sistema más fiable en móvil (Android).
+
+### Novedades en v1.56.3
+- **Nuevo:** Banner de mensaje entrante (arriba derecha, zoom in, sale a la derecha a los 5 s).
 
 ### Novedades en v1.56.2
 - **Mejora:** Chat vacío — texto «Sin mensajes» (sin apariencia de cuadro de escritura en el hilo).

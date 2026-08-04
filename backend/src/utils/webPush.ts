@@ -5,6 +5,10 @@ export type WebPushPayload = {
   title: string;
   body: string;
   url?: string;
+  /** Agrupa / renotify en el dispositivo (p. ej. chat-{conversationId}). */
+  tag?: string;
+  /** Patrón de vibración Android (ms). */
+  vibrate?: number[];
 };
 
 let vapidConfigured = false;
@@ -47,6 +51,8 @@ export async function sendWebPushToUser(
     title: payload.title,
     body: payload.body,
     url: payload.url || '/home',
+    tag: payload.tag || payload.url || 'fiix-cmms',
+    vibrate: payload.vibrate || [200, 100, 200],
   });
 
   let sent = 0;

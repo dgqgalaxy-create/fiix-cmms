@@ -11,6 +11,7 @@ import { GlobalSearchModal, GlobalSearchTrigger } from './GlobalSearchModal';
 import { TechnicianBottomNav } from './TechnicianBottomNav';
 import { useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
 import { UpdateBanner } from './UpdateBanner';
+import { ChatMessageToast } from './ChatMessageToast';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
@@ -137,6 +138,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
 
       {isTechMobileShell && <TechnicianBottomNav />}
 
+      <ChatMessageToast />
       <UpdateBanner />
       <GlobalSearchModal />
       <VersionModal

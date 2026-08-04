@@ -2,9 +2,12 @@
 /**
  * Handlers Web Push para el service worker generado por vite-plugin-pwa
  * (importado vía workbox.importScripts).
+ *
+ * En Android (PWA instalada) `vibrate` hace vibrar al mostrar la notificación.
+ * iOS suele ignorar vibrate; ahí manda el permiso + app en Inicio.
  */
 self.addEventListener('push', (event) => {
-  let data = { title: 'LPET CMMS', body: 'Nueva notificación', url: '/home' };
+  let data = { title: 'GTZ CMMS', body: 'Nueva notificación', url: '/home', tag: 'fiix-cmms' };
   try {
     if (event.data) {
       const parsed = event.data.json();
@@ -19,14 +22,19 @@ self.addEventListener('push', (event) => {
     }
   }
 
-  const title = data.title || 'LPET CMMS';
+  const title = data.title || 'GTZ CMMS';
+  const url = data.url || '/home';
+  const tag = data.tag || url || 'fiix-cmms';
   const options = {
     body: data.body || '',
     icon: '/icono_app.jpg',
     badge: '/icono_app.jpg',
-    data: { url: data.url || '/home' },
-    tag: data.url || 'fiix-cmms',
+    data: { url },
+    tag,
     renotify: true,
+    // Patrón tipo chat (ms): vibra — pausa — vibra
+    vibrate: Array.isArray(data.vibrate) ? data.vibrate : [200, 100, 200],
+    timestamp: Date.now(),
   };
 
   event.waitUntil(self.registration.showNotification(title, options));

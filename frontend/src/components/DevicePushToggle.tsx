@@ -110,8 +110,9 @@ export function DevicePushToggle({ className = '', compact = false }: Props) {
           </h3>
           {!compact && (
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
-              Avisos del sistema aunque la pestaña esté en segundo plano (nuevas OT y recordatorios SLA).
-              Requiere HTTPS (o localhost). En iPhone/iPad: instala la app en Inicio e iOS 16.4+.
+              Avisos del sistema aunque la app esté en segundo plano (mensajes, OT, SLA…).
+              Actívalo aquí. En Android vibra al llegar el aviso. Requiere HTTPS. En iPhone:
+              instala en Inicio e iOS 16.4+.
             </p>
           )}
         </div>

@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.2";
+export const APP_VERSION = "1.56.4";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Mensajes en PWA móvil — vibración al llegar aviso; push del sistema con patrón de vibración; si la app está en segundo plano también intenta notificación local.",
+    "Nuevo: Al recibir un mensaje aparece un banner arriba a la derecha (entra con zoom y a los 5 s se oculta hacia la derecha); tocarlo abre el chat.",
     "Mejora: En Mensajes, un chat vacío muestra «Sin mensajes» (sin invitar a escribir en el área del hilo; el cuadro de abajo sigue para redactar).",
     "Mejora: En Órdenes de Trabajo, cada tarjeta/fila muestra cuántos comentarios tiene y un adelanto del más reciente.",
     "Nuevo: Rol Observador — solo consulta operativa + Mensajes (sin crear/editar/eliminar). Ideal para gerentes de otras áreas o auditores.",
