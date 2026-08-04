@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import prisma from '../config/prisma';
 import { Role } from '@prisma/client';
-import { emitRefresh } from '../utils/socket';
+import { emitRefresh, getConnectedUserIds } from '../utils/socket';
 
 export const getUsers = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -141,24 +141,31 @@ export const heartbeat = async (req: Request, res: Response): Promise<void> => {
 export const getOnlineUsers = async (req: Request, res: Response): Promise<void> => {
   try {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    let connectedIds: string[] = [];
+    try {
+      connectedIds = getConnectedUserIds();
+    } catch {
+      connectedIds = [];
+    }
 
     const onlineUsers = await prisma.user.findMany({
       where: {
-        last_active: {
-          gte: fiveMinutesAgo
-        },
-        is_active: true
+        is_active: true,
+        OR: [
+          { last_active: { gte: fiveMinutesAgo } },
+          ...(connectedIds.length > 0 ? [{ id: { in: connectedIds } }] : []),
+        ],
       },
       select: {
         id: true,
         name: true,
         role: true,
         last_active: true,
-        current_path: true
+        current_path: true,
       },
       orderBy: {
-        last_active: 'desc'
-      }
+        last_active: 'desc',
+      },
     });
 
     res.json(onlineUsers);

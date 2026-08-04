@@ -12,10 +12,12 @@ import { TechnicianBottomNav } from './TechnicianBottomNav';
 import { useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
 import { UpdateBanner } from './UpdateBanner';
 import { ChatMessageToast } from './ChatMessageToast';
+import { useChatDeliveryAck } from '../hooks/useChatDeliveryAck';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const isTechMobileShell = useTechnicianMobileShell();
+  useChatDeliveryAck();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -31,7 +33,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
 
     beat();
 
-    const interval = setInterval(beat, 2 * 60 * 1000);
+    const interval = setInterval(beat, 30 * 1000);
 
     const handleOnline = () => {
       setIsOnline(true);

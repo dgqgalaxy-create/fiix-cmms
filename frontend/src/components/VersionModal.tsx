@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.8";
+export const APP_VERSION = "1.56.9";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: «Usuarios en línea» cuenta también quien tiene el socket conectado (no solo el heartbeat) y se actualiza cada 15 s.",
+    "Corrección: Entrega de mensajes en vivo fuera de Mensajes — el ACK de «entregado» ya no falla; palomitas pasan a ✓✓ aunque el otro esté en otro módulo.",
     "Corrección: El despliegue ya no falla al compilar el socket de chat (import ESM); el botón «Recargar ahora» reintenta limpiar caché aunque un intento previo no avanzó.",
     "Nuevo: En Mensajes, tus mensajes muestran palomitas tipo WhatsApp (enviando / enviado / entregado / leído); al pasar el cursor o mantener verás la palabra.",
     "Mejora: El chat se reconecta al volver a la app en móvil (menos necesidad de «actualizar» para ver mensajes nuevos).",

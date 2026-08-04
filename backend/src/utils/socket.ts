@@ -2,6 +2,7 @@ import { Server, Socket } from 'socket.io';
 import http from 'http';
 import { verifyToken } from './auth';
 import prisma from '../config/prisma';
+import { ackChatMessageDelivered } from '../services/chatReceipts';
 
 let io: Server;
 
@@ -181,6 +182,13 @@ export const initSocket = (server: http.Server) => {
 
     if (user?.userId) {
       socket.join(`user:${user.userId}`);
+      // Presencia: marcar activo al conectar (no depender solo del heartbeat HTTP)
+      void prisma.user
+        .update({
+          where: { id: user.userId },
+          data: { last_active: new Date() },
+        })
+        .catch((err) => console.error('[Socket.io] last_active on connect', err));
     }
 
     socket.on('wo:join', (payload: { workOrderId?: string }) => {
@@ -200,11 +208,9 @@ export const initSocket = (server: http.Server) => {
       (payload: { conversation_id?: string; message_id?: string }) => {
         const u = getSocketUser(socket);
         if (!u?.userId || !payload?.conversation_id || !payload?.message_id) return;
-        void import('../controllers/chatController.js')
-          .then(({ ackChatMessageDelivered }) =>
-            ackChatMessageDelivered(u.userId, payload.conversation_id!, payload.message_id!)
-          )
-          .catch((err) => console.error('[Socket.io] chat_delivered', err));
+        void ackChatMessageDelivered(u.userId, payload.conversation_id, payload.message_id).catch(
+          (err) => console.error('[Socket.io] chat_delivered', err)
+        );
       }
     );
 
@@ -272,3 +278,14 @@ export const emitToUser = (userId: string, event: string, payload?: unknown) => 
     console.error(`[Socket.io] Error emitiendo ${event} a user:${userId}:`, err);
   }
 };
+
+/** IDs de usuarios con al menos un socket conectado ahora. */
+export function getConnectedUserIds(): string[] {
+  if (!io) return [];
+  const ids = new Set<string>();
+  for (const sock of io.sockets.sockets.values()) {
+    const u = getSocketUser(sock);
+    if (u?.userId) ids.add(u.userId);
+  }
+  return Array.from(ids);
+}

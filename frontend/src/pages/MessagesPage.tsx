@@ -170,12 +170,13 @@ export default function MessagesPage() {
       receipt_status: ChatMessage['receipt_status'];
     }) => {
       if (!payload?.message_id || !payload.receipt_status) return;
-      if (payload.conversation_id !== activeId) return;
-      setMessages((prev) =>
-        prev.map((m) =>
+      // Actualizar aunque no sea el hilo activo (al volver al chat se ve el estado)
+      setMessages((prev) => {
+        if (!prev.some((m) => m.id === payload.message_id)) return prev;
+        return prev.map((m) =>
           m.id === payload.message_id ? { ...m, receipt_status: payload.receipt_status } : m
-        )
-      );
+        );
+      });
     };
 
     socket.on('chat_message', onMsg);
