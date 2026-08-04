@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { VersionModal, APP_VERSION } from './VersionModal';
 import { OnlineUsersBadge } from './common/OnlineUsersBadge';
 import { updateMyPreferences } from '../api/users';
-import { canUseTechnicianMobileUi, isTechnicianMobileUiPrefOn } from '../hooks/useTechnicianMobileShell';
+import { canUseTechnicianMobileUi, isTechnicianMobileUiPrefOn, useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getNotesSummary } from '../api/notes';
@@ -93,6 +93,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   const location = useLocation();
   const { user, logout, hasPermission, updateUserPreferences } = useAuth();
   const { theme, setTheme } = useTheme();
+  const isTechMobileShell = useTechnicianMobileShell();
   const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [orderedItems, setOrderedItems] = useState<NavItem[]>([]);
@@ -238,9 +239,11 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   return (
     <>
-      <aside className={`print:hidden w-64 bg-slate-900 dark:bg-slate-950 text-slate-300 flex flex-col h-screen max-h-dvh fixed top-0 left-0 z-40 transition-transform duration-300 ease-in-out md:translate-x-0 border-r border-transparent dark:border-slate-800 overflow-y-auto ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      <aside
+        className={`print:hidden w-64 bg-slate-900 dark:bg-slate-950 text-slate-300 flex flex-col h-screen max-h-dvh fixed top-0 left-0 z-50 transition-transform duration-300 ease-in-out md:translate-x-0 border-r border-transparent dark:border-slate-800 overflow-hidden ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         <div className="px-3 pt-3 pb-2 flex flex-col items-center justify-center border-b border-slate-800 relative shrink-0">
           <div className="flex flex-col items-center gap-1">
             <img src="/lpet.png" alt="GTZ Logo" className="h-10 object-contain" />
@@ -290,7 +293,11 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
           </DndContext>
         </nav>
 
-        <div className="p-2.5 border-t border-slate-800 shrink-0">
+        <div
+          className={`p-2.5 border-t border-slate-800 shrink-0 overflow-y-auto ${
+            isTechMobileShell ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]' : ''
+          }`}
+        >
           <div className="px-2.5 py-2 bg-slate-800/50 rounded-xl mb-2">
             <p className="text-xs font-semibold text-white truncate">{user?.name || 'Usuario'}</p>
             <p className="text-[11px] text-blue-400 font-medium truncate">{user?.email}</p>

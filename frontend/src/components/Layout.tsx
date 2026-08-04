@@ -57,7 +57,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
     <div className="flex min-h-screen bg-surface-muted text-fg transition-colors duration-200">
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-slate-950/60 z-30 md:hidden"
+          className="fixed inset-0 bg-slate-950/60 z-[45] md:hidden"
           onClick={() => setIsSidebarOpen(false)}
         ></div>
       )}

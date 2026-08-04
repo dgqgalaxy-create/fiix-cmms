@@ -85,7 +85,10 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.56.9 (Actualización: 4 de Agosto de 2026)
+## 🚀 Versión Actual: v1.56.10 (Actualización: 4 de Agosto de 2026)
+
+### Novedades en v1.56.10
+- **Corrección:** En interfaz móvil, el menú lateral ya no queda oculto detrás de la barra Mis OT / Escanear / Inventario / Inicio.
 
 ### Novedades en v1.56.9
 - **Corrección:** ACK de entrega de chat fuera de Mensajes (palomitas ✓✓ en vivo aunque el otro esté en otro módulo).
