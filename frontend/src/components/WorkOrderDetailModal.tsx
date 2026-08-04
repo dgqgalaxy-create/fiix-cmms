@@ -24,6 +24,7 @@ import { formatCurrency } from '../utils/currency';
 import { resolvePartsUnitCost } from '../utils/resolvePartsUnitCost';
 import { InfoTip } from './common/InfoTip';
 import { qtyStep, isInvalidQty } from '../utils/qtyMode';
+import { WorkOrderCommentsPanel } from './WorkOrderCommentsPanel';
 
 const STATUS_LABELS: Record<string, string> = {
   PENDIENTE: 'Pendiente',
@@ -1417,6 +1418,15 @@ export const WorkOrderDetailModal = ({
                     )}
                   </div>
                 )}
+              </div>
+
+              <div className="mt-4">
+                <WorkOrderCommentsPanel
+                  workOrderId={workOrder.id}
+                  isOpen={isOpen}
+                  canWrite={!isClosed}
+                  onZoomImage={(src) => setZoomSrc(src)}
+                />
               </div>
             </div>
           </form>

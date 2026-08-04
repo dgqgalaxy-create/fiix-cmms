@@ -1,4 +1,4 @@
-import { LayoutDashboard, Database, LogOut, Users, Activity, Shield, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote } from 'lucide-react';
+import { LayoutDashboard, Database, LogOut, Users, Activity, Shield, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote, MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { VersionModal, APP_VERSION } from './VersionModal';
@@ -8,6 +8,7 @@ import { canUseTechnicianMobileUi, isTechnicianMobileUiPrefOn } from '../hooks/u
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getNotesSummary } from '../api/notes';
+import { getChatUnreadSummary } from '../api/chat';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import {
   DndContext,
@@ -96,6 +97,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   const [isEditMode, setIsEditMode] = useState(false);
   const [orderedItems, setOrderedItems] = useState<NavItem[]>([]);
   const [notesBadge, setNotesBadge] = useState(0);
+  const [chatBadge, setChatBadge] = useState(0);
 
   const refreshNotesBadge = useCallback(async () => {
     try {
@@ -106,16 +108,28 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     }
   }, []);
 
+  const refreshChatBadge = useCallback(async () => {
+    try {
+      const s = await getChatUnreadSummary();
+      setChatBadge(s.unread_total || 0);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   useEffect(() => {
     refreshNotesBadge();
-  }, [refreshNotesBadge, user?.id]);
+    refreshChatBadge();
+  }, [refreshNotesBadge, refreshChatBadge, user?.id]);
 
   useSocketRefresh('refresh_notes', refreshNotesBadge);
+  useSocketRefresh(['refresh_chat', 'chat_message'], refreshChatBadge);
 
   useEffect(() => {
     const availableItems: NavItem[] = [
       { name: 'Inicio', path: '/home', icon: <Home size={16} /> },
       { name: 'Órdenes de Trabajo', path: '/dashboard', icon: <LayoutDashboard size={16} /> },
+      { name: 'Mensajes', path: '/messages', icon: <MessageSquare size={16} />, badge: chatBadge },
       { name: 'Notas y pendientes', path: '/notes', icon: <StickyNote size={16} />, badge: notesBadge },
       { name: 'Activos', path: '/assets', icon: <Database size={16} /> },
       { name: 'Inventario', path: '/inventory', icon: <Package size={16} /> },
@@ -166,7 +180,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     });
 
     setOrderedItems(ordered);
-  }, [user, hasPermission, notesBadge]);
+  }, [user, hasPermission, notesBadge, chatBadge]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

@@ -179,6 +179,10 @@ export const initSocket = (server: http.Server) => {
     const user = getSocketUser(socket);
     console.log(`[Socket.io] Conectado: ${socket.id} (${user?.name || 'sin nombre'})`);
 
+    if (user?.userId) {
+      socket.join(`user:${user.userId}`);
+    }
+
     socket.on('wo:join', (payload: { workOrderId?: string }) => {
       if (payload?.workOrderId) joinWorkOrder(socket, payload.workOrderId);
     });
@@ -226,4 +230,32 @@ export const emitRefresh = (event: string, payload?: unknown) => {
 export const emitWorkOrderUpdated = (id: string) => {
   emitRefresh('refresh_work_orders');
   emitRefresh('work_order_updated', { id });
+};
+
+/** Emite a la sala de una OT (comentarios, etc.). */
+export const emitToWorkOrderRoom = (workOrderId: string, event: string, payload?: unknown) => {
+  try {
+    if (!io) return;
+    if (payload !== undefined) {
+      io.to(`wo:${workOrderId}`).emit(event, payload);
+    } else {
+      io.to(`wo:${workOrderId}`).emit(event);
+    }
+  } catch (err) {
+    console.error(`[Socket.io] Error emitiendo ${event} a wo:${workOrderId}:`, err);
+  }
+};
+
+/** Emite a un usuario concreto (sala user:{id}). */
+export const emitToUser = (userId: string, event: string, payload?: unknown) => {
+  try {
+    if (!io) return;
+    if (payload !== undefined) {
+      io.to(`user:${userId}`).emit(event, payload);
+    } else {
+      io.to(`user:${userId}`).emit(event);
+    }
+  } catch (err) {
+    console.error(`[Socket.io] Error emitiendo ${event} a user:${userId}:`, err);
+  }
 };

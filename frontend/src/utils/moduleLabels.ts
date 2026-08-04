@@ -20,6 +20,8 @@ export function pathToModuleLabel(path?: string | null): string {
   if (normalized.startsWith('/permissions')) return 'Permisos';
   if (normalized.startsWith('/rca')) return 'Árbol de Fallas';
   if (normalized.startsWith('/settings')) return 'Configuración';
+  if (normalized.startsWith('/notes')) return 'Notas';
+  if (normalized.startsWith('/messages')) return 'Mensajes';
   if (normalized.startsWith('/manual')) return 'Manual';
   if (normalized.startsWith('/request')) return 'Portal';
   if (normalized.startsWith('/login')) return 'Login';

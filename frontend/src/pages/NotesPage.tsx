@@ -363,15 +363,17 @@ export default function NotesPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <label className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-slate-600 dark:text-slate-300">
-            <input
-              type="checkbox"
-              checked={includeDone}
-              onChange={(e) => setIncludeDone(e.target.checked)}
-              className="rounded border-slate-300"
-            />
-            Completados
-          </label>
+          {tab !== 'avisos' && (
+            <label className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-slate-600 dark:text-slate-300">
+              <input
+                type="checkbox"
+                checked={includeDone}
+                onChange={(e) => setIncludeDone(e.target.checked)}
+                className="rounded border-slate-300"
+              />
+              Completados
+            </label>
+          )}
           <button
             type="button"
             onClick={() => void load()}

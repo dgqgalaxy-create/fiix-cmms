@@ -10,6 +10,11 @@ import {
   joinWorkOrder,
   getRequesters,
 } from '../controllers/workOrderController';
+import {
+  listWorkOrderComments,
+  createWorkOrderComment,
+  woCommentUpload,
+} from '../controllers/woCommentsController';
 import { authenticate, requirePermission } from '../middlewares/authMiddleware';
 import { upload } from '../middlewares/upload';
 
@@ -21,6 +26,13 @@ router.get('/requesters', authenticate, getRequesters);
 
 router.get('/summary', authenticate, getWorkOrdersSummary);
 router.get('/line-stoppage', authenticate, getLineStoppageStatus);
+router.get('/:id/comments', authenticate, listWorkOrderComments);
+router.post(
+  '/:id/comments',
+  authenticate,
+  woCommentUpload.fields([{ name: 'attachment', maxCount: 1 }]),
+  createWorkOrderComment
+);
 router.get('/:id', authenticate, getWorkOrderById);
 router.post(
   '/', 

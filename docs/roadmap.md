@@ -85,7 +85,13 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.53.1 (Actualización: 3 de Agosto de 2026)
+## 🚀 Versión Actual: v1.54.0 (Actualización: 4 de Agosto de 2026)
+
+### Novedades en v1.54.0
+- **Nuevo:** Comentarios en detalle de OT (lectura/escritura para quien pueda abrirla; adjuntos; socket en vivo).
+- **Nuevo:** Chat interno 1:1 y grupos ad-hoc con adjuntos; página Mensajes + badge de no leídos; push/in-app.
+- **Mejora:** Formulario de avisos globales colapsado detrás de «Nuevo aviso global».
+- **Corrección:** Check «Completados» solo en Mis notas / Pendientes (no en Avisos).
 
 ### Novedades en v1.53.1
 - **Mejora:** UOM — editar Enteros/Decimales en unidades existentes.
@@ -673,5 +679,6 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 - [x] **Gestión con Códigos QR:** Escaneo físico en máquinas para abrir historiales y escaneo en estantes para el control rápido de refacciones (incluye galería si no hay HTTPS).
 - [x] **Árbol de Fallas (RCA):** Clasificación Problema → Causa → Solución para Pareto; al cerrar correctivas es **opcional**.
 - [x] **Calendario de Carga de Trabajo / Turnos (Roster):** Vista interactiva para gestionar y asignar turnos, días festivos y faltas del personal (Completado en v1.7.3).
+- [x] **Mensajería interna (v1.54.0):** Comentarios en OT; chat 1:1 y grupos ad-hoc con adjuntos; avisos con formulario colapsado.
 - [ ] **Portal de Contratistas:** Acceso limitado para proveedores externos donde puedan reportar sus trabajos sin ver datos sensibles.
 - [ ] **Multiplanta / Multisítio:** Segregación de información para empresas con múltiples fábricas con un dashboard corporativo global.

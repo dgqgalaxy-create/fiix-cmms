@@ -26,10 +26,20 @@ export function AnnouncementsPanel({ isAdmin, onChanged }: Props) {
   const [preview, setPreview] = useState<string | null>(null);
   const [expandedReaders, setExpandedReaders] = useState<string | null>(null);
   const [zoomSrc, setZoomSrc] = useState<string | null>(null);
+  const [showComposer, setShowComposer] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const markedRef = useRef<Set<string>>(new Set());
   const onChangedRef = useRef(onChanged);
   onChangedRef.current = onChanged;
+
+  const resetComposer = () => {
+    setTitle('');
+    setBody('');
+    setImage(null);
+    setPreview(null);
+    if (fileRef.current) fileRef.current.value = '';
+    setShowComposer(false);
+  };
 
   const load = async () => {
     try {
@@ -115,6 +125,7 @@ export function AnnouncementsPanel({ isAdmin, onChanged }: Props) {
       setImage(null);
       setPreview(null);
       if (fileRef.current) fileRef.current.value = '';
+      setShowComposer(false);
       await load();
       onChangedRef.current?.();
     } catch (err: any) {
@@ -156,7 +167,17 @@ export function AnnouncementsPanel({ isAdmin, onChanged }: Props) {
         </div>
       )}
 
-      {isAdmin && (
+      {isAdmin && !showComposer && (
+        <button
+          type="button"
+          onClick={() => setShowComposer(true)}
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-sm font-bold text-sky-800 hover:bg-sky-100 dark:border-sky-900/50 dark:bg-sky-950/40 dark:text-sky-200 dark:hover:bg-sky-950/60"
+        >
+          <Plus size={15} /> Nuevo aviso global
+        </button>
+      )}
+
+      {isAdmin && showComposer && (
         <article className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <h2 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
             <Plus size={15} /> Nuevo aviso global
@@ -210,14 +231,24 @@ export function AnnouncementsPanel({ isAdmin, onChanged }: Props) {
               </div>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => void handlePublish()}
-            disabled={saving}
-            className="mt-2.5 w-full rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-sky-700 disabled:opacity-50"
-          >
-            {saving ? 'Publicando…' : 'Publicar aviso'}
-          </button>
+          <div className="mt-2.5 flex gap-2">
+            <button
+              type="button"
+              onClick={() => void handlePublish()}
+              disabled={saving}
+              className="flex-1 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-sky-700 disabled:opacity-50"
+            >
+              {saving ? 'Publicando…' : 'Publicar aviso'}
+            </button>
+            <button
+              type="button"
+              onClick={resetComposer}
+              disabled={saving}
+              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300"
+            >
+              Cancelar
+            </button>
+          </div>
         </article>
       )}
 

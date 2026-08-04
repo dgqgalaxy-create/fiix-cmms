@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.53.1";
+export const APP_VERSION = "1.54.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,10 +12,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "3 de Agosto, 2026";
+  const updateDate = "4 de Agosto, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
+    "Mensajes (chat interno)",
     "Gestión de Activos (Equipos)",
     "Catálogo de Inventario",
     "Planes Preventivos",
@@ -30,6 +31,10 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Comentarios en el detalle de OT — quien pueda abrir la orden puede leer y escribir (texto + adjunto); actualización en vivo.",
+    "Nuevo: Mensajes internos — chat 1:1 y grupos ad-hoc con adjuntos; badge de no leídos en el menú; notificaciones in-app y push.",
+    "Mejora: Avisos globales — el formulario de publicación queda oculto detrás del botón «Nuevo aviso global».",
+    "Corrección: El check «Completados» en Notas y pendientes solo se muestra en Mis notas y Pendientes (no en Avisos).",
     "Mejora: En Unidades de Medida el Admin puede editar Enteros/Decimales de cada unidad (no solo al crear).",
     "Mejora: Menú lateral más compacto (menos espacio vertical) para ver más opciones a la vez.",
     "Corrección: El backend local ya no falla al registrar movimientos de inventario (variable de cantidad).",

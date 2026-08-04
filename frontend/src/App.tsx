@@ -39,6 +39,7 @@ const DailyChecklistsPage = lazy(() => import('./pages/DailyChecklistsPage'));
 const ChecklistFormPage = lazy(() => import('./pages/ChecklistFormPage'));
 const RosterPage = lazy(() => import('./pages/RosterPage').then((m) => ({ default: m.RosterPage })));
 const NotesPage = lazy(() => import('./pages/NotesPage'));
+const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 
 function PageFallback() {
   return (
@@ -222,7 +223,7 @@ function App() {
             } 
           />
 
-          <Route
+<Route
             path="/notes"
             element={
               <ProtectedRoute>
@@ -232,7 +233,18 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
+          <Route
+            path="/messages"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <MessagesPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/zones"
             element={<Navigate to="/assets?manageZones=1" replace />}

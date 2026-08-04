@@ -112,6 +112,10 @@ model User {
   operational_tasks_assigned OperationalTask[] @relation("OperationalTaskAssignee")
   announcements_created GlobalAnnouncement[] @relation("AnnouncementCreator")
   announcement_reads GlobalAnnouncementRead[]
+  work_order_comments WorkOrderComment[]
+  chat_conversations_created ChatConversation[] @relation("ChatConversationCreator")
+  chat_participations ChatParticipant[]
+  chat_messages ChatMessage[]
 
   pattern              TechnicianPattern?
   exceptions           TechnicianException[]
@@ -267,6 +271,7 @@ model WorkOrder {
   sla_events          WorkOrderSlaEvent[]
   inventory_transactions InventoryTransaction[]
   operational_tasks   OperationalTask[]
+  comments            WorkOrderComment[]
 }
 
 model KPIGoal {
@@ -745,4 +750,68 @@ model GlobalAnnouncementRead {
   @@unique([announcement_id, user_id])
   @@index([user_id])
   @@index([announcement_id])
+}
+
+/// Comentarios en el hilo de una OT (quien pueda abrir la OT lee/escribe).
+model WorkOrderComment {
+  id              String    @id @default(uuid()) @db.Uuid
+  work_order_id   String    @db.Uuid
+  work_order      WorkOrder @relation(fields: [work_order_id], references: [id], onDelete: Cascade)
+  author_id       String    @db.Uuid
+  author          User      @relation(fields: [author_id], references: [id], onDelete: Cascade)
+  body            String
+  attachment_url  String?
+  attachment_name String?
+  created_at      DateTime  @default(now())
+
+  @@index([work_order_id, created_at])
+  @@index([author_id])
+}
+
+enum ChatConversationType {
+  DIRECT
+  GROUP
+}
+
+model ChatConversation {
+  id            String               @id @default(uuid()) @db.Uuid
+  type          ChatConversationType
+  title         String?
+  created_by_id String               @db.Uuid
+  created_by    User                 @relation("ChatConversationCreator", fields: [created_by_id], references: [id])
+  created_at    DateTime             @default(now())
+  updated_at    DateTime             @updatedAt
+  participants  ChatParticipant[]
+  messages      ChatMessage[]
+
+  @@index([type, updated_at])
+  @@index([created_by_id])
+}
+
+model ChatParticipant {
+  id              String           @id @default(uuid()) @db.Uuid
+  conversation_id String           @db.Uuid
+  conversation    ChatConversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  user_id         String           @db.Uuid
+  user            User             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  joined_at       DateTime         @default(now())
+  last_read_at    DateTime?
+
+  @@unique([conversation_id, user_id])
+  @@index([user_id])
+}
+
+model ChatMessage {
+  id              String           @id @default(uuid()) @db.Uuid
+  conversation_id String           @db.Uuid
+  conversation    ChatConversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  author_id       String           @db.Uuid
+  author          User             @relation(fields: [author_id], references: [id], onDelete: Cascade)
+  body            String           @default("")
+  attachment_url  String?
+  attachment_name String?
+  created_at      DateTime         @default(now())
+
+  @@index([conversation_id, created_at])
+  @@index([author_id])
 }
