@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.12";
+export const APP_VERSION = "1.56.13";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "4 de Agosto, 2026";
+  const updateDate = "6 de Agosto, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: En interfaz móvil, la barra inferior incluye Mensajes (orden: Mis OT, Mensajes, Escanear, Inventario, Inicio).",
+    "Mejora: Badges en la barra inferior — Mis OT muestra OT abiertas asignadas a ti; Mensajes muestra no leídos.",
     "Corrección: En Windows ya no salen 2 toasts push a la vez (Chrome + PWA / suscripciones duplicadas del mismo PC); se deja una por tipo de dispositivo.",
     "Mejora: Push en Android — patrón de vibración más fuerte; si la PWA está en segundo plano también vibra por la app. Si solo suena y no vibra con la app cerrada, activa Vibrar en Ajustes → Apps → Notificaciones.",
     "Corrección: En interfaz móvil, el menú lateral ya no queda tapado por la barra inferior (Mis OT / Escanear / …); se puede ver y usar hasta el final (usuarios en línea, tema, salir).",

@@ -85,7 +85,11 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.56.12 (Actualización: 4 de Agosto de 2026)
+## 🚀 Versión Actual: v1.56.13 (Actualización: 6 de Agosto de 2026)
+
+### Novedades en v1.56.13
+- **Nuevo:** Barra inferior móvil — acceso a Mensajes (orden: Mis OT, Mensajes, Escanear, Inventario, Inicio).
+- **Mejora:** Badges en barra inferior — Mis OT (OT abiertas asignadas) y Mensajes (no leídos).
 
 ### Novedades en v1.56.12
 - **Corrección:** Push duplicado en Windows (2 toasts) — se elimina la suscripción vieja del mismo PC (Chrome + PWA).

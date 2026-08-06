@@ -514,7 +514,7 @@ export const SettingsPage = () => {
                     <div>
                       <h3 className="font-semibold text-slate-800 dark:text-slate-200">Interfaz móvil</h3>
                       <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
-                        Preferencia de <strong>tu cuenta</strong>. En celular: barra inferior (Mis OT, Escanear, Inventario, Inicio) y botones grandes en órdenes.
+                        Preferencia de <strong>tu cuenta</strong>. En celular: barra inferior (Mis OT, Mensajes, Escanear, Inventario, Inicio) y botones grandes en órdenes.
                         {user?.role === 'TECNICO'
                           ? ' Por defecto está activa; puedes desactivarla para ver la interfaz completa.'
                           : ' Por defecto está desactivada; actívala si quieres la vista compacta en el teléfono.'}

@@ -1,26 +1,82 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
-import { Home, Package, QrCode, ListChecks } from 'lucide-react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Home, Package, QrCode, ListChecks, MessageSquare } from 'lucide-react';
 import { QRScannerModal } from './common/QRScannerModal';
 import { parseFiixQr } from '../utils/fiixQr';
+import { getChatUnreadSummary } from '../api/chat';
+import { getWorkOrders } from '../api/workOrders';
+import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import { useAuth } from '../context/AuthContext';
 
 const tabClass = (active: boolean) =>
-  `flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-bold tracking-wide transition-colors ${
+  `relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-bold tracking-wide transition-colors ${
     active ? 'text-emerald-400' : 'text-slate-400 hover:text-white'
   }`;
+
+const BadgeIcon = ({ count, children }: { count: number; children: ReactNode }) => (
+  <span className="relative inline-flex">
+    {children}
+    {count > 0 && (
+      <span className="absolute -right-2.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[9px] font-black leading-none text-white">
+        {count > 99 ? '99+' : count}
+      </span>
+    )}
+  </span>
+);
 
 /**
  * Barra inferior móvil de la interfaz compacta
  * (Técnico / Gestionador / Administrador con la preferencia activa).
+ * Orden: Mis OT · Mensajes · Escanear · Inventario · Inicio
  */
 export const TechnicianBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [chatBadge, setChatBadge] = useState(0);
+  const [mineBadge, setMineBadge] = useState(0);
 
   const onMine = location.pathname.startsWith('/dashboard');
+  const onMessages = location.pathname.startsWith('/messages');
   const onInventory = location.pathname.startsWith('/inventory');
   const onHome = location.pathname.startsWith('/home');
+
+  const refreshChatBadge = useCallback(async () => {
+    try {
+      const s = await getChatUnreadSummary();
+      setChatBadge(s.unread_total || 0);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const refreshMineBadge = useCallback(async () => {
+    if (!user?.id) {
+      setMineBadge(0);
+      return;
+    }
+    try {
+      const orders = await getWorkOrders();
+      const count = orders.filter(
+        (wo) =>
+          wo.status !== 'FINALIZADO' &&
+          wo.status !== 'ANULADO' &&
+          wo.assigned_technicians?.some((t) => t.id === user.id)
+      ).length;
+      setMineBadge(count);
+    } catch {
+      /* ignore */
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    refreshChatBadge();
+    refreshMineBadge();
+  }, [refreshChatBadge, refreshMineBadge, user?.id]);
+
+  useSocketRefresh(['refresh_chat', 'chat_message'], refreshChatBadge);
+  useSocketRefresh(['refresh_work_orders', 'work_order_updated'], refreshMineBadge);
 
   const handleScan = (code: string) => {
     const parsed = parseFiixQr(code);
@@ -56,8 +112,17 @@ export const TechnicianBottomNav = () => {
       >
         <div className="flex h-16 items-stretch">
           <NavLink to="/dashboard?tab=mine" className={tabClass(onMine)}>
-            <ListChecks size={20} />
+            <BadgeIcon count={mineBadge}>
+              <ListChecks size={20} />
+            </BadgeIcon>
             Mis OT
+          </NavLink>
+
+          <NavLink to="/messages" className={tabClass(onMessages)}>
+            <BadgeIcon count={chatBadge}>
+              <MessageSquare size={20} />
+            </BadgeIcon>
+            Mensajes
           </NavLink>
 
           <button
