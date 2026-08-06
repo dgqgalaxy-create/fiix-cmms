@@ -85,7 +85,10 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.56.14 (Actualización: 6 de Agosto de 2026)
+## 🚀 Versión Actual: v1.56.15 (Actualización: 6 de Agosto de 2026)
+
+### Novedades en v1.56.15
+- **Nuevo:** Watchdog del GitHub Actions self-hosted runner (`scripts/gha-runner-watchdog.sh` + cron); `install.sh` paso 7f. Evita deploys trabados en “Waiting for a runner…”.
 
 ### Novedades en v1.56.14
 - **Mejora:** En interfaz móvil, el menú lateral no duplica Inicio / Órdenes / Mensajes / Inventario (están en la barra inferior).

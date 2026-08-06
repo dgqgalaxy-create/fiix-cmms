@@ -289,6 +289,27 @@ cd ~/fiix-cmms
 
 **GitHub Actions (self-hosted):** mismo usuario que tiene nvm. El workflow hace `git restore .`, `git pull --ff-only` y `bash ./update.sh`. Si un deploy quedó a medias: `cd ~/fiix-cmms && git restore . && git pull --ff-only && bash ./update.sh`.
 
+### Runner self-hosted se “cuelga” (Waiting for a runner…)
+
+A veces `systemctl` dice **active** pero el listener perdió la sesión con GitHub (red, reinicios, hora del sistema → errores SSL `NotTimeValid`). Los pushes a `main` quedan en cola.
+
+**Instalar vigilancia (recomendado en el servidor de planta):**
+
+```bash
+cd ~/fiix-cmms   # o la ruta del repo
+sudo bash ./scripts/install-gha-runner-watchdog.sh
+sudo ./scripts/gha-runner-watchdog.sh   # prueba inmediata
+tail -n 50 /var/log/fiix-gha-runner-watchdog.log
+```
+
+- Cron root cada **15 min** (`/etc/cron.d/fiix-gha-runner-watchdog`).
+- Activa **NTP** y reinicia el unit `actions.runner.*` solo si no hay `Listening for Jobs` / job en curso.
+- `install.sh` pregunta por esto en el paso opcional **7f** (default **S** si ya detecta el runner).
+
+**Registrar el runner** (solo la primera vez en un servidor nuevo): GitHub → repo → **Settings → Actions → Runners → New self-hosted runner** → Linux x64 → al final `sudo ./svc.sh install` y `sudo ./svc.sh start`. El watchdog no sustituye ese registro.
+
+**Desinstalar watchdog:** `sudo rm -f /etc/cron.d/fiix-gha-runner-watchdog`
+
 | | `install.sh` (primera vez) | `update.sh` (después) |
 |---|---|---|
 | `git clone` / SSH | **No** (ya debiste clonar en §1) | No |

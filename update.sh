@@ -160,6 +160,8 @@ chmod +x \
   "${APP_DIR}/scripts/restore.sh" \
   "${APP_DIR}/scripts/healthcheck.sh" \
   "${APP_DIR}/scripts/ensure-vapid-env.sh" \
+  "${APP_DIR}/scripts/gha-runner-watchdog.sh" \
+  "${APP_DIR}/scripts/install-gha-runner-watchdog.sh" \
   2>/dev/null || true
 git status --short || true
 
@@ -178,6 +180,8 @@ chmod +x \
   "${APP_DIR}/scripts/restore.sh" \
   "${APP_DIR}/scripts/healthcheck.sh" \
   "${APP_DIR}/scripts/ensure-vapid-env.sh" \
+  "${APP_DIR}/scripts/gha-runner-watchdog.sh" \
+  "${APP_DIR}/scripts/install-gha-runner-watchdog.sh" \
   2>/dev/null || true
 
 AFTER_SHA="$(git rev-parse --short HEAD)"

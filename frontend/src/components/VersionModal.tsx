@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.14";
+export const APP_VERSION = "1.56.15";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Watchdog del GitHub Actions runner en el servidor — reinicia la sesión si se cuelga (Waiting for a runner) y activa NTP; install.sh pregunta por instalarlo.",
     "Mejora: En interfaz móvil, el menú lateral ya no repite Inicio, Órdenes, Mensajes ni Inventario (van en la barra inferior); sin barra inferior sí aparecen en el menú.",
     "Nuevo: En interfaz móvil, la barra inferior incluye Mensajes (orden: Mis OT, Mensajes, Escanear, Inventario, Inicio).",
     "Mejora: Badges en la barra inferior — Mis OT muestra OT abiertas asignadas a ti; Mensajes muestra no leídos.",

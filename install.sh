@@ -67,7 +67,7 @@ echo ">>> [0/8] Verificar repositorio local..."
 [ -f "${APP_DIR}/install.sh" ] || die "No se encontró install.sh. Ejecuta este script desde dentro del repo clonado."
 [ -d "${APP_DIR}/backend" ] && [ -d "${APP_DIR}/frontend" ] || die "Faltan carpetas backend/ o frontend/. ¿Clonaste el repo completo?"
 [ -f "${APP_DIR}/backend/package.json" ] || die "Falta backend/package.json."
-chmod +x "${APP_DIR}/update.sh" "${APP_DIR}/install.sh" "${APP_DIR}/scripts/backup.sh" "${APP_DIR}/scripts/healthcheck.sh" "${APP_DIR}/scripts/ensure-vapid-env.sh" 2>/dev/null || true
+chmod +x "${APP_DIR}/update.sh" "${APP_DIR}/install.sh" "${APP_DIR}/scripts/backup.sh" "${APP_DIR}/scripts/healthcheck.sh" "${APP_DIR}/scripts/ensure-vapid-env.sh" "${APP_DIR}/scripts/gha-runner-watchdog.sh" "${APP_DIR}/scripts/install-gha-runner-watchdog.sh" 2>/dev/null || true
 echo "  [OK] Código local listo (clone/SSH se hace ANTES, ver README)."
 
 # --- 1. Paquetes del sistema ---
@@ -340,6 +340,30 @@ else
   echo "  Omitido. Guía: https://tailscale.com/download/linux"
 fi
 
+# 7f. Watchdog GitHub Actions self-hosted runner
+echo
+echo "  Auto-deploy (Actions): el runner a veces queda 'active' en systemd pero sin escuchar jobs"
+echo "  (Waiting for a runner…). Este watchdog reinicia la sesión cada 15 min si hace falta,"
+echo "  y activa NTP (evita fallos SSL NotTimeValid)."
+if systemctl list-unit-files --type=service --no-legend 'actions.runner.*' 2>/dev/null | grep -q .; then
+  DO_GHA_WD_DEFAULT="S"
+  echo "  Se detectó al menos un unit actions.runner.* en este host."
+else
+  DO_GHA_WD_DEFAULT="N"
+  echo "  No se detectó runner todavía (puedes instalar el watchdog igual y registrar el runner después)."
+fi
+DO_GHA_WD="$(ask "¿Instalar watchdog del GitHub Actions runner (cron cada 15 min)?" "${DO_GHA_WD_DEFAULT}")"
+if [[ "${DO_GHA_WD}" =~ ^[sS]$ ]]; then
+  chmod +x "${APP_DIR}/scripts/gha-runner-watchdog.sh" "${APP_DIR}/scripts/install-gha-runner-watchdog.sh" 2>/dev/null || true
+  if sudo bash "${APP_DIR}/scripts/install-gha-runner-watchdog.sh"; then
+    echo "  [OK] Watchdog GHA instalado. Prueba: sudo ${APP_DIR}/scripts/gha-runner-watchdog.sh"
+  else
+    echo "  [AVISO] No se pudo instalar el watchdog. Manual: sudo bash ${APP_DIR}/scripts/install-gha-runner-watchdog.sh"
+  fi
+else
+  echo "  Omitido. Luego: sudo bash ${APP_DIR}/scripts/install-gha-runner-watchdog.sh  (ver README § Actions runner)."
+fi
+
 # --- 8. Smoke test + resumen ---
 echo
 echo ">>> [8/8] Comprobación y resumen..."
@@ -350,6 +374,8 @@ chmod +x \
   "${APP_DIR}/scripts/restore.sh" \
   "${APP_DIR}/scripts/healthcheck.sh" \
   "${APP_DIR}/scripts/ensure-vapid-env.sh" \
+  "${APP_DIR}/scripts/gha-runner-watchdog.sh" \
+  "${APP_DIR}/scripts/install-gha-runner-watchdog.sh" \
   2>/dev/null || true
 
 http_code() {
