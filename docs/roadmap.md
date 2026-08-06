@@ -85,7 +85,10 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.56.13 (Actualización: 6 de Agosto de 2026)
+## 🚀 Versión Actual: v1.56.14 (Actualización: 6 de Agosto de 2026)
+
+### Novedades en v1.56.14
+- **Mejora:** En interfaz móvil, el menú lateral no duplica Inicio / Órdenes / Mensajes / Inventario (están en la barra inferior).
 
 ### Novedades en v1.56.13
 - **Nuevo:** Barra inferior móvil — acceso a Mensajes (orden: Mis OT, Mensajes, Escanear, Inventario, Inicio).

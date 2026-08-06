@@ -156,20 +156,26 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
       availableItems.push({ name: 'Configuración', path: '/settings', icon: <Settings size={16} /> });
     }
 
+    // Con barra inferior móvil, no repetir atajos que ya están abajo.
+    const bottomNavPaths = new Set(['/home', '/dashboard', '/messages', '/inventory']);
+    const menuItems = isTechMobileShell
+      ? availableItems.filter((item) => !bottomNavPaths.has(item.path))
+      : availableItems;
+
     // Apply saved order
     const savedOrder: string[] = user?.preferences?.sidebarOrder || [];
     const ordered: NavItem[] = [];
     
     // Add items that are in savedOrder
     savedOrder.forEach(path => {
-      const found = availableItems.find(item => item.path === path);
+      const found = menuItems.find(item => item.path === path);
       if (found) {
         ordered.push(found);
       }
     });
 
     // Add remaining items that are not in savedOrder (e.g. newly added features)
-    availableItems.forEach(item => {
+    menuItems.forEach(item => {
       if (!ordered.find(o => o.path === item.path)) {
         // Nuevo módulo Inicio: colocarlo al inicio aunque el usuario tenga un orden guardado
         if (item.path === '/home') {
@@ -181,7 +187,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     });
 
     setOrderedItems(ordered);
-  }, [user, hasPermission, notesBadge, chatBadge]);
+  }, [user, hasPermission, notesBadge, chatBadge, isTechMobileShell]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
