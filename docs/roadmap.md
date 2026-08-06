@@ -85,7 +85,10 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.56.15 (Actualización: 6 de Agosto de 2026)
+## 🚀 Versión Actual: v1.56.16 (Actualización: 6 de Agosto de 2026)
+
+### Novedades en v1.56.16
+- **Mejora:** Mensajes — al abrir un contacto con no leídos, scroll al primer mensaje nuevo (más antiguo) + separador «Mensajes nuevos».
 
 ### Novedades en v1.56.15
 - **Nuevo:** Watchdog del GitHub Actions self-hosted runner (`scripts/gha-runner-watchdog.sh` + cron); `install.sh` paso 7f. Evita deploys trabados en “Waiting for a runner…”.

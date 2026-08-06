@@ -60,6 +60,12 @@ export default function MessagesPage() {
   const [zoomSrc, setZoomSrc] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const conversationsRef = useRef(conversations);
+  conversationsRef.current = conversations;
+  /** Tras cargar el hilo: ir al fondo o al primer no leído */
+  const pendingScrollRef = useRef<'bottom' | { unreadId: string } | null>(null);
+  /** Id del primer mensaje no leído (para el separador visual en esta apertura) */
+  const [unreadDividerId, setUnreadDividerId] = useState<string | null>(null);
 
   const active = useMemo(
     () => conversations.find((c) => c.id === activeId) || null,
@@ -77,21 +83,61 @@ export default function MessagesPage() {
     }
   }, []);
 
-  const loadThread = useCallback(async (id: string) => {
-    try {
-      setLoadingThread(true);
-      const data = await listMessages(id);
-      setMessages(data);
-      await markConversationRead(id);
-      setConversations((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, unread_count: 0 } : c))
-      );
-    } catch (err: any) {
-      setError(err?.response?.data?.error || 'No se pudieron cargar los mensajes');
-    } finally {
-      setLoadingThread(false);
+  const findFirstUnreadId = (
+    data: ChatMessage[],
+    myId: string | undefined,
+    unreadCount: number,
+    lastReadAt?: string | null
+  ): string | null => {
+    if (!myId || unreadCount <= 0) return null;
+    const fromOthers = data.filter((m) => m.author_id !== myId && !m.is_deleted);
+    if (fromOthers.length === 0) return null;
+
+    if (lastReadAt) {
+      const t = new Date(lastReadAt).getTime();
+      const first = fromOthers.find((m) => new Date(m.created_at).getTime() > t);
+      if (first) return first.id;
+    } else {
+      // Nunca leído: el más antiguo de otros en el lote
+      return fromOthers[0]?.id || null;
     }
-  }, []);
+
+    // Fallback por contador (últimos N de otros = no leídos)
+    const start = Math.max(0, fromOthers.length - unreadCount);
+    return fromOthers[start]?.id || null;
+  };
+
+  const loadThread = useCallback(
+    async (id: string) => {
+      try {
+        setLoadingThread(true);
+        const conv = conversationsRef.current.find((c) => c.id === id);
+        const unreadCount = conv?.unread_count || 0;
+        const myId = user?.id;
+        const lastReadAt =
+          conv?.participants?.find((p) => p.user_id === myId)?.last_read_at || null;
+
+        const data = await listMessages(id);
+        const firstUnreadId = findFirstUnreadId(data, myId, unreadCount, lastReadAt);
+
+        setMessages(data);
+        setUnreadDividerId(firstUnreadId);
+        pendingScrollRef.current = firstUnreadId
+          ? { unreadId: firstUnreadId }
+          : 'bottom';
+
+        await markConversationRead(id);
+        setConversations((prev) =>
+          prev.map((c) => (c.id === id ? { ...c, unread_count: 0 } : c))
+        );
+      } catch (err: any) {
+        setError(err?.response?.data?.error || 'No se pudieron cargar los mensajes');
+      } finally {
+        setLoadingThread(false);
+      }
+    },
+    [user?.id]
+  );
 
   useEffect(() => {
     void loadConversations();
@@ -121,14 +167,32 @@ export default function MessagesPage() {
   useEffect(() => {
     if (!activeId) {
       setMessages([]);
+      setUnreadDividerId(null);
       return;
     }
     void loadThread(activeId);
   }, [activeId, loadThread]);
 
+  // Scroll al primer no leído (inicio del bloque) o al final si no hay pendientes
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length]);
+    if (loadingThread) return;
+    const pending = pendingScrollRef.current;
+    if (!pending) return;
+
+    const run = () => {
+      if (pending === 'bottom') {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      } else {
+        const el = document.getElementById(`chat-msg-${pending.unreadId}`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      pendingScrollRef.current = null;
+    };
+
+    // Esperar a que el DOM pinte los mensajes
+    const t = window.setTimeout(run, 50);
+    return () => window.clearTimeout(t);
+  }, [messages, loadingThread]);
 
   useEffect(() => {
     const upsertDeleted = (payload: { conversation_id: string; message: ChatMessage }) => {
@@ -159,6 +223,7 @@ export default function MessagesPage() {
           if (prev.some((m) => m.id === payload.message.id)) return prev;
           return [...prev, payload.message];
         });
+        pendingScrollRef.current = 'bottom';
         void markConversationRead(payload.conversation_id);
       }
       void loadConversations();
@@ -247,6 +312,7 @@ export default function MessagesPage() {
       receipt_status: 'sending',
     };
     setMessages((prev) => [...prev, optimistic]);
+    pendingScrollRef.current = 'bottom';
     const pendingBody = body.trim();
     const pendingFile = file;
     setBody('');
@@ -551,11 +617,23 @@ export default function MessagesPage() {
                       att &&
                       (m.attachment_url?.match(/\.(png|jpe?g|gif|webp)$/i) ||
                         m.attachment_name?.match(/\.(png|jpe?g|gif|webp)$/i));
+                    const showUnreadDivider = unreadDividerId === m.id;
                     return (
-                      <div
-                        key={m.id}
-                        className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
-                      >
+                      <div key={m.id} id={`chat-msg-${m.id}`} className="scroll-mt-2">
+                        {showUnreadDivider && (
+                          <div
+                            className="mb-2 flex items-center gap-2 py-1"
+                            role="separator"
+                            aria-label="Mensajes nuevos"
+                          >
+                            <div className="h-px flex-1 bg-amber-400/70" />
+                            <span className="shrink-0 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                              Mensajes nuevos
+                            </span>
+                            <div className="h-px flex-1 bg-amber-400/70" />
+                          </div>
+                        )}
+                        <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                         <div
                           className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
                             deleted
@@ -640,6 +718,7 @@ export default function MessagesPage() {
                               </button>
                             )}
                           </div>
+                        </div>
                         </div>
                       </div>
                     );
