@@ -85,7 +85,12 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.56.16 (Actualización: 6 de Agosto de 2026)
+## 🚀 Versión Actual: v1.56.17 (Actualización: 7 de Agosto de 2026)
+
+### Novedades en v1.56.17
+- **Nuevo:** Seguridad — rate limit login + portal `/request`; JWT_SECRET obligatorio; multer fotos OT/portal (12 MB, solo imágenes).
+- **Nuevo:** CI deploy — `scripts/ci-typecheck.sh` (backend bloqueante) antes de `update.sh`; workflow con timeout 45 min.
+- **Mejora:** Aviso de versión vs GitHub en repo privado vía `GITHUB_TOKEN` (Contents: Read).
 
 ### Novedades en v1.56.16
 - **Mejora:** Mensajes — al abrir un contacto con no leídos, scroll al primer mensaje nuevo (más antiguo) + separador «Mensajes nuevos».

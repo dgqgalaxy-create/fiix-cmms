@@ -162,6 +162,7 @@ chmod +x \
   "${APP_DIR}/scripts/ensure-vapid-env.sh" \
   "${APP_DIR}/scripts/gha-runner-watchdog.sh" \
   "${APP_DIR}/scripts/install-gha-runner-watchdog.sh" \
+  "${APP_DIR}/scripts/ci-typecheck.sh" \
   2>/dev/null || true
 git status --short || true
 
@@ -182,6 +183,7 @@ chmod +x \
   "${APP_DIR}/scripts/ensure-vapid-env.sh" \
   "${APP_DIR}/scripts/gha-runner-watchdog.sh" \
   "${APP_DIR}/scripts/install-gha-runner-watchdog.sh" \
+  "${APP_DIR}/scripts/ci-typecheck.sh" \
   2>/dev/null || true
 
 AFTER_SHA="$(git rev-parse --short HEAD)"
@@ -217,6 +219,7 @@ if [ ! -f "${FREEZE_COST_MARKER}" ]; then
   fi
 fi
 info "Compilando backend (dist/)..."
+npx tsc --noEmit
 npm run build
 if [ ! -f "${APP_DIR}/backend/dist/index.js" ]; then
   die "No existe backend/dist/index.js tras tsc. Revisa tsconfig (rootDir=src)."

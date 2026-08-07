@@ -287,7 +287,24 @@ cd ~/fiix-cmms
 
 **No toca** `backend/.env` ni `backend/uploads/`. Al final (solo con TTY) pregunta si actualizar **nginx**; en CI usa `UPDATE_NGINX=1 ./update.sh` si hace falta. No edites código en el servidor: se pierde en el próximo update.
 
-**GitHub Actions (self-hosted):** mismo usuario que tiene nvm. El workflow hace `git restore .`, `git pull --ff-only` y `bash ./update.sh`. Si un deploy quedó a medias: `cd ~/fiix-cmms && git restore . && git pull --ff-only && bash ./update.sh`.
+**GitHub Actions (self-hosted):** mismo usuario que tiene nvm. El workflow hace `git restore .`, `git pull --ff-only`, **`scripts/ci-typecheck.sh`** (tsc backend+frontend) y `bash ./update.sh`. Si el typecheck falla, el job termina en rojo **sin** reiniciar PM2 con un build roto. Si un deploy quedó a medias: `cd ~/fiix-cmms && git restore . && git pull --ff-only && bash ./update.sh`.
+
+### Aviso de versión (banner ámbar) en repo privado
+
+El servidor compara `backend/package.json` local vs `frontend/package.json` en GitHub. En repos **privados** hace falta un token de solo lectura:
+
+1. GitHub → **Settings → Developer settings → Personal access tokens** (fine-grained).
+2. Solo este repositorio; permiso **Contents: Read**.
+3. En el servidor, `backend/.env`:
+   ```bash
+   GITHUB_TOKEN="ghp_...."
+   # opcional:
+   # GITHUB_REPO="dgqgalaxy-create/fiix-cmms"
+   # GITHUB_BRANCH="main"
+   ```
+4. `pm2 restart fiix-backend --update-env`
+
+Sin token, el auto-deploy sigue funcionando; solo falla el aviso ámbar.
 
 ### Runner self-hosted se “cuelga” (Waiting for a runner…)
 

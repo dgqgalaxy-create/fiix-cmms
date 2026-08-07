@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.16";
+export const APP_VERSION = "1.56.17";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Seguridad — rate limit en login y portal público; JWT_SECRET obligatorio (sin default inseguro); límite 12 MB e imágenes en subidas de OT/portal.",
+    "Nuevo: Deploy — typecheck de backend antes de update (Actions); timeout 45 min; aviso de versión GitHub con GITHUB_TOKEN en repos privados.",
     "Mejora: Al abrir un chat con mensajes sin leer, la vista salta al primer no leído (el más antiguo) y muestra el separador «Mensajes nuevos».",
     "Nuevo: Watchdog del GitHub Actions runner en el servidor — reinicia la sesión si se cuelga (Waiting for a runner) y activa NTP; install.sh pregunta por instalarlo.",
     "Mejora: En interfaz móvil, el menú lateral ya no repite Inicio, Órdenes, Mensajes ni Inventario (van en la barra inferior); sin barra inferior sí aparecen en el menú.",

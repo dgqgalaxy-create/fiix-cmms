@@ -5,19 +5,27 @@ on:
     branches:
       - main
 
+# Un solo deploy a la vez; cancela el anterior si llega otro push rápido
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: self-hosted
+    timeout-minutes: 45
     steps:
-      - name: Pull and update
+      - name: Pull, typecheck and update
         run: |
+          set -euo pipefail
           cd ~/fiix-cmms
-          # Pull primero para usar el update.sh endurecido (evita chicken-egg:
-          # el script antiguo fallaba en nvm antes del git pull).
           export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
           [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
           # npm install puede ensuciar package-lock.json en el servidor;
           # sin restore, git pull aborta y el auto-deploy queda parado.
           git restore .
           git pull --ff-only
+          chmod +x ./scripts/ci-typecheck.sh ./update.sh ./scripts/gha-runner-watchdog.sh 2>/dev/null || true
+          # Gate: falla el job ANTES de rebuild/PM2 si TypeScript no compila
+          bash ./scripts/ci-typecheck.sh
           bash ./update.sh

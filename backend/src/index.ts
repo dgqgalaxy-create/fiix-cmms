@@ -4,9 +4,13 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import http from 'http';
-import { initSocket } from './utils/socket';
 
 dotenv.config();
+
+import { initSocket } from './utils/socket';
+import { assertJwtConfigured } from './utils/auth';
+
+assertJwtConfigured();
 
 // Restart trigger
 
@@ -92,6 +96,26 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/version', versionRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/chat', chatRoutes);
+
+/** Errores de multer (tamaño / tipo) → 400 JSON legible */
+app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
+  if (!err) {
+    next();
+    return;
+  }
+  const msg = err instanceof Error ? err.message : String(err);
+  const code =
+    typeof err === 'object' && err && 'code' in err ? String((err as { code?: string }).code) : '';
+  if (code === 'LIMIT_FILE_SIZE' || /file size|File too large/i.test(msg)) {
+    res.status(400).json({ error: 'Archivo demasiado grande (máx. 12 MB para fotos de OT/portal).' });
+    return;
+  }
+  if (/Solo se permiten imágenes|Tipo de archivo/i.test(msg) || code === 'LIMIT_UNEXPECTED_FILE') {
+    res.status(400).json({ error: msg || 'Archivo no permitido' });
+    return;
+  }
+  next(err);
+});
 
 // Producción: Express sirve el frontend ya compilado (frontend/dist) en el mismo
 // puerto que la API, para no depender de un segundo proceso Vite en :5173.

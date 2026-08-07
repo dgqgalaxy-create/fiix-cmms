@@ -45,23 +45,73 @@ export function compareSemver(a: string, b: string): number {
   return 0;
 }
 
-async function fetchGithubFrontendVersion(): Promise<string | null> {
+/**
+ * Lee frontend/package.json desde GitHub.
+ * Repo privado: define GITHUB_TOKEN (classic con `repo` o fine-grained Contents: Read).
+ */
+async function fetchGithubFrontendVersion(): Promise<{ version: string | null; error?: string }> {
   const repo = (process.env.GITHUB_REPO || 'dgqgalaxy-create/fiix-cmms').trim();
   const branch = (process.env.GITHUB_BRANCH || 'main').trim();
-  const url = `https://raw.githubusercontent.com/${repo}/${branch}/frontend/package.json`;
+  const token = (process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '').trim();
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
+  const timer = setTimeout(() => controller.abort(), 10000);
+
+  const headers: Record<string, string> = {
+    Accept: 'application/vnd.github+json',
+    'User-Agent': 'fiix-cmms-version-check',
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: { Accept: 'application/json', 'User-Agent': 'fiix-cmms-version-check' },
-    });
-    if (!res.ok) return null;
-    const pkg = (await res.json()) as { version?: string };
-    return pkg?.version ? String(pkg.version) : null;
-  } catch {
-    return null;
+    // API contents (funciona en privados con token; en públicos también)
+    const apiUrl = `https://api.github.com/repos/${repo}/contents/frontend/package.json?ref=${encodeURIComponent(branch)}`;
+    const apiRes = await fetch(apiUrl, { signal: controller.signal, headers });
+
+    if (apiRes.status === 404 && !token) {
+      return {
+        version: null,
+        error:
+          'Repo privado o ruta no encontrada. Añade GITHUB_TOKEN (Contents: Read) en backend/.env',
+      };
+    }
+    if (apiRes.status === 401 || apiRes.status === 403) {
+      return {
+        version: null,
+        error: 'GitHub rechazó el token (401/403). Revisa GITHUB_TOKEN y permisos Contents: Read',
+      };
+    }
+    if (!apiRes.ok) {
+      // Fallback raw (públicos o token con raw)
+      const rawUrl = `https://raw.githubusercontent.com/${repo}/${branch}/frontend/package.json`;
+      const rawHeaders: Record<string, string> = {
+        Accept: 'application/json',
+        'User-Agent': 'fiix-cmms-version-check',
+      };
+      if (token) rawHeaders.Authorization = `Bearer ${token}`;
+      const rawRes = await fetch(rawUrl, { signal: controller.signal, headers: rawHeaders });
+      if (!rawRes.ok) {
+        return { version: null, error: `GitHub HTTP ${apiRes.status}` };
+      }
+      const pkg = (await rawRes.json()) as { version?: string };
+      return { version: pkg?.version ? String(pkg.version) : null };
+    }
+
+    const body = (await apiRes.json()) as { content?: string; encoding?: string };
+    if (!body.content) {
+      return { version: null, error: 'Respuesta GitHub sin content' };
+    }
+    const decoded = Buffer.from(body.content, (body.encoding as BufferEncoding) || 'base64').toString(
+      'utf8'
+    );
+    const pkg = JSON.parse(decoded) as { version?: string };
+    return { version: pkg?.version ? String(pkg.version) : null };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Error de red';
+    return { version: null, error: msg };
   } finally {
     clearTimeout(timer);
   }
@@ -76,7 +126,7 @@ export const getVersionStatus = async (_req: Request, res: Response): Promise<vo
     }
 
     const deployed = readDeployedVersion();
-    const github = await fetchGithubFrontendVersion();
+    const { version: github, error: fetchError } = await fetchGithubFrontendVersion();
     const updateAvailable = github != null && compareSemver(github, deployed) > 0;
 
     const payload: VersionPayload = {
@@ -84,7 +134,7 @@ export const getVersionStatus = async (_req: Request, res: Response): Promise<vo
       github,
       updateAvailable,
       checkedAt: new Date().toISOString(),
-      ...(github == null ? { error: 'No se pudo consultar GitHub' } : {}),
+      ...(github == null ? { error: fetchError || 'No se pudo consultar GitHub' } : {}),
     };
 
     cache = { at: now, payload };
