@@ -85,7 +85,10 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.56.17 (Actualización: 7 de Agosto de 2026)
+## 🚀 Versión Actual: v1.56.18 (Actualización: 7 de Agosto de 2026)
+
+### Novedades en v1.56.18
+- **Corrección:** Timeout de API/PWA y mensaje «No se pudo conectar» + Reintentar — evita spinner eterno al refrescar si el servidor está caído.
 
 ### Novedades en v1.56.17
 - **Nuevo:** Seguridad — rate limit login + portal `/request`; JWT_SECRET obligatorio; multer fotos OT/portal (12 MB, solo imágenes).

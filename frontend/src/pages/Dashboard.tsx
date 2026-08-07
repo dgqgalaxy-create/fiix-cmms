@@ -14,6 +14,7 @@ import { formatWorkOrderFolio } from '../utils/folio';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
 import { formatDate, formatDateTime } from '../utils/dateUtils';
+import { PageLoadError, PageLoadingState, isLikelyServerUnreachable } from '../components/PageLoadState';
 
 export const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -21,6 +22,7 @@ export const Dashboard = () => {
   const { user, hasPermission } = useAuth();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false);
@@ -236,15 +238,22 @@ export const Dashboard = () => {
 
   const fetchWorkOrders = async (backgroundFetch: boolean = false) => {
     try {
-      if (!backgroundFetch) setIsLoading(true);
+      if (!backgroundFetch) {
+        setIsLoading(true);
+        setLoadError(false);
+      }
       const data = await getWorkOrders();
       setWorkOrders(data);
+      setLoadError(false);
       setSelectedWorkOrder((prev) => {
         if (!prev) return null;
         return data.find((w) => w.id === prev.id) || prev;
       });
     } catch (error) {
       console.error('Error fetching work orders', error);
+      if (!backgroundFetch) {
+        setLoadError(isLikelyServerUnreachable(error));
+      }
     } finally {
       if (!backgroundFetch) setIsLoading(false);
     }
@@ -438,10 +447,9 @@ export const Dashboard = () => {
       </div>
 
       {isLoading && workOrders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
-          <RefreshCw size={32} className="animate-spin text-blue-800 mb-4" />
-          <p className="text-slate-500 font-medium">Cargando órdenes de trabajo...</p>
-        </div>
+        <PageLoadingState label="Cargando órdenes de trabajo..." />
+      ) : loadError && workOrders.length === 0 ? (
+        <PageLoadError onRetry={() => void fetchWorkOrders()} />
       ) : (
         <div ref={tableContainerRef}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 border-b border-slate-200 pb-4 print:hidden">

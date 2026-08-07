@@ -24,6 +24,7 @@ import {
   Package,
   ShoppingCart,
 } from 'lucide-react';
+import { PageLoadError, isLikelyServerUnreachable } from '../components/PageLoadState';
 import {
   Bar,
   BarChart,
@@ -84,6 +85,7 @@ export const HomePage = () => {
   const [summaryStartDate, setSummaryStartDate] = useState('');
   const [summaryEndDate, setSummaryEndDate] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [streakMsgSeed, setStreakMsgSeed] = useState(() => Date.now());
 
   const isControlRoomRole =
@@ -104,7 +106,10 @@ export const HomePage = () => {
 
   const fetchDashboard = async (backgroundFetch = false) => {
     try {
-      if (!backgroundFetch) setIsLoading(true);
+      if (!backgroundFetch) {
+        setIsLoading(true);
+        setLoadError(false);
+      }
       const [orders, summaryData, stoppageData, notesData, invData] = await Promise.all([
         getWorkOrders(),
         getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined),
@@ -117,8 +122,10 @@ export const HomePage = () => {
       setLineStoppage(stoppageData);
       if (notesData) setNotesSummary(notesData);
       if (invData) setInventorySummary(invData);
+      setLoadError(false);
     } catch (error) {
       console.error('Error fetching dashboard summary', error);
+      if (!backgroundFetch) setLoadError(isLikelyServerUnreachable(error));
     } finally {
       if (!backgroundFetch) setIsLoading(false);
     }
@@ -381,6 +388,12 @@ export const HomePage = () => {
           </button>
         </div>
       </div>
+
+      {loadError && workOrders.length === 0 && !isLoading && (
+        <div className="mb-6">
+          <PageLoadError onRetry={() => void fetchDashboard()} />
+        </div>
+      )}
 
       <section className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div

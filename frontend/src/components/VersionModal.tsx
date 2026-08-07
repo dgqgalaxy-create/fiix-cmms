@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.17";
+export const APP_VERSION = "1.56.18";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "6 de Agosto, 2026";
+  const updateDate = "7 de Agosto, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Si el servidor cae y das F5, ya no queda el círculo girando minutos — timeout de API ~15 s, PWA corta red en ~5–8 s y muestra «No se pudo conectar» con Reintentar.",
     "Nuevo: Seguridad — rate limit en login y portal público; JWT_SECRET obligatorio (sin default inseguro); límite 12 MB e imágenes en subidas de OT/portal.",
     "Nuevo: Deploy — typecheck de backend antes de update (Actions); timeout 45 min; aviso de versión GitHub con GITHUB_TOKEN en repos privados.",
     "Mejora: Al abrir un chat con mensajes sin leer, la vista salta al primer no leído (el más antiguo) y muestra el separador «Mensajes nuevos».",

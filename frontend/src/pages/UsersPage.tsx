@@ -10,6 +10,7 @@ import { UserModal } from '../components/UserModal';
 import { RequestersTable } from '../components/RequestersTable';
 import { RequesterModal } from '../components/RequesterModal';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import { PageLoadError, PageLoadingState, isLikelyServerUnreachable } from '../components/PageLoadState';
 
 export const UsersPage = () => {
   const { user: currentUser, hasPermission } = useAuth();
@@ -19,6 +20,7 @@ export const UsersPage = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [requesters, setRequesters] = useState<Requester[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   
   const [showInactive, setShowInactive] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,11 +34,16 @@ export const UsersPage = () => {
 
   const fetchUsers = async (background = false) => {
     try {
-      if (!background) setIsLoading(true);
+      if (!background) {
+        setIsLoading(true);
+        setLoadError(false);
+      }
       const data = await getUsers();
       setUsers(data);
+      setLoadError(false);
     } catch (error) {
       console.error('Error fetching users', error);
+      if (!background) setLoadError(isLikelyServerUnreachable(error));
     } finally {
       if (!background) setIsLoading(false);
     }
@@ -44,11 +51,16 @@ export const UsersPage = () => {
 
   const fetchRequesters = async (background = false) => {
     try {
-      if (!background) setIsLoading(true);
+      if (!background) {
+        setIsLoading(true);
+        setLoadError(false);
+      }
       const data = await getRequesters();
       setRequesters(data);
+      setLoadError(false);
     } catch (error) {
       console.error('Error fetching requesters', error);
+      if (!background) setLoadError(isLikelyServerUnreachable(error));
     } finally {
       if (!background) setIsLoading(false);
     }
@@ -166,10 +178,15 @@ export const UsersPage = () => {
       </div>
 
       {isLoading && ((activeTab === 'users' && users.length === 0) || (activeTab === 'requesters' && requesters.length === 0)) ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-          <RefreshCw size={32} className="animate-spin text-emerald-600 dark:text-emerald-400 mb-4" />
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Cargando...</p>
-        </div>
+        <PageLoadingState />
+      ) : loadError &&
+        ((activeTab === 'users' && users.length === 0) ||
+          (activeTab === 'requesters' && requesters.length === 0)) ? (
+        <PageLoadError
+          onRetry={() =>
+            void (activeTab === 'users' ? fetchUsers() : fetchRequesters())
+          }
+        />
       ) : activeTab === 'users' ? (
         <>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">

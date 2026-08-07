@@ -20,12 +20,18 @@ export const resolveBackendUrl = (): string => {
 
 export const BACKEND_URL = resolveBackendUrl();
 
+/** Timeout por defecto: evita spinners eternos si el servidor cae pero el Wi‑Fi sigue “online”. */
+const DEFAULT_TIMEOUT_MS = 15_000;
+
 const api: AxiosInstance = axios.create({
   baseURL: `${BACKEND_URL}/api`,
+  timeout: DEFAULT_TIMEOUT_MS,
 });
 
 /** Cliente sin interceptores offline: para sync de cola y llamadas internas. */
-export const bareAxios: AxiosInstance = axios.create();
+export const bareAxios: AxiosInstance = axios.create({
+  timeout: DEFAULT_TIMEOUT_MS,
+});
 
 const OFFLINE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 

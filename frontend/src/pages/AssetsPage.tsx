@@ -16,6 +16,7 @@ import { getZones } from '../api/zones';
 import type { Zone } from '../api/zones';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { zoneNeedsSections } from '../utils/assetSection';
+import { PageLoadError, PageLoadingState, isLikelyServerUnreachable } from '../components/PageLoadState';
 
 export const AssetsPage = () => {
   const { hasPermission } = useAuth();
@@ -27,6 +28,7 @@ export const AssetsPage = () => {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [manageZonesOpen, setManageZonesOpen] = useState(false);
@@ -42,11 +44,16 @@ export const AssetsPage = () => {
 
   const fetchAssets = async (background = false) => {
     try {
-      if (!background) setIsLoading(true);
+      if (!background) {
+        setIsLoading(true);
+        setLoadError(false);
+      }
       const data = await getAssets();
       setAssets(data);
+      setLoadError(false);
     } catch (error) {
       console.error('Error fetching assets', error);
+      if (!background) setLoadError(isLikelyServerUnreachable(error));
     } finally {
       if (!background) setIsLoading(false);
     }
@@ -260,10 +267,9 @@ export const AssetsPage = () => {
       )}
 
       {isLoading && assets.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-          <RefreshCw size={32} className="animate-spin text-emerald-600 dark:text-emerald-400 mb-4" />
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Cargando inventario...</p>
-        </div>
+        <PageLoadingState label="Cargando inventario..." />
+      ) : loadError && assets.length === 0 ? (
+        <PageLoadError onRetry={() => void fetchAssets()} />
       ) : (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-3 mb-6">

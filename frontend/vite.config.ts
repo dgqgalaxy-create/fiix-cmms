@@ -68,8 +68,22 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         // Handlers push / notificationclick
         importScripts: ['/push-sw.js'],
-        // Cache API requests
+        // SPA: si el servidor no contesta el HTML, no colgar F5 minutos — usar shell en caché.
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/api/, /^\/uploads/, /^\/socket\.io/],
+        // Cache API + navegación
         runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages-shell',
+              networkTimeoutSeconds: 5,
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
           {
             // Solo GET: no interceptar POST/PUT de import CSV+zip (body grande → Network Error).
             urlPattern: ({ url, request }) =>
@@ -78,6 +92,8 @@ export default defineConfig({
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
+              // Si el servidor no responde, no colgar la UI minutos: fallback a caché o error rápido.
+              networkTimeoutSeconds: 8,
               expiration: {
                 maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
