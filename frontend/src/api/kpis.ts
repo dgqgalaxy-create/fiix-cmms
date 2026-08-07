@@ -29,12 +29,34 @@ export interface KPIResponse {
   };
 }
 
-export const getKPIs = async (period?: string, reworkDays?: number): Promise<KPIResponse> => {
-  const params = new URLSearchParams();
-  if (period) params.set('period', period);
-  if (reworkDays !== undefined) params.set('reworkDays', String(reworkDays));
-  const query = params.toString() ? `?${params.toString()}` : '';
-  const response = await api.get(`/kpis${query}`);
+export type KpiPeriodQuery = {
+  period?: string;
+  startDate?: string;
+  endDate?: string;
+  reworkDays?: number;
+};
+
+const buildKpiQuery = (params: KpiPeriodQuery = {}): string => {
+  const q = new URLSearchParams();
+  if (params.period) q.set('period', params.period);
+  if (params.period === 'CUSTOM') {
+    if (params.startDate) q.set('startDate', params.startDate);
+    if (params.endDate) q.set('endDate', params.endDate);
+  }
+  if (params.reworkDays !== undefined) q.set('reworkDays', String(params.reworkDays));
+  const s = q.toString();
+  return s ? `?${s}` : '';
+};
+
+export const getKPIs = async (
+  periodOrQuery?: string | KpiPeriodQuery,
+  reworkDays?: number,
+): Promise<KPIResponse> => {
+  const params: KpiPeriodQuery =
+    typeof periodOrQuery === 'object' && periodOrQuery
+      ? periodOrQuery
+      : { period: periodOrQuery, reworkDays };
+  const response = await api.get(`/kpis${buildKpiQuery(params)}`);
   return response.data;
 };
 
@@ -52,9 +74,12 @@ export interface ChartData {
   mtbfSample?: number;
 }
 
-export const getChartData = async (period?: string): Promise<ChartData[]> => {
-  const query = period ? `?period=${period}` : '';
-  const response = await api.get(`/kpis/charts${query}`);
+export const getChartData = async (periodOrQuery?: string | KpiPeriodQuery): Promise<ChartData[]> => {
+  const params: KpiPeriodQuery =
+    typeof periodOrQuery === 'object' && periodOrQuery
+      ? periodOrQuery
+      : { period: periodOrQuery };
+  const response = await api.get(`/kpis/charts${buildKpiQuery(params)}`);
   return response.data;
 };
 
@@ -64,9 +89,12 @@ export interface AssetCostData {
   totalCost: number;
 }
 
-export const getCostsByAsset = async (period?: string): Promise<AssetCostData[]> => {
-  const query = period ? `?period=${period}` : '';
-  const response = await api.get(`/kpis/costs-by-asset${query}`);
+export const getCostsByAsset = async (periodOrQuery?: string | KpiPeriodQuery): Promise<AssetCostData[]> => {
+  const params: KpiPeriodQuery =
+    typeof periodOrQuery === 'object' && periodOrQuery
+      ? periodOrQuery
+      : { period: periodOrQuery };
+  const response = await api.get(`/kpis/costs-by-asset${buildKpiQuery(params)}`);
   return response.data;
 };
 
@@ -76,9 +104,14 @@ export interface TopFailingAsset {
   count: number;
 }
 
-export const getTopFailingAssets = async (period?: string): Promise<TopFailingAsset[]> => {
-  const query = period ? `?period=${period}` : '';
-  const response = await api.get(`/kpis/top-failures${query}`);
+export const getTopFailingAssets = async (
+  periodOrQuery?: string | KpiPeriodQuery,
+): Promise<TopFailingAsset[]> => {
+  const params: KpiPeriodQuery =
+    typeof periodOrQuery === 'object' && periodOrQuery
+      ? periodOrQuery
+      : { period: periodOrQuery };
+  const response = await api.get(`/kpis/top-failures${buildKpiQuery(params)}`);
   return response.data;
 };
 
@@ -93,9 +126,15 @@ export interface FailureOrder {
   assigned_technicians?: { name: string }[];
 }
 
-export const getAssetFailureOrders = async (assetId: string, period?: string): Promise<FailureOrder[]> => {
-  const query = period ? `?period=${period}` : '';
-  const response = await api.get(`/kpis/top-failures/${assetId}/orders${query}`);
+export const getAssetFailureOrders = async (
+  assetId: string,
+  periodOrQuery?: string | KpiPeriodQuery,
+): Promise<FailureOrder[]> => {
+  const params: KpiPeriodQuery =
+    typeof periodOrQuery === 'object' && periodOrQuery
+      ? periodOrQuery
+      : { period: periodOrQuery };
+  const response = await api.get(`/kpis/top-failures/${assetId}/orders${buildKpiQuery(params)}`);
   return response.data;
 };
 
@@ -115,10 +154,19 @@ export interface TechnicianPerformance {
   FinalizadasSemana: number;
   /** Horas de mano de obra (accumulated_time_ms) de OTs cerradas esta semana. */
   HorasLaborSemana: number;
+  /** Horas de labor (sin pausas) de OT finalizadas en el periodo del filtro. */
+  HorasLaborPeriodo?: number;
+  /** Promedio de horas de labor por OT finalizada en el periodo. */
+  TiempoPromedioHoras?: number;
 }
 
-export const getTechnicianPerformance = async (period?: string): Promise<TechnicianPerformance[]> => {
-  const query = period ? `?period=${period}` : '';
-  const response = await api.get(`/kpis/technician-performance${query}`);
+export const getTechnicianPerformance = async (
+  periodOrQuery?: string | KpiPeriodQuery,
+): Promise<TechnicianPerformance[]> => {
+  const params: KpiPeriodQuery =
+    typeof periodOrQuery === 'object' && periodOrQuery
+      ? periodOrQuery
+      : { period: periodOrQuery };
+  const response = await api.get(`/kpis/technician-performance${buildKpiQuery(params)}`);
   return response.data;
 };

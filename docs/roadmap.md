@@ -85,7 +85,11 @@ Categories → Location → Vendors → Items → Users → Inventory → **Form
 
 ---
 
-## 🚀 Versión Actual: v1.56.18 (Actualización: 7 de Agosto de 2026)
+## 🚀 Versión Actual: v1.56.19 (Actualización: 7 de Agosto de 2026)
+
+### Novedades en v1.56.19
+- **Nuevo:** KPI — periodo personalizado; marco de filtros; gráficas por técnico (finalizadas + tiempo promedio de labor sin pausas).
+- **Nuevo:** Órdenes — periodo inicio/fin + Estado; Inventario Movimientos — entradas/bajas/todos; marcos de filtro (KPI, OT, Activos, Inventario, Inicio).
 
 ### Novedades en v1.56.18
 - **Corrección:** Timeout de API/PWA y mensaje «No se pudo conectar» + Reintentar — evita spinner eterno al refrescar si el servidor está caído.

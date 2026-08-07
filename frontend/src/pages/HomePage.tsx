@@ -25,6 +25,7 @@ import {
   ShoppingCart,
 } from 'lucide-react';
 import { PageLoadError, isLikelyServerUnreachable } from '../components/PageLoadState';
+import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
 import {
   Bar,
   BarChart,
@@ -767,38 +768,37 @@ export const HomePage = () => {
         </div>
       )}
 
-      <section className="relative mb-8 rounded-3xl border-2 border-blue-200/80 bg-blue-50/30 p-3 sm:p-5 dark:border-blue-900/70 dark:bg-blue-950/10">
-        <div className="absolute -top-3 left-5 flex items-center gap-2 rounded-full border border-blue-200 bg-white px-3 py-1 text-xs font-bold uppercase tracking-wider text-blue-700 shadow-sm dark:border-blue-800 dark:bg-slate-900 dark:text-blue-300">
-          <CalendarClock size={14} />
-          Resumen por periodo
-        </div>
-        <p className="mb-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
-          El periodo seleccionado se aplica a todas las tarjetas y a la distribución de mantenimiento dentro de este marco.
-        </p>
-
-      <div className="flex flex-wrap gap-4 items-center mb-4 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-        <div className="flex items-center gap-2">
-          <CalendarClock size={18} className="text-slate-500" />
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Filtro para resumen superior:</span>
-        </div>
-        <label className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-          Desde:
-          <input type="date" value={summaryStartDate} onChange={e => setSummaryStartDate(e.target.value)} className="text-sm px-2 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
-        </label>
-        <label className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-          Hasta:
-          <input type="date" value={summaryEndDate} onChange={e => setSummaryEndDate(e.target.value)} className="text-sm px-2 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
-        </label>
-        {summaryStartDate || summaryEndDate ? (
-          <button onClick={() => { setSummaryStartDate(''); setSummaryEndDate(''); }} className="text-xs text-rose-500 hover:text-rose-700 font-medium px-2 py-1 bg-rose-50 rounded-lg">
-            Limpiar filtro
-          </button>
-        ) : (
-          <span className="text-xs px-2.5 py-1 bg-blue-50 text-blue-700 font-bold rounded-lg border border-blue-200 flex items-center gap-1.5">
-            <Activity size={14} /> Modo Histórico (Viendo Todo)
-          </span>
-        )}
-      </div>
+      <FilterScopeFrame
+        title="Resumen por periodo"
+        icon={CalendarClock}
+        tone="blue"
+        hint="El periodo seleccionado se aplica a todas las tarjetas y a la distribución de mantenimiento dentro de este marco."
+        toolbar={
+          <>
+            <div className="flex items-center gap-2">
+              <CalendarClock size={18} className="text-slate-500" />
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Filtro para resumen superior:</span>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+              Desde:
+              <input type="date" value={summaryStartDate} onChange={e => setSummaryStartDate(e.target.value)} className="text-sm px-2 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
+            </label>
+            <label className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+              Hasta:
+              <input type="date" value={summaryEndDate} onChange={e => setSummaryEndDate(e.target.value)} className="text-sm px-2 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
+            </label>
+            {summaryStartDate || summaryEndDate ? (
+              <button type="button" onClick={() => { setSummaryStartDate(''); setSummaryEndDate(''); }} className="text-xs text-rose-500 hover:text-rose-700 font-medium px-2 py-1 bg-rose-50 rounded-lg">
+                Limpiar filtro
+              </button>
+            ) : (
+              <span className="text-xs px-2.5 py-1 bg-blue-50 text-blue-700 font-bold rounded-lg border border-blue-200 flex items-center gap-1.5">
+                <Activity size={14} /> Modo Histórico (Viendo Todo)
+              </span>
+            )}
+          </>
+        }
+      >
 
       <div className="flex flex-col xl:flex-row gap-4 mb-6 sm:mb-8">
         <div className="flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-6 gap-3 sm:gap-4">
@@ -885,7 +885,7 @@ export const HomePage = () => {
           </div>
         </div>
       </div>
-      </section>
+      </FilterScopeFrame>
 
       {/* Resumen semanal de finalizadas (Lunes → Domingo) */}
       <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mb-8">

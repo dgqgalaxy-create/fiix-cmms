@@ -28,12 +28,34 @@ const DEFAULT_GOALS: Record<string, { targetValue: number; unit: string }> = {
 
 const clip = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-const getDateRange = (period: string | undefined): { start: Date; end: Date; effectiveEnd: Date } => {
+type DateRangeOpts = { startDate?: unknown; endDate?: unknown };
+
+const parseYmdLocal = (raw: unknown, endOfDay: boolean): Date | null => {
+  if (typeof raw !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(raw.trim())) return null;
+  const [y, m, d] = raw.trim().split('-').map(Number);
+  if (!y || !m || !d) return null;
+  return endOfDay
+    ? new Date(y, m - 1, d, 23, 59, 59, 999)
+    : new Date(y, m - 1, d, 0, 0, 0, 0);
+};
+
+const getDateRange = (
+  period: string | undefined,
+  opts?: DateRangeOpts,
+): { start: Date; end: Date; effectiveEnd: Date } => {
   const now = new Date();
   let start = new Date(now.getFullYear(), now.getMonth(), 1);
   let end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-  if (period === 'THIS_WEEK') {
+  if (period === 'CUSTOM') {
+    start = parseYmdLocal(opts?.startDate, false) || new Date(now.getFullYear(), now.getMonth(), 1);
+    end =
+      parseYmdLocal(opts?.endDate, true) ||
+      new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    if (end < start) {
+      end = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 23, 59, 59, 999);
+    }
+  } else if (period === 'THIS_WEEK') {
     start = new Date(now);
     const day = start.getDay();
     const diff = start.getDate() - day + (day === 0 ? -6 : 1);
@@ -74,6 +96,12 @@ const getDateRange = (period: string | undefined): { start: Date; end: Date; eff
   return { start, end, effectiveEnd };
 };
 
+const rangeFromReq = (req: AuthRequest) =>
+  getDateRange(req.query.period as string, {
+    startDate: req.query.startDate,
+    endDate: req.query.endDate,
+  });
+
 const normalizeGoal = (metricKey: string, targetValue: number, unit?: string | null) => {
   const fallback = DEFAULT_GOALS[metricKey] || { targetValue, unit: unit || '' };
   let value = targetValue;
@@ -99,8 +127,7 @@ const avg = (values: number[]) =>
 
 export const getTopFailingAssets = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const period = req.query.period as string;
-    const { start, effectiveEnd } = getDateRange(period);
+    const { start, effectiveEnd } = rangeFromReq(req);
 
     const workOrders = await prisma.workOrder.findMany({
       where: {
@@ -136,8 +163,7 @@ export const getTopFailingAssets = async (req: AuthRequest, res: Response): Prom
 export const getAssetFailureOrders = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const assetId = req.params.assetId as string;
-    const period = req.query.period as string;
-    const { start, effectiveEnd } = getDateRange(period);
+    const { start, effectiveEnd } = rangeFromReq(req);
 
     const workOrders = await prisma.workOrder.findMany({
       where: {
@@ -171,9 +197,8 @@ export const getAssetFailureOrders = async (req: AuthRequest, res: Response): Pr
 
 export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const period = req.query.period as string;
     const reworkWindowDays = parseReworkWindowDays(req.query.reworkDays);
-    const { start, effectiveEnd } = getDateRange(period);
+    const { start, effectiveEnd } = rangeFromReq(req);
 
     const dbGoals = await prisma.kPIGoal.findMany();
     const goals: Record<string, { targetValue: number; unit: string }> = { ...DEFAULT_GOALS };
@@ -420,9 +445,25 @@ export const updateGoals = async (req: AuthRequest, res: Response): Promise<void
   }
 };
 
-const getChartIntervals = (period: string | undefined) => {
-  const { start, effectiveEnd } = getDateRange(period);
+const getChartIntervals = (period: string | undefined, opts?: DateRangeOpts) => {
+  const { start, effectiveEnd } = getDateRange(period, opts);
   const intervals: { label: string; start: Date; end: Date; days: number }[] = [];
+
+  const pushDaily = (labelFn: (d: Date) => string) => {
+    const cursor = new Date(start);
+    cursor.setHours(0, 0, 0, 0);
+    while (cursor <= effectiveEnd) {
+      const dStart = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate());
+      const dEnd = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate(), 23, 59, 59, 999);
+      intervals.push({
+        label: labelFn(cursor),
+        start: dStart,
+        end: dEnd > effectiveEnd ? effectiveEnd : dEnd,
+        days: 1,
+      });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  };
 
   if (period === 'THIS_WEEK') {
     const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -441,17 +482,33 @@ const getChartIntervals = (period: string | undefined) => {
       });
     }
   } else if (period === 'THIS_MONTH' || period === 'LAST_MONTH') {
-    const cursor = new Date(start);
-    while (cursor <= effectiveEnd) {
-      const dStart = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate());
-      const dEnd = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate(), 23, 59, 59, 999);
-      intervals.push({
-        label: `${cursor.getDate()}`,
-        start: dStart,
-        end: dEnd > effectiveEnd ? effectiveEnd : dEnd,
-        days: 1,
-      });
-      cursor.setDate(cursor.getDate() + 1);
+    pushDaily((d) => `${d.getDate()}`);
+  } else if (period === 'CUSTOM') {
+    const spanDays =
+      Math.ceil((effectiveEnd.getTime() - start.getTime()) / 86_400_000) + 1;
+    if (spanDays <= 62) {
+      pushDaily((d) => `${d.getDate()}/${d.getMonth() + 1}`);
+    } else {
+      const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+      while (cursor <= effectiveEnd) {
+        const dStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+        const dEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59, 999);
+        intervals.push({
+          label: monthNames[dStart.getMonth()],
+          start: dStart < start ? start : dStart,
+          end: dEnd > effectiveEnd ? effectiveEnd : dEnd,
+          days: Math.max(
+            1,
+            Math.ceil(
+              ((dEnd > effectiveEnd ? effectiveEnd : dEnd).getTime() -
+                (dStart < start ? start : dStart).getTime()) /
+                86_400_000
+            )
+          ),
+        });
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
     }
   } else {
     const monthsToShow = period === 'THIS_YEAR' ? 12 : period === 'LAST_12_MONTHS' || period === 'ALL' ? 12 : 6;
@@ -476,7 +533,8 @@ const getChartIntervals = (period: string | undefined) => {
 export const getChartData = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const period = req.query.period as string;
-    const intervals = getChartIntervals(period);
+    const opts = { startDate: req.query.startDate, endDate: req.query.endDate };
+    const intervals = getChartIntervals(period, opts);
     if (intervals.length === 0) {
       res.json([]);
       return;
@@ -552,8 +610,7 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
 
 export const getCostsByAsset = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const period = req.query.period as string;
-    const { start, effectiveEnd } = getDateRange(period);
+    const { start, effectiveEnd } = rangeFromReq(req);
 
     const transactions = await prisma.inventoryTransaction.findMany({
       where: {
@@ -617,8 +674,7 @@ const holdElapsedMs = (wo: { status: string; paused_at: Date | null; updated_at:
 
 export const getTechnicianPerformance = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const period = req.query.period as string;
-    const { start, effectiveEnd } = getDateRange(period);
+    const { start, effectiveEnd } = rangeFromReq(req);
     const { start: weekStart, effectiveEnd: weekEnd } = getDateRange('THIS_WEEK');
     const now = new Date();
 
@@ -675,10 +731,18 @@ export const getTechnicianPerformance = async (req: AuthRequest, res: Response):
             wo.completed_at >= weekStart &&
             wo.completed_at <= weekEnd,
         );
+        const completedInPeriod = assigned.filter(
+          (wo) =>
+            wo.status === 'FINALIZADO' &&
+            wo.completed_at &&
+            wo.completed_at >= start &&
+            wo.completed_at <= effectiveEnd,
+        );
         const waitMs = paused.reduce((sum, wo) => sum + holdElapsedMs(wo, now), 0);
         const laborMs = completedThisWeek.reduce((sum, wo) => sum + (wo.accumulated_time_ms || 0), 0);
+        const laborPeriodMs = completedInPeriod.reduce((sum, wo) => sum + (wo.accumulated_time_ms || 0), 0);
 
-        const Finalizadas = inPeriodOrOpen.filter((wo) => wo.status === 'FINALIZADO').length;
+        const Finalizadas = completedInPeriod.length;
         const EnProceso = inPeriodOrOpen.filter((wo) => wo.status === 'EN_PROCESO').length;
         const Pendientes = inPeriodOrOpen.filter((wo) => wo.status === 'PENDIENTE').length;
         const Pausadas = paused.length;
@@ -698,9 +762,20 @@ export const getTechnicianPerformance = async (req: AuthRequest, res: Response):
           TiempoEsperaHoras: roundHours(waitMs),
           FinalizadasSemana,
           HorasLaborSemana: roundHours(laborMs),
+          /** Horas de labor (accumulated_time_ms; sin pausas) de OT finalizadas en el periodo. */
+          HorasLaborPeriodo: roundHours(laborPeriodMs),
+          /** Promedio de horas de labor por OT finalizada en el periodo. */
+          TiempoPromedioHoras:
+            Finalizadas > 0 ? roundHours(laborPeriodMs / Finalizadas) : 0,
         };
       })
-      .filter((row) => row.Total > 0 || row.CargaHoy > 0 || row.FinalizadasSemana > 0)
+      .filter(
+        (row) =>
+          row.Total > 0 ||
+          row.CargaHoy > 0 ||
+          row.FinalizadasSemana > 0 ||
+          row.Finalizadas > 0
+      )
       .sort((a, b) => b.CargaHoy - a.CargaHoy || b.FinalizadasSemana - a.FinalizadasSemana || b.Total - a.Total);
 
     res.json(rows);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, type MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download } from 'lucide-react';
+import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter } from 'lucide-react';
 import { 
   getItems, getTransactions, getCategories, getLocations, getVendors
 } from '../api/inventory';
@@ -20,6 +20,7 @@ import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { parseFiixQr, formatItemQr, formatLocationQr } from '../utils/fiixQr';
 import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
 import { InfoTip } from '../components/common/InfoTip';
+import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
 
 export const InventoryPage = () => {
   const navigate = useNavigate();
@@ -39,6 +40,7 @@ export const InventoryPage = () => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [movementTypeFilter, setMovementTypeFilter] = useState<'ALL' | 'IN' | 'OUT'>('ALL');
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [showNoVendorOnly, setShowNoVendorOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'code' | 'category' | 'stock'>('name');
@@ -856,6 +858,39 @@ export const InventoryPage = () => {
 
       case 'transactions':
         return (
+          <FilterScopeFrame
+            title="Movimientos filtrados"
+            icon={Filter}
+            tone="blue"
+            className="mb-0"
+            hint="La búsqueda y el tipo (entradas / bajas) aplican a la tabla dentro de este marco."
+            toolbar={
+              <>
+                <div className="flex-1 min-w-[200px] bg-slate-50 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center">
+                  <div className="pl-2 pr-2 text-slate-400">
+                    <Search size={18} />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Buscar en movimientos (ej. PO-25, Recepción)..."
+                    className="w-full bg-transparent border-none focus:ring-0 text-slate-700 dark:text-slate-200 placeholder-slate-400 px-1 py-1.5 text-sm outline-none"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <select
+                  value={movementTypeFilter}
+                  onChange={(e) => setMovementTypeFilter(e.target.value as 'ALL' | 'IN' | 'OUT')}
+                  className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  title="Tipo de movimiento"
+                >
+                  <option value="ALL">Todos los movimientos</option>
+                  <option value="IN">Solo entradas</option>
+                  <option value="OUT">Solo bajas</option>
+                </select>
+              </>
+            }
+          >
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm text-slate-600">
@@ -879,11 +914,17 @@ export const InventoryPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {transactions.filter(t => !searchTerm || 
-                    (t.item?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                    (t.user?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                    (t.reason || '').toLowerCase().includes(searchTerm.toLowerCase())
-                  ).sort((a, b) => {
+                  {transactions.filter(t => {
+                    if (movementTypeFilter === 'IN' && !(t.amount > 0)) return false;
+                    if (movementTypeFilter === 'OUT' && !(t.amount < 0)) return false;
+                    if (!searchTerm) return true;
+                    const term = searchTerm.toLowerCase();
+                    return (
+                      (t.item?.name || '').toLowerCase().includes(term) ||
+                      (t.user?.name || '').toLowerCase().includes(term) ||
+                      (t.reason || '').toLowerCase().includes(term)
+                    );
+                  }).sort((a, b) => {
                     let cmp = 0;
                     switch (txSortBy) {
                       case 'date':
@@ -931,6 +972,7 @@ export const InventoryPage = () => {
               </table>
             </div>
           </div>
+          </FilterScopeFrame>
         );
 
       case 'categories':
@@ -1371,21 +1413,6 @@ export const InventoryPage = () => {
                   {criticalWithoutVendor.length} críticos sin proveedor — clic para verlos
                 </button>
               )}
-            </div>
-          )}
-
-          {activeTab === 'transactions' && (
-            <div className="mb-6 bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex items-center">
-              <div className="pl-3 pr-2 text-slate-400">
-                <Search size={20} />
-              </div>
-              <input
-                type="text"
-                placeholder="Buscar en movimientos (ej. PO-25, Recepción)..."
-                className="w-full bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 px-2 py-1.5"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
             </div>
           )}
 

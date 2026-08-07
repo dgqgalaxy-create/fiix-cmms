@@ -39,6 +39,8 @@ import {
   PauseCircle,
   Timer,
   CalendarCheck,
+  CalendarClock,
+  Filter,
 } from 'lucide-react';
 import {
   LineChart,
@@ -55,6 +57,12 @@ import {
 import { formatWorkOrderFolio } from '../utils/folio';
 import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
 import { formatCurrency, formatCurrencyAxis } from '../utils/currency';
+import {
+  PeriodRangeFilter,
+  firstDayOfMonthYmd,
+  todayYmd,
+} from '../components/common/PeriodRangeFilter';
+import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
 
 type MetricStatus = 'good' | 'warn' | 'bad' | 'neutral';
 
@@ -65,6 +73,7 @@ const PERIOD_OPTIONS = [
   { value: 'LAST_MONTH', label: 'Mes pasado' },
   { value: 'THIS_YEAR', label: 'Este año' },
   { value: 'LAST_12_MONTHS', label: 'Últimos 12 meses' },
+  { value: 'CUSTOM', label: 'Periodo personalizado…' },
   { value: 'ALL', label: 'Histórico' },
 ];
 
@@ -158,6 +167,8 @@ export const KPIPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [period, setPeriod] = useState('THIS_MONTH');
+  const [customStartDate, setCustomStartDate] = useState(firstDayOfMonthYmd);
+  const [customEndDate, setCustomEndDate] = useState(todayYmd);
   const [reworkDays, setReworkDays] = useState(DEFAULT_REWORK_DAYS);
   const [reworkDaysInput, setReworkDaysInput] = useState(String(DEFAULT_REWORK_DAYS));
   const [loadError, setLoadError] = useState(false);
@@ -167,24 +178,35 @@ export const KPIPage = () => {
   const [isFetchingOrders, setIsFetchingOrders] = useState(false);
   const [goalsForm, setGoalsForm] = useState<Record<string, number>>({});
 
+  const periodQuery = {
+    period,
+    startDate: period === 'CUSTOM' ? customStartDate : undefined,
+    endDate: period === 'CUSTOM' ? customEndDate : undefined,
+    reworkDays,
+  };
+
   const fetchData = async (background = false) => {
+    if (period === 'CUSTOM' && (!customStartDate || !customEndDate)) {
+      if (!background) setIsLoading(false);
+      return;
+    }
     try {
       if (!background) {
         setIsLoading(true);
         setLoadError(false);
       }
       const [kpiData, chartData, costData, topFailingData, techData] = await Promise.all([
-        getKPIs(period, reworkDays),
-        getChartData(period).catch(() => []),
-        getCostsByAsset(period).catch(() => []),
-        getTopFailingAssets(period).catch(() => []),
-        getTechnicianPerformance(period).catch(() => []),
+        getKPIs(periodQuery),
+        getChartData(periodQuery).catch(() => []),
+        getCostsByAsset(periodQuery).catch(() => []),
+        getTopFailingAssets(periodQuery).catch(() => []),
+        getTechnicianPerformance(periodQuery).catch(() => []),
       ]);
       setData(kpiData);
 
       if (period === 'THIS_WEEK') {
         try {
-          setCompareData(await getKPIs('LAST_WEEK', reworkDays));
+          setCompareData(await getKPIs({ period: 'LAST_WEEK', reworkDays }));
         } catch {
           setCompareData(null);
         }
@@ -220,7 +242,7 @@ export const KPIPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, [period, reworkDays]);
+  }, [period, reworkDays, customStartDate, customEndDate]);
 
   useSocketRefresh(['refresh_work_orders', 'refresh_inventory'], () => { void fetchData(true); });
 
@@ -261,7 +283,7 @@ export const KPIPage = () => {
     setSelectedFailureAsset({ id: assetId, name: assetName });
     setIsFetchingOrders(true);
     try {
-      setFailureOrders(await getAssetFailureOrders(assetId, period));
+      setFailureOrders(await getAssetFailureOrders(assetId, periodQuery));
     } catch (error) {
       console.error(error);
       alert('Error al obtener el detalle de fallas');
@@ -308,6 +330,8 @@ export const KPIPage = () => {
     const tecnicosRows = techPerformance.map((t) => ({
       Técnico: t.name,
       Finalizadas: t.Finalizadas,
+      'Horas labor periodo': t.HorasLaborPeriodo ?? 0,
+      'Tiempo promedio (h)': t.TiempoPromedioHoras ?? 0,
       'En proceso': t.EnProceso,
       Pendientes: t.Pendientes,
       Pausadas: t.Pausadas,
@@ -351,6 +375,27 @@ export const KPIPage = () => {
       fullName: r.name,
       finalizadas: r.FinalizadasSemana ?? 0,
       horas: r.HorasLaborSemana ?? 0,
+    }));
+
+  const techPeriodCompletedChart = [...techPerformance]
+    .filter((r) => (r.Finalizadas ?? 0) > 0)
+    .sort((a, b) => (b.Finalizadas ?? 0) - (a.Finalizadas ?? 0))
+    .slice(0, 12)
+    .map((r) => ({
+      name: r.name.length > 18 ? `${r.name.slice(0, 18)}…` : r.name,
+      fullName: r.name,
+      finalizadas: r.Finalizadas ?? 0,
+    }));
+
+  const techPeriodAvgTimeChart = [...techPerformance]
+    .filter((r) => (r.Finalizadas ?? 0) > 0 && (r.TiempoPromedioHoras ?? 0) > 0)
+    .sort((a, b) => (a.TiempoPromedioHoras ?? 0) - (b.TiempoPromedioHoras ?? 0))
+    .slice(0, 12)
+    .map((r) => ({
+      name: r.name.length > 18 ? `${r.name.slice(0, 18)}…` : r.name,
+      fullName: r.name,
+      promedio: r.TiempoPromedioHoras ?? 0,
+      finalizadas: r.Finalizadas ?? 0,
     }));
 
   const renderKpiCard = (
@@ -428,30 +473,11 @@ export const KPIPage = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Indicadores de mantenimiento</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-            Periodo: <span className="font-semibold text-slate-700 dark:text-slate-300">{formatPeriodLabel()}</span>
+            Periodo activo: <span className="font-semibold text-slate-700 dark:text-slate-300">{formatPeriodLabel()}</span>
             {data ? ` · ${data.totalOrders} registros relevantes` : ''}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <label className="sr-only" htmlFor="kpi-period">Periodo</label>
-          <select
-            id="kpi-period"
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-            className="px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            {PERIOD_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={() => fetchData()}
-            className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
-            title="Actualizar"
-          >
-            <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
-          </button>
           <button
             type="button"
             onClick={handleExportExcel}
@@ -482,6 +508,86 @@ export const KPIPage = () => {
           )}
         </div>
       </div>
+
+      {isEditing && data && (
+        <div className={`${panelClass} print:hidden`}>
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Configurar metas</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {Object.keys(goalsForm).map((key) => (
+              <div key={key}>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  {GOAL_LABELS[key]?.label || key}
+                  <span className="ml-1 font-normal text-slate-400 dark:text-slate-500">({GOAL_LABELS[key]?.unit})</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  value={goalsForm[key]}
+                  onChange={(e) => setGoalsForm({ ...goalsForm, [key]: Number(e.target.value) })}
+                />
+                <p className="mt-1 text-[11px] text-slate-400">{GOAL_LABELS[key]?.hint}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            <button type="button" onClick={() => setIsEditing(false)} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-50 dark:hover:bg-slate-800">
+              Cancelar
+            </button>
+            <button type="button" onClick={handleSaveGoals} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+              Guardar metas
+            </button>
+          </div>
+        </div>
+      )}
+
+      <FilterScopeFrame
+        title="Indicadores por periodo"
+        icon={CalendarClock}
+        tone="blue"
+        className="print:border-0 print:bg-transparent print:p-0"
+        hint="El periodo elegido aplica a tarjetas, gráficos, costos, fallas, finalizadas por técnico y retrabajo dentro de este marco."
+        toolbar={
+          <>
+            <Filter size={16} className="text-slate-400 shrink-0" />
+            <label className="sr-only" htmlFor="kpi-period">Periodo</label>
+            <select
+              id="kpi-period"
+              value={period}
+              onChange={(e) => {
+                const next = e.target.value;
+                setPeriod(next);
+                if (next === 'CUSTOM') {
+                  if (!customStartDate) setCustomStartDate(firstDayOfMonthYmd());
+                  if (!customEndDate) setCustomEndDate(todayYmd());
+                }
+              }}
+              className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              {PERIOD_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            {period === 'CUSTOM' && (
+              <PeriodRangeFilter
+                startDate={customStartDate}
+                endDate={customEndDate}
+                onStartChange={setCustomStartDate}
+                onEndChange={setCustomEndDate}
+                size="sm"
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => fetchData()}
+              className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 ml-auto"
+              title="Actualizar"
+            >
+              <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
+            </button>
+          </>
+        }
+      >
 
       {period === 'THIS_WEEK' && data && compareData && (
         <div className="rounded-2xl border border-sky-200/80 bg-sky-50/40 p-3 dark:border-sky-900/50 dark:bg-sky-950/20 print:hidden">
@@ -577,38 +683,6 @@ export const KPIPage = () => {
           <button type="button" onClick={() => fetchData()} className="mt-3 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold">
             Reintentar
           </button>
-        </div>
-      )}
-
-      {isEditing && data && (
-        <div className={`${panelClass} print:hidden`}>
-          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Configurar metas</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {Object.keys(goalsForm).map((key) => (
-              <div key={key}>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  {GOAL_LABELS[key]?.label || key}
-                  <span className="ml-1 font-normal text-slate-400 dark:text-slate-500">({GOAL_LABELS[key]?.unit})</span>
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                  value={goalsForm[key]}
-                  onChange={(e) => setGoalsForm({ ...goalsForm, [key]: Number(e.target.value) })}
-                />
-                <p className="mt-1 text-[11px] text-slate-400">{GOAL_LABELS[key]?.hint}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex justify-end gap-2">
-            <button type="button" onClick={() => setIsEditing(false)} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-50 dark:hover:bg-slate-800">
-              Cancelar
-            </button>
-            <button type="button" onClick={handleSaveGoals} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
-              Guardar metas
-            </button>
-          </div>
         </div>
       )}
 
@@ -883,14 +957,219 @@ export const KPIPage = () => {
             </div>
           </section>
 
-          <section className={`${panelClass} space-y-5`}>
+          <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div className={panelClass}>
+              <div className="flex items-center gap-2 mb-4">
+                <CheckCircle2 className="text-emerald-600 dark:text-emerald-400" size={20} />
+                <div>
+                  <h3 className="font-bold text-slate-800 dark:text-slate-100">Solicitudes finalizadas por técnico</h3>
+                  <p className="text-xs text-slate-400">OT cerradas en el periodo del marco</p>
+                </div>
+              </div>
+              <div className="h-80">
+                {techPeriodCompletedChart.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={techPeriodCompletedChart} layout="vertical" margin={{ left: 8, right: 12 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal vertical={false} stroke="var(--color-border)" />
+                      <XAxis
+                        type="number"
+                        allowDecimals={false}
+                        tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        width={120}
+                        tick={{ fill: 'var(--color-fg-muted)', fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        formatter={(val: number) => [val, 'Finalizadas']}
+                        labelFormatter={(_: string, payload) => payload?.[0]?.payload?.fullName || _}
+                        contentStyle={{
+                          borderRadius: 12,
+                          border: '1px solid var(--color-border)',
+                          background: 'var(--color-surface)',
+                          color: 'var(--color-fg)',
+                          boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)',
+                        }}
+                      />
+                      <Bar dataKey="finalizadas" fill="#059669" radius={[0, 4, 4, 0]} barSize={16} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm">
+                    Sin OT finalizadas en este periodo
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className={panelClass}>
+              <div className="flex items-center gap-2 mb-4">
+                <Timer className="text-sky-600 dark:text-sky-400" size={20} />
+                <div>
+                  <h3 className="font-bold text-slate-800 dark:text-slate-100">Tiempo promedio de labor</h3>
+                  <p className="text-xs text-slate-400">
+                    Horas de trabajo activo por OT (sin pausas) · periodo
+                  </p>
+                </div>
+              </div>
+              <div className="h-80">
+                {techPeriodAvgTimeChart.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={techPeriodAvgTimeChart} layout="vertical" margin={{ left: 8, right: 12 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal vertical={false} stroke="var(--color-border)" />
+                      <XAxis
+                        type="number"
+                        tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v) => `${v}h`}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        width={120}
+                        tick={{ fill: 'var(--color-fg-muted)', fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        formatter={(val: number, _key: string, item: { payload?: { finalizadas?: number } }) => [
+                          formatHours(Number(val)),
+                          `Promedio (${item?.payload?.finalizadas ?? 0} OT)`,
+                        ]}
+                        labelFormatter={(_: string, payload) => payload?.[0]?.payload?.fullName || _}
+                        contentStyle={{
+                          borderRadius: 12,
+                          border: '1px solid var(--color-border)',
+                          background: 'var(--color-surface)',
+                          color: 'var(--color-fg)',
+                          boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)',
+                        }}
+                      />
+                      <Bar dataKey="promedio" fill="#0284c7" radius={[0, 4, 4, 0]} barSize={16} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm text-center px-4">
+                    Sin tiempos de labor registrados en OT finalizadas del periodo
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-1 gap-4">
+            <div className={panelClass}>
+              <div className="flex flex-col gap-4 mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <RefreshCw className="text-rose-600 dark:text-rose-400" size={20} />
+                    <div>
+                      <h3 className="font-bold text-slate-800 dark:text-slate-100">Equipos con retrabajo</h3>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">
+                        Misma falla o mismo equipo ≤ {reworkDays} día{reworkDays === 1 ? '' : 's'} · periodo del marco
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-rose-800 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/50 rounded-xl px-3 py-2 max-w-xs">
+                    Correctiva finalizada tras otra correctiva cerrada en los {reworkDays} días previos
+                    (mismo equipo; mismo problema si está capturado).
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Ventana de retrabajo</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Define cuántos días hacia atrás se busca una falla previa.</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {REWORK_DAY_PRESETS.map((days) => (
+                      <button
+                        key={days}
+                        type="button"
+                        onClick={() => applyReworkDays(days)}
+                        className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-colors ${
+                          reworkDays === days
+                            ? 'bg-rose-600 text-white'
+                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-rose-300 hover:text-rose-700 dark:hover:text-rose-400'
+                        }`}
+                      >
+                        {days}d
+                      </button>
+                    ))}
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min={1}
+                        max={90}
+                        value={reworkDaysInput}
+                        onChange={(e) => setReworkDaysInput(e.target.value)}
+                        onBlur={() => applyReworkDays(Number(reworkDaysInput))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') applyReworkDays(Number(reworkDaysInput));
+                        }}
+                        className="w-16 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 text-center text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-500/20"
+                        aria-label="Días personalizados de retrabajo"
+                      />
+                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">días</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {data.metrics.REINCIDENCIA.details && data.metrics.REINCIDENCIA.details.length > 0 ? (
+                <div className="overflow-x-auto max-h-80">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 dark:bg-slate-800 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      <tr>
+                        <th className="text-left px-3 py-2 font-bold">Equipo</th>
+                        <th className="text-right px-3 py-2 font-bold">Retrabajos</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {data.metrics.REINCIDENCIA.details.map((asset) => (
+                        <tr
+                          key={asset.id}
+                          className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer"
+                          onClick={() => handleAssetClick(asset.id, asset.name)}
+                        >
+                          <td className="px-3 py-2.5 font-medium text-slate-700 dark:text-slate-300">{asset.name}</td>
+                          <td className="px-3 py-2.5 text-right">
+                            <span className="inline-flex rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 px-2.5 py-0.5 text-xs font-bold">
+                              {asset.count}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="h-40 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 text-sm">
+                  <CheckCircle2 className="text-emerald-400 mb-2" size={28} />
+                  Sin retrabajos en este periodo
+                </div>
+              )}
+            </div>
+          </section>
+        </>
+      )}
+      </FilterScopeFrame>
+
+      {data && data.totalOrders > 0 && (
+          <section className={`${panelClass} space-y-5 mt-6`}>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Users className="text-sky-600 dark:text-sky-400" size={22} />
                 <div>
                   <h3 className="font-bold text-slate-800 dark:text-slate-100">Dashboard de técnicos</h3>
                   <p className="text-xs text-slate-400 dark:text-slate-500">
-                    Carga del día, pausadas, tiempo en espera y productividad de la semana (lun–dom). La tabla de periodo sigue el filtro superior.
+                    Vista operativa del día y productividad de la semana (lun–dom). No usa el filtro de periodo de arriba.
                   </p>
                 </div>
               </div>
@@ -1029,101 +1308,6 @@ export const KPIPage = () => {
               </div>
             </div>
           </section>
-
-          <section className="grid grid-cols-1 gap-4">
-            <div className={panelClass}>
-              <div className="flex flex-col gap-4 mb-4">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <RefreshCw className="text-rose-600 dark:text-rose-400" size={20} />
-                    <div>
-                      <h3 className="font-bold text-slate-800 dark:text-slate-100">Equipos con retrabajo</h3>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">
-                        Misma falla o mismo equipo ≤ {reworkDays} día{reworkDays === 1 ? '' : 's'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-[11px] text-rose-800 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/50 rounded-xl px-3 py-2 max-w-xs">
-                    Correctiva finalizada tras otra correctiva cerrada en los {reworkDays} días previos
-                    (mismo equipo; mismo problema si está capturado).
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Ventana de retrabajo</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Define cuántos días hacia atrás se busca una falla previa.</p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {REWORK_DAY_PRESETS.map((days) => (
-                      <button
-                        key={days}
-                        type="button"
-                        onClick={() => applyReworkDays(days)}
-                        className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-colors ${
-                          reworkDays === days
-                            ? 'bg-rose-600 text-white'
-                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-rose-300 hover:text-rose-700 dark:hover:text-rose-400'
-                        }`}
-                      >
-                        {days}d
-                      </button>
-                    ))}
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="number"
-                        min={1}
-                        max={90}
-                        value={reworkDaysInput}
-                        onChange={(e) => setReworkDaysInput(e.target.value)}
-                        onBlur={() => applyReworkDays(Number(reworkDaysInput))}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') applyReworkDays(Number(reworkDaysInput));
-                        }}
-                        className="w-16 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 text-center text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-500/20"
-                        aria-label="Días personalizados de retrabajo"
-                      />
-                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">días</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {data.metrics.REINCIDENCIA.details && data.metrics.REINCIDENCIA.details.length > 0 ? (
-                <div className="overflow-x-auto max-h-80">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 dark:bg-slate-800 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      <tr>
-                        <th className="text-left px-3 py-2 font-bold">Equipo</th>
-                        <th className="text-right px-3 py-2 font-bold">Retrabajos</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {data.metrics.REINCIDENCIA.details.map((asset) => (
-                        <tr
-                          key={asset.id}
-                          className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer"
-                          onClick={() => handleAssetClick(asset.id, asset.name)}
-                        >
-                          <td className="px-3 py-2.5 font-medium text-slate-700 dark:text-slate-300">{asset.name}</td>
-                          <td className="px-3 py-2.5 text-right">
-                            <span className="inline-flex rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 px-2.5 py-0.5 text-xs font-bold">
-                              {asset.count}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="h-40 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 text-sm">
-                  <CheckCircle2 className="text-emerald-400 mb-2" size={28} />
-                  Sin retrabajos en este periodo
-                </div>
-              )}
-            </div>
-          </section>
-        </>
       )}
 
       {selectedFailureAsset && (

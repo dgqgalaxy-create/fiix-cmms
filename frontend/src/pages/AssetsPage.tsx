@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Plus, RefreshCw, Search, QrCode, Printer, MapPin } from 'lucide-react';
+import { Plus, RefreshCw, Search, QrCode, Printer, MapPin, Filter } from 'lucide-react';
 import { AssetsTable } from '../components/AssetsTable';
 import { CreateAssetModal } from '../components/CreateAssetModal';
 import { AssetDetailModal } from '../components/AssetDetailModal';
@@ -17,6 +17,7 @@ import type { Zone } from '../api/zones';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { zoneNeedsSections } from '../utils/assetSection';
 import { PageLoadError, PageLoadingState, isLikelyServerUnreachable } from '../components/PageLoadState';
+import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
 
 export const AssetsPage = () => {
   const { hasPermission } = useAuth();
@@ -271,16 +272,22 @@ export const AssetsPage = () => {
       ) : loadError && assets.length === 0 ? (
         <PageLoadError onRetry={() => void fetchAssets()} />
       ) : (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            <div className="flex-1 bg-white dark:bg-slate-900 p-2 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center">
-              <div className="pl-3 pr-2 text-slate-400">
-                <Search size={20} />
+        <FilterScopeFrame
+          title="Activos filtrados"
+          icon={Filter}
+          tone="blue"
+          className="mb-0"
+          hint="Búsqueda, zona y sección aplican a la tabla dentro de este marco."
+          toolbar={
+            <>
+            <div className="flex-1 min-w-[200px] bg-slate-50 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center">
+              <div className="pl-2 pr-2 text-slate-400">
+                <Search size={18} />
               </div>
               <input
                 type="text"
                 placeholder="Buscar activos por nombre o código..."
-                className="w-full bg-transparent border-none focus:ring-0 text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 px-2 py-1.5 outline-none"
+                className="w-full bg-transparent border-none focus:ring-0 text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 px-1 py-1.5 text-sm outline-none"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -290,12 +297,12 @@ export const AssetsPage = () => {
                   className="p-1.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-xl transition-colors"
                   title="Escanear QR del activo"
                 >
-                  <QrCode size={20} />
+                  <QrCode size={18} />
                 </button>
               )}
             </div>
             <select
-              className="sm:w-40 px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm text-slate-700 dark:text-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-emerald-600"
+              className="sm:w-40 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-700 dark:text-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-emerald-600"
               value={filterZoneId}
               onChange={(e) => setFilterZoneId(e.target.value)}
               title="Filtrar por zona"
@@ -307,7 +314,7 @@ export const AssetsPage = () => {
             </select>
             {showSectionFilter && (
               <select
-                className="sm:w-40 px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm text-slate-700 dark:text-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-emerald-600"
+                className="sm:w-40 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-700 dark:text-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-emerald-600"
                 value={filterSectionId}
                 onChange={(e) => setFilterSectionId(e.target.value)}
                 title="Filtrar por sección"
@@ -318,7 +325,9 @@ export const AssetsPage = () => {
                 ))}
               </select>
             )}
-          </div>
+            </>
+          }
+        >
           <AssetsTable 
             assets={filteredAssets}
             filterKey={assetsFilterKey}
@@ -331,7 +340,7 @@ export const AssetsPage = () => {
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
           />
-        </div>
+        </FilterScopeFrame>
       )}
 
       <CreateAssetModal 

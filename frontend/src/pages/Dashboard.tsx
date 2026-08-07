@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, RefreshCw, Search, Download, XCircle, Users } from 'lucide-react';
+import { Plus, RefreshCw, Search, Download, XCircle, Users, Filter } from 'lucide-react';
 import { WorkOrdersTable } from '../components/WorkOrdersTable';
 import { CreateWorkOrderModal } from '../components/CreateWorkOrderModal';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
@@ -15,6 +15,13 @@ import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
 import { formatDate, formatDateTime } from '../utils/dateUtils';
 import { PageLoadError, PageLoadingState, isLikelyServerUnreachable } from '../components/PageLoadState';
+import {
+  PeriodRangeFilter,
+  firstDayOfMonthYmd,
+  isInDateRange,
+  todayYmd,
+} from '../components/common/PeriodRangeFilter';
+import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
 
 export const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -37,6 +44,8 @@ export const Dashboard = () => {
   const [activeTab, setActiveTab] = useState<'ACTIVAS' | 'MIS_ORDENES' | 'HISTORIAL'>('MIS_ORDENES');
 
   const [dateFilter, setDateFilter] = useState<string>('ALL');
+  const [customStartDate, setCustomStartDate] = useState(firstDayOfMonthYmd);
+  const [customEndDate, setCustomEndDate] = useState(todayYmd);
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [assetFilter, setAssetFilter] = useState<string>('ALL');
   const [unassignedFilter, setUnassignedFilter] = useState(false);
@@ -339,7 +348,11 @@ export const Dashboard = () => {
       list = list.filter(wo => wo.asset?.name === assetFilter);
     }
     
-    if (dateFilter !== 'ALL') {
+    if (dateFilter === 'CUSTOM') {
+      if (customStartDate || customEndDate) {
+        list = list.filter((wo) => isInDateRange(wo.created_at, customStartDate, customEndDate));
+      }
+    } else if (dateFilter !== 'ALL') {
       const now = new Date();
       list = list.filter(wo => {
         const woDate = new Date(wo.created_at);
@@ -547,10 +560,24 @@ export const Dashboard = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3 mb-6 bg-slate-50 p-3 rounded-xl border border-slate-100 print:hidden">
+          <FilterScopeFrame
+            title="Listado filtrado"
+            icon={Filter}
+            tone="blue"
+            className="print:hidden mb-0"
+            hint="Fecha, prioridad, equipo, orden y estado se aplican a la tabla y al total dentro de este marco."
+            toolbar={
+              <>
             <select
               value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setDateFilter(next);
+                if (next === 'CUSTOM') {
+                  if (!customStartDate) setCustomStartDate(firstDayOfMonthYmd());
+                  if (!customEndDate) setCustomEndDate(todayYmd());
+                }
+              }}
               className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
             >
               <option value="ALL">Cualquier fecha</option>
@@ -559,7 +586,18 @@ export const Dashboard = () => {
               <option value="LAST_WEEK">Semana Pasada</option>
               <option value="THIS_MONTH">Este Mes</option>
               <option value="LAST_MONTH">Mes Pasado</option>
+              <option value="CUSTOM">Periodo (inicio — fin)</option>
             </select>
+
+            {dateFilter === 'CUSTOM' && (
+              <PeriodRangeFilter
+                startDate={customStartDate}
+                endDate={customEndDate}
+                onStartChange={setCustomStartDate}
+                onEndChange={setCustomEndDate}
+                size="sm"
+              />
+            )}
 
             <select
               value={priorityFilter}
@@ -593,10 +631,44 @@ export const Dashboard = () => {
               <option value="PRIORITY">Por prioridad (Urgentes)</option>
             </select>
 
+            <select
+              value={statusFilter || 'ALL'}
+              onChange={(e) => {
+                const next = e.target.value;
+                const value = next === 'ALL' ? null : next;
+                setStatusFilter(value);
+                const params = new URLSearchParams(searchParams);
+                if (value) {
+                  params.set('status', value);
+                  if (value === 'FINALIZADO' || value === 'ANULADO') {
+                    setActiveTab('HISTORIAL');
+                    params.set('tab', 'history');
+                  } else {
+                    setActiveTab(hasPermission('VIEW_ALL_WORK_ORDERS') ? 'ACTIVAS' : 'MIS_ORDENES');
+                    params.set('tab', hasPermission('VIEW_ALL_WORK_ORDERS') ? 'all' : 'mine');
+                  }
+                } else {
+                  params.delete('status');
+                }
+                setSearchParams(params, { replace: true });
+              }}
+              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
+              title="Filtrar por estado"
+            >
+              <option value="ALL">Todos los estados</option>
+              <option value="PENDIENTE">Pendiente</option>
+              <option value="EN_PROCESO">En proceso</option>
+              <option value="EN_ESPERA">En espera</option>
+              <option value="FINALIZADO">Finalizado</option>
+              <option value="ANULADO">Anulado</option>
+            </select>
+
             {(dateFilter !== 'ALL' || priorityFilter !== 'ALL' || assetFilter !== 'ALL' || searchTerm !== '' || statusFilter !== null || unassignedFilter || slaFilter) && (
               <button 
                 onClick={() => {
                   setDateFilter('ALL');
+                  setCustomStartDate(firstDayOfMonthYmd());
+                  setCustomEndDate(todayYmd());
                   setPriorityFilter('ALL');
                   setAssetFilter('ALL');
                   setSearchTerm('');
@@ -616,29 +688,31 @@ export const Dashboard = () => {
                 Limpiar filtros
               </button>
             )}
-          </div>
-
-          <div className="mb-4 flex items-center justify-between bg-emerald-50 border border-emerald-100 p-4 rounded-xl print:hidden">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
-                <Search size={20} />
+              </>
+            }
+          >
+            <div className="mb-4 flex items-center justify-between bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
+                  <Search size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-emerald-900">Total filtradas</p>
+                  <p className="text-xs text-emerald-700">Órdenes recibidas según los filtros actuales</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-emerald-900">Total filtradas</p>
-                <p className="text-xs text-emerald-700">Órdenes recibidas según los filtros actuales</p>
+              <div className="text-2xl font-black text-emerald-700">
+                {filteredList.length}
               </div>
             </div>
-            <div className="text-2xl font-black text-emerald-700">
-              {filteredList.length}
-            </div>
-          </div>
 
-          <WorkOrdersTable 
-            workOrders={filteredList} 
-            onRowClick={openWorkOrderDetail}
-            onAssignClick={canQuickActions ? handleAssignClick : undefined}
-            onScheduleClick={canQuickSchedule ? handleScheduleClick : undefined}
-          />
+            <WorkOrdersTable 
+              workOrders={filteredList} 
+              onRowClick={openWorkOrderDetail}
+              onAssignClick={canQuickActions ? handleAssignClick : undefined}
+              onScheduleClick={canQuickSchedule ? handleScheduleClick : undefined}
+            />
+          </FilterScopeFrame>
         </div>
       )}
 
