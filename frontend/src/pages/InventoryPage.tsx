@@ -49,8 +49,9 @@ export const InventoryPage = () => {
   const [txSortBy, setTxSortBy] = useState<'date' | 'item' | 'user' | 'amount' | 'reason'>('date');
   const [txSortDirection, setTxSortDirection] = useState<'asc' | 'desc'>('desc');
   
-  // Pagination
+  // Pagination (repuestos y movimientos por separado)
   const [currentPage, setCurrentPage] = useState(1);
+  const [txCurrentPage, setTxCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
 
   // Modals state
@@ -317,6 +318,52 @@ export const InventoryPage = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, showLowStockOnly, showNoVendorOnly, sortBy, sortDirection]);
+
+  const filteredTransactions = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const list = transactions.filter((t) => {
+      if (movementTypeFilter === 'IN' && !(t.amount > 0)) return false;
+      if (movementTypeFilter === 'OUT' && !(t.amount < 0)) return false;
+      if (!term) return true;
+      return (
+        (t.item?.name || '').toLowerCase().includes(term) ||
+        (t.user?.name || '').toLowerCase().includes(term) ||
+        (t.reason || '').toLowerCase().includes(term)
+      );
+    });
+    return [...list].sort((a, b) => {
+      let cmp = 0;
+      switch (txSortBy) {
+        case 'date':
+          cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+        case 'item':
+          cmp = (a.item?.name || '').localeCompare(b.item?.name || '');
+          break;
+        case 'user':
+          cmp = (a.user?.name || '').localeCompare(b.user?.name || '');
+          break;
+        case 'amount':
+          cmp = a.amount - b.amount;
+          break;
+        case 'reason':
+          cmp = (a.reason || '').localeCompare(b.reason || '');
+          break;
+      }
+      return txSortDirection === 'asc' ? cmp : -cmp;
+    });
+  }, [transactions, searchTerm, movementTypeFilter, txSortBy, txSortDirection]);
+
+  useEffect(() => {
+    setTxCurrentPage(1);
+  }, [searchTerm, movementTypeFilter, txSortBy, txSortDirection, activeTab]);
+
+  const paginatedTransactions = useMemo(() => {
+    const startIndex = (txCurrentPage - 1) * ITEMS_PER_PAGE;
+    return filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredTransactions, txCurrentPage]);
+
+  const txTotalPages = Math.max(1, Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE));
 
   const filterCriticalStock = () => {
     setShowNoVendorOnly(false);
@@ -914,37 +961,7 @@ export const InventoryPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {transactions.filter(t => {
-                    if (movementTypeFilter === 'IN' && !(t.amount > 0)) return false;
-                    if (movementTypeFilter === 'OUT' && !(t.amount < 0)) return false;
-                    if (!searchTerm) return true;
-                    const term = searchTerm.toLowerCase();
-                    return (
-                      (t.item?.name || '').toLowerCase().includes(term) ||
-                      (t.user?.name || '').toLowerCase().includes(term) ||
-                      (t.reason || '').toLowerCase().includes(term)
-                    );
-                  }).sort((a, b) => {
-                    let cmp = 0;
-                    switch (txSortBy) {
-                      case 'date':
-                        cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-                        break;
-                      case 'item':
-                        cmp = (a.item?.name || '').localeCompare(b.item?.name || '');
-                        break;
-                      case 'user':
-                        cmp = (a.user?.name || '').localeCompare(b.user?.name || '');
-                        break;
-                      case 'amount':
-                        cmp = a.amount - b.amount;
-                        break;
-                      case 'reason':
-                        cmp = (a.reason || '').localeCompare(b.reason || '');
-                        break;
-                    }
-                    return txSortDirection === 'asc' ? cmp : -cmp;
-                  }).map((tx) => (
+                  {paginatedTransactions.map((tx) => (
                     <tr 
                       key={tx.id} 
                       className="hover:bg-slate-50/50 transition-colors cursor-pointer"
@@ -961,16 +978,117 @@ export const InventoryPage = () => {
                       <td className="px-6 py-4 text-slate-500">{tx.reason}</td>
                     </tr>
                   ))}
-                  {transactions.length === 0 && (
+                  {filteredTransactions.length === 0 && (
                     <tr>
                       <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                        No hay movimientos registrados.
+                        {transactions.length === 0
+                          ? 'No hay movimientos registrados.'
+                          : 'Ningún movimiento coincide con el filtro.'}
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
+            {filteredTransactions.length > ITEMS_PER_PAGE && (
+              <div className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-3 sm:px-6">
+                <div className="flex flex-1 justify-between sm:hidden">
+                  <button
+                    type="button"
+                    onClick={() => setTxCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={txCurrentPage === 1}
+                    className="relative inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTxCurrentPage((p) => Math.min(txTotalPages, p + 1))}
+                    disabled={txCurrentPage === txTotalPages}
+                    className="relative ml-3 inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+                <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm text-slate-700">
+                      Mostrando{' '}
+                      <span className="font-medium">
+                        {(txCurrentPage - 1) * ITEMS_PER_PAGE + 1}
+                      </span>{' '}
+                      a{' '}
+                      <span className="font-medium">
+                        {Math.min(txCurrentPage * ITEMS_PER_PAGE, filteredTransactions.length)}
+                      </span>{' '}
+                      de <span className="font-medium">{filteredTransactions.length}</span> resultados
+                    </p>
+                  </div>
+                  <div>
+                    <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm" aria-label="Paginación movimientos">
+                      <button
+                        type="button"
+                        onClick={() => setTxCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={txCurrentPage === 1}
+                        className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                      >
+                        <span className="sr-only">Anterior</span>
+                        <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      {[...Array(txTotalPages)].map((_, i) => {
+                        if (
+                          i === 0 ||
+                          i === txTotalPages - 1 ||
+                          (i >= txCurrentPage - 2 && i <= txCurrentPage)
+                        ) {
+                          return (
+                            <button
+                              type="button"
+                              key={i + 1}
+                              onClick={() => setTxCurrentPage(i + 1)}
+                              className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20 focus:outline-offset-0 ${
+                                txCurrentPage === i + 1
+                                  ? 'z-10 bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
+                                  : 'text-slate-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              {i + 1}
+                            </button>
+                          );
+                        }
+                        if (
+                          (i === 1 && txCurrentPage > 3) ||
+                          (i === txTotalPages - 2 && txCurrentPage < txTotalPages - 2)
+                        ) {
+                          return (
+                            <span
+                              key={i}
+                              className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-inset ring-slate-300"
+                            >
+                              ...
+                            </span>
+                          );
+                        }
+                        return null;
+                      })}
+                      <button
+                        type="button"
+                        onClick={() => setTxCurrentPage((p) => Math.min(txTotalPages, p + 1))}
+                        disabled={txCurrentPage === txTotalPages}
+                        className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                      >
+                        <span className="sr-only">Siguiente</span>
+                        <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </nav>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           </FilterScopeFrame>
         );

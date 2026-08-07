@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Plus, RefreshCw, Search, Download, XCircle, Users, Filter } from 'lucide-react';
 import { WorkOrdersTable } from '../components/WorkOrdersTable';
@@ -52,6 +52,8 @@ export const Dashboard = () => {
   const [slaFilter, setSlaFilter] = useState<string | null>(null);
 
   const [sortOrder, setSortOrder] = useState<'NEWEST' | 'OLDEST' | 'PRIORITY'>('NEWEST');
+  const [historyPage, setHistoryPage] = useState(1);
+  const HISTORY_PER_PAGE = 20;
 
   useEffect(() => {
     const status = searchParams.get('status');
@@ -406,20 +408,46 @@ export const Dashboard = () => {
       });
     }
 
-    // Ordenamiento explícito
+    // Ordenamiento explícito (copia para no mutar el estado)
+    const sorted = [...list];
     if (sortOrder === 'NEWEST') {
-      list.sort((a, b) => (b.folio || 0) - (a.folio || 0));
+      sorted.sort((a, b) => (b.folio || 0) - (a.folio || 0));
     } else if (sortOrder === 'OLDEST') {
-      list.sort((a, b) => (a.folio || 0) - (b.folio || 0));
+      sorted.sort((a, b) => (a.folio || 0) - (b.folio || 0));
     } else if (sortOrder === 'PRIORITY') {
       const pMap: Record<string, number> = { URGENTE: 3, NORMAL: 2, BAJO: 1 };
-      list.sort((a, b) => (pMap[b.priority] || 0) - (pMap[a.priority] || 0));
+      sorted.sort((a, b) => (pMap[b.priority] || 0) - (pMap[a.priority] || 0));
     }
 
-    return list;
+    return sorted;
   };
 
   const filteredList = getFilteredWorkOrders();
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [
+    activeTab,
+    searchTerm,
+    statusFilter,
+    dateFilter,
+    customStartDate,
+    customEndDate,
+    priorityFilter,
+    assetFilter,
+    unassignedFilter,
+    slaFilter,
+    sortOrder,
+  ]);
+
+  const historyTotalPages = Math.max(1, Math.ceil(filteredList.length / HISTORY_PER_PAGE));
+
+  const displayList = useMemo(() => {
+    if (activeTab !== 'HISTORIAL') return filteredList;
+    const page = Math.min(Math.max(1, historyPage), historyTotalPages);
+    const start = (page - 1) * HISTORY_PER_PAGE;
+    return filteredList.slice(start, start + HISTORY_PER_PAGE);
+  }, [activeTab, filteredList, historyPage, historyTotalPages]);
 
   return (
     <>
@@ -707,11 +735,112 @@ export const Dashboard = () => {
             </div>
 
             <WorkOrdersTable 
-              workOrders={filteredList} 
+              workOrders={displayList} 
               onRowClick={openWorkOrderDetail}
               onAssignClick={canQuickActions ? handleAssignClick : undefined}
               onScheduleClick={canQuickSchedule ? handleScheduleClick : undefined}
             />
+
+            {activeTab === 'HISTORIAL' && filteredList.length > HISTORY_PER_PAGE && (
+              <div className="flex items-center justify-between bg-white dark:bg-slate-900 px-4 py-3 sm:px-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mt-4 print:hidden">
+                <div className="flex flex-1 justify-between sm:hidden">
+                  <button
+                    type="button"
+                    onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                    disabled={historyPage <= 1}
+                    className="relative inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHistoryPage((p) => Math.min(historyTotalPages, p + 1))}
+                    disabled={historyPage >= historyTotalPages}
+                    className="relative ml-3 inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+                <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">
+                      Mostrando{' '}
+                      <span className="font-medium">
+                        {(Math.min(historyPage, historyTotalPages) - 1) * HISTORY_PER_PAGE + 1}
+                      </span>{' '}
+                      a{' '}
+                      <span className="font-medium">
+                        {Math.min(Math.min(historyPage, historyTotalPages) * HISTORY_PER_PAGE, filteredList.length)}
+                      </span>{' '}
+                      de <span className="font-medium">{filteredList.length}</span> resultados
+                    </p>
+                  </div>
+                  <div>
+                    <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm" aria-label="Paginación historial">
+                      <button
+                        type="button"
+                        onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                        disabled={historyPage <= 1}
+                        className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                      >
+                        <span className="sr-only">Anterior</span>
+                        <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      {[...Array(historyTotalPages)].map((_, i) => {
+                        const page = Math.min(historyPage, historyTotalPages);
+                        if (
+                          i === 0 ||
+                          i === historyTotalPages - 1 ||
+                          (i >= page - 2 && i <= page)
+                        ) {
+                          return (
+                            <button
+                              key={i + 1}
+                              type="button"
+                              onClick={() => setHistoryPage(i + 1)}
+                              className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20 focus:outline-offset-0 ${
+                                page === i + 1
+                                  ? 'z-10 bg-emerald-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600'
+                                  : 'text-slate-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              {i + 1}
+                            </button>
+                          );
+                        }
+                        if (
+                          (i === 1 && page > 3) ||
+                          (i === historyTotalPages - 2 && page < historyTotalPages - 2)
+                        ) {
+                          return (
+                            <span
+                              key={`ellipsis-${i}`}
+                              className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-inset ring-slate-300"
+                            >
+                              ...
+                            </span>
+                          );
+                        }
+                        return null;
+                      })}
+                      <button
+                        type="button"
+                        onClick={() => setHistoryPage((p) => Math.min(historyTotalPages, p + 1))}
+                        disabled={historyPage >= historyTotalPages}
+                        className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                      >
+                        <span className="sr-only">Siguiente</span>
+                        <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </nav>
+                  </div>
+                </div>
+              </div>
+            )}
           </FilterScopeFrame>
         </div>
       )}

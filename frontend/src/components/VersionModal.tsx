@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.19";
+export const APP_VERSION = "1.56.20";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Órdenes → Historial e Inventario → Movimientos muestran 20 registros por página (como Repuestos), para no ralentizar la pantalla con listas muy largas.",
     "Nuevo: KPI — periodo personalizado (Desde/Hasta); marco visual de filtros; gráficas de OT finalizadas y tiempo promedio de labor por técnico (sin pausas).",
     "Nuevo: Órdenes — filtro periodo inicio/fin y filtro Estado; Inventario Movimientos — entradas/bajas/todos; marcos de filtro en OT, Activos e Inventario.",
     "Corrección: Si el servidor cae y das F5, ya no queda el círculo girando minutos — timeout de API ~15 s, PWA corta red en ~5–8 s y muestra «No se pudo conectar» con Reintentar.",

@@ -69,6 +69,7 @@ Se han mejorado las reglas del almacén para prevenir errores y mejorar la fluid
 - **Validación de Stock Mínimo:** El sistema ya no permite configurar un stock mínimo igual a 0.
 - **Bloqueo de Inventario Negativo:** Si intentas sacar más piezas de las que existen actualmente, el sistema bloqueará la operación con una alerta.
 - **Movimientos sin conexión:** Puedes registrar **salidas (OUT)** y **entradas (IN)** sin señal; se guardan en el dispositivo y se aplican al recuperar conexión (sin duplicar el mismo movimiento).
+- **Paginación (Movimientos):** El listado de movimientos muestra **20** registros por página. Al buscar, filtrar por tipo o cambiar el orden se vuelve a la página 1.
 - **Área táctil:** En Inventario, los botones de escaneo QR y las acciones de cada fila (movimiento / QR / editar) tienen un área mínima amplia para dedo.
 - **Ubicación Automática:** Si creas un nuevo repuesto o importas un CSV sin definir lugar, el sistema lo agrupará bajo la ubicación "Sin Asignación".
 - **Ver Detalle desde Categorías, Ubicaciones y Proveedores:** Al abrir el detalle de una Categoría, Ubicación o Proveedor, la lista de "Repuestos Asociados" ahora es clickeable: selecciona cualquier repuesto de esa lista para abrir su ficha completa de detalle, igual que si lo hubieras abierto desde la pestaña de "Repuestos".
@@ -108,6 +109,7 @@ Avisos del sistema operativo aunque la pestaña esté en segundo plano (nuevas O
 
 Gestión de solicitudes (listado), sin el resumen gráfico:
 - **Vistas:** Vista General, Mis Órdenes e Historial.
+- **Paginación (Historial):** La pestaña **Historial** muestra **20** órdenes por página (misma lógica que Inventario → Repuestos/Movimientos). Al buscar o cambiar filtros se vuelve a la página 1. Exportar Excel/CSV sigue usando la lista filtrada completa.
 - **Búsqueda y filtros** por estado, fecha, prioridad, equipo, **zona** (barra «Buscar equipo, folio, zona…») y ordenamiento.
 - **Acciones rápidas en tarjetas (Admin / Gestionador):** Si la OT no tiene personal, toca **Sin asignar** para abrir el detalle enfocado en **Personal asignado**. El icono de **calendario** (tarjeta o columna Fecha) abre **Calendario** con esa OT lista para agendar. Los técnicos ven las etiquetas solo informativas.
 - **Exportar:** botón **Excel** (.xlsx real, lista filtrada), **CSV** y **PDF**/impresión (A4 horizontal compacto: folio, título/equipo, fecha y estado; ~10–15 órdenes por hoja).
