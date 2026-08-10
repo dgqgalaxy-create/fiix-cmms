@@ -204,18 +204,22 @@ export const Dashboard = () => {
 
   const uniqueAssets = Array.from(new Set(workOrders.map(wo => wo.asset?.name).filter(Boolean))) as string[];
 
+  /** Texto de falla reportada (descripción completa); si falta, usa el título. */
+  const workOrderFailureText = (wo: WorkOrder) =>
+    (wo.description?.trim() || wo.title || '').trim();
+
   const handleExportCSV = () => {
     const list = getFilteredWorkOrders();
-    const headers = ['Folio', 'Titulo', 'Equipo', 'Zona', 'Prioridad', 'Estado', 'Fecha Creacion'];
+    const headers = ['Folio', 'Falla', 'Equipo', 'Zona', 'Prioridad', 'Estado', 'Fecha Creacion'];
     const rows = list.map(wo => {
       const folio = formatWorkOrderFolio(wo.folio);
-      const title = `"${wo.title?.replace(/"/g, '""') || ''}"`;
+      const falla = `"${workOrderFailureText(wo).replace(/"/g, '""')}"`;
       const asset = `"${wo.asset?.name?.replace(/"/g, '""') || ''}"`;
       const zone = `"${wo.zone?.name?.replace(/"/g, '""') || ''}"`;
       const priority = wo.priority || '';
       const status = wo.status || '';
       const date = formatDate(wo.created_at);
-      return [folio, title, asset, zone, priority, status, date].join(',');
+      return [folio, falla, asset, zone, priority, status, date].join(',');
     });
     
     const csvContent = [headers.join(','), ...rows].join('\n');
@@ -233,7 +237,7 @@ export const Dashboard = () => {
     const list = getFilteredWorkOrders();
     const rows = list.map((wo) => ({
       Folio: formatWorkOrderFolio(wo.folio),
-      Título: wo.title || '',
+      Falla: workOrderFailureText(wo),
       Equipo: wo.asset?.name || '',
       Zona: wo.zone?.name || '',
       Prioridad: wo.priority || '',

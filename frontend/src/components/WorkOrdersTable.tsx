@@ -355,7 +355,11 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                   <div className="flex items-center gap-1.5">Orden {sortField === 'folio' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 print:hidden"/> : <ChevronDown size={14} className="text-emerald-500 print:hidden"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity print:hidden" />}</div>
                 </th>
                 <th className="px-6 py-4 print:px-1.5 print:py-1 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('asset'); setSortDirection(sortField === 'asset' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                  <div className="flex items-center gap-1.5">Equipo / Tarea {sortField === 'asset' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 print:hidden"/> : <ChevronDown size={14} className="text-emerald-500 print:hidden"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity print:hidden" />}</div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="print:hidden">Equipo / Tarea</span>
+                    <span className="hidden print:inline">Falla / Equipo</span>
+                    {sortField === 'asset' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 print:hidden"/> : <ChevronDown size={14} className="text-emerald-500 print:hidden"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity print:hidden" />}
+                  </div>
                 </th>
                 <th className="px-6 py-4 print:hidden">Técnicos</th>
                 <th className="px-6 py-4 print:px-1.5 print:py-1 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('date'); setSortDirection(sortField === 'date' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
@@ -414,8 +418,11 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                   </td>
                   <td className="px-6 py-4 print:px-1.5 print:py-0.5 align-top print:align-middle">
                     <div className="flex flex-col gap-1 mb-2 print:gap-0 print:mb-0">
-                      <div className="font-bold text-slate-900 dark:text-slate-100 text-sm print:text-[9px] print:font-semibold print:leading-tight print:line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                        {wo.title}
+                      <div className="font-bold text-slate-900 dark:text-slate-100 text-sm print:text-[9px] print:font-semibold print:leading-tight print:whitespace-pre-wrap group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        <span className="print:hidden">{wo.title}</span>
+                        <span className="hidden print:inline">
+                          {(wo.description?.trim() || wo.title || '').trim()}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2 text-xs print:text-[8px] print:gap-1 text-slate-500 dark:text-slate-400 print:leading-tight">
                         <span className="font-semibold truncate max-w-[28ch] print:max-w-[36ch]">{wo.asset.name}</span>
