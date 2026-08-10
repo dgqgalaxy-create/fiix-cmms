@@ -85,14 +85,12 @@ export default defineConfig({
             },
           },
           {
-            // Solo GET: no cachear datos autenticados por días (listas OT/stock pueden quedar viejas).
+            // Solo GET: no cachear datos autenticados (listas OT/stock).
+            // NetworkOnly no admite networkTimeoutSeconds (eso es solo NetworkFirst).
             urlPattern: ({ url, request }) =>
               request.method === 'GET' &&
               /\/(api|socket\.io)\//i.test(url.pathname),
             handler: 'NetworkOnly',
-            options: {
-              networkTimeoutSeconds: 15,
-            },
           }
         ]
       }
