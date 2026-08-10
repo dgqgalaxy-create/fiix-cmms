@@ -21,6 +21,12 @@ jobs:
           cd ~/fiix-cmms
           export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
           [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          # Actions self-hosted a veces arranca con Node 20 del sistema; forzar 22.
+          if command -v nvm >/dev/null 2>&1; then
+            nvm install 22 >/dev/null 2>&1 || true
+            nvm use 22
+          fi
+          node -v
           # npm install puede ensuciar package-lock.json en el servidor;
           # sin restore, git pull aborta y el auto-deploy queda parado.
           git restore .

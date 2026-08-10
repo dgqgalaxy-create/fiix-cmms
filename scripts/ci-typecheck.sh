@@ -6,17 +6,57 @@
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+NODE_MAJOR="${NODE_MAJOR:-22}"
 
 load_nvm() {
-  export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
-  # shellcheck disable=SC1091
-  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-  if [ -f "${APP_DIR}/.nvmrc" ]; then
-    nvm use "$(cat "${APP_DIR}/.nvmrc")" >/dev/null 2>&1 || nvm use 22 >/dev/null 2>&1 || true
+  local candidates=()
+  if [ -n "${NVM_DIR:-}" ]; then
+    candidates+=("${NVM_DIR}/nvm.sh")
+  fi
+  candidates+=("${HOME}/.nvm/nvm.sh" "/home/usuario/.nvm/nvm.sh")
+  local cand
+  for cand in "${candidates[@]}"; do
+    if [ -s "$cand" ]; then
+      export NVM_DIR="$(cd "$(dirname "$cand")" && pwd)"
+      # shellcheck disable=SC1090
+      . "$cand"
+      return 0
+    fi
+  done
+  return 1
+}
+
+ensure_node() {
+  if load_nvm; then
+    local want="$NODE_MAJOR"
+    if [ -f "${APP_DIR}/.nvmrc" ]; then
+      want="$(tr -d '[:space:]' < "${APP_DIR}/.nvmrc")"
+      want="${want:-$NODE_MAJOR}"
+    fi
+    nvm install "$want" >/dev/null 2>&1 || true
+    nvm use "$want" >/dev/null 2>&1 \
+      || nvm use "$NODE_MAJOR" >/dev/null 2>&1 \
+      || nvm use default >/dev/null 2>&1 \
+      || true
+    nvm alias default "$want" >/dev/null 2>&1 || true
+  fi
+
+  if ! command -v node >/dev/null 2>&1; then
+    echo "  [ERROR] node no está en PATH. Instala Node ${NODE_MAJOR}+ (nvm) en el usuario del runner." >&2
+    exit 1
+  fi
+
+  local major
+  major="$(node -p "process.versions.node.split('.')[0]")"
+  echo "  Node $(node -v) · npm $(npm -v)"
+  if [ "$major" -lt "$NODE_MAJOR" ]; then
+    echo "  [ERROR] Se requiere Node >= ${NODE_MAJOR} (actual: $(node -v))." >&2
+    echo "  El runner self-hosted debe usar nvm con Node ${NODE_MAJOR} (mismo usuario que Actions)." >&2
+    exit 1
   fi
 }
 
-load_nvm
+ensure_node
 
 echo ">>> Typecheck backend (bloqueante)..."
 cd "${APP_DIR}/backend"
@@ -24,6 +64,8 @@ cd "${APP_DIR}/backend"
 # sincronizar con el lockfile o fallan deps nuevas (p. ej. helmet).
 unset NODE_ENV || true
 npm ci --include=dev
+# npm ci borra node_modules: hay que regenerar el cliente Prisma antes de tsc
+npx prisma generate
 npx tsc --noEmit
 echo "  [OK] backend tsc"
 

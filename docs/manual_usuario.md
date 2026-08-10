@@ -1,5 +1,5 @@
 # Manual de Usuario - GTZ CMMS
-*(Versión 1.56.27 - 10 de Agosto, 2026)*
+*(Versión 1.56.28 - 10 de Agosto, 2026)*
 
 Este manual se mantiene alineado con cada release de la app (misma versión que `package.json` y el modal de novedades).
 
