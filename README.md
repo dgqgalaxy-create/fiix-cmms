@@ -323,6 +323,8 @@ tail -n 50 /var/log/fiix-gha-runner-watchdog.log
 - Activa **NTP** y reinicia el unit `actions.runner.*` solo si no hay `Listening for Jobs` / job en curso.
 - `install.sh` pregunta por esto en el paso opcional **7f** (default **S** si ya detecta el runner).
 
+**Node del runner:** el servicio Actions no carga `~/.bashrc`. Debe existir Node **22** vía nvm para el **mismo usuario** del runner (`nvm install 22 && nvm alias default 22`). Desde v1.56.29 el typecheck intenta instalarlo solo si falta.
+
 **Registrar el runner** (solo la primera vez en un servidor nuevo): GitHub → repo → **Settings → Actions → Runners → New self-hosted runner** → Linux x64 → al final `sudo ./svc.sh install` y `sudo ./svc.sh start`. El watchdog no sustituye ese registro.
 
 **Desinstalar watchdog:** `sudo rm -f /etc/cron.d/fiix-gha-runner-watchdog`

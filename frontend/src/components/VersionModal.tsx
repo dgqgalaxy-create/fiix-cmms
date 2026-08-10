@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.28";
+export const APP_VERSION = "1.56.29";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: El deploy self-hosted instala/activa Node 22 si el runner aún tiene Node 20 del sistema (nvm + PATH).",
     "Corrección: Typecheck del deploy fuerza Node 22 y prisma generate tras npm ci (evita fallos masivos de tipos Prisma en el runner).",
     "Corrección: El typecheck del deploy vuelve a ejecutar npm ci (antes reutilizaba node_modules viejo y fallaba al añadir deps como helmet).",
     "Mejora: Endurecimiento — usuarios inactivos rechazados en API; Helmet/CORS; /uploads con token; límites Multer/JSON; índices BD; paginación servidor Activos/Repuestos; KPI top fallas por groupBy; debounce sockets; AbortController en listados; PWA sin cachear /api; cola offline no descarta 401 a ciegas.",
