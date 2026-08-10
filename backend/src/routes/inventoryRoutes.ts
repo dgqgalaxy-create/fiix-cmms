@@ -9,28 +9,13 @@ import {
   searchImages, proxyImage
 } from '../controllers/inventoryController';
 import { authenticate, requirePermission, requireWritable } from '../middlewares/authMiddleware';
-import multer from 'multer';
-import fs from 'fs';
+import { createDiskUploader } from '../middlewares/upload';
 import path from 'path';
 
 const router = Router();
 
 const uploadDir = path.join(__dirname, '../../uploads/inventory');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({ storage: storage });
+const upload = createDiskUploader(uploadDir, { maxFiles: 2 });
 
 router.use(authenticate);
 
@@ -38,11 +23,11 @@ router.use(authenticate);
 // RUTAS DE CATALOGOS Y RESUMEN
 // ==========================================
 // Summary
-router.get('/summary', authenticate, getInventorySummary);
+router.get('/summary', getInventorySummary);
 
 // Image Search
-router.get('/images/search', authenticate, requirePermission('MANAGE_INVENTORY'), searchImages);
-router.get('/images/proxy', authenticate, requirePermission('MANAGE_INVENTORY'), proxyImage);
+router.get('/images/search', requirePermission('MANAGE_INVENTORY'), searchImages);
+router.get('/images/proxy', requirePermission('MANAGE_INVENTORY'), proxyImage);
 
 router.get('/categories', getCategories);
 router.post('/categories', requireWritable, requirePermission('MANAGE_INVENTORY'), createCategory);

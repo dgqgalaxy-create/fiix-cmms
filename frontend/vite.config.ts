@@ -85,23 +85,14 @@ export default defineConfig({
             },
           },
           {
-            // Solo GET: no interceptar POST/PUT de import CSV+zip (body grande → Network Error).
+            // Solo GET: no cachear datos autenticados por días (listas OT/stock pueden quedar viejas).
             urlPattern: ({ url, request }) =>
               request.method === 'GET' &&
               /\/(api|socket\.io)\//i.test(url.pathname),
-            handler: 'NetworkFirst',
+            handler: 'NetworkOnly',
             options: {
-              cacheName: 'api-cache',
-              // Si el servidor no responde, no colgar la UI minutos: fallback a caché o error rápido.
-              networkTimeoutSeconds: 8,
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
+              networkTimeoutSeconds: 15,
+            },
           }
         ]
       }

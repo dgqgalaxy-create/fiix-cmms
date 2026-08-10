@@ -7,8 +7,8 @@ import {
   deleteAnnouncement,
   type GlobalAnnouncement,
 } from '../api/notes';
-import { BACKEND_URL } from '../api/axios';
 import { formatDateTime } from '../utils/dateUtils';
+import { mediaUrl } from '../utils/mediaUrl';
 
 interface Props {
   isAdmin: boolean;
@@ -149,7 +149,7 @@ export function AnnouncementsPanel({ isAdmin, onChanged }: Props) {
   const imageSrc = (url?: string | null) => {
     if (!url) return null;
     if (url.startsWith('http')) return url;
-    return `${BACKEND_URL}${url}`;
+    return mediaUrl(url) || null;
   };
 
   return (

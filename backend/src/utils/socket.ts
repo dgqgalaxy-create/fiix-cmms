@@ -3,6 +3,7 @@ import http from 'http';
 import { verifyToken } from './auth';
 import prisma from '../config/prisma';
 import { ackChatMessageDelivered } from '../services/chatReceipts';
+import { isAllowedOrigin } from './corsOrigins';
 
 let io: Server;
 
@@ -138,7 +139,13 @@ function sweepStalePresence() {
 export const initSocket = (server: http.Server) => {
   io = new Server(server, {
     cors: {
-      origin: '*',
+      origin: (origin, callback) => {
+        if (isAllowedOrigin(origin || undefined)) {
+          callback(null, true);
+          return;
+        }
+        callback(new Error('Socket CORS: origen no permitido'));
+      },
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     },
   });

@@ -37,8 +37,54 @@ export interface Asset {
   };
 }
 
-export const getAssets = async (): Promise<Asset[]> => {
-  const response = await api.get('/assets');
+export type AssetListParams = {
+  page?: number;
+  limit?: number;
+  q?: string;
+  zoneId?: string;
+  zoneSectionId?: string;
+  status?: string;
+};
+
+export type PaginatedAssets = {
+  data: Asset[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+export const getAssets = async (params?: AssetListParams): Promise<Asset[]> => {
+  const response = await api.get('/assets', { params });
+  if (response.data?.data && Array.isArray(response.data.data)) return response.data.data;
+  return response.data;
+};
+
+export const getAssetsPage = async (
+  params: AssetListParams = {},
+  signal?: AbortSignal
+): Promise<PaginatedAssets> => {
+  const response = await api.get('/assets', {
+    params: {
+      page: params.page ?? 1,
+      limit: params.limit ?? 20,
+      ...params,
+    },
+    signal,
+  });
+  if (response.data?.data && Array.isArray(response.data.data)) return response.data;
+  const data = response.data as Asset[];
+  return {
+    data,
+    total: data.length,
+    page: 1,
+    limit: data.length || 20,
+    totalPages: 1,
+  };
+};
+
+export const getAssetById = async (id: string): Promise<Asset> => {
+  const response = await api.get(`/assets/${id}`);
   return response.data;
 };
 

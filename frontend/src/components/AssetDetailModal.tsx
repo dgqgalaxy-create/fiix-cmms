@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck, AlertTriangle, Clock, Wrench, Package, CalendarClock, Layers, Pencil } from 'lucide-react';
 import type { Asset } from '../api/assets';
-import { BACKEND_URL } from '../api/axios';
 import { getAssetMetrics } from '../api/assets';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
@@ -10,6 +9,7 @@ import { formatWorkOrderFolio } from '../utils/folio';
 import { ASSET_KIND_LABELS } from '../utils/assetSection';
 import { formatCurrency } from '../utils/currency';
 import { InfoTip } from './common/InfoTip';
+import { mediaUrl } from '../utils/mediaUrl';
 
 interface Props {
   asset: Asset | null;
@@ -286,7 +286,7 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Pr
               {asset.image_url && (
                 <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex-shrink-0 shadow-sm p-2">
                   <img 
-                    src={`${BACKEND_URL}${asset.image_url}`} 
+                    src={mediaUrl(asset.image_url)} 
                     alt={`Foto de ${asset.name}`} 
                     className="w-full h-full object-contain rounded-xl"
                   />
@@ -394,7 +394,7 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Pr
                   </div>
                   <div className="flex gap-2">
                     <a 
-                      href={`${BACKEND_URL}${asset.document_url}`}
+                      href={mediaUrl(asset.document_url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 dark:bg-slate-950 rounded-xl text-sm font-medium transition-colors"
@@ -402,7 +402,7 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Pr
                       <Eye size={16} /> Ver
                     </a>
                     <a 
-                      href={`${BACKEND_URL}${asset.document_url}`}
+                      href={mediaUrl(asset.document_url)}
                       download
                       className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:hover:bg-emerald-400 text-white rounded-xl text-sm font-medium transition-colors shadow-sm"
                     >

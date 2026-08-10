@@ -1,11 +1,10 @@
-import { useState, useEffect, useMemo, type MouseEvent } from 'react';
+import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter } from 'lucide-react';
 import { 
-  getItems, getTransactionsPage, getCategories, getLocations, getVendors
+  getItems, getItemsPage, getTransactionsPage, getCategories, getLocations, getVendors, getInventorySummary
 } from '../api/inventory';
-import { BACKEND_URL } from '../api/axios';
-import type { Item, InventoryTransaction, ItemCategory, ItemLocation, Vendor } from '../api/inventory';
+import type { Item, InventoryTransaction, ItemCategory, ItemLocation, Vendor, InventorySummary } from '../api/inventory';
 import { createDraftsFromLowStock } from '../api/purchaseOrders';
 import { useAuth } from '../context/AuthContext';
 import { ItemModal } from '../components/inventory/ItemModal';
@@ -21,6 +20,7 @@ import { parseFiixQr, formatItemQr, formatLocationQr } from '../utils/fiixQr';
 import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
 import { InfoTip } from '../components/common/InfoTip';
 import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
+import { mediaUrl } from '../utils/mediaUrl';
 
 export const InventoryPage = () => {
   const navigate = useNavigate();
@@ -37,10 +37,18 @@ export const InventoryPage = () => {
   const [categories, setCategories] = useState<ItemCategory[]>([]);
   const [locations, setLocations] = useState<ItemLocation[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  /** Full catalog for TransactionModal / CatalogModal pickers (loaded on demand). */
+  const [pickerItems, setPickerItems] = useState<Item[]>([]);
+  const [inventorySummary, setInventorySummary] = useState<InventorySummary | null>(null);
+  const [criticalTotal, setCriticalTotal] = useState(0);
+  const [criticalNoVendorItems, setCriticalNoVendorItems] = useState<Item[]>([]);
+  const [criticalNoVendorTotal, setCriticalNoVendorTotal] = useState(0);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [itemsLoading, setItemsLoading] = useState(false);
   const [txLoading, setTxLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [itemsSearchQ, setItemsSearchQ] = useState('');
   const [txSearchQ, setTxSearchQ] = useState('');
   const [movementTypeFilter, setMovementTypeFilter] = useState<'ALL' | 'IN' | 'OUT'>('ALL');
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
@@ -53,10 +61,13 @@ export const InventoryPage = () => {
   
   // Pagination (repuestos y movimientos por separado)
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsTotal, setItemsTotal] = useState(0);
+  const [itemsTotalPages, setItemsTotalPages] = useState(1);
   const [txCurrentPage, setTxCurrentPage] = useState(1);
   const [txTotal, setTxTotal] = useState(0);
   const [txTotalPages, setTxTotalPages] = useState(1);
   const ITEMS_PER_PAGE = 20;
+  const itemsAbortRef = useRef<AbortController | null>(null);
 
   // Modals state
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -83,28 +94,84 @@ export const InventoryPage = () => {
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<any>(undefined);
   const [isCatalogReadOnly, setIsCatalogReadOnly] = useState(false);
 
-  const fetchData = async (backgroundFetch: boolean = false) => {
+  const fetchCatalogs = async (backgroundFetch: boolean = false) => {
     if (!backgroundFetch) setIsLoading(true);
     try {
-      // Repuestos y catálogos (movimientos se cargan paginados en su pestaña).
-      const [itemsRes, catsRes, locsRes, vendsRes] = await Promise.allSettled([
-        getItems(),
+      const [catsRes, locsRes, vendsRes, summaryRes] = await Promise.allSettled([
         getCategories(),
         getLocations(),
-        getVendors()
+        getVendors(),
+        getInventorySummary(),
       ]);
-      if (itemsRes.status === 'fulfilled') setItems(itemsRes.value);
-      else console.error('Error fetching items', itemsRes.reason);
       if (catsRes.status === 'fulfilled') setCategories(catsRes.value);
       else console.error('Error fetching categories', catsRes.reason);
       if (locsRes.status === 'fulfilled') setLocations(locsRes.value);
       else console.error('Error fetching locations', locsRes.reason);
       if (vendsRes.status === 'fulfilled') setVendors(vendsRes.value);
       else console.error('Error fetching vendors', vendsRes.reason);
+      if (summaryRes.status === 'fulfilled') setInventorySummary(summaryRes.value);
+      else console.error('Error fetching inventory summary', summaryRes.reason);
     } catch (error) {
-      console.error('Error fetching inventory data', error);
+      console.error('Error fetching inventory catalogs', error);
     } finally {
       if (!backgroundFetch) setIsLoading(false);
+    }
+  };
+
+  const fetchCriticalBadge = async () => {
+    try {
+      const [critRes, noVendRes] = await Promise.all([
+        getItemsPage({ critical: true, page: 1, limit: 200 }),
+        getItemsPage({ critical: true, noVendor: true, page: 1, limit: 200 }),
+      ]);
+      setCriticalTotal(critRes.total);
+      setCriticalNoVendorItems(noVendRes.data);
+      setCriticalNoVendorTotal(noVendRes.total);
+    } catch (error) {
+      console.error('Error fetching critical items', error);
+    }
+  };
+
+  const fetchItemsPage = async (backgroundFetch: boolean = false) => {
+    itemsAbortRef.current?.abort();
+    const ac = new AbortController();
+    itemsAbortRef.current = ac;
+    if (!backgroundFetch) setItemsLoading(true);
+    try {
+      const res = await getItemsPage(
+        {
+          page: currentPage,
+          limit: ITEMS_PER_PAGE,
+          q: itemsSearchQ || undefined,
+          critical: showLowStockOnly || showNoVendorOnly || undefined,
+          noVendor: showNoVendorOnly || undefined,
+        },
+        ac.signal
+      );
+      if (ac.signal.aborted) return;
+      setItems(res.data);
+      setItemsTotal(res.total);
+      setItemsTotalPages(Math.max(1, res.totalPages));
+    } catch (error: any) {
+      if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') return;
+      console.error('Error fetching items', error);
+      setItems([]);
+      setItemsTotal(0);
+      setItemsTotalPages(1);
+    } finally {
+      if (!backgroundFetch && !ac.signal.aborted) setItemsLoading(false);
+    }
+  };
+
+  const ensurePickerItems = async (): Promise<Item[]> => {
+    if (pickerItems.length > 0) return pickerItems;
+    try {
+      const all = await getItems();
+      setPickerItems(all);
+      return all;
+    } catch (error) {
+      console.error('Error fetching items for picker', error);
+      return [];
     }
   };
 
@@ -130,11 +197,27 @@ export const InventoryPage = () => {
     }
   };
 
+  const refreshInventory = (backgroundFetch: boolean = false) => {
+    void fetchCatalogs(backgroundFetch);
+    void fetchCriticalBadge();
+    setPickerItems([]);
+    if (activeTab === 'items') void fetchItemsPage(backgroundFetch);
+    if (activeTab === 'transactions') void fetchTransactionsPage(backgroundFetch);
+  };
+
   useEffect(() => {
-    fetchData();
+    void fetchCatalogs();
+    void fetchCriticalBadge();
     // Solo al montar: hasPermission del AuthContext no es estable entre renders.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Debounce búsqueda de repuestos (server q)
+  useEffect(() => {
+    if (activeTab !== 'items') return;
+    const t = window.setTimeout(() => setItemsSearchQ(searchTerm.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [searchTerm, activeTab]);
 
   // Debounce búsqueda de movimientos (server q)
   useEffect(() => {
@@ -144,14 +227,20 @@ export const InventoryPage = () => {
   }, [searchTerm, activeTab]);
 
   useEffect(() => {
+    if (activeTab !== 'items') return;
+    void fetchItemsPage();
+    return () => itemsAbortRef.current?.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, currentPage, itemsSearchQ, showLowStockOnly, showNoVendorOnly]);
+
+  useEffect(() => {
     if (activeTab !== 'transactions') return;
     void fetchTransactionsPage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, txCurrentPage, movementTypeFilter, txSearchQ]);
 
   useSocketRefresh('refresh_inventory', () => {
-    void fetchData(true);
-    if (activeTab === 'transactions') void fetchTransactionsPage(true);
+    refreshInventory(true);
   });
 
   // Handle URL parameters (filters / deep links). Espera a que carguen catálogos
@@ -182,7 +271,7 @@ export const InventoryPage = () => {
           (l.internal_id || '').toLowerCase() === code.toLowerCase()
       );
 
-    const matchItem = (code: string) =>
+    const matchItemLocal = (code: string) =>
       items.find(
         (i) =>
           i.id === code ||
@@ -194,6 +283,7 @@ export const InventoryPage = () => {
       setCatalogType('location');
       setSelectedCatalogItem(loc);
       setIsCatalogReadOnly(true);
+      void ensurePickerItems();
       setIsCatalogModalOpen(true);
     };
 
@@ -201,6 +291,28 @@ export const InventoryPage = () => {
       setActiveTab('items');
       setSelectedItem(item);
       setIsItemModalOpen(true);
+    };
+
+    const resolveItemByCode = async (code: string): Promise<Item | undefined> => {
+      const local = matchItemLocal(code);
+      if (local) return local;
+      try {
+        const page = await getItemsPage({ q: code, page: 1, limit: 5 });
+        const fromPage = page.data.find(
+          (i) =>
+            i.id === code ||
+            (i.internal_code || '').toLowerCase() === code.toLowerCase()
+        );
+        if (fromPage) return fromPage;
+        const list = await getItems({ q: code });
+        return list.find(
+          (i) =>
+            i.id === code ||
+            (i.internal_code || '').toLowerCase() === code.toLowerCase()
+        );
+      } catch {
+        return undefined;
+      }
     };
 
     const locationId = next.get('location');
@@ -222,41 +334,37 @@ export const InventoryPage = () => {
     }
 
     const itemId = next.get('item');
-    if (itemId) {
-      if (isLoading) {
-        // Esperar catálogo de repuestos.
+    if (itemId && !isLoading) {
+      next.delete('item');
+      changed = true;
+      const local = matchItemLocal(itemId);
+      if (local) {
+        openItemDetail(local);
       } else {
-        const found = matchItem(itemId);
-        if (found) {
-          openItemDetail(found);
-          next.delete('item');
-          changed = true;
-        } else {
-          alert(`No se encontró el repuesto «${itemId}».`);
-          next.delete('item');
-          changed = true;
-        }
+        void resolveItemByCode(itemId).then((found) => {
+          if (found) openItemDetail(found);
+          else alert(`No se encontró el repuesto «${itemId}».`);
+        });
       }
     }
 
     // Código sin prefijo GTZ-*/FIIX-* (p. ej. E2-0): resolver ubicación o repuesto.
     const scanCode = next.get('scan');
     if (scanCode && !isLoading) {
+      next.delete('scan');
+      changed = true;
       const loc = matchLocation(scanCode);
       if (loc) {
         openLocationDetail(loc);
-        next.delete('scan');
-        changed = true;
       } else {
-        const item = matchItem(scanCode);
-        if (item) {
-          openItemDetail(item);
-          next.delete('scan');
-          changed = true;
+        const localItem = matchItemLocal(scanCode);
+        if (localItem) {
+          openItemDetail(localItem);
         } else {
-          alert(`No se encontró ubicación ni repuesto con el código «${scanCode}».`);
-          next.delete('scan');
-          changed = true;
+          void resolveItemByCode(scanCode).then((found) => {
+            if (found) openItemDetail(found);
+            else alert(`No se encontró ubicación ni repuesto con el código «${scanCode}».`);
+          });
         }
       }
     }
@@ -266,10 +374,11 @@ export const InventoryPage = () => {
     }
   }, [searchParams, items, locations, isLoading, setSearchParams]);
 
-  const handleOpenCatalogModal = (type: 'category' | 'location' | 'vendor', item?: any, readOnly: boolean = false) => {
+  const handleOpenCatalogModal = async (type: 'category' | 'location' | 'vendor', item?: any, readOnly: boolean = false) => {
     setCatalogType(type);
     setSelectedCatalogItem(item);
     setIsCatalogReadOnly(readOnly);
+    if (readOnly) await ensurePickerItems();
     setIsCatalogModalOpen(true);
   };
 
@@ -278,8 +387,9 @@ export const InventoryPage = () => {
     setIsItemModalOpen(true);
   };
 
-  const handleOpenTransactionModal = (itemId?: string) => {
+  const handleOpenTransactionModal = async (itemId?: string) => {
     setPreselectedTransactionItemId(itemId);
+    await ensurePickerItems();
     setIsTransactionModalOpen(true);
   };
 
@@ -296,26 +406,27 @@ export const InventoryPage = () => {
     { id: 'vendors', label: 'Proveedores', icon: <Building2 size={18} /> }
   ];
 
-  const filteredItems = useMemo(() => {
-    let list = [...items]; // CRITICAL FIX: Clone the array so we don't mutate the React state!
-    
-    if (showNoVendorOnly) {
-      list = list.filter((i) => i.is_active && i.stock <= i.minimum_inventory && !i.vendor_id);
-    } else if (showLowStockOnly) {
-      list = list.filter((i) => i.stock <= i.minimum_inventory);
-    }
-    
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      list = list.filter(i => 
-        (i.name || '').toLowerCase().includes(term) || 
-        (i.internal_code || '').toLowerCase().includes(term) ||
-        (i.category?.name || '').toLowerCase().includes(term) ||
-        (i.location?.name || '').toLowerCase().includes(term)
-      );
-    }
-    
-    list.sort((a, b) => {
+  const filteredLocations = useMemo(() => {
+    if (!locationSearchTerm) return locations;
+    const term = locationSearchTerm.toLowerCase();
+    return locations.filter(l =>
+      (l.name || '').toLowerCase().includes(term) ||
+      (l.internal_id || '').toLowerCase().includes(term)
+    );
+  }, [locations, locationSearchTerm]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, showLowStockOnly, showNoVendorOnly]);
+
+  useEffect(() => {
+    setTxCurrentPage(1);
+  }, [searchTerm, movementTypeFilter, activeTab]);
+
+  // Página del servidor; orden de columnas solo sobre la página actual
+  const paginatedItems = useMemo(() => {
+    return [...items].sort((a, b) => {
       let cmp = 0;
       switch (sortBy) {
         case 'name':
@@ -335,29 +446,8 @@ export const InventoryPage = () => {
       }
       return sortDirection === 'asc' ? cmp : -cmp;
     });
+  }, [items, sortBy, sortDirection]);
 
-    return list;
-  }, [items, searchTerm, showLowStockOnly, showNoVendorOnly, sortBy, sortDirection]);
-
-  const filteredLocations = useMemo(() => {
-    if (!locationSearchTerm) return locations;
-    const term = locationSearchTerm.toLowerCase();
-    return locations.filter(l =>
-      (l.name || '').toLowerCase().includes(term) ||
-      (l.internal_id || '').toLowerCase().includes(term)
-    );
-  }, [locations, locationSearchTerm]);
-
-  // Reset pagination when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, showLowStockOnly, showNoVendorOnly, sortBy, sortDirection]);
-
-  useEffect(() => {
-    setTxCurrentPage(1);
-  }, [searchTerm, movementTypeFilter, activeTab]);
-
-  // Página del servidor; orden de columnas solo sobre la página actual
   const paginatedTransactions = useMemo(() => {
     return [...serverTransactions].sort((a, b) => {
       let cmp = 0;
@@ -400,59 +490,85 @@ export const InventoryPage = () => {
     setShowNoVendorOnly(false);
   };
 
-  const handleExportItemsExcel = () => {
-    const rows = filteredItems.map((i) => ({
-      Código: i.internal_code || '',
-      Nombre: i.name || '',
-      Categoría: i.category?.name || '',
-      Ubicación: i.location?.name || '',
-      Proveedor: i.vendor?.name || '',
-      Stock: i.stock,
-      Mínimo: i.minimum_inventory,
-      UOM: i.uom || '',
-      'Costo compra': i.purchase_cost ?? '',
-      Activo: i.is_active ? 'Sí' : 'No',
-    }));
-    downloadWorkbook(`inventario_${excelDateStamp()}.xlsx`, [{ name: 'Repuestos', rows }]);
+  const sortItemsClient = (list: Item[]) => {
+    return [...list].sort((a, b) => {
+      let cmp = 0;
+      switch (sortBy) {
+        case 'name':
+          cmp = (a.name || '').localeCompare(b.name || '');
+          break;
+        case 'code':
+          cmp = (a.internal_code || '').localeCompare(b.internal_code || '');
+          break;
+        case 'category':
+          cmp = (a.category?.name || '').localeCompare(b.category?.name || '');
+          break;
+        case 'stock':
+          cmp = a.stock - b.stock;
+          break;
+        default:
+          cmp = 0;
+      }
+      return sortDirection === 'asc' ? cmp : -cmp;
+    });
   };
 
-  const paginatedItems = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredItems, currentPage]);
+  const handleExportItemsExcel = async () => {
+    try {
+      let list = await getItems({
+        q: itemsSearchQ || undefined,
+        critical: showLowStockOnly || showNoVendorOnly || undefined,
+        noVendor: showNoVendorOnly || undefined,
+      });
+      // Backend non-paginated critical only marks is_active; enforce stock filter client-side.
+      if (showLowStockOnly || showNoVendorOnly) {
+        list = list.filter((i) => i.is_active && i.stock <= i.minimum_inventory);
+      }
+      if (showNoVendorOnly) {
+        list = list.filter((i) => !i.vendor_id);
+      }
+      list = sortItemsClient(list);
+      const rows = list.map((i) => ({
+        Código: i.internal_code || '',
+        Nombre: i.name || '',
+        Categoría: i.category?.name || '',
+        Ubicación: i.location?.name || '',
+        Proveedor: i.vendor?.name || '',
+        Stock: i.stock,
+        Mínimo: i.minimum_inventory,
+        UOM: i.uom || '',
+        'Costo compra': i.purchase_cost ?? '',
+        Activo: i.is_active ? 'Sí' : 'No',
+      }));
+      downloadWorkbook(`inventario_${excelDateStamp()}.xlsx`, [{ name: 'Repuestos', rows }]);
+    } catch (error) {
+      console.error('Error exporting items', error);
+      alert('No se pudo exportar el inventario.');
+    }
+  };
 
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-
-  const criticalItems = useMemo(
-    () => items.filter((i) => i.is_active && i.stock <= i.minimum_inventory),
-    [items]
-  );
-
-  const criticalWithoutVendor = useMemo(
-    () => criticalItems.filter((i) => !i.vendor_id),
-    [criticalItems]
-  );
+  const lowStockCount = criticalTotal || inventorySummary?.low_stock_count || 0;
 
   const handleCreateDraftPurchaseOrders = async (event?: MouseEvent) => {
     event?.stopPropagation();
-    if (criticalItems.length === 0) {
+    if (lowStockCount === 0) {
       alert('No hay repuestos con stock crítico.');
       return;
     }
 
-    const withVendor = criticalItems.length - criticalWithoutVendor.length;
+    const withVendor = Math.max(0, lowStockCount - criticalNoVendorTotal);
     if (withVendor === 0) {
       alert(
-        `Hay ${criticalItems.length} ítem(s) en stock crítico, pero ninguno tiene proveedor asignado.\n\n` +
+        `Hay ${lowStockCount} ítem(s) en stock crítico, pero ninguno tiene proveedor asignado.\n\n` +
         `Ábrelos y asígnales un proveedor antes de generar el borrador:\n` +
-        criticalWithoutVendor.map((i) => `- ${i.internal_code} ${i.name}`).join('\n')
+        criticalNoVendorItems.map((i) => `- ${i.internal_code} ${i.name}`).join('\n')
       );
       return;
     }
 
     let confirmMsg = `Se crearán borradores de Orden de Compra con ${withVendor} ítem(s) bajo mínimo (agrupados por proveedor).`;
-    if (criticalWithoutVendor.length > 0) {
-      confirmMsg += `\n\nSe omitirán ${criticalWithoutVendor.length} sin proveedor:\n${criticalWithoutVendor.map((i) => `- ${i.internal_code} ${i.name}`).join('\n')}`;
+    if (criticalNoVendorTotal > 0) {
+      confirmMsg += `\n\nSe omitirán ${criticalNoVendorTotal} sin proveedor:\n${criticalNoVendorItems.map((i) => `- ${i.internal_code} ${i.name}`).join('\n')}`;
     }
     confirmMsg += '\n\n¿Continuar?';
     if (!confirm(confirmMsg)) {
@@ -485,7 +601,33 @@ export const InventoryPage = () => {
     }
   };
 
-  const handleScan = (scanned: string) => {
+  const resolveItemByCode = async (code: string): Promise<Item | undefined> => {
+    const local = items.find(
+      (i) =>
+        i.id === code ||
+        (i.internal_code || '').toLowerCase() === code.toLowerCase()
+    );
+    if (local) return local;
+    try {
+      const page = await getItemsPage({ q: code, page: 1, limit: 5 });
+      const fromPage = page.data.find(
+        (i) =>
+          i.id === code ||
+          (i.internal_code || '').toLowerCase() === code.toLowerCase()
+      );
+      if (fromPage) return fromPage;
+      const list = await getItems({ q: code });
+      return list.find(
+        (i) =>
+          i.id === code ||
+          (i.internal_code || '').toLowerCase() === code.toLowerCase()
+      );
+    } catch {
+      return undefined;
+    }
+  };
+
+  const handleScan = async (scanned: string) => {
     const parsed = parseFiixQr(scanned);
     const code = parsed.id;
     if (!code) {
@@ -500,13 +642,6 @@ export const InventoryPage = () => {
           (l.internal_id || '').toLowerCase() === code.toLowerCase()
       );
 
-    const matchItem = () =>
-      items.find(
-        (i) =>
-          i.id === code ||
-          (i.internal_code || '').toLowerCase() === code.toLowerCase()
-      );
-
     if (parsed.kind === 'location' || activeTab === 'locations') {
       const location = matchLocation();
       if (location) {
@@ -518,7 +653,7 @@ export const InventoryPage = () => {
     }
 
     if (parsed.kind === 'item' || activeTab === 'items') {
-      const item = matchItem();
+      const item = await resolveItemByCode(code);
       if (item) {
         handleOpenItemModal(item);
       } else {
@@ -533,7 +668,7 @@ export const InventoryPage = () => {
       handleOpenCatalogModal('location', location, true);
       return;
     }
-    const item = matchItem();
+    const item = await resolveItemByCode(code);
     if (item) {
       handleOpenItemModal(item);
       return;
@@ -583,10 +718,10 @@ export const InventoryPage = () => {
                 <>
                   <button
                     type="button"
-                    onClick={() => setSelectedItemIds(new Set(filteredItems.map((item) => item.id)))}
+                    onClick={() => setSelectedItemIds(new Set(paginatedItems.map((item) => item.id)))}
                     className="text-sm text-emerald-700 underline"
                   >
-                    Seleccionar filtrados ({filteredItems.length})
+                    Seleccionar página ({paginatedItems.length})
                   </button>
                   <button
                     type="button"
@@ -602,7 +737,15 @@ export const InventoryPage = () => {
 
             {/* Mobile View (Cards) */}
             <div className="block sm:hidden space-y-4">
-              {paginatedItems.map((item) => (
+              {itemsLoading && (
+                <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-500">
+                  <div className="inline-flex items-center gap-2">
+                    <Loader2 size={18} className="animate-spin text-emerald-600" />
+                    Cargando repuestos…
+                  </div>
+                </div>
+              )}
+              {!itemsLoading && paginatedItems.map((item) => (
                 <div 
                   key={item.id} 
                   onClick={() => itemSelectionMode ? toggleItemSelection(item.id) : handleOpenItemModal(item)}
@@ -635,7 +778,7 @@ export const InventoryPage = () => {
                   <div className="flex gap-3 items-center mb-3">
                     <div className="flex-shrink-0">
                       {item.image_url ? (
-                        <img src={`${BACKEND_URL}${item.image_url}`} alt={item.name} className="w-12 h-12 object-cover rounded-xl border border-slate-200" />
+                        <img src={mediaUrl(item.image_url)} alt={item.name} className="w-12 h-12 object-cover rounded-xl border border-slate-200" />
                       ) : (
                         <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400">
                           <Package size={20} />
@@ -697,7 +840,7 @@ export const InventoryPage = () => {
                   </div>
                 </div>
               ))}
-              {filteredItems.length === 0 && (
+              {!itemsLoading && itemsTotal === 0 && (
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-500">
                   No se encontraron repuestos.
                 </div>
@@ -726,7 +869,17 @@ export const InventoryPage = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {paginatedItems.map((item) => (
+                    {itemsLoading && (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                          <div className="inline-flex items-center gap-2">
+                            <Loader2 size={18} className="animate-spin text-emerald-600" />
+                            Cargando repuestos…
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    {!itemsLoading && paginatedItems.map((item) => (
                       <tr 
                         key={item.id} 
                         className={`hover:bg-slate-50/50 transition-colors cursor-pointer ${
@@ -752,7 +905,7 @@ export const InventoryPage = () => {
                           <div className="flex items-center gap-3">
                             <div className="flex-shrink-0">
                               {item.image_url ? (
-                                <img src={`${BACKEND_URL}${item.image_url}`} alt={item.name} className="w-10 h-10 object-cover rounded border border-slate-200" />
+                                <img src={mediaUrl(item.image_url)} alt={item.name} className="w-10 h-10 object-cover rounded border border-slate-200" />
                               ) : (
                                 <div className="w-10 h-10 bg-slate-100 rounded flex items-center justify-center text-slate-400">
                                   <Package size={20} />
@@ -824,7 +977,7 @@ export const InventoryPage = () => {
                         </td>
                       </tr>
                     ))}
-                    {filteredItems.length === 0 && (
+                    {!itemsLoading && itemsTotal === 0 && (
                       <tr>
                         <td colSpan={canManage ? 5 : 4} className="px-6 py-8 text-center text-slate-500">
                           No se encontraron repuestos.
@@ -837,7 +990,7 @@ export const InventoryPage = () => {
             </div>
 
             {/* Pagination Controls */}
-            {totalPages > 1 && (
+            {itemsTotal > ITEMS_PER_PAGE && (
               <div className="flex items-center justify-between bg-white px-4 py-3 sm:px-6 rounded-2xl border border-slate-200 shadow-sm mt-4">
                 <div className="flex flex-1 justify-between sm:hidden">
                   <button
@@ -848,8 +1001,8 @@ export const InventoryPage = () => {
                     Anterior
                   </button>
                   <button
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(p => Math.min(itemsTotalPages, p + 1))}
+                    disabled={currentPage === itemsTotalPages}
                     className="relative ml-3 inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                   >
                     Siguiente
@@ -858,8 +1011,8 @@ export const InventoryPage = () => {
                 <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm text-slate-700">
-                      Mostrando <span className="font-medium">{((currentPage - 1) * ITEMS_PER_PAGE) + 1}</span> a <span className="font-medium">{Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)}</span> de{' '}
-                      <span className="font-medium">{filteredItems.length}</span> resultados
+                      Mostrando <span className="font-medium">{((currentPage - 1) * ITEMS_PER_PAGE) + 1}</span> a <span className="font-medium">{Math.min(currentPage * ITEMS_PER_PAGE, itemsTotal)}</span> de{' '}
+                      <span className="font-medium">{itemsTotal}</span> resultados
                     </p>
                   </div>
                   <div>
@@ -874,11 +1027,11 @@ export const InventoryPage = () => {
                           <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
                         </svg>
                       </button>
-                      {[...Array(totalPages)].map((_, i) => {
+                      {[...Array(itemsTotalPages)].map((_, i) => {
                         // Simplified page numbers logic to avoid too many buttons
                         if (
                           i === 0 || 
-                          i === totalPages - 1 || 
+                          i === itemsTotalPages - 1 || 
                           (i >= currentPage - 2 && i <= currentPage)
                         ) {
                           return (
@@ -896,15 +1049,15 @@ export const InventoryPage = () => {
                           );
                         } else if (
                           i === 1 && currentPage > 3 ||
-                          i === totalPages - 2 && currentPage < totalPages - 2
+                          i === itemsTotalPages - 2 && currentPage < itemsTotalPages - 2
                         ) {
                           return <span key={i} className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-inset ring-slate-300">...</span>;
                         }
                         return null;
                       })}
                       <button
-                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(p => Math.min(itemsTotalPages, p + 1))}
+                        disabled={currentPage === itemsTotalPages}
                         className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
                       >
                         <span className="sr-only">Siguiente</span>
@@ -1316,14 +1469,10 @@ export const InventoryPage = () => {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Inventario</h1>
-            {!isLoading && items.length > 0 && (
+            {!isLoading && (inventorySummary?.total_items ?? 0) > 0 && (
               <div className="flex flex-wrap gap-2 mt-1 sm:mt-0">
                 <span className="bg-blue-50 text-blue-700 text-xs sm:text-sm font-semibold px-2.5 py-1 rounded-full border border-blue-100 flex items-center gap-1.5 shadow-sm dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900">
-                  <Package size={14} /> {items.length} Únicos
-                </span>
-                <span className="bg-emerald-50 text-emerald-700 text-xs sm:text-sm font-semibold px-2.5 py-1 rounded-full border border-emerald-100 flex items-center gap-1.5 shadow-sm dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  {items.reduce((acc, i) => acc + (i.stock || 0), 0)} Unidades Totales
+                  <Package size={14} /> {inventorySummary?.total_items} Únicos
                 </span>
               </div>
             )}
@@ -1392,7 +1541,7 @@ export const InventoryPage = () => {
       </div>
 
       {/* Stock crítico: franja propia debajo del encabezado (no pelea con los botones) */}
-      {!isLoading && activeTab === 'items' && criticalItems.length > 0 && (
+      {!isLoading && activeTab === 'items' && lowStockCount > 0 && (
         <div className="rounded-2xl border border-rose-200 bg-rose-50/80 dark:border-rose-900/60 dark:bg-rose-950/30">
           <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:gap-3 sm:px-4 sm:py-3">
             <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -1408,7 +1557,7 @@ export const InventoryPage = () => {
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="text-sm font-bold text-rose-700 dark:text-rose-300">Stock crítico</span>
                     <span className="inline-flex items-center rounded-full bg-rose-600 px-2 py-0.5 text-xs font-black text-white tabular-nums">
-                      {criticalItems.length}
+                      {lowStockCount}
                     </span>
                     <span className="relative flex h-2 w-2 shrink-0" aria-hidden>
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
@@ -1427,14 +1576,14 @@ export const InventoryPage = () => {
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:shrink-0">
-              {criticalWithoutVendor.length > 0 && (
+              {criticalNoVendorTotal > 0 && (
                 <div className="inline-flex w-full sm:w-auto items-center gap-1">
                   <button
                     type="button"
                     onClick={filterCriticalWithoutVendor}
                     className="inline-flex h-10 w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 text-sm font-semibold text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200"
                   >
-                    {criticalWithoutVendor.length} sin proveedor
+                    {criticalNoVendorTotal} sin proveedor
                   </button>
                   <InfoTip text="Muestra solo ítems en stock crítico que aún no tienen proveedor asignado." label="Ayuda: sin proveedor" />
                 </div>
@@ -1512,7 +1661,7 @@ export const InventoryPage = () => {
                   {showLowStockOnly && !showNoVendorOnly && (
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium">
                       <AlertCircle size={14} />
-                      Mostrando solo stock crítico ({criticalItems.length})
+                      Mostrando solo stock crítico ({itemsTotal})
                       <button
                         type="button"
                         onClick={clearStockFilters}
@@ -1523,20 +1672,20 @@ export const InventoryPage = () => {
                       </button>
                     </div>
                   )}
-                  {criticalWithoutVendor.length > 0 && !showNoVendorOnly && (
+                  {criticalNoVendorTotal > 0 && !showNoVendorOnly && (
                     <button
                       type="button"
                       onClick={filterCriticalWithoutVendor}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium hover:bg-amber-100 hover:border-amber-300 transition-colors"
                       title="Filtrar solo críticos sin proveedor"
                     >
-                      {criticalWithoutVendor.length} sin proveedor — clic para asignarles proveedor
+                      {criticalNoVendorTotal} sin proveedor — clic para asignarles proveedor
                     </button>
                   )}
                   {showNoVendorOnly && (
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-300 text-amber-900 text-sm font-medium shadow-sm">
                       <AlertCircle size={14} className="text-amber-600" />
-                      Críticos sin proveedor ({criticalWithoutVendor.length}) — edita cada uno y asígnalo
+                      Críticos sin proveedor ({itemsTotal}) — edita cada uno y asígnalo
                       <button
                         type="button"
                         onClick={clearStockFilters}
@@ -1549,13 +1698,13 @@ export const InventoryPage = () => {
                   )}
                 </div>
               )}
-              {!showLowStockOnly && !showNoVendorOnly && criticalWithoutVendor.length > 0 && (
+              {!showLowStockOnly && !showNoVendorOnly && criticalNoVendorTotal > 0 && (
                 <button
                   type="button"
                   onClick={filterCriticalWithoutVendor}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium hover:bg-amber-100 transition-colors"
                 >
-                  {criticalWithoutVendor.length} críticos sin proveedor — clic para verlos
+                  {criticalNoVendorTotal} críticos sin proveedor — clic para verlos
                 </button>
               )}
             </div>
@@ -1592,10 +1741,7 @@ export const InventoryPage = () => {
       <ItemModal 
         isOpen={isItemModalOpen} 
         onClose={() => setIsItemModalOpen(false)} 
-        onSaved={() => {
-          void fetchData(true);
-          if (activeTab === 'transactions') void fetchTransactionsPage(true);
-        }}
+        onSaved={() => refreshInventory(true)}
         item={selectedItem}
         categories={categories}
         locations={locations}
@@ -1604,7 +1750,7 @@ export const InventoryPage = () => {
         // OUT permitido a todos en Inventario; IN solo con REGISTER_INVENTORY_ENTRIES (TransactionModal).
         // No atar a MANAGE_INVENTORY: Técnico/Gestionador deben ver «Registrar movimiento» en el detalle.
         onQuickTransaction={canWriteOps ? handleOpenTransactionModal : undefined}
-        itemList={selectedItem ? filteredItems : undefined}
+        itemList={selectedItem ? paginatedItems : undefined}
         onNavigateItem={setSelectedItem}
         navigationPaused={isTransactionModalOpen}
       />
@@ -1612,11 +1758,8 @@ export const InventoryPage = () => {
       <TransactionModal
         isOpen={isTransactionModalOpen}
         onClose={() => setIsTransactionModalOpen(false)}
-        onSaved={() => {
-          void fetchData(true);
-          if (activeTab === 'transactions') void fetchTransactionsPage(true);
-        }}
-        items={items}
+        onSaved={() => refreshInventory(true)}
+        items={pickerItems.length > 0 ? pickerItems : items}
         defaultItemId={preselectedTransactionItemId}
       />
 
@@ -1631,9 +1774,9 @@ export const InventoryPage = () => {
         onClose={() => setIsCatalogModalOpen(false)}
         type={catalogType}
         item={selectedCatalogItem}
-        onSaved={() => fetchData(true)}
+        onSaved={() => refreshInventory(true)}
         readOnly={isCatalogReadOnly}
-        allItems={items}
+        allItems={pickerItems}
         onSelectItem={(selected) => {
           setIsCatalogModalOpen(false);
           handleOpenItemModal(selected);
@@ -1660,7 +1803,7 @@ export const InventoryPage = () => {
         isOpen={bulkItemPrintOpen}
         onClose={() => setBulkItemPrintOpen(false)}
         sheetTitle="Etiquetas QR de Repuestos"
-        items={items
+        items={paginatedItems
           .filter((item) => selectedItemIds.has(item.id))
           .map((item) => ({
             id: item.id,

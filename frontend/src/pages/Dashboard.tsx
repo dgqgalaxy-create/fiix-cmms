@@ -36,6 +36,7 @@ export const Dashboard = () => {
   const [detailInitialFocus, setDetailInitialFocus] = useState<'assign' | undefined>(undefined);
   
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const listAbortRef = useRef<AbortController | null>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
@@ -386,14 +387,19 @@ export const Dashboard = () => {
   };
 
   const fetchWorkOrders = async (backgroundFetch: boolean = false) => {
+    listAbortRef.current?.abort();
+    const ac = new AbortController();
+    listAbortRef.current = ac;
     try {
       if (!backgroundFetch) {
         setIsLoading(true);
         setLoadError(false);
       }
       const page = await getWorkOrdersPage(
-        buildListParams({ page: historyPage, limit: HISTORY_PER_PAGE })
+        buildListParams({ page: historyPage, limit: HISTORY_PER_PAGE }),
+        ac.signal
       );
+      if (ac.signal.aborted) return;
       setWorkOrders(page.data);
       setHistoryTotal(page.total);
       setHistoryTotalPages(page.totalPages);
@@ -402,13 +408,14 @@ export const Dashboard = () => {
         return page.data.find((w) => w.id === prev.id) || prev;
       });
       setLoadError(false);
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') return;
       console.error('Error fetching work orders', error);
       if (!backgroundFetch) {
         setLoadError(isLikelyServerUnreachable(error));
       }
     } finally {
-      if (!backgroundFetch) setIsLoading(false);
+      if (!backgroundFetch && !ac.signal.aborted) setIsLoading(false);
     }
   };
 
@@ -422,7 +429,10 @@ export const Dashboard = () => {
     const t = window.setTimeout(() => {
       void fetchWorkOrders();
     }, searchTerm ? 300 : 0);
-    return () => window.clearTimeout(t);
+    return () => {
+      window.clearTimeout(t);
+      listAbortRef.current?.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch when server-side filters change
   }, [
     activeTab,

@@ -5,9 +5,9 @@ import { getUoms } from '../../api/settings';
 import type { UnitOfMeasure } from '../../api/settings';
 import { ImageSearchModal } from '../inventory/ImageSearchModal';
 import type { Item, ItemCategory, ItemLocation, Vendor, InventoryTransaction } from '../../api/inventory';
-import { BACKEND_URL } from '../../api/axios';
 import { formatDateTime } from '../../utils/dateUtils';
 import { qtyStep, isInvalidQty, type QtyMode } from '../../utils/qtyMode';
+import { mediaUrl } from '../../utils/mediaUrl';
 
 type DateFilter = 'all' | 'this_week' | 'last_week' | 'this_month' | 'last_3_months';
 
@@ -208,7 +208,7 @@ export const ItemModal = ({
         qty_mode: (item.qty_mode === 'DECIMAL' ? 'DECIMAL' : 'INTEGER') as QtyMode,
         is_active: item.is_active,
       });
-      setImagePreview(item.image_url ? `${BACKEND_URL}${item.image_url}` : null);
+      setImagePreview(item.image_url ? mediaUrl(item.image_url) : null);
       setDateFilter('all');
     } else {
       setFormData({

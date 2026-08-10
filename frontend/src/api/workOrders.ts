@@ -124,7 +124,10 @@ function isPaginatedWorkOrders(data: unknown): data is Paginated<WorkOrder> {
   );
 }
 
-export const getWorkOrders = async (params?: WorkOrderListParams): Promise<WorkOrder[]> => {
+export const getWorkOrders = async (
+  params?: WorkOrderListParams,
+  signal?: AbortSignal
+): Promise<WorkOrder[]> => {
   const response = await api.get('/work-orders', {
     params: params
       ? {
@@ -134,13 +137,15 @@ export const getWorkOrders = async (params?: WorkOrderListParams): Promise<WorkO
           includeUnscheduled: params.includeUnscheduled ? '1' : undefined,
         }
       : undefined,
+    signal,
   });
   if (isPaginatedWorkOrders(response.data)) return response.data.data;
   return response.data;
 };
 
 export const getWorkOrdersPage = async (
-  params: WorkOrderListParams
+  params: WorkOrderListParams,
+  signal?: AbortSignal
 ): Promise<Paginated<WorkOrder>> => {
   const response = await api.get('/work-orders', {
     params: {
@@ -151,6 +156,7 @@ export const getWorkOrdersPage = async (
       openOnly: params.openOnly ? '1' : undefined,
       includeUnscheduled: params.includeUnscheduled ? '1' : undefined,
     },
+    signal,
   });
   if (isPaginatedWorkOrders(response.data)) return response.data;
   const data = response.data as WorkOrder[];
@@ -173,12 +179,16 @@ export const getWorkOrderById = async (id: string): Promise<WorkOrder> => {
   return response.data;
 };
 
-export const getWorkOrdersSummary = async (startDate?: string, endDate?: string): Promise<Record<string, number>> => {
+export const getWorkOrdersSummary = async (
+  startDate?: string,
+  endDate?: string,
+  signal?: AbortSignal
+): Promise<Record<string, number>> => {
   let url = '/work-orders/summary';
   if (startDate && endDate) {
     url += `?startDate=${startDate}&endDate=${endDate}`;
   }
-  const response = await api.get(url);
+  const response = await api.get(url, { signal });
   return response.data;
 };
 
@@ -214,8 +224,8 @@ export interface LineStoppageStatus {
   } | null;
 }
 
-export const getLineStoppageStatus = async (): Promise<LineStoppageStatus> => {
-  const response = await api.get('/work-orders/line-stoppage');
+export const getLineStoppageStatus = async (signal?: AbortSignal): Promise<LineStoppageStatus> => {
+  const response = await api.get('/work-orders/line-stoppage', { signal });
   return response.data;
 };
 

@@ -1,4 +1,5 @@
-import api, { BACKEND_URL } from './axios';
+import api from './axios';
+import { mediaUrl } from '../utils/mediaUrl';
 
 export interface ChatUser {
   id: string;
@@ -128,6 +129,6 @@ export const markConversationRead = async (conversationId: string): Promise<void
 
 export const chatAttachmentUrl = (url?: string | null) => {
   if (!url) return null;
-  if (url.startsWith('http')) return url;
-  return `${BACKEND_URL}${url}`;
+  const abs = mediaUrl(url);
+  return abs || null;
 };

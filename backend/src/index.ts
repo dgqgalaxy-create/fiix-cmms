@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
@@ -9,6 +10,8 @@ dotenv.config();
 
 import { initSocket } from './utils/socket';
 import { assertJwtConfigured } from './utils/auth';
+import { corsOriginDelegate } from './utils/corsOrigins';
+import { requireUploadAccess } from './middlewares/authMiddleware';
 
 assertJwtConfigured();
 
@@ -22,9 +25,28 @@ initSocket(server);
 
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
+app.use(
+  cors({
+    origin: corsOriginDelegate,
+    credentials: true,
+  })
+);
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '2mb' }));
+app.use(
+  '/uploads',
+  requireUploadAccess,
+  express.static(path.join(__dirname, '../uploads'), {
+    fallthrough: false,
+    index: false,
+  })
+);
 
 import authRoutes from './routes/authRoutes';
 import assetRoutes from './routes/assetRoutes';
@@ -110,11 +132,28 @@ app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
     res.status(400).json({ error: 'Archivo demasiado grande (máx. 12 MB para fotos de OT/portal).' });
     return;
   }
-  if (/Solo se permiten imágenes|Tipo de archivo/i.test(msg) || code === 'LIMIT_UNEXPECTED_FILE') {
+  if (/Solo se permiten imágenes|Solo se permiten imágenes o PDF|Tipo de archivo/i.test(msg) || code === 'LIMIT_UNEXPECTED_FILE') {
     res.status(400).json({ error: msg || 'Archivo no permitido' });
     return;
   }
   next(err);
+});
+
+/** Errores no capturados → JSON 500 (no tumbar la respuesta a medias). */
+app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+  console.error('[GTZ] Unhandled error:', err);
+  res.status(500).json({ error: 'Error interno del servidor' });
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[GTZ] unhandledRejection:', reason);
+});
+process.on('uncaughtException', (error) => {
+  console.error('[GTZ] uncaughtException:', error);
 });
 
 // Producción: Express sirve el frontend ya compilado (frontend/dist) en el mismo

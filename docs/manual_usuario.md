@@ -1,5 +1,5 @@
 # Manual de Usuario - GTZ CMMS
-*(Versión 1.56.12 - 4 de Agosto, 2026)*
+*(Versión 1.56.26 - 10 de Agosto, 2026)*
 
 Este manual se mantiene alineado con cada release de la app (misma versión que `package.json` y el modal de novedades).
 
@@ -14,6 +14,7 @@ Sus pilares son **Rapidez** (menos formatos y pasos), **Trazabilidad** (responsa
 En celular, el temario del manual aparece como una barra horizontal deslizable. Toca un tema para mostrarlo debajo con una transición de entrada de derecha a izquierda. El encabezado, el temario y el botón **Volver** permanecen fijos; únicamente se desplaza la información del tema hasta el borde inferior, con un degradado superior que aparece progresivamente.
 
 ## 0. Operación diaria
+- **Seguridad y rendimiento (1.56.26):** Las fotos/documentos en `/uploads` requieren sesión (la app adjunta el token automáticamente). Un usuario desactivado deja de poder usar la API aunque tenga un token viejo. Activos y Repuestos paginan en el servidor (20/página) con búsqueda. Los listados se actualizan con un pequeño retardo al recibir eventos en vivo (evita recargas en cascada).
 - **Rol Observador:** Perfil de solo consulta para gerentes de otras áreas o auditores. Puede ver Inicio, OT, activos, inventario, checklists (lectura), horarios, calendario, KPIs, RCA, avisos/notas en lectura y usar **Mensajes**. No puede crear, editar ni eliminar nada operativo (ni comentarios en OT ni notas personales). No aparece en listas de asignación ni en la interfaz móvil de técnico. Lo crea un Administrador en Personal.
 - **Inicio de sesión:** Si el usuario o la contraseña no son correctos, verás el mensaje **Contraseña o usuario incorrectos** en la misma pantalla (puedes reintentar de inmediato). No hay bloqueo por intentos fallidos en el login (el menú de Desarrollador sí bloquea tras 3 fallos). El login **no** muestra credenciales de prueba de forma permanente; solo tras **Vaciar base de datos** aparece un aviso con `admin@fiix.com` / `password123`.
 - **Colaborar en OT en curso:** Si una orden ya está **En proceso** o **En espera** y tú no estás en la lista de asignados, no verás el desplegable de estado ni Pausar / Finalizar / Reanudar: solo **Unirme / Colaborar**. Al unirte aparecen las acciones. En **Pendiente** no aparece Unirme / Colaborar: solo **Aceptar orden** (te asigna al aceptar). En la interfaz móvil de técnico las acciones van en botones grandes (sin duplicar el desplegable).

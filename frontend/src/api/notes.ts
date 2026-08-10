@@ -63,8 +63,8 @@ export interface GlobalAnnouncement {
 
 export type SnoozeMode = '1h' | 'tomorrow';
 
-export const getNotesSummary = async (): Promise<NotesSummary> => {
-  const res = await api.get('/notes/summary');
+export const getNotesSummary = async (signal?: AbortSignal): Promise<NotesSummary> => {
+  const res = await api.get('/notes/summary', { signal });
   return res.data;
 };
 

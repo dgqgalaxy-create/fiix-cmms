@@ -1,8 +1,8 @@
 import { forwardRef } from 'react';
 import type { WorkOrder } from '../api/workOrders';
-import { BACKEND_URL } from '../api/axios';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { formatDate, formatDateTime } from '../utils/dateUtils';
+import { mediaUrl } from '../utils/mediaUrl';
 
 interface Props {
   workOrder: WorkOrder;
@@ -79,21 +79,21 @@ export const WorkOrderPDFTemplate = forwardRef<HTMLDivElement, Props>(({ workOrd
           {workOrder.request_image_url ? (
             <div>
               <p className="text-[10px] font-bold text-slate-500 mb-1 text-center">Falla Reportada</p>
-              <img crossOrigin="anonymous" src={`${BACKEND_URL}${workOrder.request_image_url}`} className="w-full h-40 object-cover border-2 border-slate-200 rounded-lg" />
+              <img crossOrigin="anonymous" src={mediaUrl(workOrder.request_image_url)} className="w-full h-40 object-cover border-2 border-slate-200 rounded-lg" />
             </div>
           ) : <div className="border-2 border-dashed border-slate-200 rounded-lg flex items-center justify-center h-40"><span className="text-xs text-slate-400">Sin foto reporte</span></div>}
           
           {workOrder.before_image_url ? (
             <div>
               <p className="text-[10px] font-bold text-slate-500 mb-1 text-center">Antes de Reparar</p>
-              <img crossOrigin="anonymous" src={`${BACKEND_URL}${workOrder.before_image_url}`} className="w-full h-40 object-cover border-2 border-slate-200 rounded-lg" />
+              <img crossOrigin="anonymous" src={mediaUrl(workOrder.before_image_url)} className="w-full h-40 object-cover border-2 border-slate-200 rounded-lg" />
             </div>
           ) : <div className="border-2 border-dashed border-slate-200 rounded-lg flex items-center justify-center h-40"><span className="text-xs text-slate-400">Sin foto antes</span></div>}
           
           {workOrder.after_image_url ? (
             <div>
               <p className="text-[10px] font-bold text-emerald-600 mb-1 text-center">Reparación Finalizada</p>
-              <img crossOrigin="anonymous" src={`${BACKEND_URL}${workOrder.after_image_url}`} className="w-full h-40 object-cover border-2 border-emerald-300 rounded-lg" />
+              <img crossOrigin="anonymous" src={mediaUrl(workOrder.after_image_url)} className="w-full h-40 object-cover border-2 border-emerald-300 rounded-lg" />
             </div>
           ) : <div className="border-2 border-dashed border-slate-200 rounded-lg flex items-center justify-center h-40"><span className="text-xs text-slate-400">Sin foto después</span></div>}
         </div>

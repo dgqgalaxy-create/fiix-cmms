@@ -1,28 +1,13 @@
 import { Router } from 'express';
 import { getAssets, getAssetById, getAssetMetrics, createAsset, updateAsset, deleteAsset } from '../controllers/assetController';
 import { authenticate, requirePermission } from '../middlewares/authMiddleware';
-import multer from 'multer';
-import fs from 'fs';
+import { createDiskUploader } from '../middlewares/upload';
 import path from 'path';
 
 const router = Router();
 
 const uploadDir = path.join(__dirname, '../../uploads/assets');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({ storage: storage });
+const upload = createDiskUploader(uploadDir, { allowPdf: true, maxFiles: 4 });
 
 router.use(authenticate);
 

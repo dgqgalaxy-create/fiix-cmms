@@ -183,13 +183,77 @@ export const deleteVendor = async (req: Request, res: Response): Promise<void> =
 // ==========================================
 export const getItems = async (req: Request, res: Response): Promise<void> => {
   try {
-    const items = await prisma.item.findMany({
-      include: {
-        category: true,
-        vendor: true,
-        location: true
+    const { page, limit, q, categoryId, locationId, vendorId, critical, noVendor } = req.query;
+    const and: Record<string, unknown>[] = [];
+    if (categoryId) and.push({ category_id: String(categoryId) });
+    if (locationId) and.push({ location_id: String(locationId) });
+    if (vendorId) and.push({ vendor_id: String(vendorId) });
+    if (noVendor === '1' || noVendor === 'true') and.push({ vendor_id: null });
+    if (critical === '1' || critical === 'true') {
+      and.push({
+        is_active: true,
+        // stock <= minimum — Prisma no compara columnas fácil; filtramos en SQL raw o post.
+      });
+    }
+    if (q) {
+      const term = String(q).trim();
+      if (term) {
+        and.push({
+          OR: [
+            { name: { contains: term, mode: 'insensitive' } },
+            { internal_code: { contains: term, mode: 'insensitive' } },
+            { description: { contains: term, mode: 'insensitive' } },
+          ],
+        });
       }
-    });
+    }
+    const where = and.length ? { AND: and } : {};
+    const include = { category: true, vendor: true, location: true };
+    const wantsPage = page != null || limit != null;
+
+    if (wantsPage) {
+      const pageNum = Math.max(1, parseInt(String(page || '1'), 10) || 1);
+      const limitNum = Math.min(200, Math.max(1, parseInt(String(limit || '20'), 10) || 20));
+      // Críticos: cargar página amplia y filtrar (mínimo vs stock) — acotado.
+      if (critical === '1' || critical === 'true') {
+        const all = await prisma.item.findMany({
+          where: { ...where, is_active: true },
+          include,
+          orderBy: { name: 'asc' },
+        });
+        const filtered = all.filter((i) => i.stock <= (i.minimum_inventory ?? 0));
+        const total = filtered.length;
+        const data = filtered.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+        res.json({
+          data,
+          total,
+          page: pageNum,
+          limit: limitNum,
+          totalPages: Math.max(1, Math.ceil(total / limitNum)),
+        });
+        return;
+      }
+      const [total, items] = await Promise.all([
+        prisma.item.count({ where }),
+        prisma.item.findMany({
+          where,
+          include,
+          orderBy: { name: 'asc' },
+          skip: (pageNum - 1) * limitNum,
+          take: limitNum,
+        }),
+      ]);
+      res.json({
+        data: items,
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.max(1, Math.ceil(total / limitNum)),
+      });
+      return;
+    }
+
+    const items = await prisma.item.findMany({ where, include });
     res.json(items);
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener repuestos' });

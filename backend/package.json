@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "1.56.25",
+  "version": "1.56.26",
   "description": "",
   "engines": {
     "node": ">=22"
@@ -26,6 +26,7 @@
     "csv-parse": "^7.0.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "node-cron": "^4.2.1",

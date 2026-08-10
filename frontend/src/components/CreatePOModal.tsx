@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Plus, Trash2, Loader2, Search } from 'lucide-react';
 import { createPurchaseOrder } from '../api/purchaseOrders';
 import { getVendors, getItems, type Vendor, type Item } from '../api/inventory';
-import { BACKEND_URL } from '../api/axios';
 import { formatCurrency } from '../utils/currency';
 import { useAuth } from '../context/AuthContext';
+import { mediaUrl } from '../utils/mediaUrl';
 
 interface CreatePOModalProps {
   isOpen: boolean;
@@ -278,7 +278,7 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
                             <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden shrink-0">
                               {item.image_url ? (
                                 <img
-                                  src={`${BACKEND_URL}${item.image_url}`}
+                                  src={mediaUrl(item.image_url)}
                                   alt={item.name}
                                   className="w-full h-full object-cover"
                                 />

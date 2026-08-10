@@ -1,4 +1,5 @@
-import api, { BACKEND_URL } from './axios';
+import api from './axios';
+import { mediaUrl } from '../utils/mediaUrl';
 
 export interface WorkOrderComment {
   id: string;
@@ -29,6 +30,6 @@ export const createWorkOrderComment = async (
 
 export const commentAttachmentUrl = (url?: string | null) => {
   if (!url) return null;
-  if (url.startsWith('http')) return url;
-  return `${BACKEND_URL}${url}`;
+  const abs = mediaUrl(url);
+  return abs || null;
 };

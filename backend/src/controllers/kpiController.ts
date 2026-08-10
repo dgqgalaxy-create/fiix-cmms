@@ -129,7 +129,8 @@ export const getTopFailingAssets = async (req: AuthRequest, res: Response): Prom
   try {
     const { start, effectiveEnd } = rangeFromReq(req);
 
-    const workOrders = await prisma.workOrder.findMany({
+    const grouped = await prisma.workOrder.groupBy({
+      by: ['asset_id'],
       where: {
         maintenance_type: 'CORRECTIVO',
         status: { not: 'ANULADO' },
@@ -138,22 +139,27 @@ export const getTopFailingAssets = async (req: AuthRequest, res: Response): Prom
           { completed_at: null, created_at: { gte: start, lte: effectiveEnd } },
         ],
       },
-      select: {
-        asset_id: true,
-        asset: { select: { name: true } },
-      },
+      _count: { id: true },
+      orderBy: { _count: { id: 'desc' } },
+      take: 10,
     });
 
-    const failureCount: Record<string, { assetId: string; assetName: string; count: number }> = {};
-    workOrders.forEach((wo) => {
-      if (!wo.asset_id || !wo.asset) return;
-      if (!failureCount[wo.asset_id]) {
-        failureCount[wo.asset_id] = { assetId: wo.asset_id, assetName: wo.asset.name, count: 0 };
-      }
-      failureCount[wo.asset_id].count += 1;
-    });
+    const assetIds = grouped.map((g) => g.asset_id).filter(Boolean);
+    const assets = assetIds.length
+      ? await prisma.asset.findMany({
+          where: { id: { in: assetIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const nameById = new Map(assets.map((a) => [a.id, a.name]));
 
-    res.json(Object.values(failureCount).sort((a, b) => b.count - a.count).slice(0, 10));
+    res.json(
+      grouped.map((g) => ({
+        assetId: g.asset_id,
+        assetName: nameById.get(g.asset_id) || '—',
+        count: g._count.id,
+      }))
+    );
   } catch (error) {
     console.error('Error fetching top failing assets:', error);
     res.status(500).json({ error: 'Error al obtener equipos con más fallas' });

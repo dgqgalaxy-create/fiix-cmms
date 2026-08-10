@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Plus, RefreshCw, Search, QrCode, Printer, MapPin, Filter } from 'lucide-react';
@@ -10,7 +10,7 @@ import { QRDisplayModal } from '../components/common/QRDisplayModal';
 import { QRScannerModal } from '../components/common/QRScannerModal';
 import { BulkQRPrintModal } from '../components/common/BulkQRPrintModal';
 import { formatAssetQr } from '../utils/fiixQr';
-import { getAssets, createAsset, deleteAsset, updateAsset } from '../api/assets';
+import { getAssetsPage, getAssetById, createAsset, deleteAsset, updateAsset } from '../api/assets';
 import type { Asset } from '../api/assets';
 import { getZones } from '../api/zones';
 import type { Zone } from '../api/zones';
@@ -18,6 +18,8 @@ import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { zoneNeedsSections } from '../utils/assetSection';
 import { PageLoadError, PageLoadingState, isLikelyServerUnreachable } from '../components/PageLoadState';
 import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
+
+const ASSETS_PER_PAGE = 20;
 
 export const AssetsPage = () => {
   const { hasPermission } = useAuth();
@@ -27,6 +29,9 @@ export const AssetsPage = () => {
   const canUseScanner = hasPermission('USE_QR_SCANNER');
   const [searchParams, setSearchParams] = useSearchParams();
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [assetsTotal, setAssetsTotal] = useState(0);
+  const [assetsTotalPages, setAssetsTotalPages] = useState(1);
+  const [assetsPage, setAssetsPage] = useState(1);
   const [zones, setZones] = useState<Zone[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -34,6 +39,7 @@ export const AssetsPage = () => {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [manageZonesOpen, setManageZonesOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterZoneId, setFilterZoneId] = useState('');
   const [filterSectionId, setFilterSectionId] = useState('');
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
@@ -42,21 +48,35 @@ export const AssetsPage = () => {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkPrintOpen, setBulkPrintOpen] = useState(false);
+  const assetsAbortRef = useRef<AbortController | null>(null);
 
   const fetchAssets = async (background = false) => {
+    assetsAbortRef.current?.abort();
+    const ac = new AbortController();
+    assetsAbortRef.current = ac;
     try {
       if (!background) {
         setIsLoading(true);
         setLoadError(false);
       }
-      const data = await getAssets();
-      setAssets(data);
+      const page = await getAssetsPage({
+        page: assetsPage,
+        limit: ASSETS_PER_PAGE,
+        q: debouncedSearch || undefined,
+        zoneId: filterZoneId || undefined,
+        zoneSectionId: filterSectionId || undefined,
+      }, ac.signal);
+      if (ac.signal.aborted) return;
+      setAssets(page.data);
+      setAssetsTotal(page.total);
+      setAssetsTotalPages(Math.max(1, page.totalPages));
       setLoadError(false);
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') return;
       console.error('Error fetching assets', error);
       if (!background) setLoadError(isLikelyServerUnreachable(error));
     } finally {
-      if (!background) setIsLoading(false);
+      if (!background && !ac.signal.aborted) setIsLoading(false);
     }
   };
 
@@ -70,7 +90,21 @@ export const AssetsPage = () => {
   };
 
   useEffect(() => {
-    fetchAssets();
+    const t = window.setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    setAssetsPage(1);
+  }, [debouncedSearch, filterZoneId, filterSectionId]);
+
+  useEffect(() => {
+    void fetchAssets();
+    return () => assetsAbortRef.current?.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assetsPage, debouncedSearch, filterZoneId, filterSectionId]);
+
+  useEffect(() => {
     fetchZones();
   }, []);
 
@@ -96,25 +130,40 @@ export const AssetsPage = () => {
         (a.internal_code || '').toLowerCase() === assetId.toLowerCase()
     );
     const next = new URLSearchParams(searchParams);
-    if (found) {
-      setDetailAsset(found);
-    } else {
-      alert(`No se encontró el activo «${assetId}».`);
-    }
     next.delete('asset');
     setSearchParams(next, { replace: true });
+
+    if (found) {
+      setDetailAsset(found);
+      return;
+    }
+
+    void (async () => {
+      try {
+        const byId = await getAssetById(assetId).catch(() => null);
+        if (byId) {
+          setDetailAsset(byId);
+          return;
+        }
+        const page = await getAssetsPage({ q: assetId, page: 1, limit: 5 });
+        const match = page.data.find(
+          (a) =>
+            a.id === assetId ||
+            (a.internal_code || '').toLowerCase() === assetId.toLowerCase()
+        );
+        if (match) setDetailAsset(match);
+        else alert(`No se encontró el activo «${assetId}».`);
+      } catch {
+        alert(`No se encontró el activo «${assetId}».`);
+      }
+    })();
   }, [searchParams, assets, isLoading, setSearchParams]);
 
   const zoneOptions = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const z of zones) map.set(z.id, z.name);
-    for (const a of assets) {
-      if (a.zone_id && a.zone?.name) map.set(a.zone_id, a.zone.name);
-    }
-    return Array.from(map.entries())
-      .map(([id, name]) => ({ id, name }))
+    return [...zones]
+      .map((z) => ({ id: z.id, name: z.name }))
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
-  }, [assets, zones]);
+  }, [zones]);
 
   const filterZone = zones.find((z) => z.id === filterZoneId);
   const sectionFilterOptions = filterZone?.sections || [];
@@ -124,28 +173,32 @@ export const AssetsPage = () => {
     if (!showSectionFilter) setFilterSectionId('');
   }, [showSectionFilter]);
 
-  const filteredAssets = useMemo(() => {
-    const term = searchTerm.toLowerCase();
-    return assets.filter((a) => {
-      const matchesSearch =
-        a.name.toLowerCase().includes(term) ||
-        a.internal_code.toLowerCase().includes(term);
-      const matchesZone = !filterZoneId || a.zone_id === filterZoneId;
-      const matchesSection =
-        !filterSectionId || a.zone_section_id === filterSectionId;
-      return matchesSearch && matchesZone && matchesSection;
-    });
-  }, [assets, searchTerm, filterZoneId, filterSectionId]);
+  const assetsFilterKey = `${debouncedSearch}|${filterZoneId}|${filterSectionId}`;
 
-  const assetsFilterKey = `${searchTerm}|${filterZoneId}|${filterSectionId}`;
-
-  const handleScan = (scanned: string) => {
+  const handleScan = async (scanned: string) => {
     const scannedId = scanned.replace(/^(?:GTZ|FIIX)-(ASSET|ITEM|LOCATION):/i, '').trim();
-    const asset = assets.find(a => a.id === scannedId || a.internal_code === scannedId);
-    if (asset) {
-      setDetailAsset(asset);
+    const local = assets.find((a) => a.id === scannedId || a.internal_code === scannedId);
+    if (local) {
+      setDetailAsset(local);
       setIsScannerOpen(false);
-    } else {
+      return;
+    }
+    try {
+      const byId = await getAssetById(scannedId).catch(() => null);
+      if (byId) {
+        setDetailAsset(byId);
+        setIsScannerOpen(false);
+        return;
+      }
+      const page = await getAssetsPage({ q: scannedId, page: 1, limit: 5 });
+      const match = page.data.find((a) => a.id === scannedId || a.internal_code === scannedId);
+      if (match) {
+        setDetailAsset(match);
+        setIsScannerOpen(false);
+      } else {
+        alert('No se encontró ningún activo con el código escaneado.');
+      }
+    } catch {
       alert('No se encontró ningún activo con el código escaneado.');
     }
   };
@@ -180,7 +233,7 @@ export const AssetsPage = () => {
   };
 
   const selectAllFiltered = () => {
-    setSelectedIds(new Set(filteredAssets.map((a) => a.id)));
+    setSelectedIds(new Set(assets.map((a) => a.id)));
   };
 
   const bulkItems = assets
@@ -254,7 +307,7 @@ export const AssetsPage = () => {
             {selectedIds.size} seleccionado{selectedIds.size === 1 ? '' : 's'}
           </span>
           <button type="button" onClick={selectAllFiltered} className="text-sm text-emerald-700 dark:text-emerald-300 underline">
-            Seleccionar filtrados ({filteredAssets.length})
+            Seleccionar página ({assets.length})
           </button>
           <button
             type="button"
@@ -329,8 +382,12 @@ export const AssetsPage = () => {
           }
         >
           <AssetsTable 
-            assets={filteredAssets}
+            assets={assets}
             filterKey={assetsFilterKey}
+            serverTotal={assetsTotal}
+            serverPage={assetsPage}
+            serverTotalPages={assetsTotalPages}
+            onServerPageChange={setAssetsPage}
             onDelete={handleDeleteAsset} 
             onEdit={(asset) => { setEditingAsset(asset); setIsModalOpen(true); }}
             onRowClick={(asset) => setDetailAsset(asset)}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Asset } from '../api/assets';
 import { Activity, Ban, Settings, Trash2, Edit, Database, QrCode, Image as ImageIcon, ChevronUp, ChevronDown } from 'lucide-react';
-import { BACKEND_URL } from '../api/axios';
+import { mediaUrl } from '../utils/mediaUrl';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -12,6 +12,11 @@ interface Props {
   assets: Asset[];
   /** Cambia al filtrar/buscar para volver a la página 1 */
   filterKey?: string;
+  /** Si se pasa, la paginación es del servidor (no se hace slice local). */
+  serverTotal?: number;
+  serverPage?: number;
+  serverTotalPages?: number;
+  onServerPageChange?: (page: number) => void;
   onDelete: (id: string) => void;
   onEdit?: (asset: Asset) => void;
   onRowClick?: (asset: Asset) => void;
@@ -25,6 +30,10 @@ interface Props {
 export const AssetsTable = ({
   assets,
   filterKey = '',
+  serverTotal,
+  serverPage,
+  serverTotalPages,
+  onServerPageChange,
   onDelete,
   onEdit,
   onRowClick,
@@ -37,6 +46,7 @@ export const AssetsTable = ({
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [currentPage, setCurrentPage] = useState(1);
+  const serverMode = typeof serverTotal === 'number' && typeof onServerPageChange === 'function';
 
   useEffect(() => {
     setCurrentPage(1);
@@ -120,13 +130,24 @@ export const AssetsTable = ({
     return list;
   }, [assets, sortField, sortDirection]);
 
-  const totalPages = Math.ceil(sortedAssets.length / ITEMS_PER_PAGE) || 1;
-  const safePage = Math.min(currentPage, totalPages);
-  const pageAssets = sortedAssets.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE);
+  const totalPages = serverMode
+    ? Math.max(1, serverTotalPages || 1)
+    : Math.ceil(sortedAssets.length / ITEMS_PER_PAGE) || 1;
+  const safePage = serverMode
+    ? Math.min(Math.max(1, serverPage || 1), totalPages)
+    : Math.min(currentPage, totalPages);
+  const pageAssets = serverMode
+    ? sortedAssets
+    : sortedAssets.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE);
+  const resultTotal = serverMode ? serverTotal! : sortedAssets.length;
+  const setPage = (page: number) => {
+    if (serverMode) onServerPageChange!(page);
+    else setCurrentPage(page);
+  };
 
   useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(totalPages);
-  }, [currentPage, totalPages]);
+    if (!serverMode && currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages, serverMode]);
 
   if (assets.length === 0) {
     return (
@@ -144,12 +165,12 @@ export const AssetsTable = ({
     'px-2 py-2.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 transition-colors group';
   const tdClass = 'px-2 py-2.5';
 
-  const paginationControls = sortedAssets.length > ITEMS_PER_PAGE && (
+  const paginationControls = resultTotal > ITEMS_PER_PAGE && (
     <div className="flex items-center justify-between bg-white dark:bg-slate-900 px-4 py-3 sm:px-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm mt-4">
       <div className="flex flex-1 justify-between sm:hidden">
         <button
           type="button"
-          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          onClick={() => setPage(Math.max(1, safePage - 1))}
           disabled={safePage === 1}
           className="relative inline-flex items-center rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
         >
@@ -157,7 +178,7 @@ export const AssetsTable = ({
         </button>
         <button
           type="button"
-          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          onClick={() => setPage(Math.min(totalPages, safePage + 1))}
           disabled={safePage === totalPages}
           className="relative ml-3 inline-flex items-center rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
         >
@@ -166,14 +187,14 @@ export const AssetsTable = ({
       </div>
       <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
         <p className="text-sm text-slate-700 dark:text-slate-300">
-          Mostrando <span className="font-medium">{(safePage - 1) * ITEMS_PER_PAGE + 1}</span> a{' '}
-          <span className="font-medium">{Math.min(safePage * ITEMS_PER_PAGE, sortedAssets.length)}</span> de{' '}
-          <span className="font-medium">{sortedAssets.length}</span> resultados
+          Mostrando <span className="font-medium">{resultTotal === 0 ? 0 : (safePage - 1) * ITEMS_PER_PAGE + 1}</span> a{' '}
+          <span className="font-medium">{Math.min(safePage * ITEMS_PER_PAGE, resultTotal)}</span> de{' '}
+          <span className="font-medium">{resultTotal}</span> resultados
         </p>
         <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm" aria-label="Pagination">
           <button
             type="button"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            onClick={() => setPage(Math.max(1, safePage - 1))}
             disabled={safePage === 1}
             className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 dark:ring-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
           >
@@ -188,7 +209,7 @@ export const AssetsTable = ({
                 <button
                   type="button"
                   key={i + 1}
-                  onClick={() => setCurrentPage(i + 1)}
+                  onClick={() => setPage(i + 1)}
                   className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20 focus:outline-offset-0 ${
                     safePage === i + 1
                       ? 'z-10 bg-emerald-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600'
@@ -210,7 +231,7 @@ export const AssetsTable = ({
           })}
           <button
             type="button"
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            onClick={() => setPage(Math.min(totalPages, safePage + 1))}
             disabled={safePage === totalPages}
             className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 dark:ring-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
           >
@@ -264,7 +285,7 @@ export const AssetsTable = ({
             <div className="flex gap-2.5 items-center">
               {asset.image_url ? (
                 <img
-                  src={`${BACKEND_URL}${asset.image_url}`}
+                  src={mediaUrl(asset.image_url)}
                   alt={asset.name}
                   className="w-9 h-9 rounded-lg object-cover bg-slate-100 dark:bg-slate-800 flex-shrink-0 border border-slate-200 dark:border-slate-700/60"
                 />
@@ -376,7 +397,7 @@ export const AssetsTable = ({
                     <div className="flex items-center gap-2 min-w-0">
                       {asset.image_url ? (
                         <img
-                          src={`${BACKEND_URL}${asset.image_url}`}
+                          src={mediaUrl(asset.image_url)}
                           alt={asset.name}
                           className="w-8 h-8 rounded-lg object-cover bg-slate-100 dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700/60 shrink-0"
                         />

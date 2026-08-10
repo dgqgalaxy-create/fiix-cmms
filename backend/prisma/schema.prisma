@@ -213,6 +213,10 @@ model Asset {
   work_orders     WorkOrder[]
   maintenance_plans MaintenancePlan[]
   operational_tasks OperationalTask[]
+
+  @@index([zone_id])
+  @@index([status])
+  @@index([name])
 }
 
 model WorkOrder {
@@ -274,6 +278,13 @@ model WorkOrder {
   inventory_transactions InventoryTransaction[]
   operational_tasks   OperationalTask[]
   comments            WorkOrderComment[]
+
+  @@index([status, created_at])
+  @@index([created_at])
+  @@index([completed_at])
+  @@index([asset_id])
+  @@index([zone_id])
+  @@index([scheduled_date, due_date])
 }
 
 model KPIGoal {
@@ -354,6 +365,12 @@ model Item {
   inventory_transactions InventoryTransaction[]
   maintenance_plans      PlanItem[]
   purchase_order_items   PurchaseOrderItem[]
+
+  @@index([category_id])
+  @@index([location_id])
+  @@index([vendor_id])
+  @@index([is_active])
+  @@index([name])
 }
 
 model InventoryTransaction {
@@ -375,6 +392,11 @@ model InventoryTransaction {
   amount      Float    // Positivo para entradas, negativo para salidas
   reason      String   // Texto libre
   created_at  DateTime @default(now())
+
+  @@index([item_id, created_at])
+  @@index([created_at])
+  @@index([work_order_id])
+  @@index([user_id, created_at])
 }
 
 model MaintenancePlan {

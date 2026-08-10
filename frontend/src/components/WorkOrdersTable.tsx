@@ -3,7 +3,7 @@ import type { WorkOrder } from '../api/workOrders';
 import { Clock, CheckCircle2, AlertCircle, Wrench, Calendar, MapPin, Tag, User, ChevronUp, ChevronDown, Camera, MessageSquare } from 'lucide-react';
 import { SlaBadge } from './SlaBadge';
 import { formatWorkOrderFolio } from '../utils/folio';
-import { BACKEND_URL } from '../api/axios';
+import { mediaUrl } from '../utils/mediaUrl';
 
 interface Props {
   workOrders: WorkOrder[];
@@ -154,7 +154,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
             {cardPhotoUrl && (
               <div className="pointer-events-none absolute inset-0 z-0" aria-hidden="true">
                 <img
-                  src={`${BACKEND_URL}${cardPhotoUrl}`}
+                  src={mediaUrl(cardPhotoUrl)}
                   alt=""
                   loading="lazy"
                   decoding="async"
@@ -382,7 +382,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                     rowPhotoUrl ? 'wo-photo-row' : ''
                   }`}
                   style={rowPhotoUrl
-                    ? ({ '--wo-photo-url': `url("${BACKEND_URL}${rowPhotoUrl}")` } as React.CSSProperties)
+                    ? ({ '--wo-photo-url': `url("${mediaUrl(rowPhotoUrl)}")` } as React.CSSProperties)
                     : undefined}
                 >
                   <td className="px-6 py-4 print:px-1.5 print:py-0.5 align-top print:align-middle whitespace-nowrap">

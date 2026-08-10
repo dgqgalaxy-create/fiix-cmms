@@ -232,7 +232,52 @@ export const getAssetMetrics = async (req: Request, res: Response): Promise<void
 };
 export const getAssets = async (req: Request, res: Response): Promise<void> => {
   try {
+    const { page, limit, q, zoneId, zoneSectionId, status } = req.query;
+    const and: Record<string, unknown>[] = [];
+    if (zoneId) and.push({ zone_id: String(zoneId) });
+    if (zoneSectionId) and.push({ zone_section_id: String(zoneSectionId) });
+    if (status) and.push({ status: String(status) });
+    if (q) {
+      const term = String(q).trim();
+      if (term) {
+        and.push({
+          OR: [
+            { name: { contains: term, mode: 'insensitive' } },
+            { internal_code: { contains: term, mode: 'insensitive' } },
+            { brand: { contains: term, mode: 'insensitive' } },
+            { model: { contains: term, mode: 'insensitive' } },
+          ],
+        });
+      }
+    }
+    const where = and.length ? { AND: and } : {};
+    const wantsPage = page != null || limit != null;
+
+    if (wantsPage) {
+      const pageNum = Math.max(1, parseInt(String(page || '1'), 10) || 1);
+      const limitNum = Math.min(200, Math.max(1, parseInt(String(limit || '20'), 10) || 20));
+      const [total, assets] = await Promise.all([
+        prisma.asset.count({ where }),
+        prisma.asset.findMany({
+          where,
+          include: assetInclude,
+          orderBy: { created_at: 'desc' },
+          skip: (pageNum - 1) * limitNum,
+          take: limitNum,
+        }),
+      ]);
+      res.json({
+        data: assets,
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.max(1, Math.ceil(total / limitNum)),
+      });
+      return;
+    }
+
     const assets = await prisma.asset.findMany({
+      where,
       include: assetInclude,
       orderBy: { created_at: 'desc' },
     });

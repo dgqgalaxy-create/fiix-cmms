@@ -100,14 +100,54 @@ export async function syncOfflineQueue(): Promise<SyncResult> {
       } catch (error: unknown) {
         const { reason, status } = reasonFromError(error);
 
-        // 4xx: no tiene sentido reintentar (URL mala, 401/403/404/409, validación).
+        // 401/403: sesión — no descartar; reintentar (el usuario puede volver a entrar).
+        if (status === 401 || status === 403) {
+          const nextRetries = (req.retries || 0) + 1;
+          if (nextRetries >= MAX_OFFLINE_SYNC_RETRIES) {
+            if (isOfflineMultipartBody(req.body)) {
+              await removeOfflinePhotoBlobs(req.body.files.map((f) => f.blobKey));
+            }
+            await removeOfflineRequest(req.id);
+            discarded += 1;
+            failures.push({
+              id: req.id,
+              method: req.method,
+              url: req.url,
+              reason: `${reason} (sesión; descartado tras ${nextRetries} intentos — vuelve a iniciar sesión)`,
+              status,
+            });
+          } else {
+            await setOfflineRequestRetries(req.id, nextRetries);
+            failed += 1;
+            failures.push({
+              id: req.id,
+              method: req.method,
+              url: req.url,
+              reason: `${reason} (sesión expirada o sin permiso — inicia sesión y reintenta)`,
+              status,
+            });
+          }
+          continue;
+        }
+
+        // 409: conflicto — informar y descartar (no reintentar ciegamente).
+        // Otros 4xx (validación / 404): descartar.
         if (status && status >= 400 && status < 500) {
           if (isOfflineMultipartBody(req.body)) {
             await removeOfflinePhotoBlobs(req.body.files.map((f) => f.blobKey));
           }
           await removeOfflineRequest(req.id);
           discarded += 1;
-          failures.push({ id: req.id, method: req.method, url: req.url, reason, status });
+          failures.push({
+            id: req.id,
+            method: req.method,
+            url: req.url,
+            reason:
+              status === 409
+                ? `${reason} (conflicto — revisa stock/estado en el servidor)`
+                : reason,
+            status,
+          });
           console.warn(`[OfflineSync] Descartado ${req.id} por HTTP ${status}: ${req.method} ${req.url}`);
           continue;
         }

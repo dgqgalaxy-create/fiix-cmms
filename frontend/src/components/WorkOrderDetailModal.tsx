@@ -9,7 +9,7 @@ import type { User } from '../api/users';
 import { getItems } from '../api/inventory';
 import type { Item } from '../api/inventory';
 import { SignatureField } from './SignatureField';
-import api, { BACKEND_URL } from '../api/axios';
+import api from '../api/axios';
 import type { SignatureFieldRef } from './SignatureField';
 import { Download } from 'lucide-react';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -25,6 +25,7 @@ import { resolvePartsUnitCost } from '../utils/resolvePartsUnitCost';
 import { InfoTip } from './common/InfoTip';
 import { qtyStep, isInvalidQty } from '../utils/qtyMode';
 import { WorkOrderCommentsPanel } from './WorkOrderCommentsPanel';
+import { mediaUrl } from '../utils/mediaUrl';
 
 const STATUS_LABELS: Record<string, string> = {
   PENDIENTE: 'Pendiente',
@@ -812,26 +813,26 @@ export const WorkOrderDetailModal = ({
                   {displayWO.request_image_url &&
                     displayWO.request_image_url !== displayWO.before_image_url && (
                       <EvidenceThumb
-                        src={`${BACKEND_URL}${displayWO.request_image_url}`}
+                        src={mediaUrl(displayWO.request_image_url)}
                         alt="Falla reportada"
                         label="Al reportar"
-                        onZoom={() => setZoomSrc(`${BACKEND_URL}${displayWO.request_image_url}`)}
+                        onZoom={() => setZoomSrc(mediaUrl(displayWO.request_image_url))}
                       />
                     )}
                   {displayWO.before_image_url && (
                     <EvidenceThumb
-                      src={`${BACKEND_URL}${displayWO.before_image_url}`}
+                      src={mediaUrl(displayWO.before_image_url)}
                       alt="Antes"
                       label="Antes de reparar"
-                      onZoom={() => setZoomSrc(`${BACKEND_URL}${displayWO.before_image_url}`)}
+                      onZoom={() => setZoomSrc(mediaUrl(displayWO.before_image_url))}
                     />
                   )}
                   {displayWO.after_image_url && (
                     <EvidenceThumb
-                      src={`${BACKEND_URL}${displayWO.after_image_url}`}
+                      src={mediaUrl(displayWO.after_image_url)}
                       alt="Después"
                       label="Después"
-                      onZoom={() => setZoomSrc(`${BACKEND_URL}${displayWO.after_image_url}`)}
+                      onZoom={() => setZoomSrc(mediaUrl(displayWO.after_image_url))}
                     />
                   )}
                 </div>

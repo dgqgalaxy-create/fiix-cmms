@@ -134,9 +134,62 @@ export const searchImagesWeb = async (query: string): Promise<Array<{url: string
 };
 
 // Items
-export const getItems = async () => {
-  const response = await axiosInstance.get<Item[]>('/inventory/items');
-  return response.data;
+export type ItemListParams = {
+  page?: number;
+  limit?: number;
+  q?: string;
+  categoryId?: string;
+  locationId?: string;
+  vendorId?: string;
+  critical?: boolean;
+  noVendor?: boolean;
+};
+
+export type PaginatedItems = {
+  data: Item[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+export const getItems = async (params?: ItemListParams) => {
+  const response = await axiosInstance.get('/inventory/items', {
+    params: params
+      ? {
+          ...params,
+          critical: params.critical ? '1' : undefined,
+          noVendor: params.noVendor ? '1' : undefined,
+        }
+      : undefined,
+  });
+  if (response.data?.data && Array.isArray(response.data.data)) return response.data.data as Item[];
+  return response.data as Item[];
+};
+
+export const getItemsPage = async (
+  params: ItemListParams = {},
+  signal?: AbortSignal
+): Promise<PaginatedItems> => {
+  const response = await axiosInstance.get('/inventory/items', {
+    params: {
+      page: params.page ?? 1,
+      limit: params.limit ?? 20,
+      ...params,
+      critical: params.critical ? '1' : undefined,
+      noVendor: params.noVendor ? '1' : undefined,
+    },
+    signal,
+  });
+  if (response.data?.data && Array.isArray(response.data.data)) return response.data;
+  const data = response.data as Item[];
+  return {
+    data,
+    total: data.length,
+    page: 1,
+    limit: data.length || 20,
+    totalPages: 1,
+  };
 };
 
 export const createItem = async (formData: FormData) => {
@@ -150,8 +203,8 @@ export const updateItem = async (id: string, formData: FormData) => {
 };
 
 // Summary
-export const getInventorySummary = async (): Promise<InventorySummary> => {
-  const response = await axiosInstance.get('/inventory/summary');
+export const getInventorySummary = async (signal?: AbortSignal): Promise<InventorySummary> => {
+  const response = await axiosInstance.get('/inventory/summary', { signal });
   return response.data;
 };
 
