@@ -7,21 +7,28 @@ set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 NODE_MAJOR="${NODE_MAJOR:-22}"
+# Binario oficial (linux x64) si nvm no está disponible en el servicio Actions.
+NODE_DIST_VERSION="${NODE_DIST_VERSION:-v22.22.0}"
 
 node_major() {
   node -p "process.versions.node.split('.')[0]" 2>/dev/null || echo "0"
+}
+
+prepend_path_bin() {
+  local bin="$1"
+  if [ -n "$bin" ] && [ -x "${bin}/node" ]; then
+    export PATH="${bin}:${PATH}"
+    hash -r 2>/dev/null || true
+    return 0
+  fi
+  return 1
 }
 
 prepend_nvm_node_bin() {
   local want="$1"
   local bin=""
   bin="$(ls -d "${HOME}/.nvm/versions/node"/v"${want}".*/bin 2>/dev/null | sort -V | tail -n 1 || true)"
-  if [ -n "${bin}" ] && [ -x "${bin}/node" ]; then
-    export PATH="${bin}:${PATH}"
-    hash -r 2>/dev/null || true
-    return 0
-  fi
-  return 1
+  prepend_path_bin "${bin:-}"
 }
 
 load_nvm_sh() {
@@ -40,6 +47,28 @@ load_nvm_sh() {
     fi
   done
   return 1
+}
+
+install_node_tarball() {
+  local ver="$NODE_DIST_VERSION"
+  local base="${HOME}/.local"
+  local dir="${base}/node-${ver}"
+  local url="https://nodejs.org/dist/${ver}/node-${ver}-linux-x64.tar.xz"
+  local tmp="/tmp/fiix-node-${ver}.tar.xz"
+
+  if [ -x "${dir}/bin/node" ]; then
+    prepend_path_bin "${dir}/bin"
+    return 0
+  fi
+
+  echo "  Descargando Node ${ver} (tarball oficial)..."
+  mkdir -p "${base}"
+  curl -fsSL "$url" -o "$tmp"
+  rm -rf "${dir}" "${base}/node-${ver}-linux-x64"
+  tar -xJf "$tmp" -C "${base}"
+  mv "${base}/node-${ver}-linux-x64" "${dir}"
+  rm -f "$tmp"
+  prepend_path_bin "${dir}/bin"
 }
 
 ensure_node() {
@@ -64,16 +93,30 @@ ensure_node() {
     prepend_nvm_node_bin "$NODE_MAJOR" || prepend_nvm_node_bin "$want" || true
   fi
 
-  # 4) Último recurso: instalar nvm + Node 22 para ESTE usuario (runner).
+  # 4) Intentar instalar nvm (el install.sh a veces sale ≠0 aunque dejó nvm.sh).
   if [ "$(node_major)" -lt "$NODE_MAJOR" ]; then
-    echo "  Node actual: $(node -v 2>/dev/null || echo 'ausente') — instalando nvm + Node ${NODE_MAJOR}..."
+    echo "  Node actual: $(node -v 2>/dev/null || echo 'ausente') — preparando nvm + Node ${NODE_MAJOR}..."
+    set +e
     curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+    local nvm_install_rc=$?
+    set -e
+    if [ "$nvm_install_rc" -ne 0 ]; then
+      echo "  [AVISO] nvm install.sh salió con código ${nvm_install_rc} (se continúa si quedó nvm.sh)."
+    fi
     export NVM_DIR="${HOME}/.nvm"
-    # shellcheck disable=SC1091
-    . "${NVM_DIR}/nvm.sh"
-    nvm install "$NODE_MAJOR"
-    nvm use "$NODE_MAJOR"
-    nvm alias default "$NODE_MAJOR" >/dev/null 2>&1 || true
+    if [ -s "${NVM_DIR}/nvm.sh" ]; then
+      # shellcheck disable=SC1091
+      . "${NVM_DIR}/nvm.sh"
+      nvm install "$NODE_MAJOR" || true
+      nvm use "$NODE_MAJOR" || true
+      nvm alias default "$NODE_MAJOR" >/dev/null 2>&1 || true
+      prepend_nvm_node_bin "$NODE_MAJOR" || true
+    fi
+  fi
+
+  # 5) Último recurso fiable en CI: tarball oficial de Node 22.
+  if [ "$(node_major)" -lt "$NODE_MAJOR" ]; then
+    install_node_tarball
   fi
 
   if ! command -v node >/dev/null 2>&1; then

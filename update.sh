@@ -58,6 +58,37 @@ else
   info "nvm no encontrado; se usará node/npm del PATH si existen."
 fi
 
+# Si el PATH sigue en Node < 22 (p. ej. /usr/bin/node del sistema), forzar binario 22.
+node_major_now() { node -p "process.versions.node.split('.')[0]" 2>/dev/null || echo 0; }
+if [ "$(node_major_now)" -lt "${NODE_MAJOR}" ]; then
+  NVM22_BIN="$(ls -d "${HOME}/.nvm/versions/node"/v"${NODE_MAJOR}".*/bin 2>/dev/null | sort -V | tail -n1 || true)"
+  if [ -n "${NVM22_BIN}" ] && [ -x "${NVM22_BIN}/node" ]; then
+    export PATH="${NVM22_BIN}:${PATH}"
+    hash -r 2>/dev/null || true
+    info "PATH → Node nvm ${NODE_MAJOR}: $(node -v)"
+  fi
+fi
+if [ "$(node_major_now)" -lt "${NODE_MAJOR}" ]; then
+  NODE_DIST_VERSION="${NODE_DIST_VERSION:-v22.22.0}"
+  NODE_LOCAL="${HOME}/.local/node-${NODE_DIST_VERSION}"
+  if [ ! -x "${NODE_LOCAL}/bin/node" ]; then
+    info "Descargando Node ${NODE_DIST_VERSION} (tarball)..."
+    mkdir -p "${HOME}/.local"
+    TMP_NODE="/tmp/fiix-node-${NODE_DIST_VERSION}.tar.xz"
+    curl -fsSL "https://nodejs.org/dist/${NODE_DIST_VERSION}/node-${NODE_DIST_VERSION}-linux-x64.tar.xz" -o "${TMP_NODE}"
+    rm -rf "${NODE_LOCAL}" "${HOME}/.local/node-${NODE_DIST_VERSION}-linux-x64"
+    tar -xJf "${TMP_NODE}" -C "${HOME}/.local"
+    mv "${HOME}/.local/node-${NODE_DIST_VERSION}-linux-x64" "${NODE_LOCAL}"
+    rm -f "${TMP_NODE}"
+  fi
+  export PATH="${NODE_LOCAL}/bin:${PATH}"
+  hash -r 2>/dev/null || true
+  info "PATH → Node tarball: $(node -v)"
+fi
+if [ "$(node_major_now)" -lt "${NODE_MAJOR}" ]; then
+  die "Se requiere Node >= ${NODE_MAJOR} (actual: $(node -v 2>/dev/null || echo ausente))"
+fi
+
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || return 1
 }
