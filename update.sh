@@ -15,51 +15,11 @@ echo "=== Actualización GTZ CMMS ==="
 echo "Directorio: ${APP_DIR}"
 echo
 
-# --- Node: cargar nvm si existe; si no, usar node/npm del PATH ---
-try_source_nvm() {
-  local candidate="$1"
-  if [ -s "$candidate" ]; then
-    # shellcheck disable=SC1090
-    . "$candidate"
-    return 0
-  fi
-  return 1
-}
-
-NVM_CANDIDATES=()
-if [ -n "${NVM_DIR:-}" ]; then
-  NVM_CANDIDATES+=("${NVM_DIR}/nvm.sh")
-fi
-NVM_CANDIDATES+=("${HOME}/.nvm/nvm.sh")
-NVM_CANDIDATES+=("/home/usuario/.nvm/nvm.sh")
-
-NVM_LOADED=0
-NVM_TRIED=()
-for cand in "${NVM_CANDIDATES[@]}"; do
-  NVM_TRIED+=("$cand")
-  if try_source_nvm "$cand"; then
-    export NVM_DIR="$(cd "$(dirname "$cand")" && pwd)"
-    NVM_LOADED=1
-    info "nvm cargado desde ${cand}"
-    break
-  fi
-done
-
-if [ "$NVM_LOADED" -eq 1 ] && command -v nvm >/dev/null 2>&1; then
-  # Preferir Node 22+; instalar si falta (no abortar si la red falla).
-  nvm install "${NODE_MAJOR}" >/dev/null 2>&1 || true
-  nvm use "${NODE_MAJOR}" >/dev/null 2>&1 \
-    || nvm use default >/dev/null 2>&1 \
-    || nvm use --lts >/dev/null 2>&1 \
-    || nvm use node >/dev/null 2>&1 \
-    || true
-  nvm alias default "${NODE_MAJOR}" >/dev/null 2>&1 || true
-else
-  info "nvm no encontrado; se usará node/npm del PATH si existen."
-fi
-
-# Si el PATH sigue en Node < 22 (p. ej. /usr/bin/node del sistema), forzar binario 22.
+# --- Node 22+: NO sourcer nvm.sh bajo set -e (en Actions aborta con exit 3).
+# Preferir binario nvm ya instalado o tarball oficial en ~/.local.
+NODE_DIST_VERSION="${NODE_DIST_VERSION:-v22.22.0}"
 node_major_now() { node -p "process.versions.node.split('.')[0]" 2>/dev/null || echo 0; }
+
 if [ "$(node_major_now)" -lt "${NODE_MAJOR}" ]; then
   NVM22_BIN="$(ls -d "${HOME}/.nvm/versions/node"/v"${NODE_MAJOR}".*/bin 2>/dev/null | sort -V | tail -n1 || true)"
   if [ -n "${NVM22_BIN}" ] && [ -x "${NVM22_BIN}/node" ]; then
@@ -69,7 +29,6 @@ if [ "$(node_major_now)" -lt "${NODE_MAJOR}" ]; then
   fi
 fi
 if [ "$(node_major_now)" -lt "${NODE_MAJOR}" ]; then
-  NODE_DIST_VERSION="${NODE_DIST_VERSION:-v22.22.0}"
   NODE_LOCAL="${HOME}/.local/node-${NODE_DIST_VERSION}"
   if [ ! -x "${NODE_LOCAL}/bin/node" ]; then
     info "Descargando Node ${NODE_DIST_VERSION} (tarball)..."
@@ -88,6 +47,7 @@ fi
 if [ "$(node_major_now)" -lt "${NODE_MAJOR}" ]; then
   die "Se requiere Node >= ${NODE_MAJOR} (actual: $(node -v 2>/dev/null || echo ausente))"
 fi
+info "Node $(node -v) · npm $(npm -v) · $(command -v node)"
 
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || return 1

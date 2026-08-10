@@ -19,29 +19,13 @@ jobs:
         run: |
           set -euo pipefail
           cd ~/fiix-cmms
-          export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
-          # El servicio Actions no carga ~/.bashrc: hay que sourcer nvm a mano.
-          if [ -s "$NVM_DIR/nvm.sh" ]; then
-            # shellcheck disable=SC1090
-            . "$NVM_DIR/nvm.sh"
-            nvm install 22 || true
-            nvm use 22 || true
-          fi
-          # Si nvm no quedó activo, usar el binario v22.* directamente.
-          if ! node -v 2>/dev/null | grep -q '^v22'; then
-            NODE22_BIN="$(ls -d "$HOME/.nvm/versions/node"/v22.*/bin 2>/dev/null | sort -V | tail -n1 || true)"
-            if [ -n "${NODE22_BIN:-}" ] && [ -x "${NODE22_BIN}/node" ]; then
-              export PATH="${NODE22_BIN}:${PATH}"
-              hash -r || true
-            fi
-          fi
-          echo "Pre-pull node: $(node -v 2>/dev/null || echo missing) ($(command -v node 2>/dev/null || echo no-path))"
+          # No sourcer nvm aquí: con set -e el nvm.sh del runner a menudo aborta el job (exit 3).
+          # Node 22 lo resuelven ci-typecheck.sh / update.sh (tarball oficial si hace falta).
+          echo "Runner shell node (informativo): $(command -v node 2>/dev/null || echo none) $(node -v 2>/dev/null || true)"
           # npm install puede ensuciar package-lock.json en el servidor;
           # sin restore, git pull aborta y el auto-deploy queda parado.
           git restore .
           git pull --ff-only
           chmod +x ./scripts/ci-typecheck.sh ./update.sh ./scripts/gha-runner-watchdog.sh 2>/dev/null || true
-          # Gate: falla el job ANTES de rebuild/PM2 si TypeScript no compila
-          # (el script instala Node 22 vía nvm si el runner aún tiene Node 20 del sistema)
           bash ./scripts/ci-typecheck.sh
           bash ./update.sh

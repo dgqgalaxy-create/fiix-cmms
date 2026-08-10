@@ -3,11 +3,14 @@
 # - Backend: tsc --noEmit (bloqueante).
 # - Frontend: tsc -b informativo (hay deuda histórica); el gate real sigue siendo vite build en update.sh.
 # Uso: bash ./scripts/ci-typecheck.sh
+#
+# Nota: el servicio Actions self-hosted suele tener /usr/bin/node v20. No usamos
+# `source nvm.sh` bajo `set -e` (nvm aborta el job con exit 3). Preferimos el
+# tarball oficial de Node 22 en ~/.local.
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 NODE_MAJOR="${NODE_MAJOR:-22}"
-# Binario oficial (linux x64) si nvm no está disponible en el servicio Actions.
 NODE_DIST_VERSION="${NODE_DIST_VERSION:-v22.22.0}"
 
 node_major() {
@@ -24,31 +27,6 @@ prepend_path_bin() {
   return 1
 }
 
-prepend_nvm_node_bin() {
-  local want="$1"
-  local bin=""
-  bin="$(ls -d "${HOME}/.nvm/versions/node"/v"${want}".*/bin 2>/dev/null | sort -V | tail -n 1 || true)"
-  prepend_path_bin "${bin:-}"
-}
-
-load_nvm_sh() {
-  local candidates=()
-  if [ -n "${NVM_DIR:-}" ]; then
-    candidates+=("${NVM_DIR}/nvm.sh")
-  fi
-  candidates+=("${HOME}/.nvm/nvm.sh" "/home/usuario/.nvm/nvm.sh")
-  local cand
-  for cand in "${candidates[@]}"; do
-    if [ -s "$cand" ]; then
-      export NVM_DIR="$(cd "$(dirname "$cand")" && pwd)"
-      # shellcheck disable=SC1090
-      . "$cand"
-      return 0
-    fi
-  done
-  return 1
-}
-
 install_node_tarball() {
   local ver="$NODE_DIST_VERSION"
   local base="${HOME}/.local"
@@ -61,7 +39,7 @@ install_node_tarball() {
     return 0
   fi
 
-  echo "  Descargando Node ${ver} (tarball oficial)..."
+  echo "  Descargando Node ${ver} (tarball oficial nodejs.org)..."
   mkdir -p "${base}"
   curl -fsSL "$url" -o "$tmp"
   rm -rf "${dir}" "${base}/node-${ver}-linux-x64"
@@ -72,76 +50,41 @@ install_node_tarball() {
 }
 
 ensure_node() {
-  local want="$NODE_MAJOR"
-  if [ -f "${APP_DIR}/.nvmrc" ]; then
-    want="$(tr -d '[:space:]' < "${APP_DIR}/.nvmrc")"
-    want="${want:-$NODE_MAJOR}"
+  # 1) Si ya hay un Node 22+ en PATH, úsalo.
+  if [ "$(node_major)" -ge "$NODE_MAJOR" ]; then
+    echo "  Node $(node -v) · npm $(npm -v) · which=$(command -v node)"
+    return 0
   fi
 
-  # 1) Cargar nvm si existe (el servicio Actions no hereda el shell de login).
-  load_nvm_sh || true
+  echo "  Node actual: $(node -v 2>/dev/null || echo 'ausente') — se requiere >= ${NODE_MAJOR}"
 
-  # 2) Instalar/activar la versión pedida vía nvm.
-  if type nvm >/dev/null 2>&1; then
-    nvm install "$want" || true
-    nvm use "$want" || nvm use "$NODE_MAJOR" || true
-    nvm alias default "$want" >/dev/null 2>&1 || true
-  fi
-
-  # 3) Fallback: PATH directo a ~/.nvm/versions/node/v22.*/bin
-  if [ "$(node_major)" -lt "$NODE_MAJOR" ]; then
-    prepend_nvm_node_bin "$NODE_MAJOR" || prepend_nvm_node_bin "$want" || true
-  fi
-
-  # 4) Intentar instalar nvm (el install.sh a veces sale ≠0 aunque dejó nvm.sh).
-  if [ "$(node_major)" -lt "$NODE_MAJOR" ]; then
-    echo "  Node actual: $(node -v 2>/dev/null || echo 'ausente') — preparando nvm + Node ${NODE_MAJOR}..."
-    set +e
-    curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
-    local nvm_install_rc=$?
-    set -e
-    if [ "$nvm_install_rc" -ne 0 ]; then
-      echo "  [AVISO] nvm install.sh salió con código ${nvm_install_rc} (se continúa si quedó nvm.sh)."
-    fi
-    export NVM_DIR="${HOME}/.nvm"
-    if [ -s "${NVM_DIR}/nvm.sh" ]; then
-      # shellcheck disable=SC1091
-      . "${NVM_DIR}/nvm.sh"
-      nvm install "$NODE_MAJOR" || true
-      nvm use "$NODE_MAJOR" || true
-      nvm alias default "$NODE_MAJOR" >/dev/null 2>&1 || true
-      prepend_nvm_node_bin "$NODE_MAJOR" || true
+  # 2) Binario nvm ya instalado (sin sourcer nvm.sh).
+  local nvm_bin=""
+  nvm_bin="$(ls -d "${HOME}/.nvm/versions/node"/v"${NODE_MAJOR}".*/bin 2>/dev/null | sort -V | tail -n 1 || true)"
+  if prepend_path_bin "${nvm_bin:-}"; then
+    if [ "$(node_major)" -ge "$NODE_MAJOR" ]; then
+      echo "  Node $(node -v) · npm $(npm -v) · which=$(command -v node) (nvm bin)"
+      return 0
     fi
   fi
 
-  # 5) Último recurso fiable en CI: tarball oficial de Node 22.
-  if [ "$(node_major)" -lt "$NODE_MAJOR" ]; then
-    install_node_tarball
-  fi
+  # 3) Tarball oficial (fiable en CI; no depende de nvm).
+  install_node_tarball
 
-  if ! command -v node >/dev/null 2>&1; then
-    echo "  [ERROR] node no está en PATH tras intentar activar Node ${NODE_MAJOR}." >&2
+  if [ "$(node_major)" -lt "$NODE_MAJOR" ]; then
+    echo "  [ERROR] Se requiere Node >= ${NODE_MAJOR} (actual: $(node -v 2>/dev/null || echo ausente))." >&2
+    echo "  HOME=${HOME} PATH=${PATH}" >&2
     exit 1
   fi
-
-  echo "  Node $(node -v) · npm $(npm -v) · which=$(command -v node)"
-  if [ "$(node_major)" -lt "$NODE_MAJOR" ]; then
-    echo "  [ERROR] Se requiere Node >= ${NODE_MAJOR} (actual: $(node -v))." >&2
-    echo "  HOME=${HOME} NVM_DIR=${NVM_DIR:-unset}" >&2
-    echo "  ls nvm versions: $(ls "${HOME}/.nvm/versions/node" 2>/dev/null || echo 'ninguna')" >&2
-    exit 1
-  fi
+  echo "  Node $(node -v) · npm $(npm -v) · which=$(command -v node) (tarball)"
 }
 
 ensure_node
 
 echo ">>> Typecheck backend (bloqueante)..."
 cd "${APP_DIR}/backend"
-# Self-hosted: node_modules suele existir de deploys previos; hay que
-# sincronizar con el lockfile o fallan deps nuevas (p. ej. helmet).
 unset NODE_ENV || true
 npm ci --include=dev
-# npm ci borra node_modules: hay que regenerar el cliente Prisma antes de tsc
 npx prisma generate
 npx tsc --noEmit
 echo "  [OK] backend tsc"
