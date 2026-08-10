@@ -280,14 +280,14 @@ cd ~/fiix-cmms
 
 1. Carga nvm (Node **22**) o usa `node`/`npm`/`pm2` del PATH.
 2. `git restore .` + `git pull --ff-only` + `chmod +x` de scripts.
-3. Backend: `npm ci --include=dev` → `prisma generate` → `db push --accept-data-loss` → `npm run build` (exige `dist/index.js`).
-4. Frontend: `npm ci` → `npm run build:app` (exige `frontend/dist/index.html`).
+3. Backend: `npm ci` **solo si cambió** `package-lock.json` → `prisma generate` → `db push` → `npm run build`.
+4. Frontend: igual (ci cacheado) → `npm run build:app`. Typecheck previo solo valida backend (no reinstala frontend).
 5. PM2: borra y crea `fiix-backend` con **`node dist/index.js`** (`--cwd` backend). Quita `fiix-frontend` legado.
 6. Smoke test con reintentos: `GET /api/health` y `/` en `:3000`.
 
 **No toca** `backend/.env` ni `backend/uploads/`. Al final (solo con TTY) pregunta si actualizar **nginx**; en CI usa `UPDATE_NGINX=1 ./update.sh` si hace falta. No edites código en el servidor: se pierde en el próximo update.
 
-**GitHub Actions (self-hosted):** mismo usuario que tiene nvm. El workflow hace `git restore .`, `git pull --ff-only`, **`scripts/ci-typecheck.sh`** (tsc backend+frontend) y `bash ./update.sh`. Si el typecheck falla, el job termina en rojo **sin** reiniciar PM2 con un build roto. Si un deploy quedó a medias: `cd ~/fiix-cmms && git restore . && git pull --ff-only && bash ./update.sh`.
+**GitHub Actions (self-hosted):** mismo usuario del runner. El workflow hace `git restore .`, `git pull --ff-only`, **`scripts/ci-typecheck.sh`** (tsc backend; Node 22 vía tarball si hace falta) y `bash ./update.sh`. `npm ci` se omite si el `package-lock.json` no cambió. Si el typecheck falla, el job termina en rojo **sin** reiniciar PM2 con un build roto. Forzar reinstall: `FORCE_NPM_CI=1 ./update.sh`. Si un deploy quedó a medias: `cd ~/fiix-cmms && git restore . && git pull --ff-only && bash ./update.sh`.
 
 ### Aviso de versión (banner ámbar) en repo privado
 
@@ -323,7 +323,7 @@ tail -n 50 /var/log/fiix-gha-runner-watchdog.log
 - Activa **NTP** y reinicia el unit `actions.runner.*` solo si no hay `Listening for Jobs` / job en curso.
 - `install.sh` pregunta por esto en el paso opcional **7f** (default **S** si ya detecta el runner).
 
-**Node del runner:** el servicio Actions no carga `~/.bashrc`. Debe existir Node **22** vía nvm para el **mismo usuario** del runner (`nvm install 22 && nvm alias default 22`). Desde v1.56.29 el typecheck intenta instalarlo solo si falta.
+**Node del runner:** el servicio Actions no carga `~/.bashrc`. Desde v1.56.31+ se usa el tarball oficial de Node 22 en `~/.local` (sin sourcer nvm bajo `set -e`).
 
 **Registrar el runner** (solo la primera vez en un servidor nuevo): GitHub → repo → **Settings → Actions → Runners → New self-hosted runner** → Linux x64 → al final `sudo ./svc.sh install` y `sudo ./svc.sh start`. El watchdog no sustituye ese registro.
 

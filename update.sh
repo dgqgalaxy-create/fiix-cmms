@@ -9,44 +9,16 @@ NODE_MAJOR="${NODE_MAJOR:-22}"
 
 ok()   { echo "  [OK] $*"; }
 info() { echo "  --> $*"; }
+warn() { echo "  [AVISO] $*" >&2; }
 die()  { echo "  [ERROR] $*" >&2; exit 1; }
 
 echo "=== Actualización GTZ CMMS ==="
 echo "Directorio: ${APP_DIR}"
 echo
 
-# --- Node 22+: NO sourcer nvm.sh bajo set -e (en Actions aborta con exit 3).
-# Preferir binario nvm ya instalado o tarball oficial en ~/.local.
-NODE_DIST_VERSION="${NODE_DIST_VERSION:-v22.22.0}"
-node_major_now() { node -p "process.versions.node.split('.')[0]" 2>/dev/null || echo 0; }
-
-if [ "$(node_major_now)" -lt "${NODE_MAJOR}" ]; then
-  NVM22_BIN="$(ls -d "${HOME}/.nvm/versions/node"/v"${NODE_MAJOR}".*/bin 2>/dev/null | sort -V | tail -n1 || true)"
-  if [ -n "${NVM22_BIN}" ] && [ -x "${NVM22_BIN}/node" ]; then
-    export PATH="${NVM22_BIN}:${PATH}"
-    hash -r 2>/dev/null || true
-    info "PATH → Node nvm ${NODE_MAJOR}: $(node -v)"
-  fi
-fi
-if [ "$(node_major_now)" -lt "${NODE_MAJOR}" ]; then
-  NODE_LOCAL="${HOME}/.local/node-${NODE_DIST_VERSION}"
-  if [ ! -x "${NODE_LOCAL}/bin/node" ]; then
-    info "Descargando Node ${NODE_DIST_VERSION} (tarball)..."
-    mkdir -p "${HOME}/.local"
-    TMP_NODE="/tmp/fiix-node-${NODE_DIST_VERSION}.tar.xz"
-    curl -fsSL "https://nodejs.org/dist/${NODE_DIST_VERSION}/node-${NODE_DIST_VERSION}-linux-x64.tar.xz" -o "${TMP_NODE}"
-    rm -rf "${NODE_LOCAL}" "${HOME}/.local/node-${NODE_DIST_VERSION}-linux-x64"
-    tar -xJf "${TMP_NODE}" -C "${HOME}/.local"
-    mv "${HOME}/.local/node-${NODE_DIST_VERSION}-linux-x64" "${NODE_LOCAL}"
-    rm -f "${TMP_NODE}"
-  fi
-  export PATH="${NODE_LOCAL}/bin:${PATH}"
-  hash -r 2>/dev/null || true
-  info "PATH → Node tarball: $(node -v)"
-fi
-if [ "$(node_major_now)" -lt "${NODE_MAJOR}" ]; then
-  die "Se requiere Node >= ${NODE_MAJOR} (actual: $(node -v 2>/dev/null || echo ausente))"
-fi
+# shellcheck disable=SC1091
+source "${APP_DIR}/scripts/fiix-node-npm.sh"
+fiix_ensure_node || die "No se pudo activar Node >= ${NODE_MAJOR}"
 info "Node $(node -v) · npm $(npm -v) · $(command -v node)"
 
 need_cmd() {
@@ -190,7 +162,7 @@ cd "${APP_DIR}/backend"
 mkdir -p uploads
 # Si NODE_ENV=production está en el entorno, forzar include=dev para herramientas de build (tsc/prisma CLI).
 unset NODE_ENV || true
-npm ci --include=dev
+fiix_npm_ci "${APP_DIR}/backend" "--include=dev"
 # Web Push: si faltan VAPID_* en .env, generarlas (no sobrescribe las existentes).
 chmod +x "${APP_DIR}/scripts/ensure-vapid-env.sh" 2>/dev/null || true
 "${APP_DIR}/scripts/ensure-vapid-env.sh" "${APP_DIR}/backend/.env" || true
@@ -210,7 +182,7 @@ if [ ! -f "${FREEZE_COST_MARKER}" ]; then
   fi
 fi
 info "Compilando backend (dist/)..."
-npx tsc --noEmit
+# El typecheck CI ya validó tsc --noEmit; aquí solo emitimos dist/.
 npm run build
 if [ ! -f "${APP_DIR}/backend/dist/index.js" ]; then
   die "No existe backend/dist/index.js tras tsc. Revisa tsconfig (rootDir=src)."
@@ -221,7 +193,7 @@ ok "Backend listo"
 echo ">>> [3/5] Frontend (npm + build)..."
 cd "${APP_DIR}/frontend"
 unset NODE_ENV || true
-npm ci
+fiix_npm_ci "${APP_DIR}/frontend"
 info "Compilando frontend (frontend/dist)..."
 npm run build:app
 if [ ! -f "${APP_DIR}/frontend/dist/index.html" ]; then
