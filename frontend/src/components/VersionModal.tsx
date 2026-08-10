@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.26";
+export const APP_VERSION = "1.56.27";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: El typecheck del deploy vuelve a ejecutar npm ci (antes reutilizaba node_modules viejo y fallaba al añadir deps como helmet).",
     "Mejora: Endurecimiento — usuarios inactivos rechazados en API; Helmet/CORS; /uploads con token; límites Multer/JSON; índices BD; paginación servidor Activos/Repuestos; KPI top fallas por groupBy; debounce sockets; AbortController en listados; PWA sin cachear /api; cola offline no descarta 401 a ciegas.",
     "Mejora: Vista General y Mis Órdenes también paginan en servidor (20/página); PDF Carta más denso (márgenes y tipografía) con falla limitada a 2 líneas por fila.",
     "Mejora: Paginación en servidor (OT historial, movimientos, OC); Inicio/Calendario cargan rangos acotados; badge Mis OT por conteo; filtro Solicitante; export con Solicitante/Tipo/Paro; historial de repuesto y «cargar mensajes anteriores».",

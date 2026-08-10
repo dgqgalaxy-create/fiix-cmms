@@ -20,19 +20,17 @@ load_nvm
 
 echo ">>> Typecheck backend (bloqueante)..."
 cd "${APP_DIR}/backend"
-if [ ! -d node_modules ]; then
-  unset NODE_ENV || true
-  npm ci --include=dev
-fi
+# Self-hosted: node_modules suele existir de deploys previos; hay que
+# sincronizar con el lockfile o fallan deps nuevas (p. ej. helmet).
+unset NODE_ENV || true
+npm ci --include=dev
 npx tsc --noEmit
 echo "  [OK] backend tsc"
 
 echo ">>> Typecheck frontend (informativo)..."
 cd "${APP_DIR}/frontend"
-if [ ! -d node_modules ]; then
-  unset NODE_ENV || true
-  npm ci
-fi
+unset NODE_ENV || true
+npm ci
 if npx tsc -b --pretty false; then
   echo "  [OK] frontend tsc"
 else
