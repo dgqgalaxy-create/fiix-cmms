@@ -97,7 +97,17 @@ export const CalendarPage = () => {
 
   const fetchOrders = async () => {
     try {
-      const data = await getWorkOrders();
+      const view = currentViewRef.current;
+      const anchor = currentDateRef.current;
+      // Ventana amplia alrededor de la vista visible (+1 mes).
+      const from = new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1);
+      const to = new Date(anchor.getFullYear(), anchor.getMonth() + 2, 0, 23, 59, 59, 999);
+      void view;
+      const data = await getWorkOrders({
+        scheduledFrom: from.toISOString().slice(0, 10),
+        scheduledTo: to.toISOString().slice(0, 10),
+        includeUnscheduled: true,
+      });
       setWorkOrders(data);
 
       const newEvents: CustomEvent[] = [];
@@ -144,7 +154,7 @@ export const CalendarPage = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [token]);
+  }, [token, currentDate, currentView]);
 
   useSocketRefresh('refresh_work_orders', () => { void fetchOrders(); });
 
@@ -154,13 +164,22 @@ export const CalendarPage = () => {
     if (!scheduleOrderId || loading) return;
     if (processedScheduleIdRef.current === scheduleOrderId) return;
 
-    const order = workOrders.find((wo) => wo.id === scheduleOrderId);
-    if (!order) return;
+    const open = (order: WorkOrder) => {
+      processedScheduleIdRef.current = scheduleOrderId;
+      setSelectedOrder(order);
+      setIsModalOpen(true);
+      navigate(location.pathname, { replace: true, state: {} });
+    };
 
-    processedScheduleIdRef.current = scheduleOrderId;
-    setSelectedOrder(order);
-    setIsModalOpen(true);
-    navigate(location.pathname, { replace: true, state: {} });
+    const order = workOrders.find((wo) => wo.id === scheduleOrderId);
+    if (order) {
+      open(order);
+      return;
+    }
+
+    void getWorkOrderById(scheduleOrderId)
+      .then(open)
+      .catch((err) => console.error('Error loading schedule order:', err));
   }, [location.state, location.pathname, workOrders, loading, navigate]);
 
   const handleEventClick = (event: CustomEvent) => {

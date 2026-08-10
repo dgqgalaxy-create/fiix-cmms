@@ -195,76 +195,263 @@ export const getRequesters = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+const WO_LIST_SELECT = {
+  id: true,
+  folio: true,
+  title: true,
+  description: true,
+  status: true,
+  hold_reason: true,
+  priority: true,
+  maintenance_type: true,
+  machine_stopped: true,
+  requester_name: true,
+  production_group: true,
+  scheduled_date: true,
+  due_date: true,
+  started_at: true,
+  paused_at: true,
+  last_resumed_at: true,
+  accumulated_time_ms: true,
+  completed_at: true,
+  created_at: true,
+  updated_at: true,
+  request_image_url: true,
+  before_image_url: true,
+  after_image_url: true,
+  resolution_notes: true,
+  maintenance_plan_id: true,
+  asset: { select: { id: true, name: true, internal_code: true } },
+  zone: { select: { id: true, name: true } },
+  created_by: { select: { id: true, name: true } },
+  assigned_technicians: { select: { id: true, name: true } },
+  _count: { select: { comments: true } },
+  comments: {
+    orderBy: { created_at: 'desc' as const },
+    take: 1,
+    select: {
+      id: true,
+      body: true,
+      created_at: true,
+      attachment_url: true,
+      author: { select: { id: true, name: true } },
+    },
+  },
+};
+
+function parseYmdEnd(value: string): Date {
+  if (value.length <= 10) return new Date(`${value}T23:59:59.999`);
+  return new Date(value);
+}
+
+function parseYmdStart(value: string): Date {
+  if (value.length <= 10) return new Date(`${value}T00:00:00.000`);
+  return new Date(value);
+}
+
+function buildWorkOrderWhere(req: AuthRequest): Record<string, unknown> {
+  const {
+    tab,
+    status,
+    priority,
+    unassigned,
+    q,
+    requester,
+    startDate,
+    endDate,
+    scheduledFrom,
+    scheduledTo,
+    completedFrom,
+    completedTo,
+    assignedTo,
+    openOnly,
+    includeUnscheduled,
+  } = req.query;
+
+  const and: Record<string, unknown>[] = [];
+
+  const openStatuses = { notIn: ['FINALIZADO', 'ANULADO'] as const };
+
+  if (tab === 'history') {
+    and.push({ status: { in: ['FINALIZADO', 'ANULADO'] } });
+  } else if (tab === 'active' || tab === 'mine') {
+    and.push({ status: openStatuses });
+  } else if (openOnly === '1' || openOnly === 'true') {
+    and.push({ status: openStatuses });
+  }
+
+  if (tab === 'mine' || assignedTo) {
+    const uid = String(assignedTo || req.user?.userId || '');
+    if (uid) and.push({ assigned_technicians: { some: { id: uid } } });
+  }
+
+  if (status) and.push({ status: String(status) });
+  if (priority) and.push({ priority: String(priority) });
+  if (unassigned === '1' || unassigned === 'true') {
+    and.push({ assigned_technicians: { none: {} } });
+  }
+
+  if (requester) {
+    and.push({
+      requester_name: { contains: String(requester), mode: 'insensitive' },
+    });
+  }
+
+  if (startDate || endDate) {
+    and.push({
+      created_at: {
+        ...(startDate ? { gte: parseYmdStart(String(startDate)) } : {}),
+        ...(endDate ? { lte: parseYmdEnd(String(endDate)) } : {}),
+      },
+    });
+  }
+
+  if (completedFrom || completedTo) {
+    and.push({
+      completed_at: {
+        ...(completedFrom ? { gte: parseYmdStart(String(completedFrom)) } : {}),
+        ...(completedTo ? { lte: parseYmdEnd(String(completedTo)) } : {}),
+      },
+    });
+  }
+
+  if (scheduledFrom || scheduledTo) {
+    const from = scheduledFrom ? parseYmdStart(String(scheduledFrom)) : undefined;
+    const to = scheduledTo ? parseYmdEnd(String(scheduledTo)) : undefined;
+    const scheduledClause = {
+      AND: [
+        { scheduled_date: { not: null } },
+        { due_date: { not: null } },
+        ...(from ? [{ due_date: { gte: from } }] : []),
+        ...(to ? [{ scheduled_date: { lte: to } }] : []),
+      ],
+    };
+    if (includeUnscheduled === '1' || includeUnscheduled === 'true') {
+      and.push({
+        OR: [
+          scheduledClause,
+          {
+            AND: [
+              { status: 'PENDIENTE' },
+              {
+                OR: [{ scheduled_date: null }, { due_date: null }],
+              },
+            ],
+          },
+        ],
+      });
+    } else {
+      and.push(scheduledClause);
+    }
+  }
+
+  if (q) {
+    const term = String(q).trim();
+    if (term) {
+      const folioNum = Number(term.replace(/^fol-?/i, '').replace(/^wo-?/i, ''));
+      and.push({
+        OR: [
+          ...(Number.isFinite(folioNum) && folioNum > 0 ? [{ folio: folioNum }] : []),
+          { title: { contains: term, mode: 'insensitive' } },
+          { description: { contains: term, mode: 'insensitive' } },
+          { requester_name: { contains: term, mode: 'insensitive' } },
+          { asset: { name: { contains: term, mode: 'insensitive' } } },
+          { asset: { internal_code: { contains: term, mode: 'insensitive' } } },
+          { zone: { name: { contains: term, mode: 'insensitive' } } },
+        ],
+      });
+    }
+  }
+
+  return and.length ? { AND: and } : {};
+}
+
+function mapWorkOrdersWithSla(workOrders: any[], sla_policy: any) {
+  return workOrders.map((wo) => {
+    const { _count, comments, ...rest } = wo;
+    const latest = comments[0] || null;
+    return {
+      ...rest,
+      comments_count: _count.comments,
+      latest_comment: latest
+        ? {
+            id: latest.id,
+            body: latest.body,
+            created_at: latest.created_at,
+            has_attachment: Boolean(latest.attachment_url),
+            author: latest.author,
+          }
+        : null,
+      sla: computeWorkOrderSla(wo, sla_policy),
+    };
+  });
+}
+
+/** Conteo ligero para badge «Mis OT» (abiertas asignadas al usuario). */
+export const getMineOpenCount = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'No autenticado' });
+      return;
+    }
+    const count = await prisma.workOrder.count({
+      where: {
+        status: { notIn: ['FINALIZADO', 'ANULADO'] },
+        assigned_technicians: { some: { id: userId } },
+      },
+    });
+    res.json({ count });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al contar órdenes' });
+  }
+};
+
 export const getWorkOrders = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // Listado ligero: sin firmas base64 ni árboles RCA (van en getWorkOrderById).
-    const workOrders = await prisma.workOrder.findMany({
-      select: {
-        id: true,
-        folio: true,
-        title: true,
-        description: true,
-        status: true,
-        hold_reason: true,
-        priority: true,
-        maintenance_type: true,
-        machine_stopped: true,
-        requester_name: true,
-        production_group: true,
-        scheduled_date: true,
-        due_date: true,
-        started_at: true,
-        paused_at: true,
-        last_resumed_at: true,
-        accumulated_time_ms: true,
-        completed_at: true,
-        created_at: true,
-        updated_at: true,
-        request_image_url: true,
-        before_image_url: true,
-        after_image_url: true,
-        resolution_notes: true,
-        maintenance_plan_id: true,
-        asset: { select: { id: true, name: true, internal_code: true } },
-        zone: { select: { id: true, name: true } },
-        created_by: { select: { id: true, name: true } },
-        assigned_technicians: { select: { id: true, name: true } },
-        _count: { select: { comments: true } },
-        comments: {
-          orderBy: { created_at: 'desc' },
-          take: 1,
-          select: {
-            id: true,
-            body: true,
-            created_at: true,
-            attachment_url: true,
-            author: { select: { id: true, name: true } },
-          },
-        },
-      },
-      orderBy: { created_at: 'desc' },
-    });
+    const where = buildWorkOrderWhere(req);
+    const { page, limit, sort } = req.query;
+    const wantsPage = page != null || limit != null;
+
+    let orderBy: any = { created_at: 'desc' };
+    if (sort === 'oldest') orderBy = { folio: 'asc' };
+    else if (sort === 'newest') orderBy = { folio: 'desc' };
+    else if (sort === 'priority') orderBy = [{ priority: 'desc' }, { folio: 'desc' }];
 
     const { sla_policy } = await getSlaSettings();
-    const withSla = workOrders.map((wo) => {
-      const { _count, comments, ...rest } = wo;
-      const latest = comments[0] || null;
-      return {
-        ...rest,
-        comments_count: _count.comments,
-        latest_comment: latest
-          ? {
-              id: latest.id,
-              body: latest.body,
-              created_at: latest.created_at,
-              has_attachment: Boolean(latest.attachment_url),
-              author: latest.author,
-            }
-          : null,
-        sla: computeWorkOrderSla(wo, sla_policy),
-      };
+
+    if (wantsPage) {
+      const pageNum = Math.max(1, parseInt(String(page || '1'), 10) || 1);
+      const limitNum = Math.min(200, Math.max(1, parseInt(String(limit || '20'), 10) || 20));
+      const [total, workOrders] = await Promise.all([
+        prisma.workOrder.count({ where }),
+        prisma.workOrder.findMany({
+          where,
+          select: WO_LIST_SELECT,
+          orderBy,
+          skip: (pageNum - 1) * limitNum,
+          take: limitNum,
+        }),
+      ]);
+      const data = mapWorkOrdersWithSla(workOrders, sla_policy);
+      res.json({
+        data,
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.max(1, Math.ceil(total / limitNum)),
+      });
+      return;
+    }
+
+    // Sin page/limit: lista filtrada completa (compat + export / calendario acotado).
+    const workOrders = await prisma.workOrder.findMany({
+      where,
+      select: WO_LIST_SELECT,
+      orderBy,
     });
-    res.json(withSla);
+    res.json(mapWorkOrdersWithSla(workOrders, sla_policy));
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al obtener órdenes de trabajo' });

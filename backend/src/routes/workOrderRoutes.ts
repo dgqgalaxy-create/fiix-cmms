@@ -9,6 +9,7 @@ import {
   deleteWorkOrder,
   joinWorkOrder,
   getRequesters,
+  getMineOpenCount,
 } from '../controllers/workOrderController';
 import {
   listWorkOrderComments,
@@ -23,6 +24,7 @@ const router = Router();
 router.get('/', authenticate, getWorkOrders);
 
 router.get('/requesters', authenticate, getRequesters);
+router.get('/mine-open-count', authenticate, getMineOpenCount);
 
 router.get('/summary', authenticate, getWorkOrdersSummary);
 router.get('/line-stoppage', authenticate, getLineStoppageStatus);

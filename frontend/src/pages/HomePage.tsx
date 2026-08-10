@@ -111,14 +111,22 @@ export const HomePage = () => {
         setIsLoading(true);
         setLoadError(false);
       }
-      const [orders, summaryData, stoppageData, notesData, invData] = await Promise.all([
-        getWorkOrders(),
-        getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined),
-        getLineStoppageStatus(),
-        getNotesSummary().catch(() => null),
-        getInventorySummary().catch(() => null),
-      ]);
-      setWorkOrders(orders);
+      const end = summaryEndDate || new Date().toISOString().slice(0, 10);
+      const start =
+        summaryStartDate ||
+        new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const [openOrdersData, periodOrders, summaryData, stoppageData, notesData, invData] =
+        await Promise.all([
+          getWorkOrders({ openOnly: true }),
+          getWorkOrders({ startDate: start, endDate: end }),
+          getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined),
+          getLineStoppageStatus(),
+          getNotesSummary().catch(() => null),
+          getInventorySummary().catch(() => null),
+        ]);
+      const byId = new Map<string, WorkOrder>();
+      for (const wo of [...openOrdersData, ...periodOrders]) byId.set(wo.id, wo);
+      setWorkOrders([...byId.values()]);
       setSummary(summaryData);
       setLineStoppage(stoppageData);
       if (notesData) setNotesSummary(notesData);

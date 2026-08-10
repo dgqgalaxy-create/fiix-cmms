@@ -82,10 +82,14 @@ export const addGroupParticipants = async (
 
 export const listMessages = async (
   conversationId: string,
-  cursor?: string
+  cursor?: string,
+  limit = 50
 ): Promise<ChatMessage[]> => {
   const res = await api.get(`/chat/conversations/${conversationId}/messages`, {
-    params: cursor ? { cursor } : undefined,
+    params: {
+      limit,
+      ...(cursor ? { cursor } : {}),
+    },
   });
   return res.data;
 };

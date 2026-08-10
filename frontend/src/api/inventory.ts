@@ -156,9 +156,53 @@ export const getInventorySummary = async (): Promise<InventorySummary> => {
 };
 
 // Transactions
-export const getTransactions = async () => {
-  const response = await axiosInstance.get<InventoryTransaction[]>('/inventory/transactions');
+export type TransactionListParams = {
+  page?: number;
+  limit?: number;
+  itemId?: string;
+  movement?: 'IN' | 'OUT' | 'ALL';
+  q?: string;
+  startDate?: string;
+  endDate?: string;
+};
+
+export type PaginatedTransactions = {
+  data: InventoryTransaction[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+export const getTransactions = async (
+  params?: TransactionListParams
+): Promise<InventoryTransaction[]> => {
+  const response = await axiosInstance.get('/inventory/transactions', {
+    params: params
+      ? {
+          ...params,
+          movement: params.movement && params.movement !== 'ALL' ? params.movement : undefined,
+        }
+      : undefined,
+  });
+  if (response.data?.data && Array.isArray(response.data.data)) return response.data.data;
   return response.data;
+};
+
+export const getTransactionsPage = async (
+  params: TransactionListParams = {}
+): Promise<PaginatedTransactions> => {
+  const response = await axiosInstance.get('/inventory/transactions', {
+    params: {
+      page: params.page ?? 1,
+      limit: params.limit ?? 20,
+      ...params,
+      movement: params.movement && params.movement !== 'ALL' ? params.movement : undefined,
+    },
+  });
+  if (response.data?.data && Array.isArray(response.data.data)) return response.data;
+  const data = response.data as InventoryTransaction[];
+  return { data, total: data.length, page: 1, limit: data.length || 20, totalPages: 1 };
 };
 
 export const createTransaction = async (data: {

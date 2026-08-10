@@ -409,14 +409,69 @@ export const getInventorySummary = async (req: Request, res: Response): Promise<
 // ==========================================
 export const getTransactions = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Sin tope bajo: un take:1000 ordenado por fecha ocultaba recepciones de OC
-    // cuando el CSV histórico trae fechas futuras (p. ej. dic 2026).
+    const { page, limit, itemId, movement, q, startDate, endDate } = req.query;
+    const and: Record<string, unknown>[] = [];
+
+    if (itemId) and.push({ item_id: String(itemId) });
+    if (movement === 'IN') and.push({ amount: { gt: 0 } });
+    if (movement === 'OUT') and.push({ amount: { lt: 0 } });
+    if (startDate || endDate) {
+      and.push({
+        created_at: {
+          ...(startDate ? { gte: new Date(String(startDate).length <= 10 ? `${startDate}T00:00:00.000` : String(startDate)) } : {}),
+          ...(endDate ? { lte: new Date(String(endDate).length <= 10 ? `${endDate}T23:59:59.999` : String(endDate)) } : {}),
+        },
+      });
+    }
+    if (q) {
+      const term = String(q).trim();
+      if (term) {
+        and.push({
+          OR: [
+            { reason: { contains: term, mode: 'insensitive' } },
+            { item: { name: { contains: term, mode: 'insensitive' } } },
+            { user: { name: { contains: term, mode: 'insensitive' } } },
+          ],
+        });
+      }
+    }
+
+    const where = and.length ? { AND: and } : {};
+    const include = {
+      item: true,
+      user: { select: { id: true, name: true, email: true } },
+    };
+    const orderBy = { created_at: 'desc' as const };
+    const wantsPage = page != null || limit != null;
+
+    if (wantsPage) {
+      const pageNum = Math.max(1, parseInt(String(page || '1'), 10) || 1);
+      const limitNum = Math.min(200, Math.max(1, parseInt(String(limit || '20'), 10) || 20));
+      const [total, transactions] = await Promise.all([
+        prisma.inventoryTransaction.count({ where }),
+        prisma.inventoryTransaction.findMany({
+          where,
+          include,
+          orderBy,
+          skip: (pageNum - 1) * limitNum,
+          take: limitNum,
+        }),
+      ]);
+      res.json({
+        data: transactions,
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.max(1, Math.ceil(total / limitNum)),
+      });
+      return;
+    }
+
+    // Sin page/limit: lista filtrada (p. ej. historial de un ítem).
     const transactions = await prisma.inventoryTransaction.findMany({
-      include: {
-        item: true,
-        user: { select: { id: true, name: true, email: true } }
-      },
-      orderBy: { created_at: 'desc' },
+      where,
+      include,
+      orderBy,
     });
     res.json(transactions);
   } catch (error) {

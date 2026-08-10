@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { X, Save, Upload, Package, ArrowRightLeft, ChevronLeft, ChevronRight } from 'lucide-react';
-import { createItem, updateItem } from '../../api/inventory';
+import { X, Save, Upload, ArrowRightLeft, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { createItem, updateItem, getTransactions } from '../../api/inventory';
 import { getUoms } from '../../api/settings';
 import type { UnitOfMeasure } from '../../api/settings';
 import { ImageSearchModal } from '../inventory/ImageSearchModal';
@@ -8,6 +8,37 @@ import type { Item, ItemCategory, ItemLocation, Vendor, InventoryTransaction } f
 import { BACKEND_URL } from '../../api/axios';
 import { formatDateTime } from '../../utils/dateUtils';
 import { qtyStep, isInvalidQty, type QtyMode } from '../../utils/qtyMode';
+
+type DateFilter = 'all' | 'this_week' | 'last_week' | 'this_month' | 'last_3_months';
+
+const dateFilterToRange = (filter: DateFilter): { startDate?: string; endDate?: string } => {
+  const now = new Date();
+  if (filter === 'all') return {};
+  if (filter === 'this_week') {
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay());
+    start.setHours(0, 0, 0, 0);
+    return { startDate: start.toISOString() };
+  }
+  if (filter === 'last_week') {
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay() - 7);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(now);
+    end.setDate(now.getDate() - now.getDay() - 1);
+    end.setHours(23, 59, 59, 999);
+    return { startDate: start.toISOString(), endDate: end.toISOString() };
+  }
+  if (filter === 'this_month') {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { startDate: start.toISOString() };
+  }
+  if (filter === 'last_3_months') {
+    const start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+    return { startDate: start.toISOString() };
+  }
+  return {};
+};
 
 interface Props {
   isOpen: boolean;
@@ -42,7 +73,11 @@ export const ItemModal = ({
   onNavigateItem,
   navigationPaused = false,
 }: Props) => {
-  const [dateFilter, setDateFilter] = useState<'all' | 'this_week' | 'last_week' | 'this_month' | 'last_3_months'>('all');
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [itemTransactions, setItemTransactions] = useState<InventoryTransaction[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const HISTORY_PER_PAGE = 20;
   const [formData, setFormData] = useState({
     internal_code: '',
     name: '',
@@ -113,41 +148,48 @@ export const ItemModal = ({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isOpen, canNavigate, goPrev, goNext]);
 
+  // Carga historial por itemId (prop transactions solo como fallback)
+  useEffect(() => {
+    if (!isOpen || !item?.id) {
+      setItemTransactions([]);
+      setHistoryPage(1);
+      return;
+    }
+    let cancelled = false;
+    const range = dateFilterToRange(dateFilter);
+    setHistoryLoading(true);
+    setHistoryPage(1);
+    getTransactions({ itemId: item.id, ...range })
+      .then((data) => {
+        if (!cancelled) setItemTransactions(data);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        const fallback = (transactions || []).filter((tx) => tx.item_id === item.id);
+        setItemTransactions(fallback);
+      })
+      .finally(() => {
+        if (!cancelled) setHistoryLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // transactions solo fallback en catch; no re-disparar por referencia del padre
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, item?.id, dateFilter]);
+
   const filteredTransactions = useMemo(() => {
-    if (!item || !transactions) return [];
-    
-    const now = new Date();
-    const itemTxs = transactions.filter(tx => tx.item_id === item.id);
-    
-    return itemTxs.filter(tx => {
-      const txDate = new Date(tx.created_at);
-      if (dateFilter === 'all') return true;
-      if (dateFilter === 'this_week') {
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay());
-        startOfWeek.setHours(0,0,0,0);
-        return txDate >= startOfWeek;
-      }
-      if (dateFilter === 'last_week') {
-        const startOfLastWeek = new Date(now);
-        startOfLastWeek.setDate(now.getDate() - now.getDay() - 7);
-        startOfLastWeek.setHours(0,0,0,0);
-        const endOfLastWeek = new Date(now);
-        endOfLastWeek.setDate(now.getDate() - now.getDay() - 1);
-        endOfLastWeek.setHours(23,59,59,999);
-        return txDate >= startOfLastWeek && txDate <= endOfLastWeek;
-      }
-      if (dateFilter === 'this_month') {
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        return txDate >= startOfMonth;
-      }
-      if (dateFilter === 'last_3_months') {
-        const startOf3MonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-        return txDate >= startOf3MonthsAgo;
-      }
-      return true;
-    }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [item, transactions, dateFilter]);
+    return [...itemTransactions].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }, [itemTransactions]);
+
+  const historyTotalPages = Math.max(1, Math.ceil(filteredTransactions.length / HISTORY_PER_PAGE));
+  const paginatedHistory = useMemo(() => {
+    const start = (historyPage - 1) * HISTORY_PER_PAGE;
+    return filteredTransactions.slice(start, start + HISTORY_PER_PAGE);
+  }, [filteredTransactions, historyPage]);
+
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -551,13 +593,13 @@ export const ItemModal = ({
             </div>
           </div>
 
-          {item && transactions && (
+          {item && (
             <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex justify-between items-center mb-4 gap-3 flex-wrap">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Historial de Movimientos</h3>
                 <select
                   value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value as any)}
+                  onChange={(e) => setDateFilter(e.target.value as DateFilter)}
                   className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 font-medium text-slate-700 dark:text-slate-200"
                 >
                   <option value="all">Todo el historial</option>
@@ -580,7 +622,17 @@ export const ItemModal = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {filteredTransactions.map(tx => (
+                      {historyLoading && (
+                        <tr>
+                          <td colSpan={4} className="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
+                            <span className="inline-flex items-center gap-2">
+                              <Loader2 size={16} className="animate-spin text-emerald-600" />
+                              Cargando historial…
+                            </span>
+                          </td>
+                        </tr>
+                      )}
+                      {!historyLoading && paginatedHistory.map(tx => (
                         <tr key={tx.id} className="hover:bg-slate-100 dark:hover:bg-slate-800/50 dark:bg-slate-800/50 transition-colors">
                           <td className="px-4 py-3 whitespace-nowrap">{formatDateTime(tx.created_at)}</td>
                           <td className="px-4 py-3">{tx.user?.name}</td>
@@ -592,7 +644,7 @@ export const ItemModal = ({
                           <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{tx.reason}</td>
                         </tr>
                       ))}
-                      {filteredTransactions.length === 0 && (
+                      {!historyLoading && filteredTransactions.length === 0 && (
                         <tr>
                           <td colSpan={4} className="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
                             No hay movimientos en este periodo.
@@ -602,6 +654,33 @@ export const ItemModal = ({
                     </tbody>
                   </table>
                 </div>
+                {filteredTransactions.length > HISTORY_PER_PAGE && (
+                  <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-t border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-900/40">
+                    <p className="text-xs text-slate-500">
+                      {(historyPage - 1) * HISTORY_PER_PAGE + 1}–
+                      {Math.min(historyPage * HISTORY_PER_PAGE, filteredTransactions.length)} de{' '}
+                      {filteredTransactions.length}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                        disabled={historyPage === 1}
+                        className="px-3 py-1.5 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+                      >
+                        Anterior
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHistoryPage((p) => Math.min(historyTotalPages, p + 1))}
+                        disabled={historyPage === historyTotalPages}
+                        className="px-3 py-1.5 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+                      >
+                        Siguiente
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

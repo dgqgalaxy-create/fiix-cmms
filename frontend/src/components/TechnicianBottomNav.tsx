@@ -4,7 +4,7 @@ import { Home, Package, QrCode, ListChecks, MessageSquare } from 'lucide-react';
 import { QRScannerModal } from './common/QRScannerModal';
 import { parseFiixQr } from '../utils/fiixQr';
 import { getChatUnreadSummary } from '../api/chat';
-import { getWorkOrders } from '../api/workOrders';
+import { getMineOpenCount } from '../api/workOrders';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { useAuth } from '../context/AuthContext';
 
@@ -57,14 +57,7 @@ export const TechnicianBottomNav = () => {
       return;
     }
     try {
-      const orders = await getWorkOrders();
-      const count = orders.filter(
-        (wo) =>
-          wo.status !== 'FINALIZADO' &&
-          wo.status !== 'ANULADO' &&
-          wo.assigned_technicians?.some((t) => t.id === user.id)
-      ).length;
-      setMineBadge(count);
+      setMineBadge(await getMineOpenCount());
     } catch {
       /* ignore */
     }

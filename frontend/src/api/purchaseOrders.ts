@@ -45,9 +45,38 @@ export interface PurchaseOrder {
   items: PurchaseOrderItem[];
 }
 
-export const getPurchaseOrders = async (): Promise<PurchaseOrder[]> => {
-  const { data } = await api.get('/purchase-orders');
+export type PurchaseOrderListParams = {
+  page?: number;
+  limit?: number;
+  status?: string;
+  q?: string;
+};
+
+export type PaginatedPurchaseOrders = {
+  data: PurchaseOrder[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+export const getPurchaseOrders = async (
+  params?: PurchaseOrderListParams
+): Promise<PurchaseOrder[]> => {
+  const { data } = await api.get('/purchase-orders', { params });
+  if (data?.data && Array.isArray(data.data)) return data.data;
   return data;
+};
+
+export const getPurchaseOrdersPage = async (
+  params: PurchaseOrderListParams = {}
+): Promise<PaginatedPurchaseOrders> => {
+  const { data } = await api.get('/purchase-orders', {
+    params: { page: params.page ?? 1, limit: params.limit ?? 20, ...params },
+  });
+  if (data?.data && Array.isArray(data.data)) return data;
+  const list = data as PurchaseOrder[];
+  return { data: list, total: list.length, page: 1, limit: list.length || 20, totalPages: 1 };
 };
 
 export const createPurchaseOrder = async (orderData: { vendor_id: string; expected_date?: string; items: { item_id: string; quantity: number; unit_cost: number }[] }): Promise<PurchaseOrder> => {

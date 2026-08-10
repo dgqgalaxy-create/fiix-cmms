@@ -6,19 +6,65 @@ import { parseDateInput } from '../utils/parseDateInput';
 
 export const getPurchaseOrders = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const orders = await prisma.purchaseOrder.findMany({
-      include: {
-        vendor: true,
-        created_by: {
-          select: { id: true, name: true, email: true, role: true }
-        },
-        items: {
-          include: {
-            item: true
-          }
-        }
+    const { page, limit, status, q } = req.query;
+    const and: Record<string, unknown>[] = [];
+
+    if (status && status !== 'TODOS') and.push({ status: String(status) });
+    if (q) {
+      const term = String(q).trim();
+      if (term) {
+        const folioNum = Number(term.replace(/^po-?/i, ''));
+        and.push({
+          OR: [
+            ...(Number.isFinite(folioNum) && folioNum > 0 ? [{ folio: folioNum }] : []),
+            { vendor: { name: { contains: term, mode: 'insensitive' } } },
+          ],
+        });
+      }
+    }
+
+    const where = and.length ? { AND: and } : {};
+    const include = {
+      vendor: true,
+      created_by: {
+        select: { id: true, name: true, email: true, role: true },
       },
-      orderBy: { created_at: 'desc' }
+      items: {
+        include: {
+          item: true,
+        },
+      },
+    };
+    const orderBy = { created_at: 'desc' as const };
+    const wantsPage = page != null || limit != null;
+
+    if (wantsPage) {
+      const pageNum = Math.max(1, parseInt(String(page || '1'), 10) || 1);
+      const limitNum = Math.min(100, Math.max(1, parseInt(String(limit || '20'), 10) || 20));
+      const [total, orders] = await Promise.all([
+        prisma.purchaseOrder.count({ where }),
+        prisma.purchaseOrder.findMany({
+          where,
+          include,
+          orderBy,
+          skip: (pageNum - 1) * limitNum,
+          take: limitNum,
+        }),
+      ]);
+      res.json({
+        data: orders,
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.max(1, Math.ceil(total / limitNum)),
+      });
+      return;
+    }
+
+    const orders = await prisma.purchaseOrder.findMany({
+      where,
+      include,
+      orderBy,
     });
     res.json(orders);
   } catch (error) {

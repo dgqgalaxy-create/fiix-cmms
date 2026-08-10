@@ -44,7 +44,10 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [loadingThread, setLoadingThread] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMoreOlder, setHasMoreOlder] = useState(false);
   const [sending, setSending] = useState(false);
+  const MSG_LIMIT = 50;
   const [body, setBody] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +63,7 @@ export default function MessagesPage() {
   const [zoomSrc, setZoomSrc] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const threadScrollRef = useRef<HTMLDivElement>(null);
   const conversationsRef = useRef(conversations);
   conversationsRef.current = conversations;
   /** Tras cargar el hilo: ir al fondo o al primer no leído */
@@ -111,16 +115,18 @@ export default function MessagesPage() {
     async (id: string) => {
       try {
         setLoadingThread(true);
+        setHasMoreOlder(false);
         const conv = conversationsRef.current.find((c) => c.id === id);
         const unreadCount = conv?.unread_count || 0;
         const myId = user?.id;
         const lastReadAt =
           conv?.participants?.find((p) => p.user_id === myId)?.last_read_at || null;
 
-        const data = await listMessages(id);
+        const data = await listMessages(id, undefined, MSG_LIMIT);
         const firstUnreadId = findFirstUnreadId(data, myId, unreadCount, lastReadAt);
 
         setMessages(data);
+        setHasMoreOlder(data.length >= MSG_LIMIT);
         setUnreadDividerId(firstUnreadId);
         pendingScrollRef.current = firstUnreadId
           ? { unreadId: firstUnreadId }
@@ -138,6 +144,33 @@ export default function MessagesPage() {
     },
     [user?.id]
   );
+
+  const loadOlderMessages = async () => {
+    if (!activeId || !messages.length || !hasMoreOlder || loadingOlder) return;
+    const scrollEl = threadScrollRef.current;
+    const prevHeight = scrollEl?.scrollHeight ?? 0;
+    const prevTop = scrollEl?.scrollTop ?? 0;
+    setLoadingOlder(true);
+    setError(null);
+    try {
+      const older = await listMessages(activeId, messages[0].id, MSG_LIMIT);
+      setHasMoreOlder(older.length >= MSG_LIMIT);
+      setMessages((prev) => {
+        const ids = new Set(prev.map((m) => m.id));
+        const unique = older.filter((m) => !ids.has(m.id));
+        return [...unique, ...prev];
+      });
+      requestAnimationFrame(() => {
+        if (scrollEl) {
+          scrollEl.scrollTop = scrollEl.scrollHeight - prevHeight + prevTop;
+        }
+      });
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'No se pudieron cargar mensajes anteriores');
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
 
   useEffect(() => {
     void loadConversations();
@@ -168,6 +201,7 @@ export default function MessagesPage() {
     if (!activeId) {
       setMessages([]);
       setUnreadDividerId(null);
+      setHasMoreOlder(false);
       return;
     }
     void loadThread(activeId);
@@ -597,7 +631,7 @@ export default function MessagesPage() {
                 </div>
               </header>
 
-              <div className="flex-1 space-y-2 overflow-y-auto px-3 py-3">
+              <div ref={threadScrollRef} className="flex-1 space-y-2 overflow-y-auto px-3 py-3">
                 {loadingThread ? (
                   <div className="flex justify-center py-8">
                     <Loader2 className="animate-spin text-slate-400" size={22} />
@@ -607,7 +641,21 @@ export default function MessagesPage() {
                     Sin mensajes
                   </p>
                 ) : (
-                  messages.map((m) => {
+                  <>
+                  <div className="flex justify-center pb-1">
+                    <button
+                      type="button"
+                      disabled={!hasMoreOlder || loadingOlder}
+                      onClick={() => void loadOlderMessages()}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                      {loadingOlder ? (
+                        <Loader2 size={14} className="animate-spin text-emerald-600" />
+                      ) : null}
+                      Cargar mensajes anteriores
+                    </button>
+                  </div>
+                  {messages.map((m) => {
                     const mine = m.author_id === user?.id;
                     const deleted = Boolean(m.is_deleted);
                     const canDelete = canAuthorSoftDelete(m, user?.id);
@@ -722,7 +770,8 @@ export default function MessagesPage() {
                         </div>
                       </div>
                     );
-                  })
+                  })}
+                  </>
                 )}
                 <div ref={bottomRef} />
               </div>

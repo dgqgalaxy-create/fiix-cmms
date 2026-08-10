@@ -86,9 +86,86 @@ export interface WorkOrder {
   } | null;
 }
 
-export const getWorkOrders = async (): Promise<WorkOrder[]> => {
-  const response = await api.get('/work-orders');
+export type WorkOrderListParams = {
+  page?: number;
+  limit?: number;
+  tab?: 'active' | 'mine' | 'history';
+  status?: string;
+  priority?: string;
+  unassigned?: boolean;
+  q?: string;
+  requester?: string;
+  startDate?: string;
+  endDate?: string;
+  scheduledFrom?: string;
+  scheduledTo?: string;
+  completedFrom?: string;
+  completedTo?: string;
+  assignedTo?: string;
+  openOnly?: boolean;
+  includeUnscheduled?: boolean;
+  sort?: 'newest' | 'oldest' | 'priority';
+};
+
+export type Paginated<T> = {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+function isPaginatedWorkOrders(data: unknown): data is Paginated<WorkOrder> {
+  return (
+    !!data &&
+    typeof data === 'object' &&
+    Array.isArray((data as Paginated<WorkOrder>).data) &&
+    typeof (data as Paginated<WorkOrder>).total === 'number'
+  );
+}
+
+export const getWorkOrders = async (params?: WorkOrderListParams): Promise<WorkOrder[]> => {
+  const response = await api.get('/work-orders', {
+    params: params
+      ? {
+          ...params,
+          unassigned: params.unassigned ? '1' : undefined,
+          openOnly: params.openOnly ? '1' : undefined,
+          includeUnscheduled: params.includeUnscheduled ? '1' : undefined,
+        }
+      : undefined,
+  });
+  if (isPaginatedWorkOrders(response.data)) return response.data.data;
   return response.data;
+};
+
+export const getWorkOrdersPage = async (
+  params: WorkOrderListParams
+): Promise<Paginated<WorkOrder>> => {
+  const response = await api.get('/work-orders', {
+    params: {
+      page: params.page ?? 1,
+      limit: params.limit ?? 20,
+      ...params,
+      unassigned: params.unassigned ? '1' : undefined,
+      openOnly: params.openOnly ? '1' : undefined,
+      includeUnscheduled: params.includeUnscheduled ? '1' : undefined,
+    },
+  });
+  if (isPaginatedWorkOrders(response.data)) return response.data;
+  const data = response.data as WorkOrder[];
+  return {
+    data,
+    total: data.length,
+    page: 1,
+    limit: data.length || 20,
+    totalPages: 1,
+  };
+};
+
+export const getMineOpenCount = async (): Promise<number> => {
+  const response = await api.get('/work-orders/mine-open-count');
+  return Number(response.data?.count || 0);
 };
 
 export const getWorkOrderById = async (id: string): Promise<WorkOrder> => {

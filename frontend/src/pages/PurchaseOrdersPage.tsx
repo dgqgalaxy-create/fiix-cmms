@@ -1,64 +1,74 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ShoppingCart, Plus, Search, Calendar, PackageOpen, ChevronRight, Filter, ExternalLink, ChevronUp, ChevronDown } from 'lucide-react';
-import { getPurchaseOrders, type PurchaseOrder } from '../api/purchaseOrders';
+import { getPurchaseOrdersPage, type PurchaseOrder } from '../api/purchaseOrders';
 import { CreatePOModal } from '../components/CreatePOModal';
 import { PODetailModal } from '../components/PODetailModal';
-import { useAuth } from '../context/AuthContext';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatDate } from '../utils/dateUtils';
 import { formatCurrency } from '../utils/currency';
 
+const ORDERS_PER_PAGE = 20;
+
 export const PurchaseOrdersPage = () => {
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
-  const [filteredOrders, setFilteredOrders] = useState<PurchaseOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedQ, setDebouncedQ] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('TODOS');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [sortField, setSortField] = useState<'folio' | 'vendor' | 'status' | 'total' | 'date'>('folio');
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const { hasPermission } = useAuth();
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQ(searchTerm.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus]);
 
   const fetchOrders = async (background = false) => {
     try {
       if (!background) setIsLoading(true);
-      const data = await getPurchaseOrders();
-      setOrders(data);
-      setFilteredOrders(data);
-      setSelectedOrder((prev) => (prev ? data.find((o) => o.id === prev.id) ?? prev : null));
+      const res = await getPurchaseOrdersPage({
+        page: currentPage,
+        limit: ORDERS_PER_PAGE,
+        status: filterStatus === 'TODOS' ? undefined : filterStatus,
+        q: debouncedQ || undefined,
+      });
+      setOrders(res.data);
+      setTotal(res.total);
+      setTotalPages(Math.max(1, res.totalPages));
+      setSelectedOrder((prev) => (prev ? res.data.find((o) => o.id === prev.id) ?? prev : null));
     } catch (error) {
       console.error('Error fetching purchase orders:', error);
+      setOrders([]);
+      setTotal(0);
+      setTotalPages(1);
     } finally {
       if (!background) setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    void fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, debouncedQ, filterStatus]);
 
   useSocketRefresh('refresh_purchase_orders', () => fetchOrders(true));
-
-  useEffect(() => {
-    const term = searchTerm.toLowerCase();
-    setFilteredOrders(
-      orders.filter(o => {
-        const matchesSearch = `po-${o.folio}`.includes(term) || o.vendor?.name.toLowerCase().includes(term) || o.status.toLowerCase().includes(term);
-        const matchesFilter = filterStatus === 'TODOS' || o.status === filterStatus;
-        return matchesSearch && matchesFilter;
-      })
-    );
-  }, [searchTerm, filterStatus, orders]);
 
   const calculateTotal = (items: any[]) => {
     return items.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
   };
 
   const sortedOrders = useMemo(() => {
-    return [...filteredOrders].sort((a, b) => {
+    return [...orders].sort((a, b) => {
       let cmp = 0;
       switch (sortField) {
         case 'folio':
@@ -79,7 +89,7 @@ export const PurchaseOrdersPage = () => {
       }
       return sortDirection === 'asc' ? cmp : -cmp;
     });
-  }, [filteredOrders, sortField, sortDirection]);
+  }, [orders, sortField, sortDirection]);
 
   const getStatusBadge = (status: string, compact = false) => {
     const pad = compact ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs';
@@ -170,7 +180,7 @@ export const PurchaseOrdersPage = () => {
           <div className="flex justify-center items-center py-12 sm:py-20 text-slate-400">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
           </div>
-        ) : filteredOrders.length > 0 ? (
+        ) : total > 0 ? (
           <>
             {/* Lista compacta móvil */}
             <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
@@ -263,12 +273,66 @@ export const PurchaseOrdersPage = () => {
                 </tbody>
               </table>
             </div>
+
+            {total > ORDERS_PER_PAGE && (
+              <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 sm:px-6">
+                <div className="flex flex-1 justify-between sm:hidden">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="relative ml-3 inline-flex items-center rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+                <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    Mostrando{' '}
+                    <span className="font-medium">{(currentPage - 1) * ORDERS_PER_PAGE + 1}</span>
+                    {' '}a{' '}
+                    <span className="font-medium">{Math.min(currentPage * ORDERS_PER_PAGE, total)}</span>
+                    {' '}de <span className="font-medium">{total}</span> resultados
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="relative inline-flex items-center rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+                    >
+                      Anterior
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="relative inline-flex items-center rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="py-12 sm:py-20 text-center px-4">
             <PackageOpen className="mx-auto text-slate-300 mb-3 sm:mb-4" size={40} />
             <h3 className="text-base sm:text-lg font-bold text-slate-700 dark:text-slate-200 mb-1">No hay órdenes de compra</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Crea una nueva orden para reabastecer tu inventario.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {debouncedQ || filterStatus !== 'TODOS'
+                ? 'Ninguna orden coincide con el filtro.'
+                : 'Crea una nueva orden para reabastecer tu inventario.'}
+            </p>
           </div>
         )}
       </div>
@@ -279,7 +343,7 @@ export const PurchaseOrdersPage = () => {
           onClose={() => setIsCreateModalOpen(false)}
           onSuccess={() => {
             setIsCreateModalOpen(false);
-            fetchOrders();
+            void fetchOrders();
           }}
         />
       )}
@@ -290,7 +354,7 @@ export const PurchaseOrdersPage = () => {
           isOpen={!!selectedOrder}
           onClose={() => setSelectedOrder(null)}
           onUpdate={() => {
-            fetchOrders(true);
+            void fetchOrders(true);
           }}
         />
       )}

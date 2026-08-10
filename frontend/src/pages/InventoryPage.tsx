@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, type MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter } from 'lucide-react';
 import { 
-  getItems, getTransactions, getCategories, getLocations, getVendors
+  getItems, getTransactionsPage, getCategories, getLocations, getVendors
 } from '../api/inventory';
 import { BACKEND_URL } from '../api/axios';
 import type { Item, InventoryTransaction, ItemCategory, ItemLocation, Vendor } from '../api/inventory';
@@ -33,13 +33,15 @@ export const InventoryPage = () => {
   const [activeTab, setActiveTab] = useState<'items' | 'transactions' | 'categories' | 'locations' | 'vendors'>('items');
   
   const [items, setItems] = useState<Item[]>([]);
-  const [transactions, setTransactions] = useState<InventoryTransaction[]>([]);
+  const [serverTransactions, setServerTransactions] = useState<InventoryTransaction[]>([]);
   const [categories, setCategories] = useState<ItemCategory[]>([]);
   const [locations, setLocations] = useState<ItemLocation[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [txLoading, setTxLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [txSearchQ, setTxSearchQ] = useState('');
   const [movementTypeFilter, setMovementTypeFilter] = useState<'ALL' | 'IN' | 'OUT'>('ALL');
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [showNoVendorOnly, setShowNoVendorOnly] = useState(false);
@@ -52,6 +54,8 @@ export const InventoryPage = () => {
   // Pagination (repuestos y movimientos por separado)
   const [currentPage, setCurrentPage] = useState(1);
   const [txCurrentPage, setTxCurrentPage] = useState(1);
+  const [txTotal, setTxTotal] = useState(0);
+  const [txTotalPages, setTxTotalPages] = useState(1);
   const ITEMS_PER_PAGE = 20;
 
   // Modals state
@@ -82,7 +86,7 @@ export const InventoryPage = () => {
   const fetchData = async (backgroundFetch: boolean = false) => {
     if (!backgroundFetch) setIsLoading(true);
     try {
-      // Repuestos y catálogos primero (para no dejar la vista vacía si movimientos van lentos o fallan).
+      // Repuestos y catálogos (movimientos se cargan paginados en su pestaña).
       const [itemsRes, catsRes, locsRes, vendsRes] = await Promise.allSettled([
         getItems(),
         getCategories(),
@@ -102,13 +106,27 @@ export const InventoryPage = () => {
     } finally {
       if (!backgroundFetch) setIsLoading(false);
     }
+  };
 
+  const fetchTransactionsPage = async (backgroundFetch: boolean = false) => {
+    if (!backgroundFetch) setTxLoading(true);
     try {
-      const fetchedTrans = await getTransactions();
-      setTransactions(fetchedTrans);
+      const res = await getTransactionsPage({
+        page: txCurrentPage,
+        limit: ITEMS_PER_PAGE,
+        movement: movementTypeFilter,
+        q: txSearchQ || undefined,
+      });
+      setServerTransactions(res.data);
+      setTxTotal(res.total);
+      setTxTotalPages(Math.max(1, res.totalPages));
     } catch (error) {
       console.error('Error fetching transactions', error);
-      setTransactions([]);
+      setServerTransactions([]);
+      setTxTotal(0);
+      setTxTotalPages(1);
+    } finally {
+      if (!backgroundFetch) setTxLoading(false);
     }
   };
 
@@ -118,7 +136,23 @@ export const InventoryPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useSocketRefresh('refresh_inventory', () => fetchData(true));
+  // Debounce búsqueda de movimientos (server q)
+  useEffect(() => {
+    if (activeTab !== 'transactions') return;
+    const t = window.setTimeout(() => setTxSearchQ(searchTerm.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [searchTerm, activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'transactions') return;
+    void fetchTransactionsPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, txCurrentPage, movementTypeFilter, txSearchQ]);
+
+  useSocketRefresh('refresh_inventory', () => {
+    void fetchData(true);
+    if (activeTab === 'transactions') void fetchTransactionsPage(true);
+  });
 
   // Handle URL parameters (filters / deep links). Espera a que carguen catálogos
   // antes de descartar location/item/scan (evita perder el destino al escanear QR).
@@ -319,19 +353,13 @@ export const InventoryPage = () => {
     setCurrentPage(1);
   }, [searchTerm, showLowStockOnly, showNoVendorOnly, sortBy, sortDirection]);
 
-  const filteredTransactions = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-    const list = transactions.filter((t) => {
-      if (movementTypeFilter === 'IN' && !(t.amount > 0)) return false;
-      if (movementTypeFilter === 'OUT' && !(t.amount < 0)) return false;
-      if (!term) return true;
-      return (
-        (t.item?.name || '').toLowerCase().includes(term) ||
-        (t.user?.name || '').toLowerCase().includes(term) ||
-        (t.reason || '').toLowerCase().includes(term)
-      );
-    });
-    return [...list].sort((a, b) => {
+  useEffect(() => {
+    setTxCurrentPage(1);
+  }, [searchTerm, movementTypeFilter, activeTab]);
+
+  // Página del servidor; orden de columnas solo sobre la página actual
+  const paginatedTransactions = useMemo(() => {
+    return [...serverTransactions].sort((a, b) => {
       let cmp = 0;
       switch (txSortBy) {
         case 'date':
@@ -352,18 +380,7 @@ export const InventoryPage = () => {
       }
       return txSortDirection === 'asc' ? cmp : -cmp;
     });
-  }, [transactions, searchTerm, movementTypeFilter, txSortBy, txSortDirection]);
-
-  useEffect(() => {
-    setTxCurrentPage(1);
-  }, [searchTerm, movementTypeFilter, txSortBy, txSortDirection, activeTab]);
-
-  const paginatedTransactions = useMemo(() => {
-    const startIndex = (txCurrentPage - 1) * ITEMS_PER_PAGE;
-    return filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredTransactions, txCurrentPage]);
-
-  const txTotalPages = Math.max(1, Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE));
+  }, [serverTransactions, txSortBy, txSortDirection]);
 
   const filterCriticalStock = () => {
     setShowNoVendorOnly(false);
@@ -961,7 +978,17 @@ export const InventoryPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {paginatedTransactions.map((tx) => (
+                  {txLoading && (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                        <div className="inline-flex items-center gap-2">
+                          <Loader2 size={18} className="animate-spin text-emerald-600" />
+                          Cargando movimientos…
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  {!txLoading && paginatedTransactions.map((tx) => (
                     <tr 
                       key={tx.id} 
                       className="hover:bg-slate-50/50 transition-colors cursor-pointer"
@@ -978,19 +1005,19 @@ export const InventoryPage = () => {
                       <td className="px-6 py-4 text-slate-500">{tx.reason}</td>
                     </tr>
                   ))}
-                  {filteredTransactions.length === 0 && (
+                  {!txLoading && txTotal === 0 && (
                     <tr>
                       <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                        {transactions.length === 0
-                          ? 'No hay movimientos registrados.'
-                          : 'Ningún movimiento coincide con el filtro.'}
+                        {txSearchQ || movementTypeFilter !== 'ALL'
+                          ? 'Ningún movimiento coincide con el filtro.'
+                          : 'No hay movimientos registrados.'}
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
-            {filteredTransactions.length > ITEMS_PER_PAGE && (
+            {txTotal > ITEMS_PER_PAGE && (
               <div className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-3 sm:px-6">
                 <div className="flex flex-1 justify-between sm:hidden">
                   <button
@@ -1019,9 +1046,9 @@ export const InventoryPage = () => {
                       </span>{' '}
                       a{' '}
                       <span className="font-medium">
-                        {Math.min(txCurrentPage * ITEMS_PER_PAGE, filteredTransactions.length)}
+                        {Math.min(txCurrentPage * ITEMS_PER_PAGE, txTotal)}
                       </span>{' '}
-                      de <span className="font-medium">{filteredTransactions.length}</span> resultados
+                      de <span className="font-medium">{txTotal}</span> resultados
                     </p>
                   </div>
                   <div>
@@ -1565,12 +1592,14 @@ export const InventoryPage = () => {
       <ItemModal 
         isOpen={isItemModalOpen} 
         onClose={() => setIsItemModalOpen(false)} 
-        onSaved={() => fetchData(true)}
+        onSaved={() => {
+          void fetchData(true);
+          if (activeTab === 'transactions') void fetchTransactionsPage(true);
+        }}
         item={selectedItem}
         categories={categories}
         locations={locations}
         vendors={vendors}
-        transactions={transactions}
         readOnly={!canManage}
         // OUT permitido a todos en Inventario; IN solo con REGISTER_INVENTORY_ENTRIES (TransactionModal).
         // No atar a MANAGE_INVENTORY: Técnico/Gestionador deben ver «Registrar movimiento» en el detalle.
@@ -1583,7 +1612,10 @@ export const InventoryPage = () => {
       <TransactionModal
         isOpen={isTransactionModalOpen}
         onClose={() => setIsTransactionModalOpen(false)}
-        onSaved={() => fetchData(true)}
+        onSaved={() => {
+          void fetchData(true);
+          if (activeTab === 'transactions') void fetchTransactionsPage(true);
+        }}
         items={items}
         defaultItemId={preselectedTransactionItemId}
       />

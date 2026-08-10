@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.23";
+export const APP_VERSION = "1.56.24";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Paginación en servidor (OT historial, movimientos, OC); Inicio/Calendario cargan rangos acotados; badge Mis OT por conteo; filtro Solicitante; export con Solicitante/Tipo/Paro; historial de repuesto y «cargar mensajes anteriores».",
     "Mejora: Todos los PDF/impresión usan hoja Carta (Letter 21.6×27.9 cm): Órdenes y calendario en horizontal; checklist, OC y QR en vertical.",
     "Mejora: Excel/CSV/PDF de Órdenes exportan la columna Falla (descripción completa de la solicitud) en lugar del título corto.",
     "Corrección: En Órdenes, el botón PDF ya no genera hoja en blanco; imprime la misma lista filtrada que Excel/CSV (p. ej. por solicitante).",

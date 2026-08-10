@@ -7,8 +7,8 @@ import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { InfoTip } from '../components/common/InfoTip';
 import { BulkAssignModal } from '../components/BulkAssignModal';
-import { getWorkOrders, getWorkOrderById, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder } from '../api/workOrders';
-import type { WorkOrder } from '../api/workOrders';
+import { getWorkOrders, getWorkOrdersPage, getWorkOrderById, getUniqueRequesters, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder } from '../api/workOrders';
+import type { WorkOrder, WorkOrderListParams } from '../api/workOrders';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
@@ -18,7 +18,6 @@ import { PageLoadError, PageLoadingState, isLikelyServerUnreachable } from '../c
 import {
   PeriodRangeFilter,
   firstDayOfMonthYmd,
-  isInDateRange,
   todayYmd,
 } from '../components/common/PeriodRangeFilter';
 import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
@@ -48,13 +47,87 @@ export const Dashboard = () => {
   const [customEndDate, setCustomEndDate] = useState(todayYmd);
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [assetFilter, setAssetFilter] = useState<string>('ALL');
+  const [requesterFilter, setRequesterFilter] = useState<string>('ALL');
+  const [requesterOptions, setRequesterOptions] = useState<string[]>([]);
   const [unassignedFilter, setUnassignedFilter] = useState(false);
   const [slaFilter, setSlaFilter] = useState<string | null>(null);
 
   const [sortOrder, setSortOrder] = useState<'NEWEST' | 'OLDEST' | 'PRIORITY'>('NEWEST');
   const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyTotalPages, setHistoryTotalPages] = useState(1);
   const [printAllFiltered, setPrintAllFiltered] = useState(false);
+  const [exportList, setExportList] = useState<WorkOrder[] | null>(null);
   const HISTORY_PER_PAGE = 20;
+
+  const ymd = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const dateFilterToRange = (): { startDate?: string; endDate?: string } => {
+    if (dateFilter === 'ALL') return {};
+    if (dateFilter === 'CUSTOM') {
+      return {
+        startDate: customStartDate || undefined,
+        endDate: customEndDate || undefined,
+      };
+    }
+    const now = new Date();
+    if (dateFilter === 'TODAY') {
+      const t = ymd(now);
+      return { startDate: t, endDate: t };
+    }
+    if (dateFilter === 'THIS_WEEK') {
+      const start = new Date(now);
+      start.setDate(now.getDate() - now.getDay());
+      return { startDate: ymd(start), endDate: ymd(now) };
+    }
+    if (dateFilter === 'LAST_WEEK') {
+      const start = new Date(now);
+      start.setDate(now.getDate() - now.getDay() - 7);
+      const end = new Date(now);
+      end.setDate(now.getDate() - now.getDay() - 1);
+      return { startDate: ymd(start), endDate: ymd(end) };
+    }
+    if (dateFilter === 'THIS_MONTH') {
+      return {
+        startDate: ymd(new Date(now.getFullYear(), now.getMonth(), 1)),
+        endDate: ymd(now),
+      };
+    }
+    if (dateFilter === 'LAST_MONTH') {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { startDate: ymd(start), endDate: ymd(end) };
+    }
+    return {};
+  };
+
+  const buildListParams = (opts?: { page?: number; limit?: number }): WorkOrderListParams => {
+    const range = dateFilterToRange();
+    return {
+      tab:
+        activeTab === 'HISTORIAL'
+          ? 'history'
+          : activeTab === 'MIS_ORDENES'
+            ? 'mine'
+            : 'active',
+      status: statusFilter || undefined,
+      priority: priorityFilter !== 'ALL' ? priorityFilter : undefined,
+      unassigned: unassignedFilter || undefined,
+      q: searchTerm.trim() || undefined,
+      requester: requesterFilter !== 'ALL' ? requesterFilter : undefined,
+      ...range,
+      sort:
+        sortOrder === 'NEWEST' ? 'newest' : sortOrder === 'OLDEST' ? 'oldest' : 'priority',
+      ...(opts?.page != null || opts?.limit != null
+        ? { page: opts.page ?? 1, limit: opts.limit ?? HISTORY_PER_PAGE }
+        : {}),
+    };
+  };
 
   useEffect(() => {
     const status = searchParams.get('status');
@@ -202,68 +275,114 @@ export const Dashboard = () => {
     navigate('/calendar', { state: { scheduleOrderId: wo.id } });
   };
 
-  const uniqueAssets = Array.from(new Set(workOrders.map(wo => wo.asset?.name).filter(Boolean))) as string[];
-
   /** Texto de falla reportada (descripción completa); si falta, usa el título. */
   const workOrderFailureText = (wo: WorkOrder) =>
     (wo.description?.trim() || wo.title || '').trim();
 
-  const handleExportCSV = () => {
-    const list = getFilteredWorkOrders();
-    const headers = ['Folio', 'Falla', 'Equipo', 'Zona', 'Prioridad', 'Estado', 'Fecha Creacion'];
-    const rows = list.map(wo => {
-      const folio = formatWorkOrderFolio(wo.folio);
-      const falla = `"${workOrderFailureText(wo).replace(/"/g, '""')}"`;
-      const asset = `"${wo.asset?.name?.replace(/"/g, '""') || ''}"`;
-      const zone = `"${wo.zone?.name?.replace(/"/g, '""') || ''}"`;
-      const priority = wo.priority || '';
-      const status = wo.status || '';
-      const date = formatDate(wo.created_at);
-      return [folio, falla, asset, zone, priority, status, date].join(',');
-    });
-    
-    const csvContent = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `ordenes_trabajo_${excelDateStamp()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const applyClientOnlyFilters = (list: WorkOrder[]) => {
+    let out = list;
+    if (assetFilter !== 'ALL') {
+      out = out.filter((wo) => wo.asset?.name === assetFilter);
+    }
+    if (slaFilter === 'RISK' || slaFilter === 'BREACHED') {
+      out = out.filter((wo) => wo.sla?.overall === slaFilter);
+    }
+    return out;
   };
 
-  const handleExportExcel = () => {
-    const list = getFilteredWorkOrders();
-    const rows = list.map((wo) => ({
-      Folio: formatWorkOrderFolio(wo.folio),
-      Falla: workOrderFailureText(wo),
-      Equipo: wo.asset?.name || '',
-      Zona: wo.zone?.name || '',
-      Prioridad: wo.priority || '',
-      Estado: wo.status || '',
-      Técnicos: wo.assigned_technicians?.map((t) => t.name).join(', ') || '',
-      'Fecha creación': formatDateTime(wo.created_at),
-    }));
-    downloadWorkbook(`ordenes_${excelDateStamp()}.xlsx`, [{ name: 'Ordenes', rows }]);
-  };
-
-  const handleExportPDF = () => {
-    // Excel/CSV usan la lista filtrada completa; print() solo ve el DOM.
-    // Expandimos paginación y dejamos visible la tabla (el marco ya no es print:hidden).
-    setPrintAllFiltered(true);
-    const finish = () => setPrintAllFiltered(false);
-    const onAfterPrint = () => {
-      finish();
-      window.removeEventListener('afterprint', onAfterPrint);
-    };
-    window.addEventListener('afterprint', onAfterPrint);
-    window.setTimeout(finish, 60_000);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        window.print();
+  const handleExportCSV = async () => {
+    try {
+      const list = applyClientOnlyFilters(await getWorkOrders(buildListParams()));
+      const headers = [
+        'Folio',
+        'Falla',
+        'Equipo',
+        'Zona',
+        'Solicitante',
+        'Tipo',
+        'Paro maquina',
+        'Prioridad',
+        'Estado',
+        'Fecha Creacion',
+      ];
+      const rows = list.map((wo) => {
+        const folio = formatWorkOrderFolio(wo.folio);
+        const falla = `"${workOrderFailureText(wo).replace(/"/g, '""')}"`;
+        const asset = `"${wo.asset?.name?.replace(/"/g, '""') || ''}"`;
+        const zone = `"${wo.zone?.name?.replace(/"/g, '""') || ''}"`;
+        const solicitante = `"${(wo.requester_name || '').replace(/"/g, '""')}"`;
+        const tipo = wo.maintenance_type || '';
+        const paro = wo.machine_stopped ? 'Si' : 'No';
+        const priority = wo.priority || '';
+        const status = wo.status || '';
+        const date = formatDate(wo.created_at);
+        return [folio, falla, asset, zone, solicitante, tipo, paro, priority, status, date].join(',');
       });
-    });
+
+      const csvContent = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], {
+        type: 'text/csv;charset=utf-8;',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `ordenes_trabajo_${excelDateStamp()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo exportar el CSV.');
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      const list = applyClientOnlyFilters(await getWorkOrders(buildListParams()));
+      const rows = list.map((wo) => ({
+        Folio: formatWorkOrderFolio(wo.folio),
+        Falla: workOrderFailureText(wo),
+        Equipo: wo.asset?.name || '',
+        Zona: wo.zone?.name || '',
+        Solicitante: wo.requester_name || '',
+        Tipo: wo.maintenance_type || '',
+        'Paro máquina': wo.machine_stopped ? 'Sí' : 'No',
+        Prioridad: wo.priority || '',
+        Estado: wo.status || '',
+        Técnicos: wo.assigned_technicians?.map((t) => t.name).join(', ') || '',
+        'Fecha creación': formatDateTime(wo.created_at),
+      }));
+      downloadWorkbook(`ordenes_${excelDateStamp()}.xlsx`, [{ name: 'Ordenes', rows }]);
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo exportar el Excel.');
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      const list = applyClientOnlyFilters(await getWorkOrders(buildListParams()));
+      setExportList(list);
+      setPrintAllFiltered(true);
+      const finish = () => {
+        setPrintAllFiltered(false);
+        setExportList(null);
+      };
+      const onAfterPrint = () => {
+        finish();
+        window.removeEventListener('afterprint', onAfterPrint);
+      };
+      window.addEventListener('afterprint', onAfterPrint);
+      window.setTimeout(finish, 60_000);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          window.print();
+        });
+      });
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo preparar el PDF.');
+    }
   };
 
   const fetchWorkOrders = async (backgroundFetch: boolean = false) => {
@@ -272,13 +391,28 @@ export const Dashboard = () => {
         setIsLoading(true);
         setLoadError(false);
       }
-      const data = await getWorkOrders();
-      setWorkOrders(data);
+      if (activeTab === 'HISTORIAL') {
+        const page = await getWorkOrdersPage(
+          buildListParams({ page: historyPage, limit: HISTORY_PER_PAGE })
+        );
+        setWorkOrders(page.data);
+        setHistoryTotal(page.total);
+        setHistoryTotalPages(page.totalPages);
+        setSelectedWorkOrder((prev) => {
+          if (!prev) return null;
+          return page.data.find((w) => w.id === prev.id) || prev;
+        });
+      } else {
+        const data = await getWorkOrders(buildListParams());
+        setWorkOrders(data);
+        setHistoryTotal(data.length);
+        setHistoryTotalPages(1);
+        setSelectedWorkOrder((prev) => {
+          if (!prev) return null;
+          return data.find((w) => w.id === prev.id) || prev;
+        });
+      }
       setLoadError(false);
-      setSelectedWorkOrder((prev) => {
-        if (!prev) return null;
-        return data.find((w) => w.id === prev.id) || prev;
-      });
     } catch (error) {
       console.error('Error fetching work orders', error);
       if (!backgroundFetch) {
@@ -290,8 +424,30 @@ export const Dashboard = () => {
   };
 
   useEffect(() => {
-    fetchWorkOrders();
+    void getUniqueRequesters()
+      .then((names) => setRequesterOptions(names.filter(Boolean).sort((a, b) => a.localeCompare(b))))
+      .catch(() => setRequesterOptions([]));
   }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      void fetchWorkOrders();
+    }, searchTerm ? 300 : 0);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch when server-side filters change
+  }, [
+    activeTab,
+    historyPage,
+    statusFilter,
+    priorityFilter,
+    unassignedFilter,
+    requesterFilter,
+    searchTerm,
+    dateFilter,
+    customStartDate,
+    customEndDate,
+    sortOrder,
+  ]);
 
   useSocketRefresh('refresh_work_orders', () => fetchWorkOrders(true));
 
@@ -337,109 +493,7 @@ export const Dashboard = () => {
   const canCreate = hasPermission('CREATE_WORK_ORDERS');
   const canBulkAssign = hasPermission('EDIT_WORK_ORDERS') && user?.role !== 'TECNICO';
 
-  const getFilteredWorkOrders = () => {
-    let list = workOrders;
-    const myId = user?.userId || (user as any)?.id;
-
-    if (activeTab === 'ACTIVAS') {
-      list = list.filter(wo => wo.status !== 'FINALIZADO' && wo.status !== 'ANULADO');
-    } else if (activeTab === 'MIS_ORDENES') {
-      list = list.filter(wo => wo.status !== 'FINALIZADO' && wo.status !== 'ANULADO' && wo.assigned_technicians?.some(t => t.id === myId));
-    } else if (activeTab === 'HISTORIAL') {
-      list = list.filter(wo => wo.status === 'FINALIZADO' || wo.status === 'ANULADO');
-    }
-
-    if (statusFilter) {
-      list = list.filter(wo => wo.status === statusFilter);
-    }
-
-    if (priorityFilter !== 'ALL') {
-      list = list.filter(wo => wo.priority === priorityFilter);
-    }
-
-    if (unassignedFilter) {
-      list = list.filter(wo => !wo.assigned_technicians?.length);
-    }
-
-    if (slaFilter === 'RISK' || slaFilter === 'BREACHED') {
-      list = list.filter(wo => wo.sla?.overall === slaFilter);
-    }
-    
-    if (assetFilter !== 'ALL') {
-      list = list.filter(wo => wo.asset?.name === assetFilter);
-    }
-    
-    if (dateFilter === 'CUSTOM') {
-      if (customStartDate || customEndDate) {
-        list = list.filter((wo) => isInDateRange(wo.created_at, customStartDate, customEndDate));
-      }
-    } else if (dateFilter !== 'ALL') {
-      const now = new Date();
-      list = list.filter(wo => {
-        const woDate = new Date(wo.created_at);
-        if (dateFilter === 'TODAY') {
-          return woDate.toDateString() === now.toDateString();
-        } else if (dateFilter === 'THIS_WEEK') {
-          const startOfWeek = new Date(now);
-          startOfWeek.setDate(now.getDate() - now.getDay());
-          startOfWeek.setHours(0,0,0,0);
-          return woDate >= startOfWeek;
-        } else if (dateFilter === 'LAST_WEEK') {
-          const startOfLastWeek = new Date(now);
-          startOfLastWeek.setDate(now.getDate() - now.getDay() - 7);
-          startOfLastWeek.setHours(0,0,0,0);
-          const endOfLastWeek = new Date(now);
-          endOfLastWeek.setDate(now.getDate() - now.getDay() - 1);
-          endOfLastWeek.setHours(23,59,59,999);
-          return woDate >= startOfLastWeek && woDate <= endOfLastWeek;
-        } else if (dateFilter === 'THIS_MONTH') {
-          return woDate.getMonth() === now.getMonth() && woDate.getFullYear() === now.getFullYear();
-        } else if (dateFilter === 'LAST_MONTH') {
-          const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-          return woDate.getMonth() === lastMonth.getMonth() && woDate.getFullYear() === lastMonth.getFullYear();
-        }
-        return true;
-      });
-    }
-
-    if (searchTerm.trim() !== '') {
-      const term = searchTerm.toLowerCase().trim();
-      list = list.filter(wo => {
-        const folioMatch =
-          `wo-${(wo.folio || 0).toString().padStart(4, '0')}`.includes(term) ||
-          `fol-${(wo.folio || 0).toString().padStart(4, '0')}`.includes(term) ||
-          String(wo.folio || '').includes(term);
-        const assetMatch = wo.asset?.name?.toLowerCase().includes(term);
-        const assetCodeMatch = wo.asset?.internal_code?.toLowerCase().includes(term);
-        const zoneMatch = wo.zone?.name?.toLowerCase().includes(term);
-        const titleMatch = wo.title?.toLowerCase().includes(term);
-        const typeMatch = wo.maintenance_type?.toLowerCase().includes(term);
-        const requesterMatch = wo.requester_name?.toLowerCase().includes(term);
-        return (
-          folioMatch ||
-          assetMatch ||
-          assetCodeMatch ||
-          zoneMatch ||
-          titleMatch ||
-          typeMatch ||
-          requesterMatch
-        );
-      });
-    }
-
-    // Ordenamiento explícito (copia para no mutar el estado)
-    const sorted = [...list];
-    if (sortOrder === 'NEWEST') {
-      sorted.sort((a, b) => (b.folio || 0) - (a.folio || 0));
-    } else if (sortOrder === 'OLDEST') {
-      sorted.sort((a, b) => (a.folio || 0) - (b.folio || 0));
-    } else if (sortOrder === 'PRIORITY') {
-      const pMap: Record<string, number> = { URGENTE: 3, NORMAL: 2, BAJO: 1 };
-      sorted.sort((a, b) => (pMap[b.priority] || 0) - (pMap[a.priority] || 0));
-    }
-
-    return sorted;
-  };
+  const getFilteredWorkOrders = () => applyClientOnlyFilters(workOrders);
 
   const filteredList = getFilteredWorkOrders();
 
@@ -454,19 +508,22 @@ export const Dashboard = () => {
     customEndDate,
     priorityFilter,
     assetFilter,
+    requesterFilter,
     unassignedFilter,
     slaFilter,
     sortOrder,
   ]);
 
-  const historyTotalPages = Math.max(1, Math.ceil(filteredList.length / HISTORY_PER_PAGE));
-
   const displayList = useMemo(() => {
-    if (printAllFiltered || activeTab !== 'HISTORIAL') return filteredList;
-    const page = Math.min(Math.max(1, historyPage), historyTotalPages);
-    const start = (page - 1) * HISTORY_PER_PAGE;
-    return filteredList.slice(start, start + HISTORY_PER_PAGE);
-  }, [activeTab, filteredList, historyPage, historyTotalPages, printAllFiltered]);
+    if (printAllFiltered && exportList) return exportList;
+    if (printAllFiltered) return filteredList;
+    // Historial ya viene paginado del servidor
+    return filteredList;
+  }, [printAllFiltered, exportList, filteredList]);
+
+  const uniqueAssets = Array.from(
+    new Set(workOrders.map((wo) => wo.asset?.name).filter(Boolean))
+  ) as string[];
 
   return (
     <>
@@ -669,6 +726,20 @@ export const Dashboard = () => {
             </select>
 
             <select
+              value={requesterFilter}
+              onChange={(e) => setRequesterFilter(e.target.value)}
+              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm max-w-[220px]"
+              title="Filtrar por solicitante"
+            >
+              <option value="ALL">Todos los solicitantes</option>
+              {requesterOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+
+            <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as any)}
               className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
@@ -710,7 +781,7 @@ export const Dashboard = () => {
               <option value="ANULADO">Anulado</option>
             </select>
 
-            {(dateFilter !== 'ALL' || priorityFilter !== 'ALL' || assetFilter !== 'ALL' || searchTerm !== '' || statusFilter !== null || unassignedFilter || slaFilter) && (
+            {(dateFilter !== 'ALL' || priorityFilter !== 'ALL' || assetFilter !== 'ALL' || requesterFilter !== 'ALL' || searchTerm !== '' || statusFilter !== null || unassignedFilter || slaFilter) && (
               <button 
                 onClick={() => {
                   setDateFilter('ALL');
@@ -718,12 +789,14 @@ export const Dashboard = () => {
                   setCustomEndDate(todayYmd());
                   setPriorityFilter('ALL');
                   setAssetFilter('ALL');
+                  setRequesterFilter('ALL');
                   setSearchTerm('');
                   setStatusFilter(null);
                   setUnassignedFilter(false);
                   setSlaFilter(null);
                   const next = new URLSearchParams(searchParams);
                   next.delete('status');
+                  next.delete('q');
                   next.delete('priority');
                   next.delete('unassigned');
                   next.delete('sla');
@@ -749,7 +822,7 @@ export const Dashboard = () => {
                 </div>
               </div>
               <div className="text-2xl font-black text-emerald-700">
-                {filteredList.length}
+                {activeTab === 'HISTORIAL' ? historyTotal : filteredList.length}
               </div>
             </div>
 
@@ -760,7 +833,7 @@ export const Dashboard = () => {
               onScheduleClick={canQuickSchedule ? handleScheduleClick : undefined}
             />
 
-            {activeTab === 'HISTORIAL' && filteredList.length > HISTORY_PER_PAGE && (
+            {activeTab === 'HISTORIAL' && historyTotal > HISTORY_PER_PAGE && (
               <div className="flex items-center justify-between bg-white dark:bg-slate-900 px-4 py-3 sm:px-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mt-4 print:hidden">
                 <div className="flex flex-1 justify-between sm:hidden">
                   <button
@@ -789,9 +862,9 @@ export const Dashboard = () => {
                       </span>{' '}
                       a{' '}
                       <span className="font-medium">
-                        {Math.min(Math.min(historyPage, historyTotalPages) * HISTORY_PER_PAGE, filteredList.length)}
+                        {Math.min(Math.min(historyPage, historyTotalPages) * HISTORY_PER_PAGE, historyTotal)}
                       </span>{' '}
-                      de <span className="font-medium">{filteredList.length}</span> resultados
+                      de <span className="font-medium">{historyTotal}</span> resultados
                     </p>
                   </div>
                   <div>
