@@ -31,6 +31,7 @@ export const QRDisplayModal: React.FC<Props> = ({ isOpen, onClose, title, subtit
             .container { text-align: center; border: 2px dashed #cbd5e1; padding: 40px; border-radius: 16px; }
             h1 { margin: 0 0 10px 0; font-size: 24px; color: #0f172a; }
             p { margin: 0 0 30px 0; font-size: 16px; color: #64748b; }
+            @page { size: letter portrait; margin: 12mm; }
           </style>
         </head>
         <body>

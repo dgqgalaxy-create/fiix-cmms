@@ -99,7 +99,8 @@ body {
 
 @media print {
   @page {
-    size: A4 landscape;
+    /* Carta / Letter 8.5×11 in (21.6×27.9 cm) — estándar de planta */
+    size: letter landscape;
     margin: 6mm;
   }
   body {
@@ -111,7 +112,7 @@ body {
   /*
    * Órdenes de Compra: .po-print-sheet vive en document.body (portal).
    * display:none en hermanos — no visibility — para que el layout oculto no genere
-   * páginas en blanco. A4 portrait se fuerza con <style> temporal (PODetailModal).
+   * páginas en blanco. Letter portrait se fuerza con <style> temporal (PODetailModal).
    */
   body.po-printing {
     background: white !important;
@@ -146,7 +147,7 @@ body {
   }
 
   /*
-   * Checklist Diario: una sola hoja A4 portrait (override landscape global).
+   * Checklist Diario: una sola hoja Letter portrait (override landscape global).
    * @page portrait se inyecta desde ChecklistFormPage (como OC).
    */
   body.checklist-printing {
@@ -174,8 +175,8 @@ body {
     break-inside: avoid !important;
     page-break-after: avoid !important;
     break-after: avoid !important;
-    /* Zoom reduce el layout real (mejor que transform para caber en 1 hoja). */
-    zoom: 0.82;
+    /* Zoom reduce el layout real (mejor que transform para caber en 1 hoja Letter). */
+    zoom: 0.78;
   }
   body.checklist-printing .checklist-print-sheet table {
     font-size: 7px !important;
@@ -202,7 +203,7 @@ body {
     color: #000;
   }
 
-  /* Listado OT: sin fondos fotográficos; filas densas (~10–15 / hoja A4 landscape). */
+  /* Listado OT: sin fondos fotográficos; filas densas (~10–15 / hoja Letter landscape). */
   .wo-print-list .wo-print-cards {
     display: none !important;
   }

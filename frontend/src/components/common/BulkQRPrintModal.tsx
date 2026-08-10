@@ -49,6 +49,7 @@ export const BulkQRPrintModal: React.FC<Props> = ({ isOpen, onClose, items, shee
             .label p { margin: 0 0 8px 0; font-size: 10px; color: #64748b; }
             .label svg { width: 96px; height: 96px; }
             @media print {
+              @page { size: letter portrait; margin: 8mm; }
               body { margin: 8mm; }
               .no-print { display: none !important; }
             }

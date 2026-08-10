@@ -132,7 +132,7 @@ export default function ChecklistFormPage() {
     void fetchChecklist(id, true);
   });
 
-  // Bloquear Ctrl+P en borrador; en finalizado forzar A4 portrait (igual que el botón).
+  // Bloquear Ctrl+P en borrador; en finalizado forzar Letter portrait (igual que el botón).
   useEffect(() => {
     const status = checklist?.status;
     const STYLE_ID = 'checklist-print-page-style';
@@ -146,7 +146,7 @@ export default function ChecklistFormPage() {
       document.getElementById(STYLE_ID)?.remove();
       const style = document.createElement('style');
       style.id = STYLE_ID;
-      style.textContent = '@page { size: A4 portrait; margin: 5mm; }';
+      style.textContent = '@page { size: letter portrait; margin: 5mm; }';
       document.head.appendChild(style);
       document.body.classList.add('checklist-printing');
     };
@@ -686,7 +686,7 @@ export default function ChecklistFormPage() {
             type="button"
             onClick={handlePrint}
             disabled={!canPrint}
-            title={canPrint ? 'Imprimir / PDF (una hoja A4)' : PRINT_BLOCKED_MSG}
+            title={canPrint ? 'Imprimir / PDF (una hoja Carta)' : PRINT_BLOCKED_MSG}
             className={`flex items-center gap-2 border px-4 py-2.5 rounded-xl transition-all font-medium shadow-sm ${
               canPrint
                 ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'

@@ -682,7 +682,7 @@ export const UserManual = () => {
                   </p>
                   <ul className="list-disc pl-5 space-y-1 text-sm text-indigo-800/80 dark:text-indigo-300/80">
                     <li>Oculta el menú lateral, los botones y la botonera propia del calendario para no gastar tinta en "basura visual".</li>
-                    <li>Fija la altura a 650px exactos para que la vista del mes quepa perfectamente en una hoja A4 Horizontal sin salir partida a la mitad.</li>
+                    <li>Fija la altura a 650px exactos para que la vista del mes quepa perfectamente en una hoja Carta horizontal sin salir partida a la mitad.</li>
                     <li>Reduce inteligentemente las etiquetas (9px) para garantizar que si hay más de 8 personas en un día, quepan todos sin que se oculte ninguno tras un botón "+X más".</li>
                   </ul>
                 </div>
