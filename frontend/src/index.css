@@ -101,7 +101,7 @@ body {
   @page {
     /* Carta / Letter 8.5×11 in (21.6×27.9 cm) — estándar de planta */
     size: letter landscape;
-    margin: 6mm;
+    margin: 5mm;
   }
   body {
     -webkit-print-color-adjust: exact;
@@ -176,7 +176,7 @@ body {
     page-break-after: avoid !important;
     break-after: avoid !important;
     /* Zoom reduce el layout real (mejor que transform para caber en 1 hoja Letter). */
-    zoom: 0.78;
+    zoom: 0.76;
   }
   body.checklist-printing .checklist-print-sheet table {
     font-size: 7px !important;
@@ -203,7 +203,7 @@ body {
     color: #000;
   }
 
-  /* Listado OT: sin fondos fotográficos; filas densas (~10–15 / hoja Letter landscape). */
+  /* Listado OT: filas densas (~14–18 / hoja Letter landscape). */
   .wo-print-list .wo-print-cards {
     display: none !important;
   }
@@ -214,12 +214,22 @@ body {
     background-image: none !important;
   }
   .wo-print-list table {
-    font-size: 9px !important;
+    font-size: 8px !important;
+    line-height: 1.15 !important;
   }
   .wo-print-list th,
   .wo-print-list td {
-    padding-top: 2px !important;
-    padding-bottom: 2px !important;
+    padding-top: 1px !important;
+    padding-bottom: 1px !important;
+  }
+  .wo-print-list .wo-print-failure {
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden !important;
+    white-space: normal !important;
+    max-height: 2.4em !important;
   }
 
   .rbc-btn-group {

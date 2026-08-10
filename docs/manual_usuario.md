@@ -109,10 +109,10 @@ Avisos del sistema operativo aunque la pestaña esté en segundo plano (nuevas O
 
 Gestión de solicitudes (listado), sin el resumen gráfico:
 - **Vistas:** Vista General, Mis Órdenes e Historial.
-- **Paginación (Historial):** pagina en el **servidor** (20 por página). Vista General y Mis Órdenes cargan solo órdenes abiertas.
+- **Paginación:** Vista General, Mis Órdenes e Historial paginan en el **servidor** (20 por página).
 - **Búsqueda y filtros** por estado, fecha, prioridad, equipo, **solicitante**, **zona** (barra «Buscar equipo, folio, zona…») y ordenamiento.
 - **Acciones rápidas en tarjetas (Admin / Gestionador):** Si la OT no tiene personal, toca **Sin asignar** para abrir el detalle enfocado en **Personal asignado**. El icono de **calendario** (tarjeta o columna Fecha) abre **Calendario** con esa OT lista para agendar. Los técnicos ven las etiquetas solo informativas.
-- **Exportar:** Excel/CSV/PDF (**Carta** horizontal). Incluyen **Falla** (descripción completa), **Solicitante**, **Tipo** y **Paro máquina**; mismos filtros que la tabla.
+- **Exportar:** Excel/CSV/PDF (**Carta** horizontal, tipografía compacta ~14–18 filas/hoja). Incluyen **Falla** (hasta 2 líneas en PDF), **Solicitante**, **Tipo** y **Paro máquina**; mismos filtros que la tabla.
 - **Foto visible en tarjetas y tabla web:** En celular, tablet y escritorio, las órdenes que incluyen una foto de la solicitud la muestran como un fondo progresivo de izquierda a derecha y un indicador de cámara. Las órdenes sin foto conservan su diseño habitual; selecciona cualquier orden para consultar la evidencia completa.
 - **Atrás en celular:** Al abrir el detalle de una orden, el botón o gesto Atrás del teléfono cierra ese detalle y te deja en el listado de Órdenes de Trabajo. Solo vuelve a Inicio si esa era la pantalla anterior (por ejemplo, si entraste desde el resumen).
 - **Navegación entre órdenes:** En el detalle, las flechas ← → (o los botones del encabezado) pasan a la orden anterior/siguiente según la lista filtrada y ordenada que estés viendo.

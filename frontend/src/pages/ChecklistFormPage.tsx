@@ -146,7 +146,7 @@ export default function ChecklistFormPage() {
       document.getElementById(STYLE_ID)?.remove();
       const style = document.createElement('style');
       style.id = STYLE_ID;
-      style.textContent = '@page { size: letter portrait; margin: 5mm; }';
+      style.textContent = '@page { size: letter portrait; margin: 4mm; }';
       document.head.appendChild(style);
       document.body.classList.add('checklist-printing');
     };

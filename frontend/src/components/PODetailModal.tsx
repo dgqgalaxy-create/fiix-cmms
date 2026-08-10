@@ -157,7 +157,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
     const style = document.createElement('style');
     style.id = STYLE_ID;
     // Override the app-wide landscape @page so this print is always Letter portrait.
-    style.textContent = '@page { size: letter portrait; margin: 10mm; }';
+    style.textContent = '@page { size: letter portrait; margin: 8mm; }';
     document.head.appendChild(style);
     document.body.classList.add('po-printing');
 

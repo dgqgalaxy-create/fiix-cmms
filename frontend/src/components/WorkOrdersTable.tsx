@@ -418,9 +418,9 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                   </td>
                   <td className="px-6 py-4 print:px-1.5 print:py-0.5 align-top print:align-middle">
                     <div className="flex flex-col gap-1 mb-2 print:gap-0 print:mb-0">
-                      <div className="font-bold text-slate-900 dark:text-slate-100 text-sm print:text-[9px] print:font-semibold print:leading-tight print:whitespace-pre-wrap group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      <div className="font-bold text-slate-900 dark:text-slate-100 text-sm print:text-[8px] print:font-semibold print:leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         <span className="print:hidden">{wo.title}</span>
-                        <span className="hidden print:inline">
+                        <span className="hidden print:inline wo-print-failure">
                           {(wo.description?.trim() || wo.title || '').trim()}
                         </span>
                       </div>

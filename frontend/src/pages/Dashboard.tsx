@@ -391,27 +391,16 @@ export const Dashboard = () => {
         setIsLoading(true);
         setLoadError(false);
       }
-      if (activeTab === 'HISTORIAL') {
-        const page = await getWorkOrdersPage(
-          buildListParams({ page: historyPage, limit: HISTORY_PER_PAGE })
-        );
-        setWorkOrders(page.data);
-        setHistoryTotal(page.total);
-        setHistoryTotalPages(page.totalPages);
-        setSelectedWorkOrder((prev) => {
-          if (!prev) return null;
-          return page.data.find((w) => w.id === prev.id) || prev;
-        });
-      } else {
-        const data = await getWorkOrders(buildListParams());
-        setWorkOrders(data);
-        setHistoryTotal(data.length);
-        setHistoryTotalPages(1);
-        setSelectedWorkOrder((prev) => {
-          if (!prev) return null;
-          return data.find((w) => w.id === prev.id) || prev;
-        });
-      }
+      const page = await getWorkOrdersPage(
+        buildListParams({ page: historyPage, limit: HISTORY_PER_PAGE })
+      );
+      setWorkOrders(page.data);
+      setHistoryTotal(page.total);
+      setHistoryTotalPages(page.totalPages);
+      setSelectedWorkOrder((prev) => {
+        if (!prev) return null;
+        return page.data.find((w) => w.id === prev.id) || prev;
+      });
       setLoadError(false);
     } catch (error) {
       console.error('Error fetching work orders', error);
@@ -528,12 +517,14 @@ export const Dashboard = () => {
   return (
     <>
       {/* Encabezado exclusivo para impresión (compacto: no restar filas al listado) */}
-      <div className="hidden print:flex justify-between items-baseline border-b border-slate-800 pb-1 mb-2">
+      <div className="hidden print:flex justify-between items-baseline border-b border-slate-800 pb-0.5 mb-1">
         <div className="flex items-baseline gap-2">
-          <h1 className="text-sm font-bold text-slate-900 tracking-tight">Órdenes de Trabajo</h1>
-          <p className="text-[10px] text-slate-500">GTZ CMMS</p>
+          <h1 className="text-xs font-bold text-slate-900 tracking-tight">Órdenes de Trabajo</h1>
+          <p className="text-[9px] text-slate-500">GTZ CMMS</p>
         </div>
-        <p className="text-[10px] text-slate-600">{formatDate(new Date())} · {filteredList.length} OT</p>
+        <p className="text-[9px] text-slate-600">
+          {formatDate(new Date())} · {(exportList?.length ?? historyTotal)} OT
+        </p>
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 print:hidden">
@@ -822,7 +813,7 @@ export const Dashboard = () => {
                 </div>
               </div>
               <div className="text-2xl font-black text-emerald-700">
-                {activeTab === 'HISTORIAL' ? historyTotal : filteredList.length}
+                {historyTotal}
               </div>
             </div>
 
@@ -833,7 +824,7 @@ export const Dashboard = () => {
               onScheduleClick={canQuickSchedule ? handleScheduleClick : undefined}
             />
 
-            {activeTab === 'HISTORIAL' && historyTotal > HISTORY_PER_PAGE && (
+            {historyTotal > HISTORY_PER_PAGE && (
               <div className="flex items-center justify-between bg-white dark:bg-slate-900 px-4 py-3 sm:px-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mt-4 print:hidden">
                 <div className="flex flex-1 justify-between sm:hidden">
                   <button
@@ -868,7 +859,7 @@ export const Dashboard = () => {
                     </p>
                   </div>
                   <div>
-                    <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm" aria-label="Paginación historial">
+                    <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm" aria-label="Paginación órdenes">
                       <button
                         type="button"
                         onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
