@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.20";
+export const APP_VERSION = "1.56.21";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "7 de Agosto, 2026";
+  const updateDate = "10 de Agosto, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: En Órdenes, el botón PDF ya no genera hoja en blanco; imprime la misma lista filtrada que Excel/CSV (p. ej. por solicitante).",
     "Mejora: Órdenes → Historial e Inventario → Movimientos muestran 20 registros por página (como Repuestos), para no ralentizar la pantalla con listas muy largas.",
     "Nuevo: KPI — periodo personalizado (Desde/Hasta); marco visual de filtros; gráficas de OT finalizadas y tiempo promedio de labor por técnico (sin pausas).",
     "Nuevo: Órdenes — filtro periodo inicio/fin y filtro Estado; Inventario Movimientos — entradas/bajas/todos; marcos de filtro en OT, Activos e Inventario.",

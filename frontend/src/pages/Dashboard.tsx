@@ -53,6 +53,7 @@ export const Dashboard = () => {
 
   const [sortOrder, setSortOrder] = useState<'NEWEST' | 'OLDEST' | 'PRIORITY'>('NEWEST');
   const [historyPage, setHistoryPage] = useState(1);
+  const [printAllFiltered, setPrintAllFiltered] = useState(false);
   const HISTORY_PER_PAGE = 20;
 
   useEffect(() => {
@@ -244,7 +245,21 @@ export const Dashboard = () => {
   };
 
   const handleExportPDF = () => {
-    window.print();
+    // Excel/CSV usan la lista filtrada completa; print() solo ve el DOM.
+    // Expandimos paginación y dejamos visible la tabla (el marco ya no es print:hidden).
+    setPrintAllFiltered(true);
+    const finish = () => setPrintAllFiltered(false);
+    const onAfterPrint = () => {
+      finish();
+      window.removeEventListener('afterprint', onAfterPrint);
+    };
+    window.addEventListener('afterprint', onAfterPrint);
+    window.setTimeout(finish, 60_000);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.print();
+      });
+    });
   };
 
   const fetchWorkOrders = async (backgroundFetch: boolean = false) => {
@@ -443,11 +458,11 @@ export const Dashboard = () => {
   const historyTotalPages = Math.max(1, Math.ceil(filteredList.length / HISTORY_PER_PAGE));
 
   const displayList = useMemo(() => {
-    if (activeTab !== 'HISTORIAL') return filteredList;
+    if (printAllFiltered || activeTab !== 'HISTORIAL') return filteredList;
     const page = Math.min(Math.max(1, historyPage), historyTotalPages);
     const start = (page - 1) * HISTORY_PER_PAGE;
     return filteredList.slice(start, start + HISTORY_PER_PAGE);
-  }, [activeTab, filteredList, historyPage, historyTotalPages]);
+  }, [activeTab, filteredList, historyPage, historyTotalPages, printAllFiltered]);
 
   return (
     <>
@@ -592,7 +607,7 @@ export const Dashboard = () => {
             title="Listado filtrado"
             icon={Filter}
             tone="blue"
-            className="print:hidden mb-0"
+            className="mb-0 print:mb-0 print:rounded-none print:border-0 print:bg-transparent print:p-0"
             hint="Fecha, prioridad, equipo, orden y estado se aplican a la tabla y al total dentro de este marco."
             toolbar={
               <>
@@ -719,7 +734,7 @@ export const Dashboard = () => {
               </>
             }
           >
-            <div className="mb-4 flex items-center justify-between bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
+            <div className="mb-4 flex items-center justify-between bg-emerald-50 border border-emerald-100 p-4 rounded-xl print:hidden">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
                   <Search size={20} />

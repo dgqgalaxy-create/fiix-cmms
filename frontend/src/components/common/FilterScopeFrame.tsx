@@ -56,20 +56,20 @@ export function FilterScopeFrame({
       className={`relative mb-8 rounded-3xl border-2 ${t.section} p-3 sm:p-5 ${className}`}
     >
       <div
-        className={`absolute -top-3 left-5 z-10 flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider shadow-sm ${t.badge}`}
+        className={`absolute -top-3 left-5 z-10 flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider shadow-sm print:hidden ${t.badge}`}
       >
         <Icon size={14} />
         {title}
       </div>
 
       {hint ? (
-        <p className="mb-3 mt-2 text-xs text-slate-500 dark:text-slate-400">{hint}</p>
+        <p className="mb-3 mt-2 text-xs text-slate-500 dark:text-slate-400 print:hidden">{hint}</p>
       ) : (
-        <div className="mt-2" />
+        <div className="mt-2 print:hidden" />
       )}
 
       {toolbar ? (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/80 bg-white/90 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/90">
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/80 bg-white/90 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/90 print:hidden">
           {toolbar}
         </div>
       ) : null}
