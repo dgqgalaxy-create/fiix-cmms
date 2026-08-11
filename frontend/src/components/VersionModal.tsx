@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.33";
+export const APP_VERSION = "1.56.34";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Rutina de pruebas del endurecimiento — scripts/smoke-hardening.sh + Fase H en plan_pruebas.md (uploads, Helmet, paginación, KPI).",
     "Corrección: Build PWA — NetworkOnly en /api ya no usa networkTimeoutSeconds (Workbox lo rechazaba y tumba el deploy).",
     "Mejora: Deploy más rápido — npm ci solo si cambió el lockfile; typecheck ya no reinstala el frontend (el gate UI sigue siendo el build).",
     "Corrección: Deploy ya no ejecuta nvm bajo set -e (provocaba exit 3 silencioso); usa tarball Node 22 en ~/.local.",

@@ -286,6 +286,41 @@ Marca cada casilla al completar. Anota folio, código o captura si falla un **P0
 
 ---
 
+## Fase H — Endurecimiento v1.56.26+ (estabilidad / seguridad / rendimiento)
+
+**Tiempo:** ~20–40 min · **Automático:** `scripts/smoke-hardening.sh` · **Checklist UI:** canvas *hardening-test-routine*
+
+```bash
+BASE_URL=http://127.0.0.1:3000 EMAIL=admin@fiix.com PASS=password123 \
+  bash ./scripts/smoke-hardening.sh
+```
+
+### H1 · API / seguridad (P0)
+- [ ] **P0** `/api/health` OK con `version`.
+- [ ] **P0** Helmet: `X-Content-Type-Options: nosniff` (u otros headers de seguridad).
+- [ ] **P0** `/uploads/...` **sin** token → **401/403**.
+- [ ] **P0** `/uploads/...?access_token=<JWT>` → auth OK (404 si el archivo no existe).
+- [ ] **P0** En la app: fotos de OT, activos, repuestos y avisos se ven estando logueado.
+- [ ] **P1** Usuario `is_active=false`: deja de usar la API aunque tenga JWT viejo.
+
+### H2 · Rendimiento listados (P0)
+- [ ] **P0** Activos: páginas de 20 + búsqueda; Network muestra `page`/`limit`.
+- [ ] **P0** Repuestos: igual; filtros stock crítico / sin proveedor.
+- [ ] **P1** KPIs → top fallas (`/api/kpis/top-failures`) sin 500.
+
+### H3 · Estabilidad cliente (P1)
+- [ ] **P1** Dos usuarios/pestañas: Inicio no refresca en cascada (debounce sockets).
+- [ ] **P1** Cola offline: un **401** no descarta la petición a la primera; tras re-login reintenta.
+- [ ] **P1** Deploy: build PWA completa (sin error Workbox `NetworkOnly` + timeout).
+
+### H4 · Límites (P2)
+- [ ] **P2** Body JSON ~3 MB rechazado (smoke script).
+- [ ] **P2** Subida de imagen enorme (>12 MB) rechazada en OT/inventario/activos.
+
+**Criterio:** H1 P0 + H2 P0 + smoke script en verde.
+
+---
+
 ## Quién prueba qué
 
 | Ámbito | Agente (browser) | Humano en planta |
