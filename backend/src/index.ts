@@ -139,10 +139,18 @@ app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
   next(err);
 });
 
-/** Errores no capturados → JSON 500 (no tumbar la respuesta a medias). */
+/** Errores no capturados → JSON (respeta status 404 de express.static fallthrough:false). */
 app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
   if (res.headersSent) {
     next(err);
+    return;
+  }
+  const status =
+    typeof err === 'object' && err && 'status' in err
+      ? Number((err as { status?: number }).status)
+      : 0;
+  if (status === 404) {
+    res.status(404).json({ error: 'Archivo no encontrado' });
     return;
   }
   console.error('[GTZ] Unhandled error:', err);

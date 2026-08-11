@@ -4,6 +4,7 @@
 #   BASE_URL=http://127.0.0.1:3000 EMAIL=admin@fiix.com PASS=password123 \
 #     bash ./scripts/smoke-hardening.sh
 #
+# Usa la contraseña REAL del admin (no el placeholder). Tras seed: password123.
 # Códigos: 0 = todo OK · 1 = falló al menos un check P0 · 2 = uso incorrecto
 set -euo pipefail
 
@@ -77,18 +78,35 @@ esac
 TOKEN=""
 if [ -n "$EMAIL" ] && [ -n "$PASS" ]; then
   echo ">>> [4] Login + uploads con token + paginación"
-  LOGIN_JSON="$(curl -fsS --connect-timeout 8 -X POST "${BASE_URL}/api/auth/login" \
-    -H 'Content-Type: application/json' \
-    -d "$(python3 -c "import json; print(json.dumps({'email':'''${EMAIL}''','password':'''${PASS}'''}))")" \
-    || true)"
-  if [ -z "$LOGIN_JSON" ]; then
-    fail "Login falló (sin cuerpo)"
+  if [ "$PASS" = "tu_password" ] || [ "$PASS" = "YOUR_PASSWORD" ]; then
+    fail "PASS parece un placeholder ('${PASS}'). Usa la contraseña real del admin (seed: password123)."
   else
-    TOKEN="$(echo "$LOGIN_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin).get('token') or '')" 2>/dev/null || true)"
-    if [ -n "$TOKEN" ]; then
-      ok "Login OK (JWT recibido)"
+    export EMAIL PASS
+    LOGIN_BODY_FILE="$(mktemp)"
+    LOGIN_CODE="$(curl -s -o "${LOGIN_BODY_FILE}" -w '%{http_code}' --connect-timeout 8 \
+      -X POST "${BASE_URL}/api/auth/login" \
+      -H 'Content-Type: application/json' \
+      -d "$(python3 -c "import json,os; print(json.dumps({'email':os.environ['EMAIL'],'password':os.environ['PASS']}))")" \
+      2>/dev/null || true)"
+    LOGIN_CODE="${LOGIN_CODE:-000}"
+    LOGIN_JSON="$(cat "${LOGIN_BODY_FILE}" 2>/dev/null || true)"
+    rm -f "${LOGIN_BODY_FILE}"
+
+    if [ "$LOGIN_CODE" != "200" ]; then
+      ERR_MSG="$(echo "$LOGIN_JSON" | python3 -c "import json,sys
+try:
+ d=json.load(sys.stdin)
+ print(d.get('error') or d.get('message') or sys.stdin.read()[:120])
+except Exception:
+ print('')" 2>/dev/null || true)"
+      fail "Login HTTP ${LOGIN_CODE}${ERR_MSG:+ — ${ERR_MSG}} (revisa EMAIL/PASS; seed: admin@fiix.com / password123)"
     else
-      fail "Login sin token en respuesta"
+      TOKEN="$(echo "$LOGIN_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin).get('token') or '')" 2>/dev/null || true)"
+      if [ -n "$TOKEN" ]; then
+        ok "Login OK (JWT recibido)"
+      else
+        fail "Login 200 pero sin token en respuesta"
+      fi
     fi
   fi
 
@@ -102,6 +120,7 @@ if [ -n "$EMAIL" ] && [ -n "$PASS" ]; then
       404) ok "/uploads con access_token → 404 (auth OK, archivo inexistente)" ;;
       401|403) fail "/uploads con access_token → ${CODE_AUTH} (token no aceptado)" ;;
       200) warn "/uploads con token → 200 inesperado para archivo inventado" ;;
+      500) fail "/uploads con token → 500 (debería ser 404 si el archivo no existe)" ;;
       *) warn "/uploads con token → HTTP ${CODE_AUTH}" ;;
     esac
 
@@ -184,6 +203,7 @@ PY
 else
   warn "Sin EMAIL/PASS — se omiten checks autenticados (login, paginación, KPI, uploads+token)"
   info "Ejemplo: EMAIL=admin@fiix.com PASS=password123 bash ./scripts/smoke-hardening.sh"
+  info "Importante: PASS debe ser la contraseña real (no 'tu_password')."
 fi
 
 # --- 5. CORS preflight sanity (informativo) ---

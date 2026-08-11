@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.34";
+export const APP_VERSION = "1.56.35";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: /uploads con sesión y archivo inexistente responde 404 (no 500); smoke-hardening aclara errores de login.",
     "Nuevo: Rutina de pruebas del endurecimiento — scripts/smoke-hardening.sh + Fase H en plan_pruebas.md (uploads, Helmet, paginación, KPI).",
     "Corrección: Build PWA — NetworkOnly en /api ya no usa networkTimeoutSeconds (Workbox lo rechazaba y tumba el deploy).",
     "Mejora: Deploy más rápido — npm ci solo si cambió el lockfile; typecheck ya no reinstala el frontend (el gate UI sigue siendo el build).",
