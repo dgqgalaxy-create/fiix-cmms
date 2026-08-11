@@ -1,0 +1,23 @@
+---
+description: Baseline estable v1.56.39 — no romper lo funcional; restaurar si hace falta
+alwaysApply: true
+---
+
+# Baseline estable (protegido)
+
+Hasta que el usuario diga lo contrario, **v1.56.39** es el punto de restauración permanente.
+
+- **Commit:** `036c53a` — `Release v1.56.39: give full failure text room on work-order list PDF.`
+- **Tag:** `v1.56.39-stable`
+- **Rama de respaldo:** `backup/v1.56.39-stable` (no desarrollar encima; solo restaurar)
+
+## Cómo trabajar
+
+- Nuevas mejoras (p. ej. fotos Google Drive/Sheets) van en `main` o ramas de feature.
+- No mezclar refactors ajenos al pedido; no “arreglar de paso” lo que ya funciona en el baseline.
+- Si un cambio rompe comportamiento validado del baseline, revertir o restaurar desde el tag/rama de backup antes de seguir.
+- Restaurar código: `git checkout v1.56.39-stable -- <paths>` o reset/branch desde `backup/v1.56.39-stable` solo con petición explícita del usuario.
+
+## Contexto activo
+
+Prioridad actual: importación de **fotos** vía Google Sheets + Drive (los datos de hoja/BD ya importan; las imágenes no).
