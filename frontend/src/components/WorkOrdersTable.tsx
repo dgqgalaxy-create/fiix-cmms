@@ -101,38 +101,48 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
   }, [workOrders, sortField, sortDirection]);
 
   const statusBadgePrint =
-    'print:gap-0 print:px-1 print:py-0 print:text-[9px] print:rounded print:shadow-none print:leading-tight print:[&_svg]:hidden';
+    'wo-print-status print:gap-0 print:px-0.5 print:py-0 print:text-[7px] print:rounded-sm print:shadow-none print:leading-tight print:[&_svg]:hidden';
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'PENDIENTE':
         return (
           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 shadow-sm ${statusBadgePrint}`}>
-            <Clock size={14} /> Pendiente
+            <Clock size={14} />
+            <span className="print:hidden">Pendiente</span>
+            <span className="hidden print:inline">Pend.</span>
           </span>
         );
       case 'EN_PROCESO':
         return (
           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-blue-100 text-emerald-800 dark:text-emerald-300 border border-blue-200 shadow-sm ${statusBadgePrint}`}>
-            <Wrench size={14} /> En Proceso
+            <Wrench size={14} />
+            <span className="print:hidden">En Proceso</span>
+            <span className="hidden print:inline">Proc.</span>
           </span>
         );
       case 'EN_ESPERA':
         return (
           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-red-100 text-red-800 border border-red-200 shadow-sm ${statusBadgePrint}`}>
-            <AlertCircle size={14} /> En Espera
+            <AlertCircle size={14} />
+            <span className="print:hidden">En Espera</span>
+            <span className="hidden print:inline">Esp.</span>
           </span>
         );
       case 'FINALIZADO':
         return (
           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm ${statusBadgePrint}`}>
-            <CheckCircle2 size={14} /> Finalizado
+            <CheckCircle2 size={14} />
+            <span className="print:hidden">Finalizado</span>
+            <span className="hidden print:inline">Fin.</span>
           </span>
         );
       case 'ANULADO':
         return (
           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-slate-200 text-slate-600 dark:text-slate-400 border border-slate-300 shadow-sm line-through ${statusBadgePrint}`}>
-            <AlertCircle size={14} /> Anulado
+            <AlertCircle size={14} />
+            <span className="print:hidden">Anulado</span>
+            <span className="hidden print:inline">Anul.</span>
           </span>
         );
       default:
@@ -367,10 +377,10 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
           <table className="w-full text-left border-collapse print:text-[9px] print:leading-tight">
             <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold shadow-md shadow-[#739239]/40 dark:shadow-[#739239]/20 relative z-10 print:bg-slate-100 print:shadow-none print:text-[8px] print:tracking-normal">
               <tr>
-                <th className="px-6 py-4 print:px-1.5 print:py-1 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('folio'); setSortDirection(sortField === 'folio' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                <th className="wo-print-col-orden px-6 py-4 print:px-0.5 print:py-0.5 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('folio'); setSortDirection(sortField === 'folio' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
                   <div className="flex items-center gap-1.5">Orden {sortField === 'folio' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 print:hidden"/> : <ChevronDown size={14} className="text-emerald-500 print:hidden"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity print:hidden" />}</div>
                 </th>
-                <th className="px-6 py-4 print:px-1 print:py-1 print:w-[28%] cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('asset'); setSortDirection(sortField === 'asset' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                <th className="wo-print-col-failure px-6 py-4 print:px-0.5 print:py-0.5 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('asset'); setSortDirection(sortField === 'asset' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
                   <div className="flex items-center gap-1.5">
                     <span className="print:hidden">Equipo / Tarea</span>
                     <span className="hidden print:inline">Falla / Equipo</span>
@@ -381,11 +391,15 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                 <th className="px-6 py-4 print:hidden cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('date'); setSortDirection(sortField === 'date' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
                   <div className="flex items-center gap-1.5">Fecha {sortField === 'date' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
                 </th>
-                <th className="hidden print:table-cell print:px-1 print:py-1 whitespace-nowrap">Solicitud</th>
-                <th className="hidden print:table-cell print:px-1 print:py-1 whitespace-nowrap">Inicio</th>
-                <th className="hidden print:table-cell print:px-1 print:py-1 whitespace-nowrap">Fin</th>
-                <th className="px-6 py-4 print:px-1.5 print:py-1 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('status'); setSortDirection(sortField === 'status' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                  <div className="flex items-center gap-1.5">Estado {sortField === 'status' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 print:hidden"/> : <ChevronDown size={14} className="text-emerald-500 print:hidden"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity print:hidden" />}</div>
+                <th className="wo-print-col-date hidden print:table-cell print:px-0.5 print:py-0.5">Sol.</th>
+                <th className="wo-print-col-date hidden print:table-cell print:px-0.5 print:py-0.5">Ini.</th>
+                <th className="wo-print-col-date hidden print:table-cell print:px-0.5 print:py-0.5">Fin</th>
+                <th className="wo-print-col-status px-6 py-4 print:px-0.5 print:py-0.5 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('status'); setSortDirection(sortField === 'status' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">
+                    <span className="print:hidden">Estado</span>
+                    <span className="hidden print:inline">Est.</span>
+                    {sortField === 'status' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 print:hidden"/> : <ChevronDown size={14} className="text-emerald-500 print:hidden"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity print:hidden" />}
+                  </div>
                 </th>
               </tr>
             </thead>
@@ -404,9 +418,9 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                     ? ({ '--wo-photo-url': `url("${mediaUrl(rowPhotoUrl)}")` } as React.CSSProperties)
                     : undefined}
                 >
-                  <td className="px-6 py-4 print:px-1.5 print:py-0.5 align-top print:align-middle whitespace-nowrap">
-                    <div className="flex flex-col gap-1.5 print:gap-0 items-start print:flex-row print:items-center print:gap-1">
-                      <span className="bg-slate-800 dark:bg-slate-700 text-white px-2.5 py-1 print:px-1 print:py-0 rounded-md print:rounded text-xs print:text-[9px] font-bold tracking-wide">
+                  <td className="wo-print-col-orden px-6 py-4 print:px-0.5 print:py-0.5 align-top print:align-top whitespace-nowrap">
+                    <div className="flex flex-col gap-1.5 print:gap-0 items-start">
+                      <span className="bg-slate-800 dark:bg-slate-700 text-white px-2.5 py-1 print:px-0.5 print:py-0 rounded-md print:rounded-sm text-xs print:text-[7.5px] font-bold tracking-wide print:tracking-normal">
                         {formatWorkOrderFolio(wo.folio)}
                       </span>
                       {rowPhotoUrl && (
@@ -428,23 +442,23 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                         </span>
                       )}
                       {wo.priority === 'URGENTE' && (
-                        <span className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-0.5 print:px-0.5 print:py-0 rounded text-[10px] print:text-[8px] font-bold border border-red-100 dark:border-red-800 uppercase tracking-widest flex items-center gap-1 print:gap-0 print:[&_svg]:hidden">
+                        <span className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100 dark:border-red-800 uppercase tracking-widest flex items-center gap-1 print:hidden">
                           <AlertCircle size={10} /> Urgente
                         </span>
                       )}
                       <span className="print:hidden"><SlaBadge sla={wo.sla} compact /></span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 print:px-1 print:py-0.5 align-top print:align-middle print:max-w-[28%]">
+                  <td className="wo-print-col-failure px-6 py-4 print:px-0.5 print:py-0.5 align-top">
                     <div className="flex flex-col gap-1 mb-2 print:gap-0 print:mb-0">
-                      <div className="font-bold text-slate-900 dark:text-slate-100 text-sm print:text-[7.5px] print:font-semibold print:leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      <div className="font-bold text-slate-900 dark:text-slate-100 text-sm print:text-[8px] print:font-semibold print:leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         <span className="print:hidden">{wo.title}</span>
                         <span className="hidden print:inline wo-print-failure">
                           {(wo.description?.trim() || wo.title || '').trim()}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 text-xs print:text-[7.5px] print:gap-1 text-slate-500 dark:text-slate-400 print:leading-tight">
-                        <span className="font-semibold truncate max-w-[28ch] print:max-w-[18ch]">{wo.asset.name}</span>
+                      <div className="flex items-center gap-2 text-xs print:text-[7.5px] print:gap-1 text-slate-500 dark:text-slate-400 print:leading-snug">
+                        <span className="font-semibold truncate max-w-[28ch] print:max-w-none wo-print-asset">{wo.asset.name}</span>
                         {wo.zone?.name && (
                           <>
                             <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 print:hidden" />
@@ -530,16 +544,16 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                       )}
                     </div>
                   </td>
-                  <td className="hidden print:table-cell print:px-1 print:py-0.5 align-middle whitespace-nowrap print:text-[8px]">
+                  <td className="wo-print-col-date hidden print:table-cell print:px-0.5 print:py-0.5 align-top whitespace-nowrap print:text-[7.5px]">
                     {formatPrintDate(wo.created_at)}
                   </td>
-                  <td className="hidden print:table-cell print:px-1 print:py-0.5 align-middle whitespace-nowrap print:text-[8px]">
+                  <td className="wo-print-col-date hidden print:table-cell print:px-0.5 print:py-0.5 align-top whitespace-nowrap print:text-[7.5px]">
                     {formatPrintDate(wo.started_at)}
                   </td>
-                  <td className="hidden print:table-cell print:px-1 print:py-0.5 align-middle whitespace-nowrap print:text-[8px]">
+                  <td className="wo-print-col-date hidden print:table-cell print:px-0.5 print:py-0.5 align-top whitespace-nowrap print:text-[7.5px]">
                     {formatPrintDate(wo.completed_at)}
                   </td>
-                  <td className="px-6 py-4 print:px-1.5 print:py-0.5 align-top print:align-middle text-right print:text-left whitespace-nowrap">
+                  <td className="wo-print-col-status px-6 py-4 print:px-0.5 print:py-0.5 align-top text-right print:text-left whitespace-nowrap">
                     {getStatusBadge(wo.status)}
                   </td>
                 </tr>
