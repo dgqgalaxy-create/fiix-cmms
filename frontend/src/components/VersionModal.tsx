@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.35";
+export const APP_VERSION = "1.56.36";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "10 de Agosto, 2026";
+  const updateDate = "11 de Agosto, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Órdenes — Mis Órdenes sin filtros; pestaña Cerradas (antes Historial) solo Finalizado/Anulado; Vista General solo Pendiente/En proceso/En espera. Asignar personal funciona offline con caché de usuarios.",
     "Corrección: /uploads con sesión y archivo inexistente responde 404 (no 500); smoke-hardening aclara errores de login.",
     "Nuevo: Rutina de pruebas del endurecimiento — scripts/smoke-hardening.sh + Fase H en plan_pruebas.md (uploads, Helmet, paginación, KPI).",
     "Corrección: Build PWA — NetworkOnly en /api ya no usa networkTimeoutSeconds (Workbox lo rechazaba y tumba el deploy).",

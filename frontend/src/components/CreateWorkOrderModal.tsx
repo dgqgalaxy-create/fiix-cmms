@@ -333,7 +333,11 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
               ) : (
                 <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2">
                   {technicians.length === 0 ? (
-                    <div className="text-sm text-slate-500 dark:text-slate-400 italic">No hay personal disponible</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400 italic">
+                      {navigator.onLine
+                        ? 'No hay personal disponible'
+                        : 'Sin personal en caché. Conéctate una vez para cargar la lista.'}
+                    </div>
                   ) : (
                     technicians.map((tech) => (
                       <label key={tech.id} className="flex items-center gap-3 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-lg cursor-pointer transition-colors">

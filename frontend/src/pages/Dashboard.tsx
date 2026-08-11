@@ -107,8 +107,22 @@ export const Dashboard = () => {
     return {};
   };
 
+  const clearListFilters = () => {
+    setDateFilter('ALL');
+    setCustomStartDate(firstDayOfMonthYmd());
+    setCustomEndDate(todayYmd());
+    setPriorityFilter('ALL');
+    setAssetFilter('ALL');
+    setRequesterFilter('ALL');
+    setSearchTerm('');
+    setStatusFilter(null);
+    setUnassignedFilter(false);
+    setSlaFilter(null);
+    setSortOrder('NEWEST');
+  };
+
   const buildListParams = (opts?: { page?: number; limit?: number }): WorkOrderListParams => {
-    const range = dateFilterToRange();
+    const range = activeTab === 'MIS_ORDENES' ? {} : dateFilterToRange();
     return {
       tab:
         activeTab === 'HISTORIAL'
@@ -116,14 +130,22 @@ export const Dashboard = () => {
           : activeTab === 'MIS_ORDENES'
             ? 'mine'
             : 'active',
-      status: statusFilter || undefined,
-      priority: priorityFilter !== 'ALL' ? priorityFilter : undefined,
-      unassigned: unassignedFilter || undefined,
-      q: searchTerm.trim() || undefined,
-      requester: requesterFilter !== 'ALL' ? requesterFilter : undefined,
+      status: activeTab === 'MIS_ORDENES' ? undefined : statusFilter || undefined,
+      priority:
+        activeTab === 'MIS_ORDENES' || priorityFilter === 'ALL' ? undefined : priorityFilter,
+      unassigned: activeTab === 'MIS_ORDENES' ? undefined : unassignedFilter || undefined,
+      q: activeTab === 'MIS_ORDENES' ? undefined : searchTerm.trim() || undefined,
+      requester:
+        activeTab === 'MIS_ORDENES' || requesterFilter === 'ALL' ? undefined : requesterFilter,
       ...range,
       sort:
-        sortOrder === 'NEWEST' ? 'newest' : sortOrder === 'OLDEST' ? 'oldest' : 'priority',
+        activeTab === 'MIS_ORDENES'
+          ? 'newest'
+          : sortOrder === 'NEWEST'
+            ? 'newest'
+            : sortOrder === 'OLDEST'
+              ? 'oldest'
+              : 'priority',
       ...(opts?.page != null || opts?.limit != null
         ? { page: opts.page ?? 1, limit: opts.limit ?? HISTORY_PER_PAGE }
         : {}),
@@ -161,12 +183,21 @@ export const Dashboard = () => {
     }
     if (tab === 'history' || tab === 'HISTORIAL') {
       setActiveTab('HISTORIAL');
-      setStatusFilter(null);
+      if (status === 'FINALIZADO' || status === 'ANULADO') setStatusFilter(status);
+      else setStatusFilter(null);
       return;
     }
     if (tab === 'all' || tab === 'ACTIVAS') {
       setActiveTab(hasPermission('VIEW_ALL_WORK_ORDERS') ? 'ACTIVAS' : 'MIS_ORDENES');
-      setStatusFilter(null);
+      if (
+        status === 'PENDIENTE' ||
+        status === 'EN_PROCESO' ||
+        status === 'EN_ESPERA'
+      ) {
+        setStatusFilter(status);
+      } else {
+        setStatusFilter(null);
+      }
       return;
     }
 
@@ -576,46 +607,62 @@ export const Dashboard = () => {
                 <button 
                   onClick={() => {
                     setActiveTab('ACTIVAS');
-                    setStatusFilter(null);
+                    clearListFilters();
                     const next = new URLSearchParams(searchParams);
                     next.set('tab', 'all');
+                    next.delete('status');
+                    next.delete('q');
+                    next.delete('priority');
+                    next.delete('unassigned');
+                    next.delete('sla');
                     setSearchParams(next, { replace: true });
                   }}
                   className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-1 ${activeTab === 'ACTIVAS' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
                 >
                   Vista General
-                  <InfoTip text="Muestra todas las órdenes de trabajo activas y pendientes de toda la planta." label="Ayuda: Vista General" />
+                  <InfoTip text="Órdenes abiertas de toda la planta: Pendiente, En proceso y En espera." label="Ayuda: Vista General" />
                 </button>
               )}
               <button 
                 onClick={() => {
                   setActiveTab('MIS_ORDENES');
-                  setStatusFilter(null);
+                  clearListFilters();
                   const next = new URLSearchParams(searchParams);
                   next.set('tab', 'mine');
+                  next.delete('status');
+                  next.delete('q');
+                  next.delete('priority');
+                  next.delete('unassigned');
+                  next.delete('sla');
                   setSearchParams(next, { replace: true });
                 }}
                 className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-1 ${activeTab === 'MIS_ORDENES' ? 'bg-amber-100 text-amber-800 shadow-sm border border-amber-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
               >
                 Mis Órdenes
-                <InfoTip text="Muestra únicamente las órdenes de trabajo activas que te han sido asignadas." label="Ayuda: Mis Órdenes" />
+                <InfoTip text="Solo tus órdenes abiertas asignadas. Sin filtros: lista directa." label="Ayuda: Mis Órdenes" />
               </button>
               <button 
                 onClick={() => {
                   setActiveTab('HISTORIAL');
-                  setStatusFilter(null);
+                  clearListFilters();
                   const next = new URLSearchParams(searchParams);
                   next.set('tab', 'history');
+                  next.delete('status');
+                  next.delete('q');
+                  next.delete('priority');
+                  next.delete('unassigned');
+                  next.delete('sla');
                   setSearchParams(next, { replace: true });
                 }}
                 className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-1 ${activeTab === 'HISTORIAL' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
               >
-                Historial
-                <InfoTip text="Archivo histórico: muestra exclusivamente órdenes ya finalizadas o anuladas." label="Ayuda: Historial" />
+                Cerradas
+                <InfoTip text="Órdenes Finalizadas o Anuladas (archivo de cierre)." label="Ayuda: Cerradas" />
               </button>
             </div>
             
             <div className="relative w-full md:w-auto flex flex-col md:flex-row gap-2">
+              {activeTab !== 'MIS_ORDENES' && (
               <div className="relative flex-1 min-w-[240px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
@@ -626,8 +673,9 @@ export const Dashboard = () => {
                   className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm"
                 />
               </div>
+              )}
               <div className="flex gap-2 flex-wrap">
-                {canBulkAssign && (
+                {canBulkAssign && activeTab !== 'HISTORIAL' && (
                   <button
                     type="button"
                     onClick={() => setIsBulkAssignOpen(true)}
@@ -637,6 +685,8 @@ export const Dashboard = () => {
                     Asignar…
                   </button>
                 )}
+                {activeTab !== 'MIS_ORDENES' && (
+                <>
                 <button
                   onClick={handleExportExcel}
                   title="Exportar a Excel (.xlsx)"
@@ -661,10 +711,84 @@ export const Dashboard = () => {
                   <Download size={16} />
                   PDF
                 </button>
+                </>
+                )}
               </div>
             </div>
           </div>
 
+          {activeTab === 'MIS_ORDENES' ? (
+            <div className="min-w-0">
+              <WorkOrdersTable 
+                workOrders={displayList} 
+                onRowClick={openWorkOrderDetail}
+                onAssignClick={canQuickActions ? handleAssignClick : undefined}
+                onScheduleClick={canQuickSchedule ? handleScheduleClick : undefined}
+              />
+              {historyTotal > HISTORY_PER_PAGE && (
+                <div className="flex items-center justify-between bg-white dark:bg-slate-900 px-4 py-3 sm:px-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mt-4 print:hidden">
+                  <div className="flex flex-1 justify-between sm:hidden">
+                    <button
+                      type="button"
+                      onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                      disabled={historyPage <= 1}
+                      className="relative inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      Anterior
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHistoryPage((p) => Math.min(historyTotalPages, p + 1))}
+                      disabled={historyPage >= historyTotalPages}
+                      className="relative ml-3 inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                  <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                    <p className="text-sm text-slate-700 dark:text-slate-300">
+                      Mostrando{' '}
+                      <span className="font-medium">
+                        {historyTotal === 0 ? 0 : (historyPage - 1) * HISTORY_PER_PAGE + 1}
+                      </span>{' '}
+                      a{' '}
+                      <span className="font-medium">
+                        {Math.min(historyPage * HISTORY_PER_PAGE, historyTotal)}
+                      </span>{' '}
+                      de <span className="font-medium">{historyTotal}</span>
+                    </p>
+                    <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm" aria-label="Pagination">
+                      <button
+                        type="button"
+                        onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                        disabled={historyPage <= 1}
+                        className="relative inline-flex items-center rounded-l-xl px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 disabled:opacity-50"
+                      >
+                        <span className="sr-only">Anterior</span>
+                        <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-slate-900 ring-1 ring-inset ring-slate-300">
+                        {historyPage} / {historyTotalPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setHistoryPage((p) => Math.min(historyTotalPages, p + 1))}
+                        disabled={historyPage >= historyTotalPages}
+                        className="relative inline-flex items-center rounded-r-xl px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 disabled:opacity-50"
+                      >
+                        <span className="sr-only">Siguiente</span>
+                        <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </nav>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
           <FilterScopeFrame
             title="Listado filtrado"
             icon={Filter}
@@ -759,13 +883,6 @@ export const Dashboard = () => {
                 const params = new URLSearchParams(searchParams);
                 if (value) {
                   params.set('status', value);
-                  if (value === 'FINALIZADO' || value === 'ANULADO') {
-                    setActiveTab('HISTORIAL');
-                    params.set('tab', 'history');
-                  } else {
-                    setActiveTab(hasPermission('VIEW_ALL_WORK_ORDERS') ? 'ACTIVAS' : 'MIS_ORDENES');
-                    params.set('tab', hasPermission('VIEW_ALL_WORK_ORDERS') ? 'all' : 'mine');
-                  }
                 } else {
                   params.delete('status');
                 }
@@ -774,27 +891,26 @@ export const Dashboard = () => {
               className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
               title="Filtrar por estado"
             >
-              <option value="ALL">Todos los estados</option>
-              <option value="PENDIENTE">Pendiente</option>
-              <option value="EN_PROCESO">En proceso</option>
-              <option value="EN_ESPERA">En espera</option>
-              <option value="FINALIZADO">Finalizado</option>
-              <option value="ANULADO">Anulado</option>
+              {activeTab === 'HISTORIAL' ? (
+                <>
+                  <option value="ALL">Todos (finalizadas y anuladas)</option>
+                  <option value="FINALIZADO">Finalizado</option>
+                  <option value="ANULADO">Anulado</option>
+                </>
+              ) : (
+                <>
+                  <option value="ALL">Todos (pendiente, proceso, espera)</option>
+                  <option value="PENDIENTE">Pendiente</option>
+                  <option value="EN_PROCESO">En proceso</option>
+                  <option value="EN_ESPERA">En espera</option>
+                </>
+              )}
             </select>
 
             {(dateFilter !== 'ALL' || priorityFilter !== 'ALL' || assetFilter !== 'ALL' || requesterFilter !== 'ALL' || searchTerm !== '' || statusFilter !== null || unassignedFilter || slaFilter) && (
               <button 
                 onClick={() => {
-                  setDateFilter('ALL');
-                  setCustomStartDate(firstDayOfMonthYmd());
-                  setCustomEndDate(todayYmd());
-                  setPriorityFilter('ALL');
-                  setAssetFilter('ALL');
-                  setRequesterFilter('ALL');
-                  setSearchTerm('');
-                  setStatusFilter(null);
-                  setUnassignedFilter(false);
-                  setSlaFilter(null);
+                  clearListFilters();
                   const next = new URLSearchParams(searchParams);
                   next.delete('status');
                   next.delete('q');
@@ -935,6 +1051,7 @@ export const Dashboard = () => {
               </div>
             )}
           </FilterScopeFrame>
+          )}
         </div>
       )}
 

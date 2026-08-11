@@ -5,6 +5,9 @@
 
 **Prioridades:** **P0** bloqueante producción · **P1** importante · **P2** nice-to-have
 
+> **Nota:** El canvas *hardening-test-routine* (14 ítems) valida solo el **endurecimiento v1.56.26+**. Este documento es el **plan completo de release** (login, OT, inventario, roles, offline, etc.): no es obligatorio repetirlo tras cada smoke de seguridad; úsalo como gate de release o tras cambios grandes.
+
+
 ---
 
 ## Recomendación de ejecución

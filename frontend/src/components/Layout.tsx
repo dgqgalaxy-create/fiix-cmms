@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
-import { sendHeartbeat } from '../api/users';
+import { sendHeartbeat, getUsers } from '../api/users';
 import { Menu, Wifi, WifiOff, Info, Search } from 'lucide-react';
 import { NotificationsBell } from './NotificationsBell';
 import { VersionModal, APP_VERSION } from './VersionModal';
@@ -23,6 +23,13 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
   const isWidePage = location.pathname.startsWith('/calendar') || location.pathname.startsWith('/roster');
+
+  useEffect(() => {
+    // Prefetch personal para asignación OT offline (caché en localStorage).
+    if (navigator.onLine) {
+      getUsers().catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     const beat = () => {

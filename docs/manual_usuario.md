@@ -1,5 +1,5 @@
 # Manual de Usuario - GTZ CMMS
-*(Versión 1.56.35 - 11 de Agosto, 2026)*
+*(Versión 1.56.36 - 11 de Agosto, 2026)*
 
 Este manual se mantiene alineado con cada release de la app (misma versión que `package.json` y el modal de novedades).
 
@@ -31,6 +31,7 @@ En celular, el temario del manual aparece como una barra horizontal deslizable. 
 - **Comentarios en OT:** En el detalle de una orden, sección **Comentarios**. Quien pueda abrir la OT puede leer y escribir (texto + adjunto opcional). Los comentarios se actualizan en vivo si el modal está abierto; se notifica a asignados y creador. En el **listado de Órdenes** verás un contador y un adelanto del comentario más reciente (sin abrir el detalle).
 - **Notas y pendientes:** En el menú lateral (con contador de abiertos) y tarjeta en **Inicio**. **Mis notas** son privadas (solo tú). **Pendientes operativos** solo los crean/editan **Administrador** y **Gestionador** (pueden asignarlos a técnicos u otros). El **técnico** asignado solo los ve y puede **completarlos** (sin editar ni eliminar). Ligados opcionalmente a OT o activo. Recordatorio: in-app + push (no Telegram).
 - **Bitácora de auditoría:** Solo **Administrador**, en Opciones de Desarrollador. El histórico se guarda **sin límite** en la base de datos. En pantalla verás los últimos 50 eventos; puedes **descargar Excel** filtrando por fechas (Desde/Hasta, día México) o el **histórico completo**.
+- **Asignación offline:** Si ya entraste a la app con red al menos una vez, al quedar offline la lista de técnicos/gestionadores para asignar una OT sigue disponible (caché local).
 - **Tiempo real:** Los listados y catálogos se actualizan casi al momento cuando otro usuario crea, edita o elimina datos (órdenes, inventario, activos, compras, checklist, turnos, RCA, zonas, usuarios, etc.). No hace falta pulsar F5.
 - **Edición concurrente de OT:** Si abres una orden de trabajo, eres el editor. Quien abra la misma orden después la verá en **solo lectura** con el mensaje «En edición por {nombre}». Al cerrar el detalle (o si se pierde la conexión ~40 s), otro puede tomarla. Si dos intentan aceptar la misma orden a la vez, el segundo recibe un aviso de conflicto y debe recargar.
 - **Folios FOL-####:** Cada orden recibe un folio automático e inmutable (`FOL-0001`, `FOL-0002`…). No se edita. En importación CSV se usa la columna `FOLIO` (acepta `FOL-####` o el número).
@@ -109,8 +110,8 @@ Avisos del sistema operativo aunque la pestaña esté en segundo plano (nuevas O
 ## 5. Módulo de Órdenes de Trabajo
 
 Gestión de solicitudes (listado), sin el resumen gráfico:
-- **Vistas:** Vista General, Mis Órdenes e Historial.
-- **Paginación:** Vista General, Mis Órdenes e Historial paginan en el **servidor** (20 por página).
+- **Vistas:** **Vista General** (abiertas de planta: Pendiente / En proceso / En espera), **Mis Órdenes** (solo las tuyas, sin filtros) y **Cerradas** (Finalizado / Anulado).
+- **Paginación:** las tres pestañas paginan en el **servidor** (20 por página).
 - **Búsqueda y filtros** por estado, fecha, prioridad, equipo, **solicitante**, **zona** (barra «Buscar equipo, folio, zona…») y ordenamiento.
 - **Acciones rápidas en tarjetas (Admin / Gestionador):** Si la OT no tiene personal, toca **Sin asignar** para abrir el detalle enfocado en **Personal asignado**. El icono de **calendario** (tarjeta o columna Fecha) abre **Calendario** con esa OT lista para agendar. Los técnicos ven las etiquetas solo informativas.
 - **Exportar:** Excel/CSV/PDF (**Carta** horizontal, tipografía compacta ~14–18 filas/hoja). Incluyen **Falla** (hasta 2 líneas en PDF), **Solicitante**, **Tipo** y **Paro máquina**; mismos filtros que la tabla.

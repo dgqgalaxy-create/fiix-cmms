@@ -13,6 +13,31 @@ export interface User {
   must_change_password?: boolean;
 }
 
+const USERS_CACHE_KEY = 'fiix_users_cache_v1';
+
+function readUsersCache(): User[] | null {
+  try {
+    const raw = localStorage.getItem(USERS_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { users?: User[]; at?: number };
+    if (!Array.isArray(parsed?.users)) return null;
+    return parsed.users;
+  } catch {
+    return null;
+  }
+}
+
+function writeUsersCache(users: User[]) {
+  try {
+    localStorage.setItem(
+      USERS_CACHE_KEY,
+      JSON.stringify({ users, at: Date.now() })
+    );
+  } catch {
+    /* quota / private mode */
+  }
+}
+
 export const sendHeartbeat = async (path?: string): Promise<void> => {
   await api.post('/users/heartbeat', path ? { path } : {});
 };
@@ -22,10 +47,29 @@ export const getOnlineUsers = async (): Promise<User[]> => {
   return response.data;
 };
 
+/**
+ * Lista de usuarios. En offline (o fallo de red) usa la última lista
+ * guardada en localStorage para poder asignar OT sin conexión.
+ */
 export const getUsers = async (role?: string): Promise<User[]> => {
   const url = role ? `/users?role=${role}` : '/users';
-  const response = await api.get(url);
-  return response.data;
+  try {
+    const response = await api.get(url);
+    const users = response.data as User[];
+    if (Array.isArray(users) && !role) {
+      writeUsersCache(users);
+    }
+    return users;
+  } catch (err) {
+    const cached = readUsersCache();
+    if (cached && cached.length > 0) {
+      if (role) {
+        return cached.filter((u) => u.role === role);
+      }
+      return cached;
+    }
+    throw err;
+  }
 };
 
 export const createUser = async (data: any): Promise<User> => {
