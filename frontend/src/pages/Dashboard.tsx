@@ -675,7 +675,7 @@ export const Dashboard = () => {
               </div>
               )}
               <div className="flex gap-2 flex-wrap">
-                {canBulkAssign && activeTab !== 'HISTORIAL' && (
+                {canBulkAssign && activeTab === 'ACTIVAS' && (
                   <button
                     type="button"
                     onClick={() => setIsBulkAssignOpen(true)}
