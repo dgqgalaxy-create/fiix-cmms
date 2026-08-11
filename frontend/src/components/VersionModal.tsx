@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.37";
+export const APP_VERSION = "1.56.38";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: PDF del listado de Órdenes muestra fechas de Solicitud, Inicio y Fin (Falla/Equipo más compacta).",
     "Corrección: En Mis Órdenes ya no aparece el botón Asignar… (solo en Vista General).",
     "Mejora: Órdenes — Mis Órdenes sin filtros; pestaña Cerradas (antes Historial) solo Finalizado/Anulado; Vista General solo Pendiente/En proceso/En espera. Asignar personal funciona offline con caché de usuarios.",
     "Corrección: /uploads con sesión y archivo inexistente responde 404 (no 500); smoke-hardening aclara errores de login.",

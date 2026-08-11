@@ -43,6 +43,22 @@ const formatFriendlyDate = (dateString: string) => {
   }
 };
 
+/** Fechas compactas para listado PDF (dd/mm/aa). */
+const formatPrintDate = (dateString?: string | null) => {
+  if (!dateString) return '—';
+  try {
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+    });
+  } catch {
+    return '—';
+  }
+};
+
 const commentPreview = (wo: WorkOrder) => {
   const n = wo.comments_count || 0;
   if (n <= 0 || !wo.latest_comment) return null;
@@ -354,7 +370,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                 <th className="px-6 py-4 print:px-1.5 print:py-1 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('folio'); setSortDirection(sortField === 'folio' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
                   <div className="flex items-center gap-1.5">Orden {sortField === 'folio' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 print:hidden"/> : <ChevronDown size={14} className="text-emerald-500 print:hidden"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity print:hidden" />}</div>
                 </th>
-                <th className="px-6 py-4 print:px-1.5 print:py-1 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('asset'); setSortDirection(sortField === 'asset' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                <th className="px-6 py-4 print:px-1 print:py-1 print:w-[28%] cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('asset'); setSortDirection(sortField === 'asset' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
                   <div className="flex items-center gap-1.5">
                     <span className="print:hidden">Equipo / Tarea</span>
                     <span className="hidden print:inline">Falla / Equipo</span>
@@ -362,9 +378,12 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                   </div>
                 </th>
                 <th className="px-6 py-4 print:hidden">Técnicos</th>
-                <th className="px-6 py-4 print:px-1.5 print:py-1 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('date'); setSortDirection(sortField === 'date' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                  <div className="flex items-center gap-1.5">Fecha {sortField === 'date' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 print:hidden"/> : <ChevronDown size={14} className="text-emerald-500 print:hidden"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity print:hidden" />}</div>
+                <th className="px-6 py-4 print:hidden cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('date'); setSortDirection(sortField === 'date' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                  <div className="flex items-center gap-1.5">Fecha {sortField === 'date' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
                 </th>
+                <th className="hidden print:table-cell print:px-1 print:py-1 whitespace-nowrap">Solicitud</th>
+                <th className="hidden print:table-cell print:px-1 print:py-1 whitespace-nowrap">Inicio</th>
+                <th className="hidden print:table-cell print:px-1 print:py-1 whitespace-nowrap">Fin</th>
                 <th className="px-6 py-4 print:px-1.5 print:py-1 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('status'); setSortDirection(sortField === 'status' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
                   <div className="flex items-center gap-1.5">Estado {sortField === 'status' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 print:hidden"/> : <ChevronDown size={14} className="text-emerald-500 print:hidden"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity print:hidden" />}</div>
                 </th>
@@ -416,16 +435,16 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                       <span className="print:hidden"><SlaBadge sla={wo.sla} compact /></span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 print:px-1.5 print:py-0.5 align-top print:align-middle">
+                  <td className="px-6 py-4 print:px-1 print:py-0.5 align-top print:align-middle print:max-w-[28%]">
                     <div className="flex flex-col gap-1 mb-2 print:gap-0 print:mb-0">
-                      <div className="font-bold text-slate-900 dark:text-slate-100 text-sm print:text-[8px] print:font-semibold print:leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      <div className="font-bold text-slate-900 dark:text-slate-100 text-sm print:text-[7.5px] print:font-semibold print:leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         <span className="print:hidden">{wo.title}</span>
                         <span className="hidden print:inline wo-print-failure">
                           {(wo.description?.trim() || wo.title || '').trim()}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 text-xs print:text-[8px] print:gap-1 text-slate-500 dark:text-slate-400 print:leading-tight">
-                        <span className="font-semibold truncate max-w-[28ch] print:max-w-[36ch]">{wo.asset.name}</span>
+                      <div className="flex items-center gap-2 text-xs print:text-[7.5px] print:gap-1 text-slate-500 dark:text-slate-400 print:leading-tight">
+                        <span className="font-semibold truncate max-w-[28ch] print:max-w-[18ch]">{wo.asset.name}</span>
                         {wo.zone?.name && (
                           <>
                             <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 print:hidden" />
@@ -475,11 +494,11 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                       <span className="text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400 italic">Sin asignar</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 print:px-1.5 print:py-0.5 align-top print:align-middle whitespace-nowrap">
+                  <td className="px-6 py-4 print:hidden align-top whitespace-nowrap">
                     <div
-                      className={`flex flex-col gap-1.5 print:gap-0 ${
+                      className={`flex flex-col gap-1.5 ${
                         onScheduleClick
-                          ? 'cursor-pointer rounded-lg -mx-1 px-1 py-0.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors print:pointer-events-none'
+                          ? 'cursor-pointer rounded-lg -mx-1 px-1 py-0.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors'
                           : ''
                       }`}
                       onClick={onScheduleClick ? (e) => {
@@ -497,19 +516,28 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                       } : undefined}
                       title={onScheduleClick ? 'Agendar en calendario' : undefined}
                     >
-                      <div className="flex items-center gap-1.5 text-xs print:text-[9px] print:gap-0.5">
-                        <Calendar size={12} className={`${onScheduleClick ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'} print:hidden`} />
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <Calendar size={12} className={onScheduleClick ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'} />
                         <span className="text-slate-700 dark:text-slate-200 dark:text-slate-300">
                           {wo.scheduled_date ? formatFriendlyDate(wo.scheduled_date) : '-'}
                         </span>
                       </div>
                       {wo.due_date && (
-                        <div className={`flex items-center gap-1.5 text-xs print:hidden ${new Date(wo.due_date) < new Date() && wo.status !== 'FINALIZADO' ? 'text-red-600 dark:text-red-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+                        <div className={`flex items-center gap-1.5 text-xs ${new Date(wo.due_date) < new Date() && wo.status !== 'FINALIZADO' ? 'text-red-600 dark:text-red-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
                           <AlertCircle size={12} />
                           <span>Límite: {formatFriendlyDate(wo.due_date)}</span>
                         </div>
                       )}
                     </div>
+                  </td>
+                  <td className="hidden print:table-cell print:px-1 print:py-0.5 align-middle whitespace-nowrap print:text-[8px]">
+                    {formatPrintDate(wo.created_at)}
+                  </td>
+                  <td className="hidden print:table-cell print:px-1 print:py-0.5 align-middle whitespace-nowrap print:text-[8px]">
+                    {formatPrintDate(wo.started_at)}
+                  </td>
+                  <td className="hidden print:table-cell print:px-1 print:py-0.5 align-middle whitespace-nowrap print:text-[8px]">
+                    {formatPrintDate(wo.completed_at)}
                   </td>
                   <td className="px-6 py-4 print:px-1.5 print:py-0.5 align-top print:align-middle text-right print:text-left whitespace-nowrap">
                     {getStatusBadge(wo.status)}

@@ -230,6 +230,7 @@ body {
     overflow: hidden !important;
     white-space: normal !important;
     max-height: 2.4em !important;
+    max-width: 18ch;
   }
 
   .rbc-btn-group {
