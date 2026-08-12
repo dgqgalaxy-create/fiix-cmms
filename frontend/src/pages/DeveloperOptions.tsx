@@ -880,6 +880,12 @@ export const DeveloperOptions = () => {
           if (prog.data.message) {
             setLoadingMessage(prog.data.message);
           }
+          // El POST puede tardar en cerrar (limpieza / proxy); no dejes el modal bloqueado.
+          if (prog.data.phase === 'done' || prog.data.phase === 'error') {
+            setLoadingMessage(null);
+            setImportLiveProgress(null);
+            setIsLoading(false);
+          }
         }
       } catch {
         // El POST principal sigue; el poll es solo visual.
@@ -2020,6 +2026,17 @@ export const DeveloperOptions = () => {
                   )}
               </div>
             )}
+            <button
+              type="button"
+              className="mt-5 text-sm font-semibold text-slate-500 underline hover:text-slate-800 dark:hover:text-slate-200"
+              onClick={() => {
+                setLoadingMessage(null);
+                setImportLiveProgress(null);
+                setIsLoading(false);
+              }}
+            >
+              Cerrar esta ventana
+            </button>
           </div>
         </div>
       )}

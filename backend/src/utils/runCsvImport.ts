@@ -859,10 +859,15 @@ if (woZipFile?.path && woPhotoMappings.length > 0) {
   };
 }
 } finally {
-  rmTempDirSafe(driveItemsTemp);
-  rmTempDirSafe(driveWoTemp);
+  // La limpieza de /tmp puede tardar minutos con miles de fotos; no bloquear
+  // el «done» ni la respuesta HTTP (el modal del cliente se quedaba colgado).
+  const itemsTmp = driveItemsTemp;
+  const woTmp = driveWoTemp;
+  setImmediate(() => {
+    rmTempDirSafe(itemsTmp);
+    rmTempDirSafe(woTmp);
+  });
 }
-
 
   emitRefresh('refresh_work_orders');
   emitRefresh('refresh_inventory');
