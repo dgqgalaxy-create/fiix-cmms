@@ -19,17 +19,18 @@ import {
   GoogleSheetsError,
 } from '../utils/googleSheetsClient';
 import {
+  getDriveApiKey,
+  getDriveItemsFolderId,
+  getDriveWoFolderId,
+} from '../utils/googleDriveImport';
+import { getImportProgress, setImportProgress, resetImportProgress } from '../utils/importProgress';
+import {
   DEV_PASSWORD_CODES,
   DEV_PASSWORD_MAX_ATTEMPTS,
   clearDevPasswordFailures,
   getDevPasswordGateStatus,
   recordDevPasswordFailure,
 } from '../utils/devPasswordGate';
-import {
-  getDriveApiKey,
-  getDriveItemsFolderId,
-  getDriveWoFolderId,
-} from '../utils/googleDriveImport';
 
 const router = express.Router();
 
@@ -519,17 +520,21 @@ router.post(
 /** Importa las 7 pestañas mapeadas desde Google Sheets (mismo motor que CSV). */
 router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
   const tempPaths: string[] = [];
+  resetImportProgress();
+  setImportProgress('sheets', 5, 'Leyendo pestañas de Google Sheets…');
   try {
     fs.mkdirSync(importTmpDir, { recursive: true });
     const tabs = await fetchAllImportTabs();
     const nonEmpty = tabs.filter((t) => t.records.length > 0);
     if (nonEmpty.length === 0) {
+      setImportProgress('error', 0, 'Hojas vacías o sin filas', { active: false });
       res.status(400).json({
         message:
           'Las pestañas de Google Sheets están vacías o no se pudieron leer filas de datos.',
       });
       return;
     }
+    setImportProgress('sheets', 15, `Sheets leídos (${nonEmpty.length} pestañas). Preparando import…`);
     const files = nonEmpty.map((tab) => {
       const csv = recordsToCsv(tab.records);
       const originalname = `Items - ${tab.filenameToken}.csv`;
@@ -561,8 +566,10 @@ router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Respo
         sheetTitle: t.sheetTitle,
         rows: t.records.length,
       })),
+      progress: getImportProgress(),
     });
   } catch (error: any) {
+    setImportProgress('error', 0, error?.message || 'Error en importación', { active: false });
     if (error instanceof GoogleSheetsError) {
       res.status(error.status).json({ message: error.message });
       return;
@@ -593,6 +600,11 @@ router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Respo
       }
     }
   }
+});
+
+/** Progreso de import CSV/Sheets/Drive (poll mientras corre el POST). */
+router.get('/import-progress', verifyDevPassword, (_req: Request, res: Response): void => {
+  res.json(getImportProgress());
 });
 
 /** Estado de Google Drive (nunca expone la API key). */

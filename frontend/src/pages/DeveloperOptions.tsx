@@ -120,6 +120,14 @@ export const DeveloperOptions = () => {
     woFolderConfigured: boolean;
   } | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [importLiveProgress, setImportLiveProgress] = useState<{
+    percent: number;
+    message: string;
+    downloaded?: number;
+    total?: number;
+    listed?: number;
+    phase?: string;
+  } | null>(null);
   const [auditOpen, setAuditOpen] = useState(false);
   const [auditLogs, setAuditLogs] = useState<AuditLogRow[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
@@ -850,8 +858,34 @@ export const DeveloperOptions = () => {
         ? 'Leyendo Google Sheets y fotos de Drive. Puede tardar...'
         : 'Leyendo Google Sheets e importando. Puede tardar unos minutos...'
     );
+    setImportLiveProgress({ percent: 2, message: 'Iniciando importación…' });
     setError(null);
     setSuccessMsg(null);
+
+    const pollId = window.setInterval(async () => {
+      try {
+        const prog = await axios.get('/dev/import-progress', {
+          headers: { 'x-dev-password': password },
+          timeout: 8000,
+        });
+        if (prog.data && typeof prog.data.percent === 'number') {
+          setImportLiveProgress({
+            percent: prog.data.percent,
+            message: prog.data.message || '',
+            downloaded: prog.data.downloaded,
+            total: prog.data.total,
+            listed: prog.data.listed,
+            phase: prog.data.phase,
+          });
+          if (prog.data.message) {
+            setLoadingMessage(prog.data.message);
+          }
+        }
+      } catch {
+        // El POST principal sigue; el poll es solo visual.
+      }
+    }, 800);
+
     try {
       const res = await axios.post(
         '/dev/import-sheets',
@@ -862,6 +896,16 @@ export const DeveloperOptions = () => {
         }
       );
       const results = res.data.results;
+      if (res.data?.progress?.message) {
+        setImportLiveProgress({
+          percent: res.data.progress.percent ?? 100,
+          message: res.data.progress.message,
+          downloaded: res.data.progress.downloaded,
+          total: res.data.progress.total,
+          listed: res.data.progress.listed,
+          phase: res.data.progress.phase,
+        });
+      }
       setSuccessMsg(formatImportResultsMessage(results, 'Google Sheets importados'));
       setTimeout(() => setSuccessMsg(null), 15000);
     } catch (err: unknown) {
@@ -882,8 +926,10 @@ export const DeveloperOptions = () => {
       }
       setError(`Fallo al importar desde Google Sheets: ${detail}`);
     } finally {
+      window.clearInterval(pollId);
       setIsLoading(false);
       setLoadingMessage(null);
+      setImportLiveProgress(null);
     }
   };
 
@@ -1939,19 +1985,39 @@ export const DeveloperOptions = () => {
       {/* Loading Modal */}
       {loadingMessage && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-md w-full shadow-2xl flex flex-col items-center text-center border border-slate-200 dark:border-slate-700">
             <div className="w-16 h-16 border-4 border-emerald-200 dark:border-emerald-900 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
             <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Procesando...</h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm">{loadingMessage}</p>
-            {uploadProgress !== null && (
+            {(importLiveProgress || uploadProgress !== null) && (
               <div className="mt-4 w-full">
-                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                   <div
                     className="h-full rounded-full bg-emerald-500 transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
+                    style={{
+                      width: `${
+                        importLiveProgress
+                          ? Math.max(2, Math.min(100, importLiveProgress.percent))
+                          : uploadProgress ?? 0
+                      }%`,
+                    }}
                   />
                 </div>
-                <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">{uploadProgress}%</p>
+                <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                  {importLiveProgress
+                    ? `${importLiveProgress.percent}%`
+                    : `${uploadProgress}%`}
+                </p>
+                {importLiveProgress &&
+                  typeof importLiveProgress.total === 'number' &&
+                  importLiveProgress.total > 0 && (
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      Fotos: {importLiveProgress.downloaded ?? 0} / {importLiveProgress.total}
+                      {typeof importLiveProgress.listed === 'number' && importLiveProgress.listed > 0
+                        ? ` · listados ${importLiveProgress.listed}`
+                        : ''}
+                    </p>
+                  )}
               </div>
             )}
           </div>

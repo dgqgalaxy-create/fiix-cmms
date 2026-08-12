@@ -18,6 +18,17 @@ export interface DriveDownloadResult {
   errors: string[];
 }
 
+export type DriveDownloadProgress = {
+  stage: 'list' | 'download';
+  label: string;
+  listed: number;
+  downloaded: number;
+  total: number;
+};
+
+const LIST_TIMEOUT_MS = 90_000;
+const DOWNLOAD_TIMEOUT_MS = 180_000;
+
 /** Extrae el ID de carpeta desde URL de Drive o devuelve el string si ya es un ID. */
 export function extractDriveFolderId(raw?: string | null): string | null {
   if (!raw) return null;
@@ -42,26 +53,29 @@ export function getDriveWoFolderId(): string | null {
   return extractDriveFolderId(process.env.GOOGLE_DRIVE_WO_FOLDER);
 }
 
-function driveHttpsJson(url: string): Promise<any> {
+function driveHttpsJson(url: string, timeoutMs = LIST_TIMEOUT_MS): Promise<any> {
   return new Promise((resolve, reject) => {
-    https
-      .get(url, (res) => {
-        const chunks: Buffer[] = [];
-        res.on('data', (c) => chunks.push(c));
-        res.on('end', () => {
-          const body = Buffer.concat(chunks).toString('utf8');
-          if (res.statusCode && res.statusCode >= 400) {
-            reject(new Error(`Drive API HTTP ${res.statusCode}: ${body.slice(0, 300)}`));
-            return;
-          }
-          try {
-            resolve(JSON.parse(body));
-          } catch (e) {
-            reject(e);
-          }
-        });
-      })
-      .on('error', reject);
+    const req = https.get(url, (res) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => {
+        const body = Buffer.concat(chunks).toString('utf8');
+        if (res.statusCode && res.statusCode >= 400) {
+          reject(new Error(`Drive API HTTP ${res.statusCode}: ${body.slice(0, 300)}`));
+          return;
+        }
+        try {
+          resolve(JSON.parse(body));
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+    req.setTimeout(timeoutMs, () => {
+      req.destroy();
+      reject(new Error(`Drive API timeout (${Math.round(timeoutMs / 1000)}s) al listar`));
+    });
+    req.on('error', reject);
   });
 }
 
@@ -71,7 +85,8 @@ function driveHttpsJson(url: string): Promise<any> {
  */
 export async function listPublicDriveFolderFiles(
   folderId: string,
-  apiKey: string
+  apiKey: string,
+  onPage?: (listedSoFar: number) => void
 ): Promise<DriveFileMeta[]> {
   const files: DriveFileMeta[] = [];
   let pageToken: string | undefined;
@@ -94,6 +109,7 @@ export async function listPublicDriveFolderFiles(
       if (!f?.id || !f?.name) continue;
       files.push({ id: f.id, name: f.name, mimeType: f.mimeType });
     }
+    onPage?.(files.length);
     pageToken = data.nextPageToken || undefined;
   } while (pageToken);
 
@@ -111,39 +127,42 @@ function downloadDriveFileToPath(fileId: string, apiKey: string, destPath: strin
   return new Promise((resolve, reject) => {
     const follow = (currentUrl: string, redirectsLeft: number) => {
       const lib = currentUrl.startsWith('http://') ? http : https;
-      lib
-        .get(currentUrl, (res) => {
-          if (
-            res.statusCode &&
-            res.statusCode >= 300 &&
-            res.statusCode < 400 &&
-            res.headers.location &&
-            redirectsLeft > 0
-          ) {
-            follow(res.headers.location, redirectsLeft - 1);
-            return;
-          }
-          if (!res.statusCode || res.statusCode >= 400) {
-            const chunks: Buffer[] = [];
-            res.on('data', (c) => chunks.push(c));
-            res.on('end', () => {
-              reject(
-                new Error(
-                  `Download HTTP ${res.statusCode}: ${Buffer.concat(chunks).toString('utf8').slice(0, 200)}`
-                )
-              );
-            });
-            return;
-          }
-          const out = fs.createWriteStream(destPath);
-          res.pipe(out);
-          out.on('finish', () => {
-            out.close();
-            resolve();
+      const req = lib.get(currentUrl, (res) => {
+        if (
+          res.statusCode &&
+          res.statusCode >= 300 &&
+          res.statusCode < 400 &&
+          res.headers.location &&
+          redirectsLeft > 0
+        ) {
+          follow(res.headers.location, redirectsLeft - 1);
+          return;
+        }
+        if (!res.statusCode || res.statusCode >= 400) {
+          const chunks: Buffer[] = [];
+          res.on('data', (c) => chunks.push(c));
+          res.on('end', () => {
+            reject(
+              new Error(
+                `Download HTTP ${res.statusCode}: ${Buffer.concat(chunks).toString('utf8').slice(0, 200)}`
+              )
+            );
           });
-          out.on('error', reject);
-        })
-        .on('error', reject);
+          return;
+        }
+        const out = fs.createWriteStream(destPath);
+        res.pipe(out);
+        out.on('finish', () => {
+          out.close();
+          resolve();
+        });
+        out.on('error', reject);
+      });
+      req.setTimeout(DOWNLOAD_TIMEOUT_MS, () => {
+        req.destroy();
+        reject(new Error(`Download timeout (${Math.round(DOWNLOAD_TIMEOUT_MS / 1000)}s)`));
+      });
+      req.on('error', reject);
     };
     follow(url, 5);
   });
@@ -173,18 +192,31 @@ async function mapPool<T, R>(
 export async function downloadPublicDriveFolderToTemp(
   folderId: string,
   apiKey: string,
-  label = 'drive'
+  label = 'drive',
+  onProgress?: (p: DriveDownloadProgress) => void
 ): Promise<DriveDownloadResult> {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), `fiix-${label}-`));
   const errors: string[] = [];
   let filesDownloaded = 0;
   let skipped = 0;
+  let lastEmit = 0;
 
-  const listed = await listPublicDriveFolderFiles(folderId, apiKey);
+  const emit = (stage: 'list' | 'download', listed: number, downloaded: number, total: number) => {
+    const now = Date.now();
+    if (stage === 'download' && downloaded < total && now - lastEmit < 400) return;
+    lastEmit = now;
+    onProgress?.({ stage, label, listed, downloaded, total });
+  };
+
+  emit('list', 0, 0, 0);
+  const listed = await listPublicDriveFolderFiles(folderId, apiKey, (n) => {
+    emit('list', n, 0, 0);
+  });
   const imageLike = listed.filter((f) => {
     const n = normalizeDriveImageFilename(f.name);
     return /\.(jpe?g|png|webp|gif)$/i.test(n);
   });
+  emit('download', listed.length, 0, imageLike.length);
 
   await mapPool(imageLike, 4, async (file) => {
     const safeName = normalizeDriveImageFilename(file.name).replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
@@ -196,6 +228,7 @@ export async function downloadPublicDriveFolderToTemp(
     try {
       await downloadDriveFileToPath(file.id, apiKey, dest);
       filesDownloaded++;
+      emit('download', listed.length, filesDownloaded, imageLike.length);
     } catch (e: any) {
       skipped++;
       errors.push(`${safeName}: ${e?.message || e}`);
@@ -206,6 +239,8 @@ export async function downloadPublicDriveFolderToTemp(
       }
     }
   });
+
+  emit('download', listed.length, filesDownloaded, imageLike.length);
 
   return {
     dir,

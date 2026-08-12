@@ -255,7 +255,7 @@ Panel de indicadores de mantenimiento:
   - **Acceso (temporal, sin Google Cloud):** Pon **ambos** spreadsheets en **Compartir → Cualquier persona con el enlace → Lector**. El servidor descarga cada pestaña como CSV público (`/export?format=csv&gid=…`). No hace falta cuenta de servicio ni JSON en `.env`.
   - **IDs opcionales:** `GOOGLE_SHEETS_INVENTORY_ID` y `GOOGLE_SHEETS_ORDERS_ID` en `backend/.env` (hay valores por defecto GTZ).
   - **Seguridad:** Mientras estén públicos, cualquiera con el link puede ver inventario, usuarios y OT. Cuando dejes de usar este modo, vuelve a restringir el acceso (solo personas concretas).
-  - **Fotos:** Con **Fotos desde Google Drive** activa, baja las carpetas `GOOGLE_DRIVE_*`; si está apagada, usa `data/Items_Images/` o `data/Formulario Solicitudes_Images/` cuando existan.
+  - **Fotos:** Con **Fotos desde Google Drive** activa, baja las carpetas `GOOGLE_DRIVE_*`; si está apagada, usa `data/Items_Images/` o `data/Formulario Solicitudes_Images/` cuando existan. Mientras corre, el modal **Procesando…** muestra porcentaje y conteo de fotos descargadas.
   - **Pendiente:** actualización automática periódica y (opcional) volver a cuenta de servicio sin Sheets públicos.
 
 ## 11. Vincular Telegram (Bot Token y Chat ID)

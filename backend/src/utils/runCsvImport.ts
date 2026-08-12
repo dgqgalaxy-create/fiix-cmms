@@ -34,7 +34,9 @@ import {
   getDriveItemsFolderId,
   getDriveWoFolderId,
   rmTempDirSafe,
+  type DriveDownloadProgress,
 } from './googleDriveImport';
+import { setImportProgress } from './importProgress';
 
 export class CsvImportError extends Error {
   status: number;
@@ -108,6 +110,31 @@ function readImportFileUtf8(file: ImportFileLike): string {
   throw new CsvImportError(`No se pudo leer el archivo: ${file.originalname}`);
 }
 
+function reportDriveProgress(p: DriveDownloadProgress, basePercent: number, span: number): void {
+  const nice = p.label === 'items' ? 'inventario' : p.label === 'wo' ? 'órdenes' : p.label;
+  if (p.stage === 'list') {
+    setImportProgress(
+      'drive_list',
+      basePercent,
+      `Listando Google Drive (${nice}): ${p.listed} archivos…`,
+      { listed: p.listed, label: p.label, downloaded: 0, total: 0 }
+    );
+    return;
+  }
+  const frac = p.total > 0 ? p.downloaded / p.total : 0;
+  setImportProgress(
+    'drive_download',
+    basePercent + Math.round(frac * span),
+    `Descargando fotos ${nice}: ${p.downloaded} / ${p.total}`,
+    {
+      downloaded: p.downloaded,
+      total: p.total,
+      listed: p.listed,
+      label: p.label,
+    }
+  );
+}
+
 /**
  * Motor compartido de importación CSV (upload o Sheets → temps).
  * Emite refresh de sockets al terminar con éxito.
@@ -130,6 +157,8 @@ export async function processCsvImportFiles(
     extractDriveFolderId(options.driveWoFolder) || (useGoogleDrive ? getDriveWoFolderId() : null);
   let driveItemsTemp: string | null = null;
   let driveWoTemp: string | null = null;
+
+  setImportProgress('csv', 22, 'Importando datos a la base (puede tardar)…');
 
 // Fechas Fiix CSV: dd/mm/yyyy (ver parseCsvDate). No usar new Date('05/07/…') (mm/dd US).
 const parseSafeDate = parseCsvDate;
@@ -642,8 +671,19 @@ if (zipFile?.path) {
   }
 } else if (useGoogleDrive && driveApiKey && itemsFolderId) {
   try {
-    const dl = await downloadPublicDriveFolderToTemp(itemsFolderId, driveApiKey, 'items');
+    const dl = await downloadPublicDriveFolderToTemp(
+      itemsFolderId,
+      driveApiKey,
+      'items',
+      (p) => reportDriveProgress(p, 55, 18)
+    );
     driveItemsTemp = dl.dir;
+    setImportProgress('assign_photos', 74, 'Asignando fotos de inventario…', {
+      downloaded: dl.filesDownloaded,
+      total: dl.filesDownloaded,
+      listed: dl.filesListed,
+      label: 'items',
+    });
     const photoResult = await assignItemImagesFromFolder(dl.dir);
     results.itemImages = {
       matched: photoResult.matched,
@@ -718,8 +758,19 @@ if (woZipFile?.path && woPhotoMappings.length > 0) {
   }
 } else if (woPhotoMappings.length > 0 && !woZipFile && useGoogleDrive && driveApiKey && woFolderId) {
   try {
-    const dl = await downloadPublicDriveFolderToTemp(woFolderId, driveApiKey, 'wo');
+    const dl = await downloadPublicDriveFolderToTemp(
+      woFolderId,
+      driveApiKey,
+      'wo',
+      (p) => reportDriveProgress(p, 76, 18)
+    );
     driveWoTemp = dl.dir;
+    setImportProgress('assign_photos', 95, 'Asignando fotos de órdenes…', {
+      downloaded: dl.filesDownloaded,
+      total: dl.filesDownloaded,
+      listed: dl.filesListed,
+      label: 'wo',
+    });
     const woPhotoResult = await assignWorkOrderImagesFromFolder(dl.dir, woPhotoMappings);
     results.workOrderImages = {
       matched: woPhotoResult.matched,
@@ -811,5 +862,6 @@ if (woZipFile?.path && woPhotoMappings.length > 0) {
   emitRefresh('refresh_work_orders');
   emitRefresh('refresh_inventory');
   emitRefresh('refresh_assets');
+  setImportProgress('done', 100, 'Importación terminada', { active: false });
   return results;
 }
