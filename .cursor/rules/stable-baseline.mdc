@@ -1,23 +1,24 @@
 ---
-description: Baseline estable v1.56.39 — no romper lo funcional; restaurar si hace falta
+description: Baseline estable v1.56.40 — no romper lo funcional; restaurar si hace falta
 alwaysApply: true
 ---
 
 # Baseline estable (protegido)
 
-Hasta que el usuario diga lo contrario, **v1.56.39** es el punto de restauración permanente.
+Hasta que el usuario diga lo contrario, **v1.56.40** es el punto de restauración permanente.
 
-- **Commit:** `036c53a` — `Release v1.56.39: give full failure text room on work-order list PDF.`
-- **Tag:** `v1.56.39-stable`
-- **Rama de respaldo:** `backup/v1.56.39-stable` (no desarrollar encima; solo restaurar)
+- **Commit:** `c135f22f14f3efc9123cc392fd1532b2d994bca0` — Release v1.56.40
+- **Tag:** `v1.56.40-stable`
+- **Rama de respaldo:** `backup/v1.56.40-stable` (no desarrollar encima; solo restaurar)
+- **Anterior:** `v1.56.39-stable` / `backup/v1.56.39-stable` sigue disponible como respaldo previo.
 
 ## Cómo trabajar
 
 - Nuevas mejoras (p. ej. fotos Google Drive/Sheets) van en `main` o ramas de feature.
 - No mezclar refactors ajenos al pedido; no “arreglar de paso” lo que ya funciona en el baseline.
 - Si un cambio rompe comportamiento validado del baseline, revertir o restaurar desde el tag/rama de backup antes de seguir.
-- Restaurar código: `git checkout v1.56.39-stable -- <paths>` o reset/branch desde `backup/v1.56.39-stable` solo con petición explícita del usuario.
+- Restaurar código: `git checkout v1.56.40-stable -- <paths>` o desde `backup/v1.56.40-stable` solo con petición explícita del usuario.
 
 ## Contexto activo
 
-Prioridad actual: importación de **fotos** vía Google Sheets + Drive (los datos de hoja/BD ya importan; las imágenes no).
+Prioridad actual: importación de **fotos** vía Google Sheets + Drive (timeouts/progreso pendientes si la descarga se cuelga).
