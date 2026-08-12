@@ -1,30 +1,30 @@
 ---
-description: Baseline estable v1.56.40 — no romper lo funcional; restaurar si hace falta
+description: Baseline estable v1.56.45 — no romper lo funcional; restaurar si hace falta
 alwaysApply: true
 ---
 
 # Baseline estable (protegido)
 
-Hasta que el usuario diga lo contrario, **v1.56.40** es el punto de restauración permanente.
+Hasta que el usuario diga lo contrario, **v1.56.45** es el punto de restauración permanente.
 
-- **Commit:** `c135f22f14f3efc9123cc392fd1532b2d994bca0` — Release v1.56.40
-- **Tag:** `v1.56.40-stable`
-- **Rama de respaldo:** `backup/v1.56.40-stable` (no desarrollar encima; solo restaurar)
-- **Anterior:** `v1.56.39-stable` / `backup/v1.56.39-stable` sigue disponible como respaldo previo.
+- **Commit:** `1df5f150a799b83040cdd590ce905d18db79a6d4` — Release v1.56.45
+- **Tag:** `v1.56.45-stable`
+- **Rama de respaldo:** `backup/v1.56.45-stable` (no desarrollar encima; solo restaurar)
+- **Anteriores:** `v1.56.40-stable` / `v1.56.39-stable` siguen disponibles.
 
 ## Cómo trabajar
 
-- Nuevas mejoras (p. ej. fotos Google Drive/Sheets) van en `main` o ramas de feature.
+- Nuevas mejoras van en `main` o ramas de feature.
 - No mezclar refactors ajenos al pedido; no “arreglar de paso” lo que ya funciona en el baseline.
 - Si un cambio rompe comportamiento validado del baseline, revertir o restaurar desde el tag/rama de backup antes de seguir.
-- Restaurar código: `git checkout v1.56.40-stable -- <paths>` o desde `backup/v1.56.40-stable` solo con petición explícita del usuario.
+- Restaurar código: `git checkout v1.56.45-stable -- <paths>` o desde `backup/v1.56.45-stable` solo con petición explícita del usuario.
 
 ## Entorno de producción
 
-- **Ya no es CasaOS.** El servidor de planta es **Ubuntu Server** directo (`~/fiix-cmms`, PM2 `fiix-backend`, nginx opcional, acceso típico por Tailscale HTTPS `*.ts.net`).
-- Tras «actualiza repositorios»: el deploy suele ser GitHub Actions self-hosted o `./update.sh` en ese Ubuntu; no asumir UI/apps de CasaOS.
+- **Ubuntu Server** directo (`~/fiix-cmms`, PM2 `fiix-backend`, nginx opcional, Tailscale HTTPS `*.ts.net`). No CasaOS.
+- Tras «actualiza repositorios»: deploy por GitHub Actions self-hosted o `./update.sh`.
 - Diagnósticos: `pm2`, `/tmp/fiix-*`, `backend/.env` en `~/fiix-cmms/backend/.env`.
 
 ## Contexto activo
 
-Prioridad: importación de **fotos** vía Google Sheets + Drive. En **v1.56.41** hay progreso en UI + timeouts Drive; el estable protegido sigue en **v1.56.40** hasta nueva instrucción.
+Importación de fotos Sheets/Drive operativa en este estable (progreso UI, descarga por enlace público, modal que cierra al terminar).
