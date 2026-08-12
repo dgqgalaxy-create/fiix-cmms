@@ -55,27 +55,34 @@ export function getDriveWoFolderId(): string | null {
 
 function driveHttpsJson(url: string, timeoutMs = LIST_TIMEOUT_MS): Promise<any> {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const settle = (err?: Error, data?: any) => {
+      if (settled) return;
+      settled = true;
+      if (err) reject(err);
+      else resolve(data);
+    };
     const req = https.get(url, (res) => {
       const chunks: Buffer[] = [];
       res.on('data', (c) => chunks.push(c));
       res.on('end', () => {
         const body = Buffer.concat(chunks).toString('utf8');
         if (res.statusCode && res.statusCode >= 400) {
-          reject(new Error(`Drive API HTTP ${res.statusCode}: ${body.slice(0, 300)}`));
+          settle(new Error(`Drive API HTTP ${res.statusCode}: ${body.slice(0, 300)}`));
           return;
         }
         try {
-          resolve(JSON.parse(body));
+          settle(undefined, JSON.parse(body));
         } catch (e) {
-          reject(e);
+          settle(e instanceof Error ? e : new Error(String(e)));
         }
       });
     });
     req.setTimeout(timeoutMs, () => {
       req.destroy();
-      reject(new Error(`Drive API timeout (${Math.round(timeoutMs / 1000)}s) al listar`));
+      settle(new Error(`Drive API timeout (${Math.round(timeoutMs / 1000)}s) al listar`));
     });
-    req.on('error', reject);
+    req.on('error', (e) => settle(e instanceof Error ? e : new Error(String(e))));
   });
 }
 
@@ -125,6 +132,14 @@ function downloadDriveFileToPath(fileId: string, apiKey: string, destPath: strin
   const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&key=${encodeURIComponent(apiKey)}`;
 
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const settle = (err?: Error) => {
+      if (settled) return;
+      settled = true;
+      if (err) reject(err);
+      else resolve();
+    };
+
     const follow = (currentUrl: string, redirectsLeft: number) => {
       const lib = currentUrl.startsWith('http://') ? http : https;
       const req = lib.get(currentUrl, (res) => {
@@ -135,6 +150,9 @@ function downloadDriveFileToPath(fileId: string, apiKey: string, destPath: strin
           res.headers.location &&
           redirectsLeft > 0
         ) {
+          // Evita que el timeout del 302 tumbe la descarga real tras el redirect.
+          req.setTimeout(0);
+          res.resume();
           follow(res.headers.location, redirectsLeft - 1);
           return;
         }
@@ -142,7 +160,7 @@ function downloadDriveFileToPath(fileId: string, apiKey: string, destPath: strin
           const chunks: Buffer[] = [];
           res.on('data', (c) => chunks.push(c));
           res.on('end', () => {
-            reject(
+            settle(
               new Error(
                 `Download HTTP ${res.statusCode}: ${Buffer.concat(chunks).toString('utf8').slice(0, 200)}`
               )
@@ -154,15 +172,18 @@ function downloadDriveFileToPath(fileId: string, apiKey: string, destPath: strin
         res.pipe(out);
         out.on('finish', () => {
           out.close();
-          resolve();
+          settle();
         });
-        out.on('error', reject);
+        out.on('error', (e) => settle(e instanceof Error ? e : new Error(String(e))));
       });
       req.setTimeout(DOWNLOAD_TIMEOUT_MS, () => {
         req.destroy();
-        reject(new Error(`Download timeout (${Math.round(DOWNLOAD_TIMEOUT_MS / 1000)}s)`));
+        settle(new Error(`Download timeout (${Math.round(DOWNLOAD_TIMEOUT_MS / 1000)}s)`));
       });
-      req.on('error', reject);
+      req.on('error', (e) => {
+        if (settled) return;
+        settle(e instanceof Error ? e : new Error(String(e)));
+      });
     };
     follow(url, 5);
   });
@@ -200,15 +221,26 @@ export async function downloadPublicDriveFolderToTemp(
   let filesDownloaded = 0;
   let skipped = 0;
   let lastEmit = 0;
+  let lastStage: 'list' | 'download' | null = null;
 
-  const emit = (stage: 'list' | 'download', listed: number, downloaded: number, total: number) => {
+  const emit = (
+    stage: 'list' | 'download',
+    listed: number,
+    downloaded: number,
+    total: number,
+    force = false
+  ) => {
     const now = Date.now();
-    if (stage === 'download' && downloaded < total && now - lastEmit < 400) return;
+    const stageChanged = lastStage !== stage;
+    if (!force && !stageChanged && stage === 'download' && downloaded < total && now - lastEmit < 400) {
+      return;
+    }
+    lastStage = stage;
     lastEmit = now;
     onProgress?.({ stage, label, listed, downloaded, total });
   };
 
-  emit('list', 0, 0, 0);
+  emit('list', 0, 0, 0, true);
   const listed = await listPublicDriveFolderFiles(folderId, apiKey, (n) => {
     emit('list', n, 0, 0);
   });
@@ -216,7 +248,11 @@ export async function downloadPublicDriveFolderToTemp(
     const n = normalizeDriveImageFilename(f.name);
     return /\.(jpe?g|png|webp|gif)$/i.test(n);
   });
-  emit('download', listed.length, 0, imageLike.length);
+  // Forzar paso a «Descargando» aunque el throttle del listado acabe de emitir.
+  emit('download', listed.length, 0, imageLike.length, true);
+  console.log(
+    `[Drive] ${label}: listados=${listed.length}, imágenes=${imageLike.length}, inicio descarga → ${dir}`
+  );
 
   await mapPool(imageLike, 4, async (file) => {
     const safeName = normalizeDriveImageFilename(file.name).replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
@@ -240,7 +276,10 @@ export async function downloadPublicDriveFolderToTemp(
     }
   });
 
-  emit('download', listed.length, filesDownloaded, imageLike.length);
+  emit('download', listed.length, filesDownloaded, imageLike.length, true);
+  console.log(
+    `[Drive] ${label}: fin descarga downloaded=${filesDownloaded} skipped=${skipped} errors=${errors.length}`
+  );
 
   return {
     dir,

@@ -16,3 +16,4 @@ alwaysApply: true
 
 - Este es un sistema CMMS para gestión de mantenimiento de planta.
 - Mantén el código modular, fácil de leer y enfocado en la estabilidad del sistema.
+- **Producción:** Ubuntu Server (no CasaOS), app en `~/fiix-cmms`, proceso PM2.

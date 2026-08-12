@@ -19,6 +19,12 @@ Hasta que el usuario diga lo contrario, **v1.56.40** es el punto de restauració
 - Si un cambio rompe comportamiento validado del baseline, revertir o restaurar desde el tag/rama de backup antes de seguir.
 - Restaurar código: `git checkout v1.56.40-stable -- <paths>` o desde `backup/v1.56.40-stable` solo con petición explícita del usuario.
 
+## Entorno de producción
+
+- **Ya no es CasaOS.** El servidor de planta es **Ubuntu Server** directo (`~/fiix-cmms`, PM2 `fiix-backend`, nginx opcional, acceso típico por Tailscale HTTPS `*.ts.net`).
+- Tras «actualiza repositorios»: el deploy suele ser GitHub Actions self-hosted o `./update.sh` en ese Ubuntu; no asumir UI/apps de CasaOS.
+- Diagnósticos: `pm2`, `/tmp/fiix-*`, `backend/.env` en `~/fiix-cmms/backend/.env`.
+
 ## Contexto activo
 
-Prioridad actual: importación de **fotos** vía Google Sheets + Drive (timeouts/progreso pendientes si la descarga se cuelga).
+Prioridad: importación de **fotos** vía Google Sheets + Drive. En **v1.56.41** hay progreso en UI + timeouts Drive; el estable protegido sigue en **v1.56.40** hasta nueva instrucción.

@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.41";
+export const APP_VERSION = "1.56.42";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Descarga Drive — el redirect de Google ya no deja la importación colgada en «Listando…» sin escribir archivos; el modal pasa a «Descargando X/Y».",
     "Nuevo: Al importar Sheets/Drive, el modal Procesando muestra barra de avance y conteo de fotos (listado/descarga). Timeouts en Drive para no colgarse.",
     "Corrección: Tras entrar a Opciones de Desarrollador se muestra Key OK de Drive; CORS ya no bloquea Tailscale/HTTPS al definir CORS_ORIGINS.",
     "Mejora: PDF de Órdenes — Falla/Equipo sin recorte; Orden, fechas y estado más compactos.",
