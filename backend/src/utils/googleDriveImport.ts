@@ -8,6 +8,7 @@ export interface DriveFileMeta {
   id: string;
   name: string;
   mimeType?: string;
+  webContentLink?: string;
 }
 
 export interface DriveDownloadResult {
@@ -109,7 +110,7 @@ export async function listPublicDriveFolderFiles(
       q: `'${folderId}' in parents and trashed=false and mimeType!='application/vnd.google-apps.folder'`,
       key: apiKey,
       pageSize: '1000',
-      fields: 'nextPageToken, files(id, name, mimeType)',
+      fields: 'nextPageToken, files(id, name, mimeType, webContentLink)',
       supportsAllDrives: 'true',
       includeItemsFromAllDrives: 'true',
     });
@@ -120,7 +121,12 @@ export async function listPublicDriveFolderFiles(
     );
     for (const f of data.files || []) {
       if (!f?.id || !f?.name) continue;
-      files.push({ id: f.id, name: f.name, mimeType: f.mimeType });
+      files.push({
+        id: f.id,
+        name: f.name,
+        mimeType: f.mimeType,
+        webContentLink: f.webContentLink || undefined,
+      });
     }
     onPage?.(files.length);
     pageToken = data.nextPageToken || undefined;
@@ -134,15 +140,57 @@ export function normalizeDriveImageFilename(name: string): string {
   return name.replace(/^Image\s+/i, '').trim();
 }
 
-function downloadDriveFileToPath(fileId: string, apiKey: string, destPath: string): Promise<void> {
-  const params = new URLSearchParams({
-    alt: 'media',
-    key: apiKey,
-    supportsAllDrives: 'true',
-    acknowledgeAbuse: 'true',
-  });
-  const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?${params.toString()}`;
+function extractDriveConfirmToken(html: string): string | null {
+  const patterns = [
+    /confirm=([0-9A-Za-z_-]+)/,
+    /name="confirm"\s+value="([^"]+)"/,
+    /"confirm"\s*,\s*"([0-9A-Za-z_-]+)"/,
+  ];
+  for (const re of patterns) {
+    const m = html.match(re);
+    if (m?.[1] && m[1] !== 't') return m[1];
+  }
+  return null;
+}
 
+function isProbablyHtml(buf: Buffer, contentType?: string): boolean {
+  if (contentType && /text\/html/i.test(contentType)) return true;
+  const head = buf.slice(0, 200).toString('utf8').trim().toLowerCase();
+  return head.startsWith('<!doctype html') || head.startsWith('<html');
+}
+
+/**
+ * Descarga archivo público. `alt=media&key=` suele dar 403 HTML aunque el listado
+ * con API key funcione; priorizamos uc/usercontent (enlace público).
+ */
+function downloadDriveFileToPath(
+  fileId: string,
+  apiKey: string,
+  destPath: string,
+  webContentLink?: string
+): Promise<void> {
+  const candidates = [
+    webContentLink,
+    `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}&confirm=t`,
+    `https://drive.usercontent.google.com/download?id=${encodeURIComponent(fileId)}&export=download&confirm=t`,
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&key=${encodeURIComponent(apiKey)}&supportsAllDrives=true&acknowledgeAbuse=true`,
+  ].filter((u): u is string => Boolean(u && String(u).trim()));
+
+  return (async () => {
+    let lastErr: Error | null = null;
+    for (const startUrl of candidates) {
+      try {
+        await downloadPublicUrlToFile(startUrl, destPath, fileId);
+        return;
+      } catch (e: any) {
+        lastErr = e instanceof Error ? e : new Error(String(e));
+      }
+    }
+    throw lastErr || new Error('No se pudo descargar el archivo de Drive');
+  })();
+}
+
+function downloadPublicUrlToFile(startUrl: string, destPath: string, fileId: string): Promise<void> {
   return new Promise((resolve, reject) => {
     let settled = false;
     const settle = (err?: Error) => {
@@ -152,7 +200,7 @@ function downloadDriveFileToPath(fileId: string, apiKey: string, destPath: strin
       else resolve();
     };
 
-    const follow = (currentUrl: string, redirectsLeft: number) => {
+    const follow = (currentUrl: string, redirectsLeft: number, cookieHeader?: string) => {
       let parsed: URL;
       try {
         parsed = new URL(currentUrl);
@@ -161,50 +209,82 @@ function downloadDriveFileToPath(fileId: string, apiKey: string, destPath: strin
         return;
       }
       const lib = parsed.protocol === 'http:' ? http : https;
-      const req = lib.get(parsed, (res) => {
-        if (
-          res.statusCode &&
-          res.statusCode >= 300 &&
-          res.statusCode < 400 &&
-          res.headers.location &&
-          redirectsLeft > 0
-        ) {
-          req.setTimeout(0);
-          res.resume();
-          const next = new URL(res.headers.location, parsed).href;
-          follow(next, redirectsLeft - 1);
-          return;
-        }
-        if (!res.statusCode || res.statusCode >= 400) {
+      const req = lib.get(
+        parsed,
+        {
+          headers: {
+            'User-Agent': 'fiix-cmms-drive-import/1.56',
+            ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+          },
+        },
+        (res) => {
+          const setCookies = res.headers['set-cookie'];
+          const nextCookie = setCookies
+            ? setCookies.map((c) => c.split(';')[0]).join('; ')
+            : cookieHeader;
+
+          if (
+            res.statusCode &&
+            res.statusCode >= 300 &&
+            res.statusCode < 400 &&
+            res.headers.location &&
+            redirectsLeft > 0
+          ) {
+            req.setTimeout(0);
+            res.resume();
+            follow(new URL(res.headers.location, parsed).href, redirectsLeft - 1, nextCookie);
+            return;
+          }
+
+          if (!res.statusCode || res.statusCode >= 400) {
+            const chunks: Buffer[] = [];
+            res.on('data', (c) => chunks.push(c));
+            res.on('end', () => {
+              settle(
+                new Error(
+                  `Download HTTP ${res.statusCode}: ${Buffer.concat(chunks).toString('utf8').slice(0, 180)}`
+                )
+              );
+            });
+            return;
+          }
+
+          const contentType = String(res.headers['content-type'] || '');
           const chunks: Buffer[] = [];
           res.on('data', (c) => chunks.push(c));
           res.on('end', () => {
-            settle(
-              new Error(
-                `Download HTTP ${res.statusCode}: ${Buffer.concat(chunks).toString('utf8').slice(0, 200)}`
-              )
-            );
-          });
-          return;
-        }
-        const out = fs.createWriteStream(destPath);
-        res.pipe(out);
-        out.on('finish', () => {
-          out.close();
-          try {
-            const st = fs.statSync(destPath);
-            if (st.size <= 0) {
+            const buf = Buffer.concat(chunks);
+            if (isProbablyHtml(buf, contentType)) {
+              const html = buf.toString('utf8');
+              const token = extractDriveConfirmToken(html);
+              if (token && redirectsLeft > 0) {
+                follow(
+                  `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}&confirm=${encodeURIComponent(token)}`,
+                  redirectsLeft - 1,
+                  nextCookie
+                );
+                return;
+              }
+              settle(
+                new Error(
+                  `Drive devolvió HTML en lugar del archivo (¿enlace público?). ${html.slice(0, 100)}`
+                )
+              );
+              return;
+            }
+            if (buf.length <= 0) {
               settle(new Error('Archivo vacío tras descarga'));
               return;
             }
-          } catch (e) {
-            settle(e instanceof Error ? e : new Error(String(e)));
-            return;
-          }
-          settle();
-        });
-        out.on('error', (e) => settle(e instanceof Error ? e : new Error(String(e))));
-      });
+            try {
+              fs.writeFileSync(destPath, buf);
+              settle();
+            } catch (e) {
+              settle(e instanceof Error ? e : new Error(String(e)));
+            }
+          });
+        }
+      );
       req.setTimeout(DOWNLOAD_TIMEOUT_MS, () => {
         req.destroy();
         settle(new Error(`Download timeout (${Math.round(DOWNLOAD_TIMEOUT_MS / 1000)}s)`));
@@ -214,7 +294,8 @@ function downloadDriveFileToPath(fileId: string, apiKey: string, destPath: strin
         settle(e instanceof Error ? e : new Error(String(e)));
       });
     };
-    follow(url, 8);
+
+    follow(startUrl, 8);
   });
 }
 
@@ -299,7 +380,7 @@ export async function downloadPublicDriveFolderToTemp(
     const probeName = normalizeDriveImageFilename(probe.name).replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
     const probeDest = path.join(dir, probeName || `probe-${probe.id}.bin`);
     try {
-      await downloadDriveFileToPath(probe.id, apiKey, probeDest);
+      await downloadDriveFileToPath(probe.id, apiKey, probeDest, probe.webContentLink);
       filesDownloaded++;
       consecutiveFailures = 0;
       emit('download', listed.length, filesDownloaded, imageLike.length, true);
@@ -317,7 +398,7 @@ export async function downloadPublicDriveFolderToTemp(
       emit('download', listed.length, filesDownloaded, imageLike.length, true);
       throw new Error(
         `Drive (${label}): no se pudo descargar ni la primera foto (${lastError}). ` +
-          `Revisa API key, que la carpeta sea pública y supportsAllDrives.`
+          `La carpeta/archivo debe ser «Cualquiera con el enlace». El listado con API key no basta para bajar el binario.`
       );
     }
   }
@@ -333,7 +414,7 @@ export async function downloadPublicDriveFolderToTemp(
     }
     const dest = path.join(dir, safeName);
     try {
-      await downloadDriveFileToPath(file.id, apiKey, dest);
+      await downloadDriveFileToPath(file.id, apiKey, dest, file.webContentLink);
       filesDownloaded++;
       consecutiveFailures = 0;
       emit('download', listed.length, filesDownloaded, imageLike.length);

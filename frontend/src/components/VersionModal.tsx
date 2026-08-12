@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.43";
+export const APP_VERSION = "1.56.44";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Fotos Drive — descarga por enlace público (uc/usercontent); alt=media+API key devolvía 403 HTML aunque el listado funcionara.",
     "Corrección: Descarga Drive — sonda del primer archivo, redirects absolutos, supportsAllDrives en media y corte rápido si falla (ya no se queda en 0/2386 con CPU ocupada).",
     "Corrección: Descarga Drive — el redirect de Google ya no deja la importación colgada en «Listando…» sin escribir archivos; el modal pasa a «Descargando X/Y».",
     "Nuevo: Al importar Sheets/Drive, el modal Procesando muestra barra de avance y conteo de fotos (listado/descarga). Timeouts en Drive para no colgarse.",
