@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.39";
+export const APP_VERSION = "1.56.40";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Tras entrar a Opciones de Desarrollador se muestra Key OK de Drive; CORS ya no bloquea Tailscale/HTTPS al definir CORS_ORIGINS.",
     "Mejora: PDF de Órdenes — Falla/Equipo sin recorte; Orden, fechas y estado más compactos.",
     "Mejora: PDF del listado de Órdenes muestra fechas de Solicitud, Inicio y Fin (Falla/Equipo más compacta).",
     "Corrección: En Mis Órdenes ya no aparece el botón Asignar… (solo en Vista General).",

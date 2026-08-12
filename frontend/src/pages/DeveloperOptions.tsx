@@ -233,6 +233,19 @@ export const DeveloperOptions = () => {
     }
   };
 
+  const fetchDriveStatus = async () => {
+    try {
+      const driveRes = await axios.get('/dev/google-drive-status');
+      setDriveStatus({
+        configured: Boolean(driveRes.data?.configured),
+        itemsFolderConfigured: Boolean(driveRes.data?.itemsFolderConfigured),
+        woFolderConfigured: Boolean(driveRes.data?.woFolderConfigured),
+      });
+    } catch {
+      setDriveStatus({ configured: false, itemsFolderConfigured: false, woFolderConfigured: false });
+    }
+  };
+
   useEffect(() => {
     const session = getValidDevOptionsSession();
     if (!session) return;
@@ -255,19 +268,8 @@ export const DeveloperOptions = () => {
       } catch (e) {
         console.error('Error fetching settings', e);
       }
-      try {
-        const driveRes = await axios.get('/dev/google-drive-status');
-        if (!cancelled && driveRes.data) {
-          setDriveStatus({
-            configured: Boolean(driveRes.data.configured),
-            itemsFolderConfigured: Boolean(driveRes.data.itemsFolderConfigured),
-            woFolderConfigured: Boolean(driveRes.data.woFolderConfigured),
-          });
-        }
-      } catch {
-        if (!cancelled) {
-          setDriveStatus({ configured: false, itemsFolderConfigured: false, woFolderConfigured: false });
-        }
+      if (!cancelled) {
+        await fetchDriveStatus();
       }
     })();
 
@@ -371,6 +373,7 @@ export const DeveloperOptions = () => {
       setRemainingAttempts(null);
       setLockedUntil(null);
       saveDevOptionsSession(password);
+      await fetchDriveStatus();
     } catch (err) {
       parseDevPasswordError(err);
     } finally {
@@ -1276,11 +1279,11 @@ export const DeveloperOptions = () => {
                     <span className="mt-0.5 block text-xs text-sky-100">
                       Si no hay zip, descarga las carpetas públicas (
                       <code className="rounded bg-black/20 px-1">GOOGLE_DRIVE_*</code>).
-                      {driveStatus
-                        ? driveStatus.configured
+                      {driveStatus == null
+                        ? ' Comprobando key…'
+                        : driveStatus.configured
                           ? ` Key OK${driveStatus.itemsFolderConfigured ? ' · inventario' : ''}${driveStatus.woFolderConfigured ? ' · órdenes' : ''}.`
-                          : ' Key no configurada en el servidor.'
-                        : ''}
+                          : ' Key no configurada en el servidor.'}
                     </span>
                   </span>
                 </label>
