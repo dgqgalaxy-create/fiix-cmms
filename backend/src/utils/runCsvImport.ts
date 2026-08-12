@@ -122,10 +122,16 @@ function reportDriveProgress(p: DriveDownloadProgress, basePercent: number, span
     return;
   }
   const frac = p.total > 0 ? p.downloaded / p.total : 0;
-  const msg =
+  let msg =
     p.downloaded === 0 && p.total > 0
       ? `Listado OK (${p.listed}). Iniciando descarga ${nice}: 0 / ${p.total}…`
       : `Descargando fotos ${nice}: ${p.downloaded} / ${p.total}`;
+  if ((p.skipped ?? 0) > 0) {
+    msg += ` · omitidas ${p.skipped}`;
+  }
+  if (p.lastError && p.downloaded === 0) {
+    msg += ` — ${p.lastError.slice(0, 100)}`;
+  }
   setImportProgress('drive_download', basePercent + Math.round(frac * span), msg, {
     downloaded: p.downloaded,
     total: p.total,

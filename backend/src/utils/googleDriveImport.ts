@@ -24,10 +24,16 @@ export type DriveDownloadProgress = {
   listed: number;
   downloaded: number;
   total: number;
+  skipped?: number;
+  lastError?: string;
 };
 
 const LIST_TIMEOUT_MS = 90_000;
-const DOWNLOAD_TIMEOUT_MS = 180_000;
+/** Si no hay datos en este tiempo, abortar (antes 180s dejaba la UI en 0/N mucho rato). */
+const DOWNLOAD_TIMEOUT_MS = 60_000;
+const DOWNLOAD_CONCURRENCY = 3;
+/** Si los primeros N fallan seguidos, cortar: key/permisos/red mal — no quemar horas. */
+const EARLY_ABORT_AFTER_FAILURES = 12;
 
 /** Extrae el ID de carpeta desde URL de Drive o devuelve el string si ya es un ID. */
 export function extractDriveFolderId(raw?: string | null): string | null {
@@ -129,7 +135,13 @@ export function normalizeDriveImageFilename(name: string): string {
 }
 
 function downloadDriveFileToPath(fileId: string, apiKey: string, destPath: string): Promise<void> {
-  const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&key=${encodeURIComponent(apiKey)}`;
+  const params = new URLSearchParams({
+    alt: 'media',
+    key: apiKey,
+    supportsAllDrives: 'true',
+    acknowledgeAbuse: 'true',
+  });
+  const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?${params.toString()}`;
 
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -141,8 +153,15 @@ function downloadDriveFileToPath(fileId: string, apiKey: string, destPath: strin
     };
 
     const follow = (currentUrl: string, redirectsLeft: number) => {
-      const lib = currentUrl.startsWith('http://') ? http : https;
-      const req = lib.get(currentUrl, (res) => {
+      let parsed: URL;
+      try {
+        parsed = new URL(currentUrl);
+      } catch {
+        settle(new Error(`URL de descarga inválida: ${currentUrl.slice(0, 120)}`));
+        return;
+      }
+      const lib = parsed.protocol === 'http:' ? http : https;
+      const req = lib.get(parsed, (res) => {
         if (
           res.statusCode &&
           res.statusCode >= 300 &&
@@ -150,10 +169,10 @@ function downloadDriveFileToPath(fileId: string, apiKey: string, destPath: strin
           res.headers.location &&
           redirectsLeft > 0
         ) {
-          // Evita que el timeout del 302 tumbe la descarga real tras el redirect.
           req.setTimeout(0);
           res.resume();
-          follow(res.headers.location, redirectsLeft - 1);
+          const next = new URL(res.headers.location, parsed).href;
+          follow(next, redirectsLeft - 1);
           return;
         }
         if (!res.statusCode || res.statusCode >= 400) {
@@ -172,6 +191,16 @@ function downloadDriveFileToPath(fileId: string, apiKey: string, destPath: strin
         res.pipe(out);
         out.on('finish', () => {
           out.close();
+          try {
+            const st = fs.statSync(destPath);
+            if (st.size <= 0) {
+              settle(new Error('Archivo vacío tras descarga'));
+              return;
+            }
+          } catch (e) {
+            settle(e instanceof Error ? e : new Error(String(e)));
+            return;
+          }
           settle();
         });
         out.on('error', (e) => settle(e instanceof Error ? e : new Error(String(e))));
@@ -185,7 +214,7 @@ function downloadDriveFileToPath(fileId: string, apiKey: string, destPath: strin
         settle(e instanceof Error ? e : new Error(String(e)));
       });
     };
-    follow(url, 5);
+    follow(url, 8);
   });
 }
 
@@ -220,8 +249,11 @@ export async function downloadPublicDriveFolderToTemp(
   const errors: string[] = [];
   let filesDownloaded = 0;
   let skipped = 0;
+  let consecutiveFailures = 0;
   let lastEmit = 0;
   let lastStage: 'list' | 'download' | null = null;
+  let lastError: string | undefined;
+  let abortAll: Error | null = null;
 
   const emit = (
     stage: 'list' | 'download',
@@ -237,7 +269,15 @@ export async function downloadPublicDriveFolderToTemp(
     }
     lastStage = stage;
     lastEmit = now;
-    onProgress?.({ stage, label, listed, downloaded, total });
+    onProgress?.({
+      stage,
+      label,
+      listed,
+      downloaded,
+      total,
+      skipped,
+      lastError,
+    });
   };
 
   emit('list', 0, 0, 0, true);
@@ -248,13 +288,44 @@ export async function downloadPublicDriveFolderToTemp(
     const n = normalizeDriveImageFilename(f.name);
     return /\.(jpe?g|png|webp|gif)$/i.test(n);
   });
-  // Forzar paso a «Descargando» aunque el throttle del listado acabe de emitir.
   emit('download', listed.length, 0, imageLike.length, true);
   console.log(
     `[Drive] ${label}: listados=${listed.length}, imágenes=${imageLike.length}, inicio descarga → ${dir}`
   );
 
-  await mapPool(imageLike, 4, async (file) => {
+  if (imageLike.length > 0) {
+    // Prueba rápida del primer archivo (falla clara en <60s si key/redirect están mal).
+    const probe = imageLike[0];
+    const probeName = normalizeDriveImageFilename(probe.name).replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
+    const probeDest = path.join(dir, probeName || `probe-${probe.id}.bin`);
+    try {
+      await downloadDriveFileToPath(probe.id, apiKey, probeDest);
+      filesDownloaded++;
+      consecutiveFailures = 0;
+      emit('download', listed.length, filesDownloaded, imageLike.length, true);
+      console.log(`[Drive] ${label}: sonda OK → ${probeName}`);
+    } catch (e: any) {
+      skipped++;
+      consecutiveFailures++;
+      lastError = e?.message || String(e);
+      errors.push(`${probeName}: ${lastError}`);
+      try {
+        fs.unlinkSync(probeDest);
+      } catch {
+        /* ignore */
+      }
+      emit('download', listed.length, filesDownloaded, imageLike.length, true);
+      throw new Error(
+        `Drive (${label}): no se pudo descargar ni la primera foto (${lastError}). ` +
+          `Revisa API key, que la carpeta sea pública y supportsAllDrives.`
+      );
+    }
+  }
+
+  const rest = imageLike.slice(filesDownloaded > 0 ? 1 : 0);
+
+  await mapPool(rest, DOWNLOAD_CONCURRENCY, async (file) => {
+    if (abortAll) return;
     const safeName = normalizeDriveImageFilename(file.name).replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
     if (!safeName) {
       skipped++;
@@ -264,17 +335,30 @@ export async function downloadPublicDriveFolderToTemp(
     try {
       await downloadDriveFileToPath(file.id, apiKey, dest);
       filesDownloaded++;
+      consecutiveFailures = 0;
       emit('download', listed.length, filesDownloaded, imageLike.length);
     } catch (e: any) {
       skipped++;
-      errors.push(`${safeName}: ${e?.message || e}`);
+      consecutiveFailures++;
+      lastError = e?.message || String(e);
+      errors.push(`${safeName}: ${lastError}`);
       try {
         fs.unlinkSync(dest);
       } catch {
         /* ignore */
       }
+      emit('download', listed.length, filesDownloaded, imageLike.length, true);
+      if (filesDownloaded === 0 && consecutiveFailures >= EARLY_ABORT_AFTER_FAILURES) {
+        abortAll = new Error(
+          `Drive (${label}): ${consecutiveFailures} descargas fallidas seguidas sin éxito. Último: ${lastError}`
+        );
+      }
     }
   });
+
+  if (abortAll) {
+    throw abortAll;
+  }
 
   emit('download', listed.length, filesDownloaded, imageLike.length, true);
   console.log(
