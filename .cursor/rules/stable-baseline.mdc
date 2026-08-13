@@ -1,23 +1,23 @@
 ---
-description: Baseline estable v1.56.45 — no romper lo funcional; restaurar si hace falta
+description: Baseline estable v1.56.50 — no romper lo funcional; restaurar si hace falta
 alwaysApply: true
 ---
 
 # Baseline estable (protegido)
 
-Hasta que el usuario diga lo contrario, **v1.56.45** es el punto de restauración permanente.
+Hasta que el usuario diga lo contrario, **v1.56.50** es el punto de restauración permanente.
 
-- **Commit:** `1df5f150a799b83040cdd590ce905d18db79a6d4` — Release v1.56.45
-- **Tag:** `v1.56.45-stable`
-- **Rama de respaldo:** `backup/v1.56.45-stable` (no desarrollar encima; solo restaurar)
-- **Anteriores:** `v1.56.40-stable` / `v1.56.39-stable` siguen disponibles.
+- **Commit:** `a51ab541be5848dc9ab2b770db91df6c04e3df1b` — Release v1.56.50
+- **Tag:** `v1.56.50-stable`
+- **Rama de respaldo:** `backup/v1.56.50-stable` (no desarrollar encima; solo restaurar)
+- **Anteriores:** `v1.56.45-stable` / `v1.56.40-stable` / `v1.56.39-stable` siguen disponibles.
 
 ## Cómo trabajar
 
 - Nuevas mejoras van en `main` o ramas de feature.
 - No mezclar refactors ajenos al pedido; no “arreglar de paso” lo que ya funciona en el baseline.
 - Si un cambio rompe comportamiento validado del baseline, revertir o restaurar desde el tag/rama de backup antes de seguir.
-- Restaurar código: `git checkout v1.56.45-stable -- <paths>` o desde `backup/v1.56.45-stable` solo con petición explícita del usuario.
+- Restaurar código: `git checkout v1.56.50-stable -- <paths>` o desde `backup/v1.56.50-stable` solo con petición explícita del usuario.
 
 ## Entorno de producción
 
@@ -27,4 +27,4 @@ Hasta que el usuario diga lo contrario, **v1.56.45** es el punto de restauració
 
 ## Contexto activo
 
-Importación de fotos Sheets/Drive operativa en este estable (progreso UI, descarga por enlace público, modal que cierra al terminar).
+Import Sheets/Drive operativo (fotos repuestos + logos proveedores vía zip/Drive/`data/`). Resultado de import queda en Bitácora de auditoría (`IMPORT_SHEETS` / `IMPORT_CSV`). Proveedores con logo en UI; detalle de repuesto en solo lectura por defecto.
