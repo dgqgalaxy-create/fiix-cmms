@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.50";
+export const APP_VERSION = "1.56.51";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Logo de marca actualizado (login, menú lateral y modal de versión).",
+    "Mejora: Marca visible unificada a GTZ CMMS (ya no «CMMS MTTO»).",
     "Nuevo: Import CSV/Sheets — el resultado queda en Bitácora de auditoría (IMPORT_SHEETS / IMPORT_CSV) para consultarlo después.",
     "Nuevo: Import — logos de proveedores (Vendors_Images.zip, Drive GOOGLE_DRIVE_VENDORS_FOLDER, o data/Vendors_Images/).",
     "Mejora: Inventario — clic en repuesto abre solo lectura; Editar junto a Registrar movimiento (Admin/Gestionador).",
@@ -365,7 +367,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
           </button>
           
           <img src="/lpet.png" alt="GTZ Logo" className="h-16 object-contain mb-3" />
-          <h2 className="text-2xl font-black text-white tracking-widest uppercase">CMMS MTTO</h2>
+          <h2 className="text-2xl font-black text-white tracking-widest uppercase">GTZ CMMS</h2>
           <span className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-sm font-bold border border-emerald-500/30">
             <Rocket size={14} />
             Versión {version}

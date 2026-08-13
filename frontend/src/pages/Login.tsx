@@ -60,7 +60,7 @@ export const Login = () => {
             className="mx-auto h-20 md:h-24 object-contain mb-4"
           />
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2">
-            CMMS <span className="text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full mt-1">v{APP_VERSION}</span>
+            GTZ CMMS <span className="text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full mt-1">v{APP_VERSION}</span>
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2">Inicia sesión para gestionar el mantenimiento</p>
         </div>

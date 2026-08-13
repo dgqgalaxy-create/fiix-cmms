@@ -253,7 +253,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         <div className="px-3 pt-3 pb-2 flex flex-col items-center justify-center border-b border-slate-800 relative shrink-0">
           <div className="flex flex-col items-center gap-1">
             <img src="/lpet.png" alt="GTZ Logo" className="h-10 object-contain" />
-            <span className="font-bold text-sm text-slate-300 tracking-widest uppercase">CMMS MTTO</span>
+            <span className="font-bold text-sm text-slate-300 tracking-widest uppercase">GTZ CMMS</span>
           </div>
           <button onClick={onClose} className="md:hidden absolute top-2 right-2 p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors" title="Cerrar menú">
             <X size={18} />
