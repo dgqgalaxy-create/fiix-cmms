@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.45";
+export const APP_VERSION = "1.56.48";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "11 de Agosto, 2026";
+  const updateDate = "13 de Agosto, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Inventario — clic en repuesto abre solo lectura; Editar junto a Registrar movimiento (Admin/Gestionador).",
+    "Mejora: Proveedores — logo más bajo para que quepan bien los datos en la tarjeta.",
+    "Nuevo: Inventario → Proveedores — logo en ficha y tarjetas (3/4 imagen); archivos en uploads/vendors/ (incluidos en respaldos).",
+    "Corrección: Ctrl+K — al elegir un repuesto abre su ficha (antes fallaba con el UUID).",
+    "Mejora: Inventario — el estado desmarcado se muestra como «Descontinuado» (ya no «Inactivo»).",
     "Corrección: Tras «Importación terminada» el modal Procesando se cierra solo (y hay botón Cerrar); la limpieza de /tmp ya no bloquea la respuesta.",
     "Corrección: Fotos Drive — descarga por enlace público (uc/usercontent); alt=media+API key devolvía 403 HTML aunque el listado funcionara.",
     "Corrección: Descarga Drive — sonda del primer archivo, redirects absolutos, supportsAllDrives en media y corte rápido si falla (ya no se queda en 0/2386 con CPU ocupada).",

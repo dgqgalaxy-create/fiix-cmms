@@ -224,7 +224,7 @@ export async function cleanupOrphanUploads(prisma: PrismaClient): Promise<Orphan
 
 /**
  * Vacía el contenido de uploads/ (mantiene la carpeta).
- * Recrea uploads/inventory/ vacío para subidas de inventario.
+ * Recrea uploads/inventory/ y uploads/vendors/ vacíos para subidas.
  */
 export async function emptyUploadsDirectory(): Promise<EmptyUploadsResult> {
   const uploadsRoot = path.resolve(getUploadsRoot());
@@ -235,6 +235,7 @@ export async function emptyUploadsDirectory(): Promise<EmptyUploadsResult> {
   if (!fs.existsSync(uploadsRoot)) {
     await fs.promises.mkdir(uploadsRoot, { recursive: true });
     await fs.promises.mkdir(path.join(uploadsRoot, 'inventory'), { recursive: true });
+    await fs.promises.mkdir(path.join(uploadsRoot, 'vendors'), { recursive: true });
     return { deletedCount: 0, freedBytes: 0 };
   }
 
@@ -293,9 +294,10 @@ export async function emptyUploadsDirectory(): Promise<EmptyUploadsResult> {
 
   try {
     await fs.promises.mkdir(path.join(uploadsRoot, 'inventory'), { recursive: true });
+    await fs.promises.mkdir(path.join(uploadsRoot, 'vendors'), { recursive: true });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    errors.push(`No se pudo recrear inventory/: ${msg}`);
+    errors.push(`No se pudo recrear inventory/vendors/: ${msg}`);
   }
 
   const result: EmptyUploadsResult = { deletedCount, freedBytes };

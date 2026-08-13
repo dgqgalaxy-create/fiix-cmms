@@ -3,7 +3,7 @@ import {
   getCategories, createCategory, updateCategory, deleteCategory,
   getLocations, createLocation, updateLocation, deleteLocation,
   getVendors, createVendor, updateVendor, deleteVendor,
-  getItems, createItem, updateItem,
+  getItems, getItemById, createItem, updateItem,
   getTransactions, createTransaction,
   getInventorySummary,
   searchImages, proxyImage
@@ -16,6 +16,8 @@ const router = Router();
 
 const uploadDir = path.join(__dirname, '../../uploads/inventory');
 const upload = createDiskUploader(uploadDir, { maxFiles: 2 });
+const vendorsUploadDir = path.join(__dirname, '../../uploads/vendors');
+const vendorsUpload = createDiskUploader(vendorsUploadDir, { maxFiles: 1 });
 
 router.use(authenticate);
 
@@ -40,14 +42,15 @@ router.patch('/locations/:id', requireWritable, requirePermission('MANAGE_INVENT
 router.delete('/locations/:id', requireWritable, requirePermission('MANAGE_INVENTORY'), deleteLocation);
 
 router.get('/vendors', getVendors);
-router.post('/vendors', requireWritable, requirePermission('MANAGE_INVENTORY'), createVendor);
-router.patch('/vendors/:id', requireWritable, requirePermission('MANAGE_INVENTORY'), updateVendor);
+router.post('/vendors', requireWritable, requirePermission('MANAGE_INVENTORY'), vendorsUpload.fields([{ name: 'logo', maxCount: 1 }]), createVendor);
+router.patch('/vendors/:id', requireWritable, requirePermission('MANAGE_INVENTORY'), vendorsUpload.fields([{ name: 'logo', maxCount: 1 }]), updateVendor);
 router.delete('/vendors/:id', requireWritable, requirePermission('MANAGE_INVENTORY'), deleteVendor);
 
 // ==========================================
 // RUTAS DE REPUESTOS (ITEMS)
 // ==========================================
 router.get('/items', getItems);
+router.get('/items/:id', getItemById);
 router.post('/items', requireWritable, requirePermission('MANAGE_INVENTORY'), upload.fields([{ name: 'image', maxCount: 1 }]), createItem);
 router.patch('/items/:id', requireWritable, requirePermission('MANAGE_INVENTORY'), upload.fields([{ name: 'image', maxCount: 1 }]), updateItem);
 

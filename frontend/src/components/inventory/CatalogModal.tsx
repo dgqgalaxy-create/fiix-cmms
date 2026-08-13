@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Trash2 } from 'lucide-react';
+import { X, Save, Trash2, Upload, Building2 } from 'lucide-react';
 import { 
   createCategory, updateCategory, deleteCategory,
   createLocation, updateLocation, deleteLocation,
   createVendor, updateVendor, deleteVendor
 } from '../../api/inventory';
+import { mediaUrl } from '../../utils/mediaUrl';
 
 interface Props {
   isOpen: boolean;
@@ -25,8 +26,11 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
     website_url: '',
     phone: '',
     email: '',
-    address: ''
+    address: '',
+    logo_url: ''
   });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,8 +43,10 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
         website_url: item.website_url || '',
         phone: item.phone || '',
         email: item.email || '',
-        address: item.address || ''
+        address: item.address || '',
+        logo_url: item.logo_url || ''
       });
+      setLogoPreview(item.logo_url ? mediaUrl(item.logo_url) : null);
     } else {
       setFormData({
         internal_id: '',
@@ -49,9 +55,12 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
         website_url: '',
         phone: '',
         email: '',
-        address: ''
+        address: '',
+        logo_url: ''
       });
+      setLogoPreview(null);
     }
+    setLogoFile(null);
     setError(null);
   }, [item, isOpen]);
 
@@ -63,6 +72,14 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
     if (type === 'location') return `${prefix} Ubicación`;
     if (type === 'vendor') return `${prefix} Proveedor`;
     return '';
+  };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setLogoFile(file);
+      setLogoPreview(URL.createObjectURL(file));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -78,8 +95,18 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
         if (item) await updateLocation(item.id, formData);
         else await createLocation(formData);
       } else if (type === 'vendor') {
-        if (item) await updateVendor(item.id, formData);
-        else await createVendor(formData);
+        const data = new FormData();
+        data.append('name', formData.name);
+        data.append('is_active', String(formData.is_active));
+        data.append('phone', formData.phone || '');
+        data.append('email', formData.email || '');
+        data.append('website_url', formData.website_url || '');
+        data.append('address', formData.address || '');
+        if (logoFile) {
+          data.append('logo', logoFile);
+        }
+        if (item) await updateVendor(item.id, data);
+        else await createVendor(data);
       }
 
       onSaved();
@@ -135,6 +162,54 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
             )}
 
             <div className="space-y-4">
+              {type === 'vendor' && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Logo del proveedor</label>
+                  <div
+                    className={`relative overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 ${readOnly ? '' : 'cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900'} transition-colors group`}
+                    onClick={() => {
+                      if (!readOnly) document.getElementById('vendor-logo-upload')?.click();
+                    }}
+                  >
+                    {logoPreview ? (
+                      <div className="relative aspect-[4/3] w-full">
+                        <img
+                          src={logoPreview}
+                          alt={formData.name || 'Logo'}
+                          className="absolute inset-0 w-full h-full object-contain p-4 bg-white dark:bg-slate-900"
+                          onError={() => setLogoPreview(null)}
+                        />
+                        {!readOnly && (
+                          <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="text-white text-sm font-medium flex items-center gap-2">
+                              <Upload size={16} /> Cambiar logo
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="aspect-[4/3] flex flex-col items-center justify-center text-slate-400 gap-2 px-4">
+                        <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-500 flex items-center justify-center">
+                          {readOnly ? <Building2 size={28} /> : <Upload size={24} />}
+                        </div>
+                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                          {readOnly ? 'Sin logo' : 'Subir logo (JPG, PNG, WebP)'}
+                        </p>
+                      </div>
+                    )}
+                    {!readOnly && (
+                      <input
+                        id="vendor-logo-upload"
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif"
+                        className="hidden"
+                        onChange={handleLogoChange}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">ID / Código Interno</label>
                 <input

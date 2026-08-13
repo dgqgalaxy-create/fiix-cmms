@@ -135,11 +135,37 @@ export const getVendors = async (req: Request, res: Response): Promise<void> => 
 
 export const createVendor = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, website_url, phone, email, address, is_active } = req.body;
+    const { name, website_url, phone, email, address, is_active, logo_url } = req.body;
     const internal_id = await generateInventoryCode('Vendor', 'PROV-', 3);
-    const vendor = await prisma.vendor.create({
-      data: { internal_id, name, website_url, phone, email, address, is_active }
-    });
+    const data: {
+      internal_id: string;
+      name: string;
+      website_url?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      address?: string | null;
+      is_active: boolean;
+      logo_url?: string | null;
+    } = {
+      internal_id,
+      name,
+      website_url: website_url || null,
+      phone: phone || null,
+      email: email || null,
+      address: address || null,
+      is_active:
+        is_active === undefined || is_active === ''
+          ? true
+          : is_active === true || is_active === 'true',
+    };
+    if (typeof logo_url === 'string' && logo_url.trim()) {
+      data.logo_url = logo_url.trim();
+    }
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    if (files?.['logo']?.[0]) {
+      data.logo_url = `/uploads/vendors/${files['logo'][0].filename}`;
+    }
+    const vendor = await prisma.vendor.create({ data });
     emitRefresh('refresh_inventory');
     res.status(201).json(vendor);
   } catch (error) {
@@ -150,10 +176,34 @@ export const createVendor = async (req: Request, res: Response): Promise<void> =
 export const updateVendor = async (req: Request, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { name, website_url, phone, email, address, is_active } = req.body;
+    const { name, website_url, phone, email, address, is_active, logo_url } = req.body;
+    const data: {
+      name?: string;
+      website_url?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      address?: string | null;
+      is_active?: boolean;
+      logo_url?: string | null;
+    } = {};
+    if (name !== undefined) data.name = name;
+    if (website_url !== undefined) data.website_url = website_url || null;
+    if (phone !== undefined) data.phone = phone || null;
+    if (email !== undefined) data.email = email || null;
+    if (address !== undefined) data.address = address || null;
+    if (is_active !== undefined && is_active !== '') {
+      data.is_active = is_active === true || is_active === 'true';
+    }
+    if (typeof logo_url === 'string') {
+      data.logo_url = logo_url.trim() || null;
+    }
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    if (files?.['logo']?.[0]) {
+      data.logo_url = `/uploads/vendors/${files['logo'][0].filename}`;
+    }
     const vendor = await prisma.vendor.update({
       where: { id },
-      data: { name, website_url, phone, email, address, is_active }
+      data,
     });
     emitRefresh('refresh_inventory');
     res.json(vendor);
@@ -198,13 +248,16 @@ export const getItems = async (req: Request, res: Response): Promise<void> => {
     if (q) {
       const term = String(q).trim();
       if (term) {
-        and.push({
-          OR: [
-            { name: { contains: term, mode: 'insensitive' } },
-            { internal_code: { contains: term, mode: 'insensitive' } },
-            { description: { contains: term, mode: 'insensitive' } },
-          ],
-        });
+        const or: Record<string, unknown>[] = [
+          { name: { contains: term, mode: 'insensitive' } },
+          { internal_code: { contains: term, mode: 'insensitive' } },
+          { description: { contains: term, mode: 'insensitive' } },
+        ];
+        // Deep-link desde Ctrl+K usa UUID; equals por id (solo si parece UUID válido).
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(term)) {
+          or.unshift({ id: term });
+        }
+        and.push({ OR: or });
       }
     }
     const where = and.length ? { AND: and } : {};
@@ -257,6 +310,23 @@ export const getItems = async (req: Request, res: Response): Promise<void> => {
     res.json(items);
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener repuestos' });
+  }
+};
+
+export const getItemById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const item = await prisma.item.findUnique({
+      where: { id },
+      include: { category: true, vendor: true, location: true },
+    });
+    if (!item) {
+      res.status(404).json({ error: 'Repuesto no encontrado' });
+      return;
+    }
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener el repuesto' });
   }
 };
 

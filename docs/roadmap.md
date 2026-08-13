@@ -1,7 +1,10 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
-*(Última actualización: 31 de Julio de 2026)*
+*(Última actualización: 13 de Agosto de 2026)*
+
+### Novedades en v1.56.47 (Logos de proveedores)
+- **Nuevo:** Inventario → Proveedores con logo en tarjetas (zona superior ~3/4) y subida en ficha; archivos en `uploads/vendors/` (respaldos de `uploads/` ya los incluyen).
 
 ## 📌 Próxima implementación
 

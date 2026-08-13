@@ -195,7 +195,7 @@ export const initSocket = (server: http.Server) => {
           where: { id: user.userId },
           data: { last_active: new Date() },
         })
-        .catch((err) => console.error('[Socket.io] last_active on connect', err));
+        .catch((err: unknown) => console.error('[Socket.io] last_active on connect', err));
     }
 
     socket.on('wo:join', (payload: { workOrderId?: string }) => {

@@ -111,12 +111,12 @@ export const getVendors = async () => {
   return response.data;
 };
 
-export const createVendor = async (data: Partial<Vendor>) => {
+export const createVendor = async (data: Partial<Vendor> | FormData) => {
   const response = await axiosInstance.post<Vendor>('/inventory/vendors', data);
   return response.data;
 };
 
-export const updateVendor = async (id: string, data: Partial<Vendor>) => {
+export const updateVendor = async (id: string, data: Partial<Vendor> | FormData) => {
   const response = await axiosInstance.patch<Vendor>(`/inventory/vendors/${id}`, data);
   return response.data;
 };
@@ -190,6 +190,15 @@ export const getItemsPage = async (
     limit: data.length || 20,
     totalPages: 1,
   };
+};
+
+export const getItemById = async (id: string): Promise<Item | null> => {
+  try {
+    const response = await axiosInstance.get<Item>(`/inventory/items/${id}`);
+    return response.data;
+  } catch {
+    return null;
+  }
 };
 
 export const createItem = async (formData: FormData) => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { X, Save, Upload, ArrowRightLeft, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { X, Save, Upload, ArrowRightLeft, ChevronLeft, ChevronRight, Loader2, Edit2 } from 'lucide-react';
 import { createItem, updateItem, getTransactions } from '../../api/inventory';
 import { getUoms } from '../../api/settings';
 import type { UnitOfMeasure } from '../../api/settings';
@@ -50,6 +50,8 @@ interface Props {
   vendors: Vendor[];
   transactions?: InventoryTransaction[];
   readOnly?: boolean;
+  /** Si el detalle está en solo lectura, permite pasar a edición (Admin/Gestionador). */
+  onRequestEdit?: () => void;
   onQuickTransaction?: (itemId: string) => void;
   /** Lista filtrada/ordenada de la tabla de Inventario (para ← →). */
   itemList?: Item[];
@@ -68,6 +70,7 @@ export const ItemModal = ({
   vendors,
   transactions,
   readOnly,
+  onRequestEdit,
   onQuickTransaction,
   itemList,
   onNavigateItem,
@@ -319,6 +322,17 @@ export const ItemModal = ({
                 <span>Registrar movimiento</span>
               </button>
             )}
+            {item && readOnly && onRequestEdit && (
+              <button
+                type="button"
+                onClick={onRequestEdit}
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 dark:text-blue-200 dark:bg-blue-950/40 dark:border-blue-800 dark:hover:bg-blue-900/50 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 dark:focus:ring-offset-slate-900"
+                title="Editar ficha del repuesto"
+              >
+                <Edit2 size={16} className="shrink-0" />
+                <span>Editar</span>
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-1 shrink-0">
             {canNavigate && (
@@ -417,8 +431,12 @@ export const ItemModal = ({
                     className="w-5 h-5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 disabled:opacity-50"
                   />
                   <div>
-                    <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">Repuesto Activo</span>
-                    <span className="block text-xs text-slate-500 dark:text-slate-400">Desmarca para ocultarlo sin borrar el historial.</span>
+                    <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      {formData.is_active ? 'Repuesto Activo' : 'Descontinuado'}
+                    </span>
+                    <span className="block text-xs text-slate-500 dark:text-slate-400">
+                      Desmarca para marcarlo como descontinuado (conserva el historial).
+                    </span>
                   </div>
                 </label>
               </div>

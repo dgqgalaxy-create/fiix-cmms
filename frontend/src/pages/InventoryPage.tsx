@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter } from 'lucide-react';
 import { 
-  getItems, getItemsPage, getTransactionsPage, getCategories, getLocations, getVendors, getInventorySummary
+  getItems, getItemsPage, getItemById, getTransactionsPage, getCategories, getLocations, getVendors, getInventorySummary
 } from '../api/inventory';
 import type { Item, InventoryTransaction, ItemCategory, ItemLocation, Vendor, InventorySummary } from '../api/inventory';
 import { createDraftsFromLowStock } from '../api/purchaseOrders';
@@ -73,6 +73,7 @@ export const InventoryPage = () => {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | undefined>(undefined);
+  const [isItemReadOnly, setIsItemReadOnly] = useState(true);
   const [qrItem, setQrItem] = useState<Item | null>(null);
   const [qrLocation, setQrLocation] = useState<ItemLocation | null>(null);
   const [itemSelectionMode, setItemSelectionMode] = useState(false);
@@ -290,6 +291,7 @@ export const InventoryPage = () => {
     const openItemDetail = (item: Item) => {
       setActiveTab('items');
       setSelectedItem(item);
+      setIsItemReadOnly(true);
       setIsItemModalOpen(true);
     };
 
@@ -297,6 +299,12 @@ export const InventoryPage = () => {
       const local = matchItemLocal(code);
       if (local) return local;
       try {
+        const looksLikeUuid =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(code);
+        if (looksLikeUuid) {
+          const byId = await getItemById(code);
+          if (byId) return byId;
+        }
         const page = await getItemsPage({ q: code, page: 1, limit: 5 });
         const fromPage = page.data.find(
           (i) =>
@@ -382,8 +390,15 @@ export const InventoryPage = () => {
     setIsCatalogModalOpen(true);
   };
 
-  const handleOpenItemModal = (item?: Item) => {
+  const handleOpenItemModal = (item?: Item, opts?: { edit?: boolean }) => {
     setSelectedItem(item);
+    if (!item) {
+      setIsItemReadOnly(false);
+    } else if (opts?.edit && canManage) {
+      setIsItemReadOnly(false);
+    } else {
+      setIsItemReadOnly(true);
+    }
     setIsItemModalOpen(true);
   };
 
@@ -538,7 +553,7 @@ export const InventoryPage = () => {
         Mínimo: i.minimum_inventory,
         UOM: i.uom || '',
         'Costo compra': i.purchase_cost ?? '',
-        Activo: i.is_active ? 'Sí' : 'No',
+        Estado: i.is_active ? 'Activo' : 'Descontinuado',
       }));
       downloadWorkbook(`inventario_${excelDateStamp()}.xlsx`, [{ name: 'Repuestos', rows }]);
     } catch (error) {
@@ -609,6 +624,12 @@ export const InventoryPage = () => {
     );
     if (local) return local;
     try {
+      const looksLikeUuid =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(code);
+      if (looksLikeUuid) {
+        const byId = await getItemById(code);
+        if (byId) return byId;
+      }
       const page = await getItemsPage({ q: code, page: 1, limit: 5 });
       const fromPage = page.data.find(
         (i) =>
@@ -771,7 +792,7 @@ export const InventoryPage = () => {
                       </span>
                     </div>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${item.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                      {item.is_active ? 'Activo' : 'Inactivo'}
+                      {item.is_active ? 'Activo' : 'Descontinuado'}
                     </span>
                   </div>
                   
@@ -830,7 +851,7 @@ export const InventoryPage = () => {
                           <QrCode size={14} /> Imprimir QR
                         </button>
                         <button 
-                          onClick={() => handleOpenItemModal(item)}
+                          onClick={() => handleOpenItemModal(item, { edit: true })}
                           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
                         >
                           <Edit2 size={14} /> Editar
@@ -916,7 +937,7 @@ export const InventoryPage = () => {
                               <div className="font-semibold text-slate-900 flex items-center gap-2 flex-wrap">
                                 {item.name}
                                 {!item.is_active && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700">Inactivo</span>
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700">Descontinuado</span>
                                 )}
                                 {!item.vendor_id && item.stock <= item.minimum_inventory && (
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
@@ -965,7 +986,7 @@ export const InventoryPage = () => {
                                   <QrCode size={18} />
                                 </button>
                                 <button 
-                                  onClick={() => handleOpenItemModal(item)}
+                                  onClick={() => handleOpenItemModal(item, { edit: true })}
                                   className="inline-flex min-h-11 min-w-11 items-center justify-center p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
                                   title="Editar"
                                 >
@@ -1421,40 +1442,73 @@ export const InventoryPage = () => {
 
       case 'vendors':
         return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
             {vendors.map((vendor) => (
               <div 
                 key={vendor.id} 
-                className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col cursor-pointer hover:border-indigo-300 transition-colors"
+                className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
                 onClick={() => handleOpenCatalogModal('vendor', vendor, true)}
               >
-                <div className="p-5 flex-1">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                      <Building2 size={24} />
-                    </div>
-                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${vendor.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                      {vendor.is_active ? 'Activo' : 'Inactivo'}
-                    </span>
+                <div className="relative h-28 sm:h-32 shrink-0 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-950">
+                  {vendor.logo_url ? (
+                    <img
+                      src={mediaUrl(vendor.logo_url)}
+                      alt={vendor.name}
+                      className="absolute inset-0 w-full h-full object-contain p-3 bg-white/80 dark:bg-slate-900/80"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                        const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                        if (fallback) fallback.classList.remove('hidden');
+                      }}
+                    />
+                  ) : null}
+                  <div className={`absolute inset-0 flex items-center justify-center text-indigo-400 ${vendor.logo_url ? 'hidden' : ''}`}>
+                    <Building2 size={40} strokeWidth={1.25} />
                   </div>
-                  <h3 className="font-bold text-lg text-slate-900 mb-1">{vendor.name}</h3>
-                  <p className="text-sm text-slate-500 mb-4 font-mono">{vendor.internal_id}</p>
-                  
-                  <div className="space-y-2 text-sm">
-                    {vendor.phone && <p className="text-slate-600">📞 {vendor.phone}</p>}
-                    {vendor.email && <p className="text-slate-600">✉️ {vendor.email}</p>}
-                    {vendor.website_url && <p className="text-blue-600 hover:underline"><a href={vendor.website_url} target="_blank" rel="noreferrer">🌐 Website</a></p>}
-                  </div>
+                  <span className={`absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider shadow-sm ${vendor.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                    {vendor.is_active ? 'Activo' : 'Inactivo'}
+                  </span>
                 </div>
-                {canManage && (
-                  <div className="bg-slate-50 p-3 border-t border-slate-100 flex justify-end">
-                    <button onClick={(e) => { e.stopPropagation(); handleOpenCatalogModal('vendor', vendor, false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                      <Edit2 size={14} /> Editar
-                    </button>
+                <div className="p-3.5 flex flex-col gap-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">{vendor.name}</h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">{vendor.internal_id}</p>
+                    <div className="mt-1.5 space-y-0.5 text-xs text-slate-600 dark:text-slate-300">
+                      {vendor.phone && <p className="truncate">📞 {vendor.phone}</p>}
+                      {vendor.email && <p className="truncate">✉️ {vendor.email}</p>}
+                      {vendor.website_url && (
+                        <p className="truncate">
+                          <a
+                            href={vendor.website_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            🌐 Website
+                          </a>
+                        </p>
+                      )}
+                    </div>
                   </div>
-                )}
+                  {canManage && (
+                    <div className="flex justify-end">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleOpenCatalogModal('vendor', vendor, false); }}
+                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg transition-colors"
+                      >
+                        <Edit2 size={13} /> Editar
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
+            {vendors.length === 0 && (
+              <div className="sm:col-span-2 xl:col-span-3 bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 text-center text-slate-500">
+                No hay proveedores registrados.
+              </div>
+            )}
           </div>
         );
 
@@ -1746,7 +1800,8 @@ export const InventoryPage = () => {
         categories={categories}
         locations={locations}
         vendors={vendors}
-        readOnly={!canManage}
+        readOnly={isItemReadOnly}
+        onRequestEdit={canManage && selectedItem ? () => setIsItemReadOnly(false) : undefined}
         // OUT permitido a todos en Inventario; IN solo con REGISTER_INVENTORY_ENTRIES (TransactionModal).
         // No atar a MANAGE_INVENTORY: Técnico/Gestionador deben ver «Registrar movimiento» en el detalle.
         onQuickTransaction={canWriteOps ? handleOpenTransactionModal : undefined}
