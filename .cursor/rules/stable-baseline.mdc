@@ -1,23 +1,23 @@
----
-description: Baseline estable v1.56.51 — no romper lo funcional; restaurar si hace falta
+﻿---
+description: Baseline estable v1.56.53 — no romper lo funcional; restaurar si hace falta
 alwaysApply: true
 ---
 
 # Baseline estable (protegido)
 
-Hasta que el usuario diga lo contrario, **v1.56.51** es el punto de restauración permanente.
+Hasta que el usuario diga lo contrario, **v1.56.53** es el punto de restauración permanente.
 
-- **Commit:** `9241af02c031c4b449b3809c17c1c1a96a84ae43` — Release v1.56.51
-- **Tag:** `v1.56.51-stable`
-- **Rama de respaldo:** `backup/v1.56.51-stable` (no desarrollar encima; solo restaurar)
-- **Anteriores:** `v1.56.50-stable` / `v1.56.45-stable` / `v1.56.40-stable` / `v1.56.39-stable` siguen disponibles.
+- **Commit:** `c1eaddda2dea48ed5cb1df7e3bb4a565e4205731` — Release v1.56.53
+- **Tag:** `v1.56.53-stable`
+- **Rama de respaldo:** `backup/v1.56.53-stable` (no desarrollar encima; solo restaurar)
+- **Anteriores:** `v1.56.51-stable` / `v1.56.50-stable` / `v1.56.45-stable` / `v1.56.40-stable` / `v1.56.39-stable` siguen disponibles.
 
 ## Cómo trabajar
 
 - Nuevas mejoras van en `main` o ramas de feature.
 - No mezclar refactors ajenos al pedido; no “arreglar de paso” lo que ya funciona en el baseline.
 - Si un cambio rompe comportamiento validado del baseline, revertir o restaurar desde el tag/rama de backup antes de seguir.
-- Restaurar código: `git checkout v1.56.51-stable -- <paths>` o desde `backup/v1.56.51-stable` solo con petición explícita del usuario.
+- Restaurar código: `git checkout v1.56.53-stable -- <paths>` o desde `backup/v1.56.53-stable` solo con petición explícita del usuario.
 
 ## Entorno de producción
 
@@ -27,4 +27,4 @@ Hasta que el usuario diga lo contrario, **v1.56.51** es el punto de restauració
 
 ## Contexto activo
 
-Marca visible **GTZ CMMS** + logo LPET (`lpet.png`). Import Sheets/Drive (repuestos + logos proveedores); resultado en Bitácora (`IMPORT_SHEETS` / `IMPORT_CSV`). Detalle de repuesto en solo lectura por defecto; proveedores con logo en tarjetas.
+Marca visible **GTZ CMMS** + logo LPET (`lpet.png`). Import Sheets/Drive (repuestos + logos proveedores); resultado en Bitácora (`IMPORT_SHEETS` / `IMPORT_CSV`). Detalle de repuesto en solo lectura por defecto; proveedores con logo en tarjetas. Compras: SP/OC SAP, adjuntos y tarjetas clicables.
