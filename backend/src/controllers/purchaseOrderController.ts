@@ -1,8 +1,26 @@
 import { Response } from 'express';
+import fs from 'fs';
+import path from 'path';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import prisma from '../config/prisma';
 import { emitRefresh } from '../utils/socket';
 import { parseDateInput } from '../utils/parseDateInput';
+
+const poDetailInclude = {
+  vendor: true,
+  created_by: {
+    select: { id: true, name: true, email: true, role: true },
+  },
+  items: {
+    include: {
+      item: true,
+    },
+  },
+  documents: {
+    orderBy: { created_at: 'desc' as const },
+    include: { uploaded_by: { select: { id: true, name: true } } },
+  },
+};
 
 export const getPurchaseOrders = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -18,23 +36,27 @@ export const getPurchaseOrders = async (req: AuthRequest, res: Response): Promis
           OR: [
             ...(Number.isFinite(folioNum) && folioNum > 0 ? [{ folio: folioNum }] : []),
             { vendor: { name: { contains: term, mode: 'insensitive' } } },
+            { sap_sp_folio: { contains: term, mode: 'insensitive' } },
+            { sap_oc_folio: { contains: term, mode: 'insensitive' } },
+            {
+              items: {
+                some: {
+                  item: {
+                    OR: [
+                      { name: { contains: term, mode: 'insensitive' } },
+                      { internal_code: { contains: term, mode: 'insensitive' } },
+                    ],
+                  },
+                },
+              },
+            },
           ],
         });
       }
     }
 
     const where = and.length ? { AND: and } : {};
-    const include = {
-      vendor: true,
-      created_by: {
-        select: { id: true, name: true, email: true, role: true },
-      },
-      items: {
-        include: {
-          item: true,
-        },
-      },
-    };
+    const include = poDetailInclude;
     const orderBy = { created_at: 'desc' as const };
     const wantsPage = page != null || limit != null;
 
@@ -148,10 +170,7 @@ export const createPurchaseOrder = async (req: AuthRequest, res: Response): Prom
             })),
           },
         },
-        include: {
-          vendor: true,
-          items: { include: { item: true } },
-        },
+        include: poDetailInclude,
       });
     });
 
@@ -161,6 +180,130 @@ export const createPurchaseOrder = async (req: AuthRequest, res: Response): Prom
   } catch (error) {
     console.error('Error creating purchase order:', error);
     res.status(500).json({ error: 'Error al crear la orden de compra' });
+  }
+};
+
+/** Actualiza SP (SAP), OC (SAP) y fecha estimada. */
+export const updatePurchaseOrder = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const { sap_sp_folio, sap_oc_folio, expected_date } = req.body ?? {};
+
+    const existing = await prisma.purchaseOrder.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: 'Orden de compra no encontrada' });
+      return;
+    }
+
+    const data: {
+      sap_sp_folio?: string | null;
+      sap_oc_folio?: string | null;
+      expected_date?: Date | null;
+    } = {};
+
+    if (sap_sp_folio !== undefined) {
+      const v = sap_sp_folio == null ? '' : String(sap_sp_folio).trim();
+      data.sap_sp_folio = v || null;
+    }
+    if (sap_oc_folio !== undefined) {
+      const v = sap_oc_folio == null ? '' : String(sap_oc_folio).trim();
+      data.sap_oc_folio = v || null;
+    }
+    if (expected_date !== undefined) {
+      if (expected_date === null || expected_date === '') {
+        data.expected_date = null;
+      } else {
+        data.expected_date = parseDateInput(String(expected_date));
+      }
+    }
+
+    if (Object.keys(data).length === 0) {
+      res.status(400).json({ error: 'Indica sap_sp_folio, sap_oc_folio o expected_date' });
+      return;
+    }
+
+    const updated = await prisma.purchaseOrder.update({
+      where: { id },
+      data,
+      include: poDetailInclude,
+    });
+
+    emitRefresh('refresh_purchase_orders');
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating purchase order:', error);
+    res.status(500).json({ error: 'Error al actualizar la orden de compra' });
+  }
+};
+
+export const uploadPurchaseOrderDocument = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const userId = req.user?.userId;
+    const docTypeRaw = String(req.body?.doc_type || '').toUpperCase();
+    const file = req.file;
+
+    if (!['SP', 'OC', 'OTRO'].includes(docTypeRaw)) {
+      res.status(400).json({ error: 'doc_type debe ser SP, OC u OTRO' });
+      return;
+    }
+    if (!file) {
+      res.status(400).json({ error: 'Adjunta un archivo (PDF o Word)' });
+      return;
+    }
+
+    const existing = await prisma.purchaseOrder.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: 'Orden de compra no encontrada' });
+      return;
+    }
+
+    const doc = await prisma.purchaseOrderDocument.create({
+      data: {
+        purchase_order_id: id,
+        doc_type: docTypeRaw as 'SP' | 'OC' | 'OTRO',
+        file_url: `/uploads/purchase-orders/${file.filename}`,
+        file_name: file.originalname || file.filename,
+        uploaded_by_id: userId || null,
+      },
+      include: { uploaded_by: { select: { id: true, name: true } } },
+    });
+
+    emitRefresh('refresh_purchase_orders');
+    res.status(201).json(doc);
+  } catch (error) {
+    console.error('Error uploading purchase order document:', error);
+    res.status(500).json({ error: 'Error al subir el documento' });
+  }
+};
+
+export const deletePurchaseOrderDocument = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const docId = req.params.docId as string;
+
+    const doc = await prisma.purchaseOrderDocument.findUnique({ where: { id: docId } });
+    if (!doc || doc.purchase_order_id !== id) {
+      res.status(404).json({ error: 'Documento no encontrado' });
+      return;
+    }
+
+    await prisma.purchaseOrderDocument.delete({ where: { id: docId } });
+
+    if (doc.file_url?.includes('/uploads/')) {
+      const abs = path.join(__dirname, '../..', doc.file_url.replace(/^\//, ''));
+      try {
+        if (fs.existsSync(abs)) fs.unlinkSync(abs);
+      } catch (err) {
+        console.warn('No se pudo borrar archivo de OC:', abs, err);
+      }
+    }
+
+    emitRefresh('refresh_purchase_orders');
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Error deleting purchase order document:', error);
+    res.status(500).json({ error: 'Error al eliminar el documento' });
   }
 };
 
@@ -250,11 +393,7 @@ export const updatePurchaseOrderLineCosts = async (req: AuthRequest, res: Respon
 
     const updated = await prisma.purchaseOrder.findUnique({
       where: { id },
-      include: {
-        vendor: true,
-        created_by: { select: { id: true, name: true, email: true, role: true } },
-        items: { include: { item: true } },
-      },
+      include: poDetailInclude,
     });
 
     emitRefresh('refresh_purchase_orders');
@@ -500,11 +639,7 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
 
         return tx.purchaseOrder.findUnique({
           where: { id },
-          include: {
-            vendor: true,
-            created_by: { select: { id: true, name: true, email: true, role: true } },
-            items: { include: { item: true } },
-          },
+          include: poDetailInclude,
         });
       });
 
@@ -518,10 +653,7 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
     const updatedOrder = await prisma.purchaseOrder.update({
       where: { id: id },
       data: updateData,
-      include: {
-        vendor: true,
-        items: { include: { item: true } }
-      }
+      include: poDetailInclude,
     });
 
     emitRefresh('refresh_purchase_orders');

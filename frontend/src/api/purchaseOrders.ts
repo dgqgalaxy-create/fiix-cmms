@@ -24,6 +24,19 @@ export interface PurchaseOrderItem {
   };
 }
 
+export type PurchaseOrderDocType = 'SP' | 'OC' | 'OTRO';
+
+export interface PurchaseOrderDocument {
+  id: string;
+  purchase_order_id: string;
+  doc_type: PurchaseOrderDocType;
+  file_url: string;
+  file_name: string;
+  uploaded_by_id?: string | null;
+  uploaded_by?: { id: string; name: string } | null;
+  created_at: string;
+}
+
 export interface PurchaseOrder {
   id: string;
   folio: number;
@@ -33,6 +46,8 @@ export interface PurchaseOrder {
   created_at: string;
   expected_date?: string;
   received_at?: string;
+  sap_sp_folio?: string | null;
+  sap_oc_folio?: string | null;
   vendor?: {
     id: string;
     name: string;
@@ -43,6 +58,7 @@ export interface PurchaseOrder {
     role: string;
   };
   items: PurchaseOrderItem[];
+  documents?: PurchaseOrderDocument[];
 }
 
 export type PurchaseOrderListParams = {
@@ -120,4 +136,34 @@ export const updatePurchaseOrderLineCosts = async (
 ): Promise<PurchaseOrder> => {
   const { data } = await api.patch(`/purchase-orders/${id}/line-costs`, payload);
   return data;
+};
+
+export const updatePurchaseOrder = async (
+  id: string,
+  payload: {
+    sap_sp_folio?: string | null;
+    sap_oc_folio?: string | null;
+    expected_date?: string | null;
+  }
+): Promise<PurchaseOrder> => {
+  const { data } = await api.patch(`/purchase-orders/${id}`, payload);
+  return data;
+};
+
+export const uploadPurchaseOrderDocument = async (
+  id: string,
+  file: File,
+  doc_type: PurchaseOrderDocType
+): Promise<PurchaseOrderDocument> => {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('doc_type', doc_type);
+  const { data } = await api.post(`/purchase-orders/${id}/documents`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+};
+
+export const deletePurchaseOrderDocument = async (id: string, docId: string): Promise<void> => {
+  await api.delete(`/purchase-orders/${id}/documents/${docId}`);
 };

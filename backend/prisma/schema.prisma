@@ -100,6 +100,7 @@ model User {
   assigned_orders WorkOrder[] @relation("AssignedOrders")
   inventory_transactions InventoryTransaction[]
   created_purchase_orders PurchaseOrder[] @relation("CreatedPurchaseOrders")
+  purchase_order_documents PurchaseOrderDocument[]
   notifications   AppNotification[]
   push_subscriptions PushSubscription[]
   checklist_technician DailyChecklist[] @relation("ChecklistTechnician")
@@ -442,6 +443,12 @@ enum PurchaseOrderStatus {
   CANCELADA
 }
 
+enum PurchaseOrderDocType {
+  SP
+  OC
+  OTRO
+}
+
 model PurchaseOrder {
   id              String   @id @default(uuid()) @db.Uuid
   folio           Int      @default(autoincrement())
@@ -459,7 +466,13 @@ model PurchaseOrder {
   expected_date   DateTime?
   received_at     DateTime?
 
+  /// Folio Solicitud de Pedido en SAP (texto libre).
+  sap_sp_folio    String?
+  /// Folio Orden de Compra en SAP (texto libre).
+  sap_oc_folio    String?
+
   items           PurchaseOrderItem[]
+  documents       PurchaseOrderDocument[]
 }
 
 model PurchaseOrderItem {
@@ -475,6 +488,20 @@ model PurchaseOrderItem {
   /// Cantidad realmente recibida al cerrar la OC (null hasta RECIBIDA).
   received_quantity  Float?
   unit_cost          Float    // Precio capturado al crear la orden
+}
+
+model PurchaseOrderDocument {
+  id                 String               @id @default(uuid()) @db.Uuid
+  purchase_order_id  String               @db.Uuid
+  purchase_order     PurchaseOrder        @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade)
+  doc_type           PurchaseOrderDocType
+  file_url           String
+  file_name          String
+  uploaded_by_id     String?              @db.Uuid
+  uploaded_by        User?                @relation(fields: [uploaded_by_id], references: [id])
+  created_at         DateTime             @default(now())
+
+  @@index([purchase_order_id])
 }
 
 model FailureProblem {

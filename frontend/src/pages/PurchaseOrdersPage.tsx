@@ -119,6 +119,7 @@ export const PurchaseOrdersPage = () => {
             href="http://lpet.tscloud.mx"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
             className="flex items-center justify-center gap-1.5 px-2.5 py-2 sm:px-5 sm:py-2.5 bg-sky-50 text-sky-700 border border-sky-200 rounded-lg sm:rounded-xl hover:bg-sky-100 transition-all text-sm font-medium shadow-sm"
             title="Acceder a SAP"
           >
@@ -142,7 +143,7 @@ export const PurchaseOrdersPage = () => {
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
-              placeholder="Buscar folio, proveedor…"
+              placeholder="Buscar folio, proveedor, ítem, SAP…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-8 pr-3 py-2 text-sm bg-white dark:bg-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all shadow-sm"
@@ -189,7 +190,7 @@ export const PurchaseOrdersPage = () => {
                   key={order.id}
                   type="button"
                   onClick={() => setSelectedOrder(order)}
-                  className="w-full text-left px-3 py-2.5 active:bg-slate-50 dark:active:bg-slate-800 flex items-center gap-2"
+                  className="w-full text-left px-3 py-2.5 active:bg-slate-50 dark:active:bg-slate-800 flex items-center gap-2 cursor-pointer"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -197,6 +198,16 @@ export const PurchaseOrdersPage = () => {
                         PO-{order.folio.toString().padStart(4, '0')}
                       </span>
                       {getStatusBadge(order.status, true)}
+                      {order.sap_sp_folio && (
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900">
+                          SP (SAP): {order.sap_sp_folio}
+                        </span>
+                      )}
+                      {order.sap_oc_folio && (
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900">
+                          OC (SAP): {order.sap_oc_folio}
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 truncate">
                       {order.vendor?.name || 'Sin proveedor'}
@@ -239,9 +250,33 @@ export const PurchaseOrdersPage = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                   {sortedOrders.map((order) => (
-                    <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                    <tr
+                      key={order.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedOrder(order)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSelectedOrder(order);
+                        }
+                      }}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group cursor-pointer"
+                    >
                       <td className="px-6 py-4">
                         <div className="font-bold text-slate-800 dark:text-slate-100">PO-{order.folio.toString().padStart(4, '0')}</div>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {order.sap_sp_folio && (
+                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900">
+                              SP (SAP): {order.sap_sp_folio}
+                            </span>
+                          )}
+                          {order.sap_oc_folio && (
+                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900">
+                              OC (SAP): {order.sap_oc_folio}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="font-medium text-slate-700 dark:text-slate-300">{order.vendor?.name}</div>
@@ -260,13 +295,13 @@ export const PurchaseOrdersPage = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => setSelectedOrder(order)}
-                          className="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition-colors"
+                        <span
+                          className="inline-flex p-2 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950/30 rounded-lg transition-colors"
                           title="Ver detalles"
+                          aria-hidden="true"
                         >
                           <ChevronRight size={20} />
-                        </button>
+                        </span>
                       </td>
                     </tr>
                   ))}

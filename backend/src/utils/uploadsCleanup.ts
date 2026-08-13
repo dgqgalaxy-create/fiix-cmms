@@ -88,7 +88,7 @@ export async function collectReferencedUploadPaths(
 ): Promise<Set<string>> {
   const referenced = new Set<string>();
 
-  const [assets, workOrders, items, categories, locations, vendors] = await Promise.all([
+  const [assets, workOrders, items, categories, locations, vendors, poDocuments] = await Promise.all([
     prisma.asset.findMany({ select: { image_url: true, document_url: true } }),
     prisma.workOrder.findMany({
       select: {
@@ -101,6 +101,7 @@ export async function collectReferencedUploadPaths(
     prisma.itemCategory.findMany({ select: { icon_url: true } }),
     prisma.itemLocation.findMany({ select: { icon_url: true } }),
     prisma.vendor.findMany({ select: { logo_url: true } }),
+    prisma.purchaseOrderDocument.findMany({ select: { file_url: true } }),
   ]);
 
   for (const a of assets) {
@@ -124,6 +125,9 @@ export async function collectReferencedUploadPaths(
   }
   for (const v of vendors) {
     if (v.logo_url && v.logo_url.includes('/uploads/')) addIfUpload(referenced, v.logo_url);
+  }
+  for (const d of poDocuments) {
+    if (d.file_url && d.file_url.includes('/uploads/')) addIfUpload(referenced, d.file_url);
   }
 
   return referenced;
@@ -224,7 +228,7 @@ export async function cleanupOrphanUploads(prisma: PrismaClient): Promise<Orphan
 
 /**
  * Vacía el contenido de uploads/ (mantiene la carpeta).
- * Recrea uploads/inventory/ y uploads/vendors/ vacíos para subidas.
+ * Recrea uploads/inventory/, uploads/vendors/ y uploads/purchase-orders/ vacíos para subidas.
  */
 export async function emptyUploadsDirectory(): Promise<EmptyUploadsResult> {
   const uploadsRoot = path.resolve(getUploadsRoot());
@@ -236,6 +240,7 @@ export async function emptyUploadsDirectory(): Promise<EmptyUploadsResult> {
     await fs.promises.mkdir(uploadsRoot, { recursive: true });
     await fs.promises.mkdir(path.join(uploadsRoot, 'inventory'), { recursive: true });
     await fs.promises.mkdir(path.join(uploadsRoot, 'vendors'), { recursive: true });
+    await fs.promises.mkdir(path.join(uploadsRoot, 'purchase-orders'), { recursive: true });
     return { deletedCount: 0, freedBytes: 0 };
   }
 
@@ -295,9 +300,10 @@ export async function emptyUploadsDirectory(): Promise<EmptyUploadsResult> {
   try {
     await fs.promises.mkdir(path.join(uploadsRoot, 'inventory'), { recursive: true });
     await fs.promises.mkdir(path.join(uploadsRoot, 'vendors'), { recursive: true });
+    await fs.promises.mkdir(path.join(uploadsRoot, 'purchase-orders'), { recursive: true });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    errors.push(`No se pudo recrear inventory/vendors/: ${msg}`);
+    errors.push(`No se pudo recrear inventory/vendors/purchase-orders/: ${msg}`);
   }
 
   const result: EmptyUploadsResult = { deletedCount, freedBytes };

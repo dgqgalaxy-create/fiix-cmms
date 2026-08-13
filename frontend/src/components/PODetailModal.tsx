@@ -1,14 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar, Package, ArrowRight, Loader2, CheckCircle2, User, Building2, Printer, RefreshCw } from 'lucide-react';
+import {
+  X,
+  Calendar,
+  Package,
+  ArrowRight,
+  Loader2,
+  CheckCircle2,
+  User,
+  Building2,
+  Printer,
+  RefreshCw,
+  FileText,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import {
   type PurchaseOrder,
+  type PurchaseOrderDocType,
   updatePurchaseOrderStatus,
   updatePurchaseOrderLineCosts,
+  updatePurchaseOrder,
+  uploadPurchaseOrderDocument,
+  deletePurchaseOrderDocument,
 } from '../api/purchaseOrders';
 import { useAuth } from '../context/AuthContext';
-import { formatDate, formatDateOnly } from '../utils/dateUtils';
+import { formatDate, formatDateOnly, parseDateOnly } from '../utils/dateUtils';
 import { formatCurrency } from '../utils/currency';
+import { mediaUrl } from '../utils/mediaUrl';
 import { ItemModal } from './inventory/ItemModal';
 import {
   getCategories,
@@ -28,6 +47,15 @@ interface PODetailModalProps {
   onUpdate: () => void;
 }
 
+function toDateInputValue(iso?: string | null): string {
+  if (!iso) return '';
+  const d = parseDateOnly(iso);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -39,11 +67,18 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
   const [categories, setCategories] = useState<ItemCategory[]>([]);
   const [locations, setLocations] = useState<ItemLocation[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [sapSp, setSapSp] = useState('');
+  const [sapOc, setSapOc] = useState('');
+  const [expectedDate, setExpectedDate] = useState('');
+  const [docType, setDocType] = useState<PurchaseOrderDocType>('SP');
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { user, hasPermission } = useAuth();
 
   const isManagerOrAdmin = user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR';
   const isAdmin = user?.role === 'ADMINISTRADOR';
   const canEditInventory = hasPermission('MANAGE_INVENTORY');
+  const canManagePurchases = hasPermission('MANAGE_PURCHASES');
   const isDraft = order.status === 'BORRADOR';
   const isClosed = order.status === 'RECIBIDA' || order.status === 'CANCELADA';
   const priceFrozen = !isDraft;
@@ -55,6 +90,9 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
       initial[oi.id] = String(oi.unit_cost);
     }
     setDraftCosts(initial);
+    setSapSp(order.sap_sp_folio || '');
+    setSapOc(order.sap_oc_folio || '');
+    setExpectedDate(toDateInputValue(order.expected_date));
     setError('');
   }, [isOpen, order]);
 
@@ -145,6 +183,52 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
       onUpdate();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al guardar costos');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveSapFields = async () => {
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await updatePurchaseOrder(order.id, {
+        sap_sp_folio: sapSp.trim() || null,
+        sap_oc_folio: sapOc.trim() || null,
+        expected_date: expectedDate || null,
+      });
+      onUpdate();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al guardar datos SAP / fecha');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUploadDocument = async (file: File | null | undefined) => {
+    if (!file) return;
+    setUploadingDoc(true);
+    setError('');
+    try {
+      await uploadPurchaseOrderDocument(order.id, file, docType);
+      onUpdate();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al subir el documento');
+    } finally {
+      setUploadingDoc(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteDocument = async (docId: string) => {
+    if (!window.confirm('¿Eliminar este documento?')) return;
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await deletePurchaseOrderDocument(order.id, docId);
+      onUpdate();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al eliminar el documento');
     } finally {
       setIsSubmitting(false);
     }
@@ -320,6 +404,12 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
             <p className="text-xl font-bold text-emerald-700 mb-1">PO-{order.folio.toString().padStart(4, '0')}</p>
             <p className="text-xs text-slate-500">Fecha: {formatDate(order.created_at)}</p>
             <p className="text-xs font-bold mt-2 px-2 py-1 bg-slate-100 rounded-lg inline-block">Estado: {order.status}</p>
+            {(order.sap_sp_folio || order.sap_oc_folio) && (
+              <div className="mt-2 text-xs text-slate-700 space-y-0.5">
+                {order.sap_sp_folio && <p><span className="font-bold">SP (SAP):</span> {order.sap_sp_folio}</p>}
+                {order.sap_oc_folio && <p><span className="font-bold">OC (SAP):</span> {order.sap_oc_folio}</p>}
+              </div>
+            )}
           </div>
         </div>
 
@@ -458,6 +548,141 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
               <p className="font-bold text-slate-800 dark:text-slate-100">{order.created_by?.name}</p>
               <p className="text-sm text-slate-500 dark:text-slate-400">{order.created_by?.role}</p>
             </div>
+          </div>
+
+          <div className="mb-8 p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm print:hidden">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <FileText size={16} /> Referencias SAP y entrega
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <label className="block">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">SP (SAP)</span>
+                <input
+                  type="text"
+                  value={sapSp}
+                  onChange={(e) => setSapSp(e.target.value)}
+                  disabled={!canManagePurchases || isSubmitting}
+                  placeholder="Ej. 4500123456"
+                  className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 disabled:opacity-60"
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">OC (SAP)</span>
+                <input
+                  type="text"
+                  value={sapOc}
+                  onChange={(e) => setSapOc(e.target.value)}
+                  disabled={!canManagePurchases || isSubmitting}
+                  placeholder="Ej. 4100987654"
+                  className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 disabled:opacity-60"
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Fecha estimada</span>
+                <input
+                  type="date"
+                  value={expectedDate}
+                  onChange={(e) => setExpectedDate(e.target.value)}
+                  disabled={!canManagePurchases || isSubmitting}
+                  className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 disabled:opacity-60"
+                />
+              </label>
+            </div>
+            {canManagePurchases && (
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleSaveSapFields}
+                  disabled={isSubmitting}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg bg-slate-800 text-white hover:bg-slate-700 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60"
+                >
+                  {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : null}
+                  Guardar SAP / fecha
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="mb-8 p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm print:hidden">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Upload size={16} /> Documentos SAP
+            </h3>
+            {canManagePurchases && (
+              <div className="flex flex-wrap items-end gap-3 mb-4">
+                <label className="block">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Tipo</span>
+                  <select
+                    value={docType}
+                    onChange={(e) => setDocType(e.target.value as PurchaseOrderDocType)}
+                    className="mt-1 block rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+                  >
+                    <option value="SP">SP (SAP)</option>
+                    <option value="OC">OC (SAP)</option>
+                    <option value="OTRO">Otro</option>
+                  </select>
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  className="hidden"
+                  onChange={(e) => handleUploadDocument(e.target.files?.[0])}
+                />
+                <button
+                  type="button"
+                  disabled={uploadingDoc || isSubmitting}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-60"
+                >
+                  {uploadingDoc ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                  Subir PDF / Word
+                </button>
+              </div>
+            )}
+            {(order.documents?.length ?? 0) === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">Sin documentos adjuntos.</p>
+            ) : (
+              <ul className="space-y-2">
+                {(order.documents || []).map((doc) => {
+                  const typeLabel =
+                    doc.doc_type === 'SP' ? 'SP (SAP)' : doc.doc_type === 'OC' ? 'OC (SAP)' : 'Otro';
+                  return (
+                    <li
+                      key={doc.id}
+                      className="flex items-center gap-3 rounded-xl border border-slate-100 dark:border-slate-800 px-3 py-2"
+                    >
+                      <FileText size={16} className="text-slate-400 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <a
+                          href={mediaUrl(doc.file_url)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm font-medium text-emerald-700 dark:text-emerald-400 hover:underline truncate block"
+                        >
+                          {doc.file_name}
+                        </a>
+                        <p className="text-[11px] text-slate-500">
+                          {typeLabel}
+                          {doc.uploaded_by?.name ? ` · ${doc.uploaded_by.name}` : ''}
+                          {doc.created_at ? ` · ${formatDate(doc.created_at)}` : ''}
+                        </p>
+                      </div>
+                      {canManagePurchases && (
+                        <button
+                          type="button"
+                          title="Eliminar"
+                          disabled={isSubmitting}
+                          onClick={() => handleDeleteDocument(doc.id)}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">

@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.51";
+export const APP_VERSION = "1.56.53";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Compras — la fila o tarjeta de cada orden abre el detalle al tocarla (la flecha queda como indicador).",
+    "Nuevo: Compras — búsqueda por folio, proveedor, ítem y SP/OC (SAP); campos SP (SAP) / OC (SAP), fecha estimada editable y adjuntos PDF/Word en el detalle.",
     "Mejora: Logo de marca actualizado (login, menú lateral y modal de versión).",
     "Mejora: Marca visible unificada a GTZ CMMS (ya no «CMMS MTTO»).",
     "Nuevo: Import CSV/Sheets — el resultado queda en Bitácora de auditoría (IMPORT_SHEETS / IMPORT_CSV) para consultarlo después.",
