@@ -96,6 +96,79 @@ export type PhotoImportSummary = {
   error?: string;
 };
 
+/** Texto legible del resumen de import (UI toast + bitácora). */
+export function formatImportResultsMessage(
+  results: CsvImportResults,
+  prefix: string
+): string {
+  let msg = `${prefix}: ${results.categories} Categorías, ${results.locations} Ubicaciones, ${results.vendors} Proveedores, ${results.items} Repuestos, ${results.users} Usuarios, ${results.inventory} Movimientos, ${results.orders} Órdenes.`;
+  if (results.assets) {
+    msg += ` Activos (desde inventario ACTIVOS): ${results.assets.created} creados, ${results.assets.updated} actualizados`;
+    if (results.assets.skipped > 0) {
+      msg += `, ${results.assets.skipped} omitidos`;
+    }
+    msg += '.';
+  }
+  if (results.itemImages) {
+    const src =
+      results.itemImages.source === 'google_drive'
+        ? 'Drive'
+        : results.itemImages.source === 'zip'
+          ? 'zip'
+          : 'data/';
+    msg += ` Fotos repuestos (${src}): ${results.itemImages.matched}`;
+    if (results.itemImages.assetsMatched && results.itemImages.assetsMatched > 0) {
+      msg += ` (también en Activos: ${results.itemImages.assetsMatched})`;
+    }
+    if (results.itemImages.missing > 0) {
+      msg += ` (${results.itemImages.missing} sin ítem coincidente)`;
+    }
+    if (results.itemImages.driveDownloaded != null) {
+      msg += `; descargadas Drive: ${results.itemImages.driveDownloaded}`;
+    }
+    if (results.itemImages.error) {
+      msg += ` — error Drive: ${results.itemImages.error}`;
+    }
+    msg += '.';
+  }
+  if (results.vendorImages) {
+    const src =
+      results.vendorImages.source === 'google_drive'
+        ? 'Drive'
+        : results.vendorImages.source === 'zip'
+          ? 'zip'
+          : 'data/';
+    msg += ` Logos proveedores (${src}): ${results.vendorImages.matched}`;
+    if (results.vendorImages.missing > 0) {
+      msg += ` (${results.vendorImages.missing} sin proveedor coincidente)`;
+    }
+    if (results.vendorImages.driveDownloaded != null) {
+      msg += `; descargadas Drive: ${results.vendorImages.driveDownloaded}`;
+    }
+    if (results.vendorImages.error) {
+      msg += ` — error Drive: ${results.vendorImages.error}`;
+    }
+    msg += '.';
+  }
+  if (results.workOrderImages) {
+    const src =
+      results.workOrderImages.source === 'google_drive'
+        ? 'Drive'
+        : results.workOrderImages.source === 'zip'
+          ? 'zip'
+          : 'data/';
+    msg += ` Fotos OT (${src}): ${results.workOrderImages.matched} (antes ${results.workOrderImages.beforeAssigned}, después ${results.workOrderImages.afterAssigned})`;
+    if (results.workOrderImages.driveDownloaded != null) {
+      msg += `; descargadas Drive: ${results.workOrderImages.driveDownloaded}`;
+    }
+    if (results.workOrderImages.error) {
+      msg += ` — error Drive: ${results.workOrderImages.error}`;
+    }
+    msg += '.';
+  }
+  return msg;
+}
+
 export type ProcessCsvImportOptions = {
   /** Si false, no intenta data/Items_Images, data/Vendors_Images ni data/Formulario… cuando no hay zip. Default true. */
   includeLocalPhotoFolders?: boolean;

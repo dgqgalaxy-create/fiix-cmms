@@ -3,6 +3,9 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 13 de Agosto de 2026)*
 
+### Novedades en v1.56.50 (Import en bitácora)
+- **Nuevo:** Resultado de import CSV/Sheets se guarda en Bitácora de auditoría (`IMPORT_SHEETS` / `IMPORT_CSV`) con detalle expandible.
+
 ### Novedades en v1.56.49 (Logos proveedores en import)
 - **Nuevo:** Import CSV/Sheets — `Vendors_Images.zip`, `GOOGLE_DRIVE_VENDORS_FOLDER` y `data/Vendors_Images/` (mismo patrón que Items_Images; no altera fotos de repuestos/OT).
 

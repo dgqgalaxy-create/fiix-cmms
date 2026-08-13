@@ -13,6 +13,7 @@ import {
 } from '../utils/uploadsCleanup';
 import { authenticate, type AuthRequest } from '../middlewares/authMiddleware';
 import { processCsvImportFiles, CsvImportError } from '../utils/runCsvImport';
+import { logImportAudit } from '../utils/importAuditLog';
 import {
   fetchAllImportTabs,
   recordsToCsv,
@@ -506,14 +507,33 @@ router.post(
     const useGoogleDrive =
       String((req.body as any)?.useGoogleDrive || '').toLowerCase() === 'true' ||
       String((req.body as any)?.useGoogleDrive || '') === '1';
+    const authReq = req as AuthRequest;
     const results = await processCsvImportFiles(files, {
       zipFile,
       vendorZipFile,
       woZipFile,
       useGoogleDrive,
     });
+    await logImportAudit({
+      source: 'csv',
+      userId: authReq.user?.userId,
+      results,
+      useGoogleDrive,
+      scopeHint: woZipFile || files.some((f) => /Solicitudes/i.test(f.originalname || ''))
+        ? 'orders_or_mixed'
+        : 'inventory',
+    });
     res.json({ success: true, message: 'Archivos CSV importados con éxito.', results });
   } catch (error: any) {
+    const authReq = req as AuthRequest;
+    await logImportAudit({
+      source: 'csv',
+      userId: authReq.user?.userId,
+      errorMessage: error?.message || String(error),
+      useGoogleDrive:
+        String((req.body as any)?.useGoogleDrive || '').toLowerCase() === 'true' ||
+        String((req.body as any)?.useGoogleDrive || '') === '1',
+    });
     if (error instanceof CsvImportError) {
       res.status(error.status).json({ message: error.message });
       return;
@@ -563,23 +583,43 @@ router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Respo
       // Por defecto: sí usar Drive en sync Sheets si hay key/carpetas (sin zip).
       ((req.body as any)?.useGoogleDrive === undefined && Boolean(getDriveApiKey()));
 
+    const authReq = req as AuthRequest;
     const results = await processCsvImportFiles(files, {
       includeLocalPhotoFolders: true,
       useGoogleDrive,
+    });
+
+    const sheetsMeta = tabs.map((t) => ({
+      sheetTitle: t.sheetTitle,
+      rows: t.records.length,
+    }));
+    await logImportAudit({
+      source: 'sheets',
+      userId: authReq.user?.userId,
+      results,
+      useGoogleDrive,
+      sheets: sheetsMeta,
     });
 
     res.json({
       success: true,
       message: 'Datos importados desde Google Sheets con éxito.',
       results,
-      sheets: tabs.map((t) => ({
-        sheetTitle: t.sheetTitle,
-        rows: t.records.length,
-      })),
+      sheets: sheetsMeta,
       progress: getImportProgress(),
     });
   } catch (error: any) {
     setImportProgress('error', 0, error?.message || 'Error en importación', { active: false });
+    const authReq = req as AuthRequest;
+    await logImportAudit({
+      source: 'sheets',
+      userId: authReq.user?.userId,
+      errorMessage: error?.message || String(error),
+      useGoogleDrive:
+        String((req.body as any)?.useGoogleDrive || '').toLowerCase() === 'true' ||
+        String((req.body as any)?.useGoogleDrive || '') === '1' ||
+        ((req.body as any)?.useGoogleDrive === undefined && Boolean(getDriveApiKey())),
+    });
     if (error instanceof GoogleSheetsError) {
       res.status(error.status).json({ message: error.message });
       return;

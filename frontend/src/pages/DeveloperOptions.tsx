@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { Fragment, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldAlert,
@@ -132,6 +132,7 @@ export const DeveloperOptions = () => {
   } | null>(null);
   const [auditOpen, setAuditOpen] = useState(false);
   const [auditLogs, setAuditLogs] = useState<AuditLogRow[]>([]);
+  const [auditExpandedId, setAuditExpandedId] = useState<string | null>(null);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
   const [auditFrom, setAuditFrom] = useState('');
@@ -774,6 +775,10 @@ export const DeveloperOptions = () => {
       } else {
         setWorkOrderImagesZip(null);
       }
+      if (isAdmin) {
+        setAuditOpen(true);
+        void fetchAuditLogs();
+      }
       setTimeout(() => setSuccessMsg(null), 12000);
     } catch (err: unknown) {
       let detail = 'Error desconocido';
@@ -943,6 +948,10 @@ export const DeveloperOptions = () => {
         });
       }
       setSuccessMsg(formatImportResultsMessage(results, 'Google Sheets importados'));
+      if (isAdmin) {
+        setAuditOpen(true);
+        void fetchAuditLogs();
+      }
       setTimeout(() => setSuccessMsg(null), 15000);
     } catch (err: unknown) {
       let detail = 'Error desconocido';
@@ -1667,6 +1676,11 @@ export const DeveloperOptions = () => {
                 <div className="min-w-0">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Auditoría</p>
                   <h2 className="mt-0.5 text-lg font-black text-slate-900 dark:text-white">Bitácora de auditoría</h2>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                    Aquí quedan los resultados de imports CSV/Sheets (acción <code className="text-xs">IMPORT_SHEETS</code> /{' '}
+                    <code className="text-xs">IMPORT_CSV</code>) aunque el aviso verde ya haya desaparecido. Toca una fila de
+                    import para ver el detalle completo.
+                  </p>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     Histórico completo en base de datos (sin caducidad). En pantalla se muestran los últimos 50; puedes descargar Excel por periodo o todo el histórico.
                   </p>
@@ -1753,24 +1767,55 @@ export const DeveloperOptions = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {auditLogs.map((row) => (
-                          <tr key={row.id} className="border-t border-slate-100 dark:border-slate-800">
-                            <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums text-slate-600 dark:text-slate-300">
-                              {formatDateTime(row.created_at)}
-                            </td>
-                            <td className="px-3 py-2 text-xs font-medium text-slate-800 dark:text-slate-100">
-                              {row.user_name || '—'}
-                            </td>
-                            <td className="px-3 py-2">
-                              <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                                {row.action}
-                              </span>
-                            </td>
-                            <td className="px-3 py-2 text-xs text-slate-600 dark:text-slate-300 max-w-xs truncate" title={row.summary}>
-                              {row.summary}
-                            </td>
-                          </tr>
-                        ))}
+                        {auditLogs.map((row) => {
+                          const meta = row.meta as { detail?: string } | null | undefined;
+                          const detailText =
+                            typeof meta?.detail === 'string' && meta.detail.trim()
+                              ? meta.detail
+                              : row.summary;
+                          const isImport = row.entity === 'import' || /^IMPORT_/i.test(row.action);
+                          const expanded = auditExpandedId === row.id;
+                          return (
+                            <Fragment key={row.id}>
+                              <tr
+                                className={`border-t border-slate-100 dark:border-slate-800 ${isImport ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60' : ''}`}
+                                onClick={() => {
+                                  if (!isImport) return;
+                                  setAuditExpandedId(expanded ? null : row.id);
+                                }}
+                              >
+                                <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums text-slate-600 dark:text-slate-300">
+                                  {formatDateTime(row.created_at)}
+                                </td>
+                                <td className="px-3 py-2 text-xs font-medium text-slate-800 dark:text-slate-100">
+                                  {row.user_name || '—'}
+                                </td>
+                                <td className="px-3 py-2">
+                                  <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                    {row.action}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-xs text-slate-600 dark:text-slate-300 max-w-md">
+                                  <span className={expanded ? 'whitespace-normal' : 'line-clamp-2'} title={row.summary}>
+                                    {row.summary}
+                                  </span>
+                                  {isImport && (
+                                    <span className="mt-0.5 block text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">
+                                      {expanded ? 'Ocultar detalle' : 'Ver detalle'}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                              {expanded && (
+                                <tr className="border-t border-slate-100 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/60">
+                                  <td colSpan={4} className="px-3 py-3 text-xs leading-5 text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words">
+                                    {detailText}
+                                  </td>
+                                </tr>
+                              )}
+                            </Fragment>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

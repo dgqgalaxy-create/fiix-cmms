@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.49";
+export const APP_VERSION = "1.56.50";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Import CSV/Sheets — el resultado queda en Bitácora de auditoría (IMPORT_SHEETS / IMPORT_CSV) para consultarlo después.",
     "Nuevo: Import — logos de proveedores (Vendors_Images.zip, Drive GOOGLE_DRIVE_VENDORS_FOLDER, o data/Vendors_Images/).",
     "Mejora: Inventario — clic en repuesto abre solo lectura; Editar junto a Registrar movimiento (Admin/Gestionador).",
     "Mejora: Proveedores — logo más bajo para que quepan bien los datos en la tarjeta.",

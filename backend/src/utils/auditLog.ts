@@ -21,7 +21,7 @@ export async function writeAuditLog(input: AuditInput): Promise<void> {
         action: input.action,
         entity: input.entity,
         entity_id: input.entityId || null,
-        summary: input.summary.slice(0, 500),
+        summary: input.summary.slice(0, 800),
         ...(input.meta != null ? { meta: input.meta } : {}),
       },
     });
