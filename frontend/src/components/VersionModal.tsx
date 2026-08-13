@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.48";
+export const APP_VERSION = "1.56.49";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,9 +31,10 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Import — logos de proveedores (Vendors_Images.zip, Drive GOOGLE_DRIVE_VENDORS_FOLDER, o data/Vendors_Images/).",
     "Mejora: Inventario — clic en repuesto abre solo lectura; Editar junto a Registrar movimiento (Admin/Gestionador).",
     "Mejora: Proveedores — logo más bajo para que quepan bien los datos en la tarjeta.",
-    "Nuevo: Inventario → Proveedores — logo en ficha y tarjetas (3/4 imagen); archivos en uploads/vendors/ (incluidos en respaldos).",
+    "Nuevo: Inventario → Proveedores — logo en ficha y tarjetas; archivos en uploads/vendors/ (incluidos en respaldos).",
     "Corrección: Ctrl+K — al elegir un repuesto abre su ficha (antes fallaba con el UUID).",
     "Mejora: Inventario — el estado desmarcado se muestra como «Descontinuado» (ya no «Inactivo»).",
     "Corrección: Tras «Importación terminada» el modal Procesando se cierra solo (y hay botón Cerrar); la limpieza de /tmp ya no bloquea la respuesta.",

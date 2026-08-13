@@ -18,6 +18,10 @@ import {
   assignItemImagesFromZip,
 } from './itemImageImport';
 import {
+  assignVendorLogosFromFolder,
+  assignVendorLogosFromZip,
+} from './vendorImageImport';
+import {
   assignWorkOrderImagesFromFolder,
   assignWorkOrderImagesFromZip,
   getWorkOrderImagesDir,
@@ -33,6 +37,7 @@ import {
   getDriveApiKey,
   getDriveItemsFolderId,
   getDriveWoFolderId,
+  getDriveVendorsFolderId,
   rmTempDirSafe,
   type DriveDownloadProgress,
 } from './googleDriveImport';
@@ -69,6 +74,7 @@ export type CsvImportResults = {
     zonesEnsured: string[];
   };
   itemImages?: PhotoImportSummary & { assetsMatched?: number };
+  vendorImages?: PhotoImportSummary;
   workOrderImages?: PhotoImportSummary & {
     beforeAssigned: number;
     afterAssigned: number;
@@ -91,13 +97,14 @@ export type PhotoImportSummary = {
 };
 
 export type ProcessCsvImportOptions = {
-  /** Si false, no intenta data/Items_Images ni data/Formulario… cuando no hay zip. Default true. */
+  /** Si false, no intenta data/Items_Images, data/Vendors_Images ni data/Formulario… cuando no hay zip. Default true. */
   includeLocalPhotoFolders?: boolean;
   /** Si true y hay API key + carpeta configurada, baja fotos de Drive cuando no hay zip. */
   useGoogleDrive?: boolean;
   /** Override opcional de carpeta (URL o ID); si falta usa GOOGLE_DRIVE_*_FOLDER. */
   driveItemsFolder?: string | null;
   driveWoFolder?: string | null;
+  driveVendorsFolder?: string | null;
 };
 
 function readImportFileUtf8(file: ImportFileLike): string {
@@ -148,19 +155,25 @@ export async function processCsvImportFiles(
   files: ImportFileLike[],
   options: ProcessCsvImportOptions & {
     zipFile?: ImportFileLike | null;
+    vendorZipFile?: ImportFileLike | null;
     woZipFile?: ImportFileLike | null;
   } = {}
 ): Promise<CsvImportResults> {
   const includeLocalPhotoFolders = options.includeLocalPhotoFolders !== false;
   const useGoogleDrive = Boolean(options.useGoogleDrive);
   const zipFile = options.zipFile ?? null;
+  const vendorZipFile = options.vendorZipFile ?? null;
   const woZipFile = options.woZipFile ?? null;
   const driveApiKey = useGoogleDrive ? getDriveApiKey() : null;
   const itemsFolderId =
     extractDriveFolderId(options.driveItemsFolder) || (useGoogleDrive ? getDriveItemsFolderId() : null);
+  const vendorsFolderId =
+    extractDriveFolderId(options.driveVendorsFolder) ||
+    (useGoogleDrive ? getDriveVendorsFolderId() : null);
   const woFolderId =
     extractDriveFolderId(options.driveWoFolder) || (useGoogleDrive ? getDriveWoFolderId() : null);
   let driveItemsTemp: string | null = null;
+  let driveVendorsTemp: string | null = null;
   let driveWoTemp: string | null = null;
 
   setImportProgress('csv', 22, 'Importando datos a la base (puede tardar)…');
@@ -204,6 +217,7 @@ const results: {
     zonesEnsured: string[];
   };
   itemImages?: PhotoImportSummary & { assetsMatched?: number };
+  vendorImages?: PhotoImportSummary;
   workOrderImages?: PhotoImportSummary & {
     beforeAssigned: number;
     afterAssigned: number;
@@ -734,6 +748,90 @@ if (zipFile?.path) {
   }
 }
 
+// Logos de proveedores: zip > Google Drive > data/Vendors_Images/
+try {
+if (vendorZipFile?.path) {
+  try {
+    const logoResult = await assignVendorLogosFromZip(vendorZipFile.path);
+    results.vendorImages = {
+      matched: logoResult.matched,
+      missing: logoResult.missing,
+      skipped: logoResult.skipped,
+      folderFound: logoResult.folderFound,
+      filesScanned: logoResult.filesScanned,
+      source: 'zip',
+    };
+  } catch (logoErr) {
+    console.error('Vendor logos import error:', logoErr);
+    results.vendorImages = {
+      matched: 0,
+      missing: 0,
+      skipped: 0,
+      folderFound: false,
+      filesScanned: 0,
+      source: 'zip',
+    };
+  }
+} else if (useGoogleDrive && driveApiKey && vendorsFolderId) {
+  try {
+    const dl = await downloadPublicDriveFolderToTemp(
+      vendorsFolderId,
+      driveApiKey,
+      'vendors',
+      (p) => reportDriveProgress(p, 72, 6)
+    );
+    driveVendorsTemp = dl.dir;
+    setImportProgress('assign_photos', 78, 'Asignando logos de proveedores…', {
+      downloaded: dl.filesDownloaded,
+      total: dl.filesDownloaded,
+      listed: dl.filesListed,
+      label: 'vendors',
+    });
+    const logoResult = await assignVendorLogosFromFolder(dl.dir);
+    results.vendorImages = {
+      matched: logoResult.matched,
+      missing: logoResult.missing,
+      skipped: logoResult.skipped + dl.skipped,
+      folderFound: logoResult.folderFound,
+      filesScanned: logoResult.filesScanned || dl.filesDownloaded,
+      source: 'google_drive',
+      driveListed: dl.filesListed,
+      driveDownloaded: dl.filesDownloaded,
+      driveErrors: dl.errors,
+    };
+  } catch (logoErr: any) {
+    console.error('Vendor logos Drive import error:', logoErr);
+    results.vendorImages = {
+      matched: 0,
+      missing: 0,
+      skipped: 0,
+      folderFound: false,
+      filesScanned: 0,
+      source: 'google_drive',
+      error: logoErr?.message || String(logoErr),
+    };
+  }
+} else if (includeLocalPhotoFolders) {
+  try {
+    const logoResult = await assignVendorLogosFromFolder();
+    if (logoResult.folderFound && logoResult.filesScanned > 0) {
+      results.vendorImages = {
+        matched: logoResult.matched,
+        missing: logoResult.missing,
+        skipped: logoResult.skipped,
+        folderFound: logoResult.folderFound,
+        filesScanned: logoResult.filesScanned,
+        source: 'data_folder',
+      };
+    }
+  } catch (logoErr) {
+    console.error('Vendor logos folder import error:', logoErr);
+  }
+}
+} catch (vendorPhotosOuterErr) {
+  console.error('Vendor logos block error:', vendorPhotosOuterErr);
+}
+
 // Fotos antes/después de OT: zip > Google Drive > data/Formulario Solicitudes_Images/
 if (woZipFile?.path && woPhotoMappings.length > 0) {
   try {
@@ -862,9 +960,11 @@ if (woZipFile?.path && woPhotoMappings.length > 0) {
   // La limpieza de /tmp puede tardar minutos con miles de fotos; no bloquear
   // el «done» ni la respuesta HTTP (el modal del cliente se quedaba colgado).
   const itemsTmp = driveItemsTemp;
+  const vendorsTmp = driveVendorsTemp;
   const woTmp = driveWoTemp;
   setImmediate(() => {
     rmTempDirSafe(itemsTmp);
+    rmTempDirSafe(vendorsTmp);
     rmTempDirSafe(woTmp);
   });
 }

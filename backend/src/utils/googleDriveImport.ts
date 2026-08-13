@@ -60,6 +60,10 @@ export function getDriveWoFolderId(): string | null {
   return extractDriveFolderId(process.env.GOOGLE_DRIVE_WO_FOLDER);
 }
 
+export function getDriveVendorsFolderId(): string | null {
+  return extractDriveFolderId(process.env.GOOGLE_DRIVE_VENDORS_FOLDER);
+}
+
 function driveHttpsJson(url: string, timeoutMs = LIST_TIMEOUT_MS): Promise<any> {
   return new Promise((resolve, reject) => {
     let settled = false;

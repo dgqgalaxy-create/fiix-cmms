@@ -3,6 +3,9 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: 13 de Agosto de 2026)*
 
+### Novedades en v1.56.49 (Logos proveedores en import)
+- **Nuevo:** Import CSV/Sheets — `Vendors_Images.zip`, `GOOGLE_DRIVE_VENDORS_FOLDER` y `data/Vendors_Images/` (mismo patrón que Items_Images; no altera fotos de repuestos/OT).
+
 ### Novedades en v1.56.47 (Logos de proveedores)
 - **Nuevo:** Inventario → Proveedores con logo en tarjetas (zona superior ~3/4) y subida en ficha; archivos en `uploads/vendors/` (respaldos de `uploads/` ya los incluyen).
 

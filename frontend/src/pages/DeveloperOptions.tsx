@@ -112,11 +112,13 @@ export const DeveloperOptions = () => {
   const [restoreConfirmText, setRestoreConfirmText] = useState('');
   const [restoreModalError, setRestoreModalError] = useState<string | null>(null);
   const [itemImagesZip, setItemImagesZip] = useState<File | null>(null);
+  const [vendorImagesZip, setVendorImagesZip] = useState<File | null>(null);
   const [workOrderImagesZip, setWorkOrderImagesZip] = useState<File | null>(null);
   const [useGoogleDrive, setUseGoogleDrive] = useState(true);
   const [driveStatus, setDriveStatus] = useState<{
     configured: boolean;
     itemsFolderConfigured: boolean;
+    vendorsFolderConfigured?: boolean;
     woFolderConfigured: boolean;
   } | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -617,15 +619,17 @@ export const DeveloperOptions = () => {
 
   const pickZipFile = (
     e: React.ChangeEvent<HTMLInputElement>,
-    kind: 'items' | 'workOrders'
+    kind: 'items' | 'vendors' | 'workOrders'
   ) => {
     const f = e.target.files?.[0] || null;
     const clear = () => {
       if (kind === 'items') setItemImagesZip(null);
+      else if (kind === 'vendors') setVendorImagesZip(null);
       else setWorkOrderImagesZip(null);
     };
     const setZip = (file: File | null) => {
       if (kind === 'items') setItemImagesZip(file);
+      else if (kind === 'vendors') setVendorImagesZip(file);
       else setWorkOrderImagesZip(file);
     };
 
@@ -701,8 +705,11 @@ export const DeveloperOptions = () => {
     }
 
     const selectedZip = scope === 'inventory' ? itemImagesZip : workOrderImagesZip;
-    const zipBytes = selectedZip?.size || 0;
-    const hasZips = Boolean(selectedZip);
+    const zipBytes =
+      scope === 'inventory'
+        ? (itemImagesZip?.size || 0) + (vendorImagesZip?.size || 0)
+        : selectedZip?.size || 0;
+    const hasZips = scope === 'inventory' ? Boolean(itemImagesZip || vendorImagesZip) : Boolean(selectedZip);
     if (zipBytes > IMPORT_BODY_MAX_BYTES) {
       setError(
         `El zip pesa ${(zipBytes / (1024 * 1024)).toFixed(0)} MB; el máximo del body es ~${Math.round(IMPORT_BODY_MAX_BYTES / (1024 * 1024))} MB. Usa http://HOST:3000 o copia las fotos a data/.`
@@ -724,6 +731,9 @@ export const DeveloperOptions = () => {
     }
     if (scope === 'inventory' && itemImagesZip) {
       formData.append('itemImagesZip', itemImagesZip);
+    }
+    if (scope === 'inventory' && vendorImagesZip) {
+      formData.append('vendorImagesZip', vendorImagesZip);
     }
     // El zip de OT va como csvFiles (no como workOrderImagesZip): backends viejos con
     // multer.fields([csvFiles, itemImagesZip]) rechazan campos desconocidos → Unexpected field.
@@ -760,6 +770,7 @@ export const DeveloperOptions = () => {
       );
       if (scope === 'inventory') {
         setItemImagesZip(null);
+        setVendorImagesZip(null);
       } else {
         setWorkOrderImagesZip(null);
       }
@@ -829,6 +840,25 @@ export const DeveloperOptions = () => {
       }
       if (results.itemImages.error) {
         msg += ` — error Drive: ${results.itemImages.error}`;
+      }
+      msg += '.';
+    }
+    if (results.vendorImages) {
+      const src =
+        results.vendorImages.source === 'google_drive'
+          ? 'Drive'
+          : results.vendorImages.source === 'zip'
+            ? 'zip'
+            : 'data/';
+      msg += ` Logos proveedores (${src}): ${results.vendorImages.matched}`;
+      if (results.vendorImages.missing > 0) {
+        msg += ` (${results.vendorImages.missing} sin proveedor coincidente)`;
+      }
+      if (results.vendorImages.driveDownloaded != null) {
+        msg += `; descargadas Drive: ${results.vendorImages.driveDownloaded}`;
+      }
+      if (results.vendorImages.error) {
+        msg += ` — error Drive: ${results.vendorImages.error}`;
       }
       msg += '.';
     }
@@ -1173,7 +1203,8 @@ export const DeveloperOptions = () => {
                 <div className="mt-4 rounded-xl border border-white/15 bg-white/10 px-3.5 py-3 text-xs leading-5 text-indigo-50">
                   <p className="font-bold text-white">Dos operaciones independientes</p>
                   <p className="mt-2 text-indigo-100/90">
-                    <strong>1. Inventario:</strong> 6 CSV + <code className="rounded bg-black/20 px-1">Items_Images.zip</code>.
+                    <strong>1. Inventario:</strong> 6 CSV + <code className="rounded bg-black/20 px-1">Items_Images.zip</code> +{' '}
+                    <code className="rounded bg-black/20 px-1">Vendors_Images.zip</code> (opcionales).
                     <br />
                     <strong>2. Órdenes:</strong> 1 CSV de Solicitudes +{' '}
                     <code className="rounded bg-black/20 px-1">Formulario Solicitudes_Images.zip</code>.
@@ -1186,7 +1217,7 @@ export const DeveloperOptions = () => {
                       <p className="text-xs font-black uppercase tracking-wider text-indigo-200">Paso 1</p>
                       <h4 className="mt-0.5 text-lg font-black text-white">Inventario</h4>
                     </div>
-                    <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">6 CSV + zip</span>
+                    <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">6 CSV + zips</span>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
                     {['Categories', 'Location', 'Vendors', 'Items', 'Users', 'Inventory'].map((label) => (
@@ -1222,8 +1253,38 @@ export const DeveloperOptions = () => {
                     </button>
                   )}
                   </div>
+                  <div className="mt-3 flex w-full flex-col gap-1.5 rounded-xl border border-white/15 bg-black/10 px-3 py-3 text-sm text-indigo-50">
+                  <span className="font-bold text-white">Vendors_Images.zip (opcional)</span>
+                  <span className="text-xs text-indigo-100">
+                    {vendorImagesZip
+                      ? `Seleccionado: ${vendorImagesZip.name} (${(vendorImagesZip.size / (1024 * 1024)).toFixed(1)} MB)`
+                      : 'Ningún archivo seleccionado'}
+                  </span>
+                  <p className="text-[11px] leading-4 text-indigo-200/90">
+                    Empareja por ID del proveedor (<code className="rounded bg-black/20 px-0.5">83a52293.Logo.170018.png</code>).
+                  </p>
+                  <label className="mt-1 block cursor-pointer text-xs text-indigo-100">
+                    <input
+                      type="file"
+                      accept=".zip,application/zip,application/x-zip-compressed,application/octet-stream"
+                      onChange={(e) => pickZipFile(e, 'vendors')}
+                      className="block w-full file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-indigo-700"
+                      disabled={isLoading}
+                    />
+                  </label>
+                  {vendorImagesZip && (
+                    <button
+                      type="button"
+                      onClick={() => setVendorImagesZip(null)}
+                      className="mt-1 self-start text-xs font-semibold text-indigo-200 underline hover:text-white"
+                      disabled={isLoading}
+                    >
+                      Quitar zip de proveedores
+                    </button>
+                  )}
+                  </div>
                   <label className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-5 py-3.5 font-black text-indigo-700 shadow-sm transition hover:bg-indigo-50">
-                    <Upload size={18} /> Importar inventario (6 CSV + zip)
+                    <Upload size={18} /> Importar inventario (6 CSV + zips)
                     <input
                       type="file"
                       accept=".csv"
@@ -1315,6 +1376,7 @@ export const DeveloperOptions = () => {
                 <p className="mt-3 text-xs leading-5 text-sky-100/90">
                   Las fotos: zip subido, o Google Drive (abajo), o carpetas en{' '}
                   <code className="rounded bg-black/20 px-1">data/Items_Images/</code> /{' '}
+                  <code className="rounded bg-black/20 px-1">data/Vendors_Images/</code> /{' '}
                   <code className="rounded bg-black/20 px-1">data/Formulario Solicitudes_Images/</code>.
                   Cuando dejes de usarlo, vuelve a restringir el acceso de los Sheets.
                 </p>
@@ -1334,7 +1396,7 @@ export const DeveloperOptions = () => {
                       {driveStatus == null
                         ? ' Comprobando key…'
                         : driveStatus.configured
-                          ? ` Key OK${driveStatus.itemsFolderConfigured ? ' · inventario' : ''}${driveStatus.woFolderConfigured ? ' · órdenes' : ''}.`
+                          ? ` Key OK${driveStatus.itemsFolderConfigured ? ' · inventario' : ''}${driveStatus.vendorsFolderConfigured ? ' · proveedores' : ''}${driveStatus.woFolderConfigured ? ' · órdenes' : ''}.`
                           : ' Key no configurada en el servidor.'}
                     </span>
                   </span>

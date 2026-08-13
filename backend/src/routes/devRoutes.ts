@@ -22,6 +22,7 @@ import {
   getDriveApiKey,
   getDriveItemsFolderId,
   getDriveWoFolderId,
+  getDriveVendorsFolderId,
 } from '../utils/googleDriveImport';
 import { getImportProgress, setImportProgress, resetImportProgress } from '../utils/importProgress';
 import {
@@ -479,17 +480,25 @@ router.post(
   // Zips pueden venir en csvFiles (compat) o en campos dedicados.
   const files = csvFieldFiles.filter((f) => !/\.zip$/i.test(f.originalname || ''));
   const zipFile = filesMap?.itemImagesZip?.[0];
+  const vendorZipFile =
+    filesMap?.vendorImagesZip?.[0] ||
+    csvFieldFiles.find((f) => {
+      const n = f.originalname || '';
+      return /\.zip$/i.test(n) && /vendors?_?images/i.test(n);
+    });
   const woZipFile =
     filesMap?.workOrderImagesZip?.[0] ||
     csvFieldFiles.find((f) => {
       const n = f.originalname || '';
       if (!/\.zip$/i.test(n)) return false;
       if (/items?_?images/i.test(n)) return false;
+      if (/vendors?_?images/i.test(n)) return false;
       return true;
     });
   const uploadedTemps = [
     ...csvFieldFiles,
     ...(zipFile ? [zipFile] : []),
+    ...(filesMap?.vendorImagesZip || []),
     ...(filesMap?.workOrderImagesZip || []),
   ];
 
@@ -499,6 +508,7 @@ router.post(
       String((req.body as any)?.useGoogleDrive || '') === '1';
     const results = await processCsvImportFiles(files, {
       zipFile,
+      vendorZipFile,
       woZipFile,
       useGoogleDrive,
     });
@@ -612,6 +622,7 @@ router.get('/google-drive-status', (_req: AuthRequest, res: Response) => {
   res.json({
     configured: Boolean(getDriveApiKey()),
     itemsFolderConfigured: Boolean(getDriveItemsFolderId()),
+    vendorsFolderConfigured: Boolean(getDriveVendorsFolderId()),
     woFolderConfigured: Boolean(getDriveWoFolderId()),
   });
 });
