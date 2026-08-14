@@ -15,6 +15,7 @@ import type { TechnicianPattern, TechnicianException, RosterResponse } from '../
 import { startOfMonth, endOfMonth, differenceInDays, addDays } from 'date-fns';
 import { Trash2, UserPlus, Calendar as CalendarIcon, Clock, AlertCircle, X, Printer } from 'lucide-react';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 
 const locales = { 'es': es };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
@@ -338,18 +339,15 @@ export const RosterPage = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Técnico afectado:</label>
-                  <select 
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  <SearchableSelect
                     value={draggedException?.user_id || ''}
-                    onChange={(e) => {
-                      setDraggedException(prev => prev ? { ...prev, user_id: e.target.value } : { type: 'FALTA', user_id: e.target.value })
+                    onChange={(v) => {
+                      setDraggedException(prev => prev ? { ...prev, user_id: v } : { type: 'FALTA', user_id: v })
                     }}
-                  >
-                    <option value="" disabled>Selecciona un técnico...</option>
-                    {data?.technicians.map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
+                    options={(data?.technicians || []).map((t) => ({ value: t.id, label: t.name }))}
+                    placeholder="Selecciona un técnico..."
+                    inputClassName="w-full px-3 py-2 pr-8 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  />
                 </div>
 
                 {draggedException?.user_id && (
@@ -395,31 +393,30 @@ export const RosterPage = () => {
             <form onSubmit={handleAssignPattern} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Técnico</label>
-                <select 
+                <SearchableSelect
                   required
                   value={selectedUser}
-                  onChange={e => setSelectedUser(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-                >
-                  <option value="" disabled>Seleccionar técnico</option>
-                  {data?.technicians.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
+                  onChange={setSelectedUser}
+                  options={(data?.technicians || []).map((t) => ({ value: t.id, label: t.name }))}
+                  placeholder="Seleccionar técnico"
+                  inputClassName="w-full px-4 py-2 pr-8 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Patrón de Turno</label>
-                <select 
+                <SearchableSelect
                   required
                   value={selectedPattern}
-                  onChange={e => setSelectedPattern(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-                >
-                  <option value="MIXTO">Mixto (L-V Día, Sáb Medio)</option>
-                  <option value="4X4_ROTATORIO">4x4 Rotatorio (2D, 2N, 4 Descanso)</option>
-                  <option value="4X4_FIJO">4x4 Fijo (4D, 4 Descanso)</option>
-                </select>
+                  onChange={setSelectedPattern}
+                  options={[
+                    { value: 'MIXTO', label: 'Mixto (L-V Día, Sáb Medio)' },
+                    { value: '4X4_ROTATORIO', label: '4x4 Rotatorio (2D, 2N, 4 Descanso)' },
+                    { value: '4X4_FIJO', label: '4x4 Fijo (4D, 4 Descanso)' },
+                  ]}
+                  placeholder="Buscar…"
+                  inputClassName="w-full px-4 py-2 pr-8 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                />
               </div>
 
               <div>
@@ -506,26 +503,23 @@ export const RosterPage = () => {
                             <Trash2 size={14} /> Quitar
                           </button>
                         ) : (
-                          <select 
-                            className="px-3 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200"
-                            onChange={async (e) => {
-                              if (e.target.value) {
+                          <SearchableSelect
+                            value=""
+                            onChange={async (v) => {
+                              if (v) {
                                 await addException({
                                   user_id: event.user_id,
-                                  exception_type: e.target.value,
+                                  exception_type: v,
                                   date: format(selectedDay, 'yyyy-MM-dd')
                                 });
                                 window.alert('Incidencia añadida correctamente');
                                 fetchData();
                               }
                             }}
-                            value=""
-                          >
-                            <option value="" disabled>Añadir Incidencia...</option>
-                            {EXCEPTION_TYPES.map(t => (
-                              <option key={t.type} value={t.type}>{t.label}</option>
-                            ))}
-                          </select>
+                            options={EXCEPTION_TYPES.map((t) => ({ value: t.type, label: t.label }))}
+                            placeholder="Añadir Incidencia..."
+                            inputClassName="px-3 py-1 pr-8 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200"
+                          />
                         )}
                       </div>
                     )}

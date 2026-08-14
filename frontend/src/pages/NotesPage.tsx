@@ -40,6 +40,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatDateTime } from '../utils/dateUtils';
 import { AnnouncementsPanel } from '../components/AnnouncementsPanel';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 
 type Tab = 'notes' | 'tasks' | 'avisos';
 
@@ -693,28 +694,26 @@ export default function NotesPage() {
               <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300">
                   Asignar a
-                  <select
+                  <SearchableSelect
                     value={taskAssignee}
-                    onChange={(e) => setTaskAssignee(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  >
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setTaskAssignee}
+                    options={users.map((u) => ({ value: u.id, label: u.name }))}
+                    placeholder="Buscar…"
+                    inputClassName="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 pr-8 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
                 </label>
                 <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300">
                   Prioridad
-                  <select
+                  <SearchableSelect
                     value={taskPriority}
-                    onChange={(e) => setTaskPriority(e.target.value as TaskPriority)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  >
-                    <option value="NORMAL">Normal</option>
-                    <option value="ALTA">Alta</option>
-                  </select>
+                    onChange={(v) => setTaskPriority(v as TaskPriority)}
+                    options={[
+                      { value: 'NORMAL', label: 'Normal' },
+                      { value: 'ALTA', label: 'Alta' },
+                    ]}
+                    placeholder="Buscar…"
+                    inputClassName="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 pr-8 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
                 </label>
               </div>
               <label className="mt-2 block text-[11px] font-semibold text-slate-600 dark:text-slate-300">

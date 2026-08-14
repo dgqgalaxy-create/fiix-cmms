@@ -28,6 +28,7 @@ import {
   type ChatMessage,
 } from '../api/chat';
 import { socket, ensureSocketConnected } from '../api/socket';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatDateTime } from '../utils/dateUtils';
 import { useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
@@ -462,18 +463,15 @@ export default function MessagesPage() {
           {compose === 'direct' ? (
             <>
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">Nuevo chat 1:1</h2>
-              <select
+              <SearchableSelect
                 value={pickUserId}
-                onChange={(e) => setPickUserId(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              >
-                <option value="">Selecciona usuario…</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} ({u.role})
-                  </option>
-                ))}
-              </select>
+                onChange={setPickUserId}
+                options={users.map((u) => ({ value: u.id, label: `${u.name} (${u.role})` }))}
+                allowEmpty
+                emptyLabel="Selecciona usuario…"
+                placeholder="Buscar…"
+                inputClassName="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 pr-8 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              />
               <div className="mt-2 flex gap-2">
                 <button
                   type="button"

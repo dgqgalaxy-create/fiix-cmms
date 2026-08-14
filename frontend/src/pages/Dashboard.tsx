@@ -21,6 +21,7 @@ import {
   todayYmd,
 } from '../components/common/PeriodRangeFilter';
 import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 
 export const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -797,26 +798,27 @@ export const Dashboard = () => {
             hint="Fecha, prioridad, equipo, orden y estado se aplican a la tabla y al total dentro de este marco."
             toolbar={
               <>
-            <select
+            <SearchableSelect
               value={dateFilter}
-              onChange={(e) => {
-                const next = e.target.value;
+              onChange={(next) => {
                 setDateFilter(next);
                 if (next === 'CUSTOM') {
                   if (!customStartDate) setCustomStartDate(firstDayOfMonthYmd());
                   if (!customEndDate) setCustomEndDate(todayYmd());
                 }
               }}
-              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
-            >
-              <option value="ALL">Cualquier fecha</option>
-              <option value="TODAY">Hoy</option>
-              <option value="THIS_WEEK">Esta Semana</option>
-              <option value="LAST_WEEK">Semana Pasada</option>
-              <option value="THIS_MONTH">Este Mes</option>
-              <option value="LAST_MONTH">Mes Pasado</option>
-              <option value="CUSTOM">Periodo (inicio — fin)</option>
-            </select>
+              options={[
+                { value: 'ALL', label: 'Cualquier fecha' },
+                { value: 'TODAY', label: 'Hoy' },
+                { value: 'THIS_WEEK', label: 'Esta Semana' },
+                { value: 'LAST_WEEK', label: 'Semana Pasada' },
+                { value: 'THIS_MONTH', label: 'Este Mes' },
+                { value: 'LAST_MONTH', label: 'Mes Pasado' },
+                { value: 'CUSTOM', label: 'Periodo (inicio — fin)' },
+              ]}
+              placeholder="Buscar…"
+              inputClassName="px-3 py-2 pr-8 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
+            />
 
             {dateFilter === 'CUSTOM' && (
               <PeriodRangeFilter
@@ -828,56 +830,59 @@ export const Dashboard = () => {
               />
             )}
 
-            <select
+            <SearchableSelect
               value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
-            >
-              <option value="ALL">Todas las prioridades</option>
-              <option value="URGENTE">Urgente</option>
-              <option value="NORMAL">Normal</option>
-              <option value="BAJO">Bajo</option>
-            </select>
+              onChange={setPriorityFilter}
+              options={[
+                { value: 'ALL', label: 'Todas las prioridades' },
+                { value: 'URGENTE', label: 'Urgente' },
+                { value: 'NORMAL', label: 'Normal' },
+                { value: 'BAJO', label: 'Bajo' },
+              ]}
+              placeholder="Buscar…"
+              inputClassName="px-3 py-2 pr-8 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
+            />
 
-            <select
+            <SearchableSelect
               value={assetFilter}
-              onChange={(e) => setAssetFilter(e.target.value)}
-              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm max-w-[200px]"
-            >
-              <option value="ALL">Todos los equipos</option>
-              {uniqueAssets.map(asset => (
-                <option key={asset} value={asset}>{asset}</option>
-              ))}
-            </select>
+              onChange={setAssetFilter}
+              options={[
+                { value: 'ALL', label: 'Todos los equipos' },
+                ...uniqueAssets.map((asset) => ({ value: asset, label: asset })),
+              ]}
+              placeholder="Buscar…"
+              className="max-w-[200px]"
+              inputClassName="px-3 py-2 pr-8 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm max-w-[200px]"
+            />
 
-            <select
+            <SearchableSelect
               value={requesterFilter}
-              onChange={(e) => setRequesterFilter(e.target.value)}
-              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm max-w-[220px]"
+              onChange={setRequesterFilter}
+              options={[
+                { value: 'ALL', label: 'Todos los solicitantes' },
+                ...requesterOptions.map((name) => ({ value: name, label: name })),
+              ]}
+              placeholder="Buscar…"
               title="Filtrar por solicitante"
-            >
-              <option value="ALL">Todos los solicitantes</option>
-              {requesterOptions.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
+              className="max-w-[220px]"
+              inputClassName="px-3 py-2 pr-8 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm max-w-[220px]"
+            />
 
-            <select
+            <SearchableSelect
               value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as any)}
-              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
-            >
-              <option value="NEWEST">Más recientes primero</option>
-              <option value="OLDEST">Más antiguos primero</option>
-              <option value="PRIORITY">Por prioridad (Urgentes)</option>
-            </select>
+              onChange={(v) => setSortOrder(v as any)}
+              options={[
+                { value: 'NEWEST', label: 'Más recientes primero' },
+                { value: 'OLDEST', label: 'Más antiguos primero' },
+                { value: 'PRIORITY', label: 'Por prioridad (Urgentes)' },
+              ]}
+              placeholder="Buscar…"
+              inputClassName="px-3 py-2 pr-8 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
+            />
 
-            <select
+            <SearchableSelect
               value={statusFilter || 'ALL'}
-              onChange={(e) => {
-                const next = e.target.value;
+              onChange={(next) => {
                 const value = next === 'ALL' ? null : next;
                 setStatusFilter(value);
                 const params = new URLSearchParams(searchParams);
@@ -888,24 +893,24 @@ export const Dashboard = () => {
                 }
                 setSearchParams(params, { replace: true });
               }}
-              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
+              options={
+                activeTab === 'HISTORIAL'
+                  ? [
+                      { value: 'ALL', label: 'Todos (finalizadas y anuladas)' },
+                      { value: 'FINALIZADO', label: 'Finalizado' },
+                      { value: 'ANULADO', label: 'Anulado' },
+                    ]
+                  : [
+                      { value: 'ALL', label: 'Todos (pendiente, proceso, espera)' },
+                      { value: 'PENDIENTE', label: 'Pendiente' },
+                      { value: 'EN_PROCESO', label: 'En proceso' },
+                      { value: 'EN_ESPERA', label: 'En espera' },
+                    ]
+              }
+              placeholder="Buscar…"
               title="Filtrar por estado"
-            >
-              {activeTab === 'HISTORIAL' ? (
-                <>
-                  <option value="ALL">Todos (finalizadas y anuladas)</option>
-                  <option value="FINALIZADO">Finalizado</option>
-                  <option value="ANULADO">Anulado</option>
-                </>
-              ) : (
-                <>
-                  <option value="ALL">Todos (pendiente, proceso, espera)</option>
-                  <option value="PENDIENTE">Pendiente</option>
-                  <option value="EN_PROCESO">En proceso</option>
-                  <option value="EN_ESPERA">En espera</option>
-                </>
-              )}
-            </select>
+              inputClassName="px-3 py-2 pr-8 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
+            />
 
             {(dateFilter !== 'ALL' || priorityFilter !== 'ALL' || assetFilter !== 'ALL' || requesterFilter !== 'ALL' || searchTerm !== '' || statusFilter !== null || unassignedFilter || slaFilter) && (
               <button 

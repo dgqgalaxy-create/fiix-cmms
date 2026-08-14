@@ -9,6 +9,7 @@ import type { User } from '../api/users';
 import { getRequesters } from '../api/requesters';
 import type { Requester } from '../api/requesters';
 import { RequesterModal } from './RequesterModal';
+import { SearchableSelect } from './ui/SearchableSelect';
 
 interface Props {
   isOpen: boolean;
@@ -190,22 +191,17 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
                       <Loader2 className="animate-spin" size={16} /> Cargando zonas...
                     </div>
                   ) : (
-                    <select
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
+                    <SearchableSelect
+                      required
                       value={zoneId}
-                      onChange={(e) => {
-                        setZoneId(e.target.value);
+                      onChange={(v) => {
+                        setZoneId(v);
                         setAssetId('');
                       }}
-                      required
-                    >
-                      <option value="" disabled>Selecciona una zona</option>
-                      {zones.map((zone) => (
-                        <option key={zone.id} value={zone.id}>
-                          {zone.name}
-                        </option>
-                      ))}
-                    </select>
+                      options={zones.map((zone) => ({ value: zone.id, label: zone.name }))}
+                      placeholder="Selecciona una zona"
+                      inputClassName="w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
+                    />
                   )}
                 </div>
               </div>
@@ -218,20 +214,20 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
                       <Loader2 className="animate-spin" size={16} /> Cargando activos...
                     </div>
                   ) : (
-                    <select
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed"
-                      value={assetId}
-                      onChange={(e) => setAssetId(e.target.value)}
+                    <SearchableSelect
                       required
                       disabled={!zoneId}
-                    >
-                      <option value="" disabled>{zoneId ? 'Selecciona un activo' : 'Primero selecciona una zona'}</option>
-                      {assets.filter(a => a.zone_id === zoneId).map((asset) => (
-                        <option key={asset.id} value={asset.id}>
-                          {asset.name} ({asset.internal_code})
-                        </option>
-                      ))}
-                    </select>
+                      value={assetId}
+                      onChange={setAssetId}
+                      options={assets
+                        .filter((a) => a.zone_id === zoneId)
+                        .map((asset) => ({
+                          value: asset.id,
+                          label: `${asset.name} (${asset.internal_code})`,
+                        }))}
+                      placeholder={zoneId ? 'Selecciona un activo' : 'Primero selecciona una zona'}
+                      inputClassName="w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed"
+                    />
                   )}
                 </div>
               </div>
@@ -240,30 +236,34 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Prioridad</label>
-                <select
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value)}
+                <SearchableSelect
                   required
-                >
-                  <option value="BAJO">Bajo</option>
-                  <option value="NORMAL">Normal</option>
-                  <option value="URGENTE">Urgente</option>
-                </select>
+                  value={priority}
+                  onChange={setPriority}
+                  options={[
+                    { value: 'BAJO', label: 'Bajo' },
+                    { value: 'NORMAL', label: 'Normal' },
+                    { value: 'URGENTE', label: 'Urgente' },
+                  ]}
+                  placeholder="Prioridad…"
+                  inputClassName="w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Tipo de Mantenimiento</label>
-                <select
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
-                  value={maintenanceType}
-                  onChange={(e) => setMaintenanceType(e.target.value)}
+                <SearchableSelect
                   required
-                >
-                  <option value="SERVICIO">Servicio</option>
-                  <option value="PREVENTIVO">Preventivo</option>
-                  <option value="CORRECTIVO">Correctivo</option>
-                </select>
+                  value={maintenanceType}
+                  onChange={setMaintenanceType}
+                  options={[
+                    { value: 'SERVICIO', label: 'Servicio' },
+                    { value: 'PREVENTIVO', label: 'Preventivo' },
+                    { value: 'CORRECTIVO', label: 'Correctivo' },
+                  ]}
+                  placeholder="Tipo de mantenimiento…"
+                  inputClassName="w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
+                />
               </div>
             </div>
 
@@ -279,33 +279,32 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
                     + Nuevo
                   </button>
                 </div>
-                <select
+                <SearchableSelect
                   required
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
                   value={requesterName}
-                  onChange={(e) => setRequesterName(e.target.value)}
-                >
-                  <option value="" disabled>Selecciona un solicitante</option>
-                  {requesters.map((req) => (
-                    <option key={req.id} value={req.name}>{req.name}</option>
-                  ))}
-                </select>
+                  onChange={setRequesterName}
+                  options={requesters.map((req) => ({ value: req.name, label: req.name }))}
+                  placeholder="Selecciona un solicitante"
+                  inputClassName="w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Grupo de Producción</label>
-                <select
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
-                  value={productionGroup}
-                  onChange={(e) => setProductionGroup(e.target.value)}
+                <SearchableSelect
                   required
-                >
-                  <option value="A">Grupo A</option>
-                  <option value="B">Grupo B</option>
-                  <option value="C">Grupo C</option>
-                  <option value="D">Grupo D</option>
-                  <option value="NA">N/A</option>
-                </select>
+                  value={productionGroup}
+                  onChange={setProductionGroup}
+                  options={[
+                    { value: 'A', label: 'Grupo A' },
+                    { value: 'B', label: 'Grupo B' },
+                    { value: 'C', label: 'Grupo C' },
+                    { value: 'D', label: 'Grupo D' },
+                    { value: 'NA', label: 'N/A' },
+                  ]}
+                  placeholder="Grupo de producción…"
+                  inputClassName="w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
+                />
               </div>
             </div>
 

@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Wifi, WifiOff, CheckCircle2, Loader2 } from 'lucide-react';
 import { BACKEND_URL } from '../api/axios';
 import { compressImageFile, dataUrlToFile, fileToDataUrl } from '../utils/imageCompress';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 
 interface Zone {
   id: string;
@@ -442,69 +443,68 @@ export const RequestPortal = () => {
                     <Loader2 className="animate-spin" size={16} /> Cargando zonas...
                   </div>
                 ) : (
-                  <select
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
+                  <SearchableSelect
+                    required
                     value={zoneId}
-                    onChange={(e) => {
-                      setZoneId(e.target.value);
+                    onChange={(v) => {
+                      setZoneId(v);
                       setAssetId('');
                     }}
-                    required
-                  >
-                    <option value="" disabled>Selecciona una zona</option>
-                    {zones.map((zone) => (
-                      <option key={zone.id} value={zone.id}>{zone.name}</option>
-                    ))}
-                  </select>
+                    options={zones.map((zone) => ({ value: zone.id, label: zone.name }))}
+                    placeholder="Selecciona una zona"
+                    inputClassName="w-full px-4 py-3 pr-8 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
+                  />
                 )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Activo asociado <span className="text-red-500">*</span></label>
-                <select
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none disabled:opacity-50 disabled:bg-slate-100 disabled:cursor-not-allowed"
-                  value={assetId}
-                  onChange={(e) => setAssetId(e.target.value)}
+                <SearchableSelect
                   required
                   disabled={!zoneId}
-                >
-                  <option value="" disabled>{zoneId ? 'Selecciona un activo' : 'Primero selecciona una zona'}</option>
-                  {assets.map((asset) => (
-                    <option key={asset.id} value={asset.id}>
-                      {asset.name} ({asset.internal_code})
-                    </option>
-                  ))}
-                </select>
+                  value={assetId}
+                  onChange={setAssetId}
+                  options={assets.map((asset) => ({
+                    value: asset.id,
+                    label: `${asset.name} (${asset.internal_code})`,
+                  }))}
+                  placeholder={zoneId ? 'Selecciona un activo' : 'Primero selecciona una zona'}
+                  inputClassName="w-full px-4 py-3 pr-8 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Prioridad <span className="text-red-500">*</span></label>
-                <select
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value)}
+                <SearchableSelect
                   required
-                >
-                  <option value="BAJO">Bajo</option>
-                  <option value="NORMAL">Normal</option>
-                  <option value="URGENTE">Urgente</option>
-                </select>
+                  value={priority}
+                  onChange={setPriority}
+                  options={[
+                    { value: 'BAJO', label: 'Bajo' },
+                    { value: 'NORMAL', label: 'Normal' },
+                    { value: 'URGENTE', label: 'Urgente' },
+                  ]}
+                  placeholder="Buscar…"
+                  inputClassName="w-full px-4 py-3 pr-8 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de Mantenimiento <span className="text-red-500">*</span></label>
-                <select
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
-                  value={maintenanceType}
-                  onChange={(e) => setMaintenanceType(e.target.value)}
+                <SearchableSelect
                   required
-                >
-                  <option value="SERVICIO">Servicio</option>
-                  <option value="PREVENTIVO">Preventivo</option>
-                  <option value="CORRECTIVO">Correctivo</option>
-                </select>
+                  value={maintenanceType}
+                  onChange={setMaintenanceType}
+                  options={[
+                    { value: 'SERVICIO', label: 'Servicio' },
+                    { value: 'PREVENTIVO', label: 'Preventivo' },
+                    { value: 'CORRECTIVO', label: 'Correctivo' },
+                  ]}
+                  placeholder="Buscar…"
+                  inputClassName="w-full px-4 py-3 pr-8 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
+                />
               </div>
             </div>
 
@@ -516,21 +516,20 @@ export const RequestPortal = () => {
                     <Loader2 className="animate-spin" size={16} /> Cargando solicitantes...
                   </div>
                 ) : (
-                  <select
+                  <SearchableSelect
                     required
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
                     value={requesterName}
-                    onChange={(e) => {
-                      setRequesterName(e.target.value);
-                      if (e.target.value !== '__OTHER__') setCustomRequester('');
+                    onChange={(v) => {
+                      setRequesterName(v);
+                      if (v !== '__OTHER__') setCustomRequester('');
                     }}
-                  >
-                    <option value="" disabled>Selecciona un solicitante</option>
-                    {requesters.map((name) => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                    <option value="__OTHER__">Otro (escribir nombre)...</option>
-                  </select>
+                    options={[
+                      ...requesters.map((name) => ({ value: name, label: name })),
+                      { value: '__OTHER__', label: 'Otro (escribir nombre)...' },
+                    ]}
+                    placeholder="Selecciona un solicitante"
+                    inputClassName="w-full px-4 py-3 pr-8 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
+                  />
                 )}
                 {requesterName === '__OTHER__' && (
                   <input
@@ -546,18 +545,20 @@ export const RequestPortal = () => {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Grupo de Producción <span className="text-red-500">*</span></label>
-                <select
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all appearance-none"
-                  value={productionGroup}
-                  onChange={(e) => setProductionGroup(e.target.value)}
+                <SearchableSelect
                   required
-                >
-                  <option value="A">Grupo A</option>
-                  <option value="B">Grupo B</option>
-                  <option value="C">Grupo C</option>
-                  <option value="D">Grupo D</option>
-                  <option value="NA">N/A</option>
-                </select>
+                  value={productionGroup}
+                  onChange={setProductionGroup}
+                  options={[
+                    { value: 'A', label: 'Grupo A' },
+                    { value: 'B', label: 'Grupo B' },
+                    { value: 'C', label: 'Grupo C' },
+                    { value: 'D', label: 'Grupo D' },
+                    { value: 'NA', label: 'N/A' },
+                  ]}
+                  placeholder="Buscar…"
+                  inputClassName="w-full px-4 py-3 pr-8 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
+                />
               </div>
             </div>
 

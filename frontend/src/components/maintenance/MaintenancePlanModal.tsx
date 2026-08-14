@@ -4,6 +4,7 @@ import type { MaintenancePlan } from '../../api/maintenance';
 import { createMaintenancePlan, updateMaintenancePlan, deleteMaintenancePlan } from '../../api/maintenance';
 import type { Asset } from '../../api/assets';
 import type { Item } from '../../api/inventory';
+import { SearchableSelect } from '../ui/SearchableSelect';
 
 interface Props {
   isOpen: boolean;
@@ -170,17 +171,21 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Equipo / Activo *</label>
-                <select
+                <SearchableSelect
                   required
-                  value={formData.asset_id}
-                  onChange={(e) => setFormData({ ...formData, asset_id: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-                >
-                  <option value="">-- Selecciona un equipo --</option>
-                  {assets.filter(a => a.status !== 'FUERA_DE_SERVICIO').map(a => (
-                    <option key={a.id} value={a.id}>{a.internal_code} - {a.name}</option>
-                  ))}
-                </select>
+                  value={formData.asset_id || ''}
+                  onChange={(asset_id) => setFormData({ ...formData, asset_id })}
+                  options={assets
+                    .filter((a) => a.status !== 'FUERA_DE_SERVICIO')
+                    .map((a) => ({
+                      value: a.id,
+                      label: `${a.internal_code} - ${a.name}`,
+                    }))}
+                  allowEmpty
+                  emptyLabel="-- Selecciona un equipo --"
+                  placeholder="-- Selecciona un equipo --"
+                  inputClassName="w-full px-4 py-2 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
               </div>
 
               <div>
@@ -215,17 +220,19 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
               <div className="flex gap-4">
                 <div className="flex-1">
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Frecuencia *</label>
-                  <select
+                  <SearchableSelect
                     required
-                    value={formData.frequency_type}
-                    onChange={(e) => setFormData({ ...formData, frequency_type: e.target.value as any })}
-                    className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none"
-                  >
-                    <option value="DIAS">Días</option>
-                    <option value="SEMANAS">Semanas</option>
-                    <option value="MESES">Meses</option>
-                    <option value="ANUAL">Años</option>
-                  </select>
+                    value={formData.frequency_type || 'MESES'}
+                    onChange={(frequency_type) => setFormData({ ...formData, frequency_type: frequency_type as any })}
+                    options={[
+                      { value: 'DIAS', label: 'Días' },
+                      { value: 'SEMANAS', label: 'Semanas' },
+                      { value: 'MESES', label: 'Meses' },
+                      { value: 'ANUAL', label: 'Años' },
+                    ]}
+                    placeholder="Frecuencia…"
+                    inputClassName="w-full px-4 py-2 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none"
+                  />
                 </div>
                 <div className="flex-1">
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Valor *</label>

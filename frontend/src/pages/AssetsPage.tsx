@@ -18,6 +18,7 @@ import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { zoneNeedsSections } from '../utils/assetSection';
 import { PageLoadError, PageLoadingState, isLikelyServerUnreachable } from '../components/PageLoadState';
 import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 
 const ASSETS_PER_PAGE = 20;
 
@@ -354,29 +355,29 @@ export const AssetsPage = () => {
                 </button>
               )}
             </div>
-            <select
-              className="sm:w-40 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-700 dark:text-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-emerald-600"
+            <SearchableSelect
               value={filterZoneId}
-              onChange={(e) => setFilterZoneId(e.target.value)}
+              onChange={setFilterZoneId}
+              options={zoneOptions.map((z) => ({ value: z.id, label: z.name }))}
+              allowEmpty
+              emptyLabel="Todas las zonas"
+              placeholder="Buscar…"
               title="Filtrar por zona"
-            >
-              <option value="">Todas las zonas</option>
-              {zoneOptions.map((z) => (
-                <option key={z.id} value={z.id}>{z.name}</option>
-              ))}
-            </select>
+              className="sm:w-40"
+              inputClassName="sm:w-40 px-3 py-2 pr-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-700 dark:text-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-emerald-600"
+            />
             {showSectionFilter && (
-              <select
-                className="sm:w-40 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-700 dark:text-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-emerald-600"
+              <SearchableSelect
                 value={filterSectionId}
-                onChange={(e) => setFilterSectionId(e.target.value)}
+                onChange={setFilterSectionId}
+                options={sectionFilterOptions.map((s) => ({ value: s.id, label: s.name }))}
+                allowEmpty
+                emptyLabel="Todas las secciones"
+                placeholder="Buscar…"
                 title="Filtrar por sección"
-              >
-                <option value="">Todas las secciones</option>
-                {sectionFilterOptions.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+                className="sm:w-40"
+                inputClassName="sm:w-40 px-3 py-2 pr-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-700 dark:text-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-emerald-600"
+              />
             )}
             </>
           }

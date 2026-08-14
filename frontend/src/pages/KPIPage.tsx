@@ -63,6 +63,7 @@ import {
   todayYmd,
 } from '../components/common/PeriodRangeFilter';
 import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 
 type MetricStatus = 'good' | 'warn' | 'bad' | 'neutral';
 
@@ -551,23 +552,20 @@ export const KPIPage = () => {
           <>
             <Filter size={16} className="text-slate-400 shrink-0" />
             <label className="sr-only" htmlFor="kpi-period">Periodo</label>
-            <select
+            <SearchableSelect
               id="kpi-period"
               value={period}
-              onChange={(e) => {
-                const next = e.target.value;
+              onChange={(next) => {
                 setPeriod(next);
                 if (next === 'CUSTOM') {
                   if (!customStartDate) setCustomStartDate(firstDayOfMonthYmd());
                   if (!customEndDate) setCustomEndDate(todayYmd());
                 }
               }}
-              className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              {PERIOD_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+              options={PERIOD_OPTIONS}
+              placeholder="Buscar…"
+              inputClassName="px-3 py-2 pr-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
             {period === 'CUSTOM' && (
               <PeriodRangeFilter
                 startDate={customStartDate}

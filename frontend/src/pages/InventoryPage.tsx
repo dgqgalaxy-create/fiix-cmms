@@ -21,6 +21,7 @@ import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
 import { InfoTip } from '../components/common/InfoTip';
 import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
 import { mediaUrl } from '../utils/mediaUrl';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 
 export const InventoryPage = () => {
   const navigate = useNavigate();
@@ -1116,16 +1117,18 @@ export const InventoryPage = () => {
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
-                <select
+                <SearchableSelect
                   value={movementTypeFilter}
-                  onChange={(e) => setMovementTypeFilter(e.target.value as 'ALL' | 'IN' | 'OUT')}
-                  className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  onChange={(v) => setMovementTypeFilter(v as 'ALL' | 'IN' | 'OUT')}
+                  options={[
+                    { value: 'ALL', label: 'Todos los movimientos' },
+                    { value: 'IN', label: 'Solo entradas' },
+                    { value: 'OUT', label: 'Solo bajas' },
+                  ]}
+                  placeholder="Buscar…"
                   title="Tipo de movimiento"
-                >
-                  <option value="ALL">Todos los movimientos</option>
-                  <option value="IN">Solo entradas</option>
-                  <option value="OUT">Solo bajas</option>
-                </select>
+                  inputClassName="px-3 py-2 pr-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
               </>
             }
           >

@@ -29,6 +29,7 @@ import { formatDate, formatDateOnly, parseDateOnly } from '../utils/dateUtils';
 import { formatCurrency } from '../utils/currency';
 import { mediaUrl } from '../utils/mediaUrl';
 import { ItemModal } from './inventory/ItemModal';
+import { SearchableSelect } from './ui/SearchableSelect';
 import {
   getCategories,
   getLocations,
@@ -611,15 +612,18 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
               <div className="flex flex-wrap items-end gap-3 mb-4">
                 <label className="block">
                   <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Tipo</span>
-                  <select
+                  <SearchableSelect
                     value={docType}
-                    onChange={(e) => setDocType(e.target.value as PurchaseOrderDocType)}
-                    className="mt-1 block rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-                  >
-                    <option value="SP">SP (SAP)</option>
-                    <option value="OC">OC (SAP)</option>
-                    <option value="OTRO">Otro</option>
-                  </select>
+                    onChange={(v) => setDocType(v as PurchaseOrderDocType)}
+                    options={[
+                      { value: 'SP', label: 'SP (SAP)' },
+                      { value: 'OC', label: 'OC (SAP)' },
+                      { value: 'OTRO', label: 'Otro' },
+                    ]}
+                    placeholder="Tipo de documento…"
+                    className="mt-1"
+                    inputClassName="block w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 pr-8 text-sm"
+                  />
                 </label>
                 <input
                   ref={fileInputRef}

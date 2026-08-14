@@ -5,6 +5,7 @@ import { getVendors, getItems, type Vendor, type Item } from '../api/inventory';
 import { formatCurrency } from '../utils/currency';
 import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../utils/mediaUrl';
+import { SearchableSelect } from './ui/SearchableSelect';
 
 interface CreatePOModalProps {
   isOpen: boolean;
@@ -145,9 +146,9 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
   const showCatalog = showItemDropdown && (Boolean(selectedVendor) || search.length > 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-800">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col h-[min(92vh,920px)] max-h-[92vh]">
+        <div className="flex justify-between items-center p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Nueva Orden de Compra</h2>
           <button
             onClick={onClose}
@@ -157,7 +158,7 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="p-5 sm:p-6 overflow-y-auto flex-1 min-h-0">
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm font-medium">
               {error}
@@ -170,19 +171,16 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
                   Proveedor *
                 </label>
-                <select
+                <SearchableSelect
                   required
                   value={selectedVendor}
-                  onChange={(e) => handleVendorChange(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="">Selecciona un proveedor...</option>
-                  {vendors.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={handleVendorChange}
+                  options={vendors.map((v) => ({ value: v.id, label: v.name }))}
+                  allowEmpty
+                  emptyLabel="Selecciona un proveedor..."
+                  placeholder="Selecciona un proveedor..."
+                  inputClassName="w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
                 <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                   Al elegir proveedor se listan sus refacciones. También puedes buscar por nombre de artículo abajo.
                 </p>
@@ -209,25 +207,27 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
                   : 'El costo unitario se toma del inventario y solo un Administrador puede modificarlo. La orden queda en borrador hasta que un Administrador la apruebe.'}
               </p>
 
-              <div className="relative mb-4" ref={searchBoxRef}>
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10 top-0 h-12">
-                  <Search size={18} className="text-slate-400" />
+              <div className="mb-4" ref={searchBoxRef}>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
+                    <Search size={18} className="text-slate-400" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder={
+                      selectedVendor
+                        ? 'Filtrar catálogo del proveedor o buscar código/nombre…'
+                        : 'Buscar por nombre o código (sin saber el proveedor)…'
+                    }
+                    value={itemSearch}
+                    onChange={(e) => {
+                      setItemSearch(e.target.value);
+                      setShowItemDropdown(true);
+                    }}
+                    onFocus={() => setShowItemDropdown(true)}
+                    className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
                 </div>
-                <input
-                  type="text"
-                  placeholder={
-                    selectedVendor
-                      ? 'Filtrar catálogo del proveedor o buscar código/nombre…'
-                      : 'Buscar por nombre o código (sin saber el proveedor)…'
-                  }
-                  value={itemSearch}
-                  onChange={(e) => {
-                    setItemSearch(e.target.value);
-                    setShowItemDropdown(true);
-                  }}
-                  onFocus={() => setShowItemDropdown(true)}
-                  className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
 
                 {selectedVendor && (
                   <div className="mt-2 flex items-center gap-2">
@@ -248,8 +248,8 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
                 )}
 
                 {showCatalog && (
-                  <div className="absolute z-10 w-full mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-60 overflow-y-auto">
-                    <div className="sticky top-0 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-800">
+                  <div className="mt-3 w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm max-h-[min(42vh,22rem)] min-h-[10rem] overflow-y-auto">
+                    <div className="sticky top-0 z-[1] px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-800">
                       {!selectedVendor && search
                         ? `${catalogItems.length} resultado(s) · toca uno para tomar su proveedor`
                         : selectedVendor && !search
@@ -407,7 +407,7 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
           </form>
         </div>
 
-        <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex justify-end gap-3">
+        <div className="p-5 sm:p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex justify-end gap-3 shrink-0">
           <button
             type="button"
             onClick={onClose}

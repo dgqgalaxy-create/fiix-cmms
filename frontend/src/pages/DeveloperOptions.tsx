@@ -37,6 +37,7 @@ import {
   touchDevOptionsSession,
 } from '../utils/devOptionsSession';
 import { formatDateTime } from '../utils/dateUtils';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 
 type AuditLogRow = {
   id: string;
@@ -2026,23 +2027,19 @@ export const DeveloperOptions = () => {
             ) : (
               <label className="mb-4 block">
                 <span className="mb-1.5 block text-sm font-bold text-slate-700 dark:text-slate-300">Respaldo</span>
-                <select
+                <SearchableSelect
                   value={selectedBackupFile}
-                  onChange={(e) => {
-                    setSelectedBackupFile(e.target.value);
+                  onChange={(v) => {
+                    setSelectedBackupFile(v);
                     setRestoreModalError(null);
                   }}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-amber-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                >
-                  {serverBackups.map((b) => (
-                    <option key={b.file} value={b.file} disabled={b.usable === false}>
-                      {b.usable === false ? '[VACÍO] ' : ''}
-                      {b.file}
-                      {b.hasUploads ? ' (+uploads)' : ''} —{' '}
-                      {b.size < 1024 ? `${b.size} B` : `${(b.size / 1024).toFixed(0)} KB`}
-                    </option>
-                  ))}
-                </select>
+                  options={serverBackups.map((b) => ({
+                    value: b.file,
+                    label: `${b.usable === false ? '[VACÍO] ' : ''}${b.file}${b.hasUploads ? ' (+uploads)' : ''} — ${b.size < 1024 ? `${b.size} B` : `${(b.size / 1024).toFixed(0)} KB`}`,
+                  }))}
+                  placeholder="Buscar…"
+                  inputClassName="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 pr-8 text-sm text-slate-900 outline-none focus:border-amber-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
               </label>
             )}
             <label className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">

@@ -3,6 +3,7 @@ import { Plus, Trash2, Loader2, Scale } from 'lucide-react';
 import { getUoms, createUom, updateUom, deleteUom } from '../api/settings';
 import type { UnitOfMeasure } from '../api/settings';
 import type { QtyMode } from '../utils/qtyMode';
+import { SearchableSelect } from './ui/SearchableSelect';
 
 export const UomCatalogue = () => {
   const [uoms, setUoms] = useState<UnitOfMeasure[]>([]);
@@ -129,15 +130,18 @@ export const UomCatalogue = () => {
               onChange={(e) => setNewName(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
             />
-            <select
+            <SearchableSelect
               value={newMode}
-              onChange={(e) => setNewMode(e.target.value as QtyMode)}
-              className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm"
+              onChange={(v) => setNewMode(v as QtyMode)}
+              options={[
+                { value: 'INTEGER', label: 'Enteros' },
+                { value: 'DECIMAL', label: 'Decimales' },
+              ]}
               title="Modo de cantidad sugerido"
-            >
-              <option value="INTEGER">Enteros</option>
-              <option value="DECIMAL">Decimales</option>
-            </select>
+              placeholder="Modo…"
+              className="min-w-[8.5rem]"
+              inputClassName="px-3 py-2 pr-8 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm"
+            />
             <button
               onClick={handleCreate}
               disabled={!newName.trim() || isSaving}
@@ -162,16 +166,19 @@ export const UomCatalogue = () => {
             >
               <div className="flex items-center gap-3 flex-wrap min-w-0 flex-1">
                 <span className="font-semibold text-slate-700 dark:text-slate-200">{uom.name}</span>
-                <select
+                <SearchableSelect
                   value={uom.default_qty_mode || 'INTEGER'}
                   disabled={savingId === uom.id}
-                  onChange={(e) => void handleModeChange(uom.id, e.target.value as QtyMode)}
-                  className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 disabled:opacity-60"
+                  onChange={(v) => void handleModeChange(uom.id, v as QtyMode)}
+                  options={[
+                    { value: 'INTEGER', label: 'Enteros' },
+                    { value: 'DECIMAL', label: 'Decimales' },
+                  ]}
                   title="Modo de cantidad sugerido al usar esta unidad"
-                >
-                  <option value="INTEGER">Enteros</option>
-                  <option value="DECIMAL">Decimales</option>
-                </select>
+                  placeholder="Modo…"
+                  className="min-w-[7.5rem]"
+                  inputClassName="px-2.5 py-1.5 pr-8 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 disabled:opacity-60"
+                />
                 {savingId === uom.id && (
                   <Loader2 size={14} className="animate-spin text-emerald-600" />
                 )}

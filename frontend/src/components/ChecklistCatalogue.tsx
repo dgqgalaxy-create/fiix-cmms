@@ -13,6 +13,7 @@ import {
 import type { ChecklistActivity, ChecklistFieldType } from '../api/checklists';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { InfoTip } from './common/InfoTip';
+import { SearchableSelect } from './ui/SearchableSelect';
 
 const FIELD_TYPE_OPTIONS: { value: ChecklistFieldType; label: string; hint: string; icon: typeof CheckSquare }[] = [
   { value: 'CHECKBOX', label: 'Check', hint: 'OK / Falla / N/A', icon: CheckSquare },
@@ -262,16 +263,18 @@ export const ChecklistCatalogue = () => {
                 if (e.key === 'Escape') setIsCreating(false);
               }}
             />
-            <select
+            <SearchableSelect
               value={newFieldType}
-              onChange={(e) => setNewFieldType(e.target.value as ChecklistFieldType)}
-              className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500"
+              onChange={(v) => setNewFieldType(v as ChecklistFieldType)}
+              options={FIELD_TYPE_OPTIONS.map((opt) => ({
+                value: opt.value,
+                label: `${opt.label} — ${opt.hint}`,
+              }))}
               title="Tipo de respuesta"
-            >
-              {FIELD_TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label} — {opt.hint}</option>
-              ))}
-            </select>
+              placeholder="Tipo de respuesta…"
+              className="min-w-[14rem]"
+              inputClassName="px-3 py-2 pr-8 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500"
+            />
             <div className="flex gap-2">
               <button
                 onClick={handleCreate}
@@ -352,16 +355,18 @@ export const ChecklistCatalogue = () => {
                   {/* Field type + actions */}
                   <div className="flex items-center gap-2 pl-9 sm:pl-0 shrink-0">
                     <div className="relative flex items-center gap-1.5">
-                      <select
+                      <SearchableSelect
                         value={fieldType}
                         disabled={updatingTypeId === act.id || isSaving}
-                        onChange={(e) => handleFieldTypeChange(act.id, e.target.value as ChecklistFieldType)}
-                        className="appearance-none pl-2.5 pr-7 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 cursor-pointer"
-                      >
-                        {FIELD_TYPE_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
+                        onChange={(v) => handleFieldTypeChange(act.id, v as ChecklistFieldType)}
+                        options={FIELD_TYPE_OPTIONS.map((opt) => ({
+                          value: opt.value,
+                          label: opt.label,
+                        }))}
+                        placeholder="Tipo…"
+                        className="min-w-[6.5rem]"
+                        inputClassName="pl-2.5 pr-8 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60"
+                      />
                       {updatingTypeId === act.id && (
                         <Loader2 size={14} className="absolute right-2 animate-spin text-indigo-500 pointer-events-none" />
                       )}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, ChevronDown, CheckCircle2, Users, PauseCircle, PlayCircle, ChevronLeft, ChevronRight, ZoomIn, StickyNote } from 'lucide-react';
+import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, CheckCircle2, Users, PauseCircle, PlayCircle, ChevronLeft, ChevronRight, ZoomIn, StickyNote } from 'lucide-react';
 import type { WorkOrder } from '../api/workOrders';
 import { getWorkOrderById } from '../api/workOrders';
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +26,7 @@ import { InfoTip } from './common/InfoTip';
 import { qtyStep, isInvalidQty } from '../utils/qtyMode';
 import { WorkOrderCommentsPanel } from './WorkOrderCommentsPanel';
 import { mediaUrl } from '../utils/mediaUrl';
+import { SearchableSelect } from './ui/SearchableSelect';
 
 const STATUS_LABELS: Record<string, string> = {
   PENDIENTE: 'Pendiente',
@@ -937,38 +938,31 @@ export const WorkOrderDetailModal = ({
                       {statusLabel(workOrder.status)}
                     </div>
                   ) : showStatusSelect ? (
-                    <div className="relative">
-                      <select
-                        className="w-full px-4 py-3.5 border rounded-xl outline-none transition-all appearance-none font-bold text-base shadow-sm bg-white dark:bg-slate-900 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 cursor-pointer hover:border-emerald-400 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500"
-                        value={status}
-                        onChange={(e) => {
-                          const next = e.target.value;
-                          setStatus(next);
-                          if (next === 'FINALIZADO') scrollToFinalizeSection();
-                        }}
-                        disabled={isReadOnly}
-                      >
-                        <option value={workOrder.status}>{statusLabel(workOrder.status)}</option>
-
-                        {workOrder.status === 'PENDIENTE' && (
-                          <option value="EN_PROCESO">Aceptar orden</option>
-                        )}
-
-                        {workOrder.status === 'EN_PROCESO' && isAssignedToMe && (
-                          <>
-                            <option value="EN_ESPERA">Pausar</option>
-                            <option value="FINALIZADO">Finalizar</option>
-                          </>
-                        )}
-
-                        {workOrder.status === 'EN_ESPERA' && isAssignedToMe && (
-                          <option value="EN_PROCESO">Reanudar</option>
-                        )}
-                      </select>
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 dark:text-emerald-400">
-                        <ChevronDown size={20} />
-                      </div>
-                    </div>
+                    <SearchableSelect
+                      disabled={isReadOnly}
+                      value={status}
+                      onChange={(next) => {
+                        setStatus(next);
+                        if (next === 'FINALIZADO') scrollToFinalizeSection();
+                      }}
+                      options={[
+                        { value: workOrder.status, label: statusLabel(workOrder.status) },
+                        ...(workOrder.status === 'PENDIENTE'
+                          ? [{ value: 'EN_PROCESO', label: 'Aceptar orden' }]
+                          : []),
+                        ...(workOrder.status === 'EN_PROCESO' && isAssignedToMe
+                          ? [
+                              { value: 'EN_ESPERA', label: 'Pausar' },
+                              { value: 'FINALIZADO', label: 'Finalizar' },
+                            ]
+                          : []),
+                        ...(workOrder.status === 'EN_ESPERA' && isAssignedToMe
+                          ? [{ value: 'EN_PROCESO', label: 'Reanudar' }]
+                          : []),
+                      ]}
+                      placeholder="Cambiar estado…"
+                      inputClassName="w-full px-4 py-3.5 pr-8 border rounded-xl outline-none transition-all font-bold text-base shadow-sm bg-white dark:bg-slate-900 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 cursor-pointer hover:border-emerald-400 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:opacity-50"
+                    />
                   ) : (
                     <div className="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-slate-900 px-3 py-2 text-sm font-bold text-emerald-900 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800">
                       {statusLabel(status || workOrder.status)}
@@ -1096,56 +1090,62 @@ export const WorkOrderDetailModal = ({
                         <div className="space-y-3">
                           <div>
                             <span className="text-xs font-semibold text-orange-700 dark:text-orange-300 block mb-1">Problema Encontrado</span>
-                            <select
-                              className="w-full px-3 py-2 border border-orange-200 dark:border-orange-800 rounded-lg text-sm bg-white dark:bg-slate-900"
+                            <SearchableSelect
                               value={failureProblemId}
-                              onChange={(e) => {
-                                setFailureProblemId(e.target.value);
+                              onChange={(v) => {
+                                setFailureProblemId(v);
                                 setFailureCauseId('');
                                 setFailureRemedyId('');
                               }}
-                            >
-                              <option value="">Sin registrar / no aplica...</option>
-                              {rcaTree.map(p => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
-                              ))}
-                            </select>
+                              options={rcaTree.map((p) => ({ value: p.id, label: p.name }))}
+                              allowEmpty
+                              emptyLabel="Sin registrar / no aplica..."
+                              placeholder="Buscar problema…"
+                              inputClassName="w-full px-3 py-2 pr-8 border border-orange-200 dark:border-orange-800 rounded-lg text-sm bg-white dark:bg-slate-900"
+                            />
                           </div>
 
                           {failureProblemId && (
                             <div className="animate-in fade-in duration-200">
                               <span className="text-xs font-semibold text-orange-700 dark:text-orange-300 block mb-1">Causa Raíz</span>
-                              <select
-                                className="w-full px-3 py-2 border border-orange-200 dark:border-orange-800 rounded-lg text-sm bg-white dark:bg-slate-900"
+                              <SearchableSelect
                                 value={failureCauseId}
-                                onChange={(e) => {
-                                  setFailureCauseId(e.target.value);
+                                onChange={(v) => {
+                                  setFailureCauseId(v);
                                   setFailureRemedyId('');
                                 }}
-                              >
-                                <option value="">Selecciona la Causa...</option>
-                                {rcaTree.find(p => p.id === failureProblemId)?.causes?.map((c: any) => (
-                                  <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                              </select>
+                                options={(rcaTree.find((p) => p.id === failureProblemId)?.causes ?? []).map((c: any) => ({
+                                  value: c.id,
+                                  label: c.name,
+                                }))}
+                                allowEmpty
+                                emptyLabel="Selecciona la Causa..."
+                                placeholder="Buscar causa…"
+                                inputClassName="w-full px-3 py-2 pr-8 border border-orange-200 dark:border-orange-800 rounded-lg text-sm bg-white dark:bg-slate-900"
+                              />
                             </div>
                           )}
 
                           {failureCauseId && (
                             <div className="animate-in fade-in duration-200">
                               <span className="text-xs font-semibold text-orange-700 dark:text-orange-300 block mb-1">Solución / Acción Tomada</span>
-                              <select
-                                className="w-full px-3 py-2 border border-orange-200 dark:border-orange-800 rounded-lg text-sm bg-white dark:bg-slate-900"
+                              <SearchableSelect
                                 value={failureRemedyId}
-                                onChange={(e) => setFailureRemedyId(e.target.value)}
-                              >
-                                <option value="">Selecciona la Solución...</option>
-                                {rcaTree.find(p => p.id === failureProblemId)
-                                  ?.causes?.find((c: any) => c.id === failureCauseId)
-                                  ?.remedies?.map((r: any) => (
-                                    <option key={r.id} value={r.id}>{r.name}</option>
-                                  ))}
-                              </select>
+                                onChange={setFailureRemedyId}
+                                options={(
+                                  rcaTree
+                                    .find((p) => p.id === failureProblemId)
+                                    ?.causes?.find((c: any) => c.id === failureCauseId)
+                                    ?.remedies ?? []
+                                ).map((r: any) => ({
+                                  value: r.id,
+                                  label: r.name,
+                                }))}
+                                allowEmpty
+                                emptyLabel="Selecciona la Solución..."
+                                placeholder="Buscar solución…"
+                                inputClassName="w-full px-3 py-2 pr-8 border border-orange-200 dark:border-orange-800 rounded-lg text-sm bg-white dark:bg-slate-900"
+                              />
                             </div>
                           )}
                         </div>

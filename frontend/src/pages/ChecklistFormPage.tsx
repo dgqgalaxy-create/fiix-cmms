@@ -38,6 +38,7 @@ import type { DailyChecklist, ChecklistRow } from '../api/checklists';
 import { getOnlineUsers, getUsers } from '../api/users';
 import type { User } from '../api/users';
 import { useAuth } from '../context/AuthContext';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { parseDateOnly } from '../utils/dateUtils';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import {
@@ -776,21 +777,20 @@ export default function ChecklistFormPage() {
 
           {canAssignTechnician && (
             <div className="flex flex-col sm:flex-row gap-2 sm:items-center pl-0 sm:pl-8">
-              <select
+              <SearchableSelect
                 value={selectedAssignUserId || ''}
-                onChange={(e) => setSelectedAssignUserId(e.target.value || null)}
+                onChange={(v) => setSelectedAssignUserId(v || null)}
                 disabled={assignLoading || assignSaving}
-                className="flex-1 rounded-xl border border-rose-300 bg-white px-3 py-2 text-sm text-slate-800 dark:border-rose-700 dark:bg-slate-900 dark:text-slate-100"
-              >
-                <option value="">
-                  {assignLoading ? 'Cargando personal…' : 'Seleccionar técnico…'}
-                </option>
-                {assignCandidates.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} ({u.role})
-                  </option>
-                ))}
-              </select>
+                options={assignCandidates.map((u) => ({
+                  value: u.id,
+                  label: `${u.name} (${u.role})`,
+                }))}
+                allowEmpty
+                emptyLabel={assignLoading ? 'Cargando personal…' : 'Seleccionar técnico…'}
+                placeholder="Buscar…"
+                className="flex-1"
+                inputClassName="w-full rounded-xl border border-rose-300 bg-white px-3 py-2 pr-8 text-sm text-slate-800 dark:border-rose-700 dark:bg-slate-900 dark:text-slate-100"
+              />
               <button
                 type="button"
                 onClick={handleAssignTechnician}

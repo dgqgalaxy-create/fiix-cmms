@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Loader2, Save, Trash2, Eye, EyeOff } from 'lucide-react';
 import type { User } from '../api/users';
 import { useAuth } from '../context/AuthContext';
+import { SearchableSelect } from './ui/SearchableSelect';
 
 interface Props {
   user: User | null;
@@ -161,17 +162,19 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
 
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Rol en el Sistema *</label>
-              <select 
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all"
+              <SearchableSelect
                 value={role}
-                onChange={(e) => setRole(e.target.value)}
-                disabled={user?.id === currentUser?.userId} // Don't allow changing your own role easily
-              >
-                <option value="TECNICO">TÉCNICO (Solo puede ver y atender sus órdenes)</option>
-                <option value="GESTIONADOR">GESTIONADOR (Crea órdenes y asigna a técnicos)</option>
-                <option value="ADMINISTRADOR">ADMINISTRADOR (Control total del sistema)</option>
-                <option value="OBSERVADOR">OBSERVADOR (Solo consulta + Mensajes; sin editar)</option>
-              </select>
+                onChange={setRole}
+                disabled={user?.id === currentUser?.userId}
+                options={[
+                  { value: 'TECNICO', label: 'TÉCNICO (Solo puede ver y atender sus órdenes)' },
+                  { value: 'GESTIONADOR', label: 'GESTIONADOR (Crea órdenes y asigna a técnicos)' },
+                  { value: 'ADMINISTRADOR', label: 'ADMINISTRADOR (Control total del sistema)' },
+                  { value: 'OBSERVADOR', label: 'OBSERVADOR (Solo consulta + Mensajes; sin editar)' },
+                ]}
+                placeholder="Seleccionar rol…"
+                inputClassName="w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
+              />
             </div>
 
             {isEditing && (
