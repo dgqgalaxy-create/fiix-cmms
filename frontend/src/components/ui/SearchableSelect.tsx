@@ -1,0 +1,165 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
+
+export type SearchableSelectOption = {
+  value: string;
+  label: string;
+};
+
+type Props = {
+  value: string;
+  onChange: (value: string) => void;
+  options: SearchableSelectOption[];
+  disabled?: boolean;
+  /** Texto cuando no hay valor seleccionado */
+  placeholder?: string;
+  /** Permite opción vacía (value '') al inicio de la lista */
+  allowEmpty?: boolean;
+  emptyLabel?: string;
+  className?: string;
+  inputClassName?: string;
+  required?: boolean;
+  id?: string;
+  title?: string;
+};
+
+/**
+ * Desplegable con filtro por texto (combobox).
+ * Útil para catálogos largos (proveedores, ubicaciones, etc.).
+ */
+export function SearchableSelect({
+  value,
+  onChange,
+  options,
+  disabled = false,
+  placeholder = 'Seleccionar…',
+  allowEmpty = false,
+  emptyLabel = '— Sin seleccionar —',
+  className = '',
+  inputClassName = '',
+  required = false,
+  id,
+  title,
+}: Props) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const selected = useMemo(
+    () => options.find((o) => o.value === value),
+    [options, value]
+  );
+
+  const allOptions = useMemo(() => {
+    if (!allowEmpty) return options;
+    return [{ value: '', label: emptyLabel }, ...options];
+  }, [allowEmpty, emptyLabel, options]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return allOptions;
+    return allOptions.filter(
+      (o) =>
+        o.label.toLowerCase().includes(q) ||
+        o.value.toLowerCase().includes(q)
+    );
+  }, [allOptions, query]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery('');
+      }
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+
+  const openList = () => {
+    if (disabled) return;
+    setQuery('');
+    setOpen(true);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
+  const pick = (next: string) => {
+    onChange(next);
+    setOpen(false);
+    setQuery('');
+  };
+
+  const showLabel = open ? query : selected?.label || (value === '' && allowEmpty ? emptyLabel : '');
+
+  return (
+    <div ref={rootRef} className={`relative ${className}`.trim()}>
+      <div className="relative">
+        <input
+          ref={inputRef}
+          id={id}
+          type="text"
+          disabled={disabled}
+          required={required && !value}
+          title={title}
+          placeholder={placeholder}
+          value={showLabel}
+          autoComplete="off"
+          onFocus={openList}
+          onClick={openList}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setOpen(false);
+              setQuery('');
+              inputRef.current?.blur();
+            }
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              const first = filtered[0];
+              if (first) pick(first.value);
+            }
+          }}
+          className={
+            inputClassName ||
+            'w-full px-4 py-2.5 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800'
+          }
+        />
+        <ChevronDown
+          size={16}
+          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+        />
+      </div>
+
+      {open && !disabled && (
+        <div className="absolute z-30 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
+          {filtered.length === 0 ? (
+            <div className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400 text-center">
+              Sin coincidencias
+            </div>
+          ) : (
+            filtered.map((o) => (
+              <button
+                key={o.value || '__empty'}
+                type="button"
+                className={`w-full text-left px-4 py-2.5 text-sm border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-emerald-50 dark:hover:bg-slate-800 ${
+                  o.value === value
+                    ? 'bg-emerald-50/80 dark:bg-emerald-950/30 font-semibold text-emerald-800 dark:text-emerald-300'
+                    : 'text-slate-800 dark:text-slate-100'
+                }`}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => pick(o.value)}
+              >
+                {o.label}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

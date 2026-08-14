@@ -8,6 +8,7 @@ import type { Item, ItemCategory, ItemLocation, Vendor, InventoryTransaction } f
 import { formatDateTime } from '../../utils/dateUtils';
 import { qtyStep, isInvalidQty, type QtyMode } from '../../utils/qtyMode';
 import { mediaUrl } from '../../utils/mediaUrl';
+import { SearchableSelect } from '../ui/SearchableSelect';
 
 type DateFilter = 'all' | 'this_week' | 'last_week' | 'this_month' | 'last_3_months';
 
@@ -444,28 +445,27 @@ export const ItemModal = ({
 
             {/* Columnas Derecha: Campos */}
             <div className="md:col-span-2 space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Código Interno</label>
-                  <input
-                    type="text"
-                    disabled
-                    value={item ? formData.internal_code : 'Autogenerado al guardar'}
-                    className="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Nombre del Repuesto *</label>
-                  <input
-                    type="text"
-                    required
-                    disabled={readOnly}
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
-                    placeholder="Ej. Balero SKF 6204"
-                  />
-                </div>
+              <div className="max-w-xs">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Código Interno</label>
+                <input
+                  type="text"
+                  disabled
+                  value={item ? formData.internal_code : 'Autogenerado al guardar'}
+                  className="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Nombre del Repuesto *</label>
+                <input
+                  type="text"
+                  required
+                  disabled={readOnly}
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
+                  placeholder="Ej. Balero SKF 6204"
+                />
               </div>
 
               <div>
@@ -483,39 +483,39 @@ export const ItemModal = ({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Categoría</label>
-                  <select
+                  <SearchableSelect
                     disabled={readOnly}
                     value={formData.category_id}
-                    onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
-                  >
-                    <option value="">-- Sin categoría --</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
+                    onChange={(category_id) => setFormData({ ...formData, category_id })}
+                    options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                    allowEmpty
+                    emptyLabel="-- Sin categoría --"
+                    placeholder="Buscar categoría…"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Ubicación</label>
-                  <select
+                  <SearchableSelect
                     disabled={readOnly}
                     value={formData.location_id}
-                    onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
-                  >
-                    <option value="">-- Sin ubicación --</option>
-                    {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                  </select>
+                    onChange={(location_id) => setFormData({ ...formData, location_id })}
+                    options={locations.map((l) => ({ value: l.id, label: l.name }))}
+                    allowEmpty
+                    emptyLabel="-- Sin ubicación --"
+                    placeholder="Buscar ubicación…"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Proveedor</label>
-                  <select
+                  <SearchableSelect
                     disabled={readOnly}
                     value={formData.vendor_id}
-                    onChange={(e) => setFormData({ ...formData, vendor_id: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
-                  >
-                    <option value="">-- Sin proveedor --</option>
-                    {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-                  </select>
+                    onChange={(vendor_id) => setFormData({ ...formData, vendor_id })}
+                    options={vendors.map((v) => ({ value: v.id, label: v.name }))}
+                    allowEmpty
+                    emptyLabel="-- Sin proveedor --"
+                    placeholder="Buscar proveedor…"
+                  />
                 </div>
               </div>
 
@@ -573,12 +573,11 @@ export const ItemModal = ({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Unidad</label>
-                  <select
+                  <SearchableSelect
                     required
                     disabled={readOnly}
                     value={formData.uom}
-                    onChange={(e) => {
-                      const name = e.target.value;
+                    onChange={(name) => {
                       const u = uoms.find((x) => x.name === name);
                       setFormData({
                         ...formData,
@@ -586,26 +585,30 @@ export const ItemModal = ({
                         qty_mode: (u?.default_qty_mode === 'DECIMAL' ? 'DECIMAL' : 'INTEGER') as QtyMode,
                       });
                     }}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
-                  >
-                    {uoms.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
-                    {formData.uom && !uoms.find(u => u.name === formData.uom) && (
-                      <option value={formData.uom}>{formData.uom}</option>
-                    )}
-                  </select>
+                    options={[
+                      ...uoms.map((u) => ({ value: u.name, label: u.name })),
+                      ...(formData.uom && !uoms.find((u) => u.name === formData.uom)
+                        ? [{ value: formData.uom, label: formData.uom }]
+                        : []),
+                    ]}
+                    placeholder="Buscar unidad…"
+                    inputClassName="w-full px-3 py-2 pr-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Cantidades</label>
-                  <select
+                  <SearchableSelect
                     disabled={readOnly}
                     value={formData.qty_mode}
-                    onChange={(e) => setFormData({ ...formData, qty_mode: e.target.value as QtyMode })}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
+                    onChange={(qty_mode) => setFormData({ ...formData, qty_mode: qty_mode as QtyMode })}
+                    options={[
+                      { value: 'INTEGER', label: 'Enteros' },
+                      { value: 'DECIMAL', label: 'Decimales' },
+                    ]}
+                    placeholder="Cantidades…"
                     title="Enteros (piezas) o decimales (litros, kg…)"
-                  >
-                    <option value="INTEGER">Enteros</option>
-                    <option value="DECIMAL">Decimales</option>
-                  </select>
+                    inputClassName="w-full px-3 py-2 pr-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
+                  />
                 </div>
               </div>
             </div>
@@ -615,17 +618,20 @@ export const ItemModal = ({
             <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
               <div className="flex justify-between items-center mb-4 gap-3 flex-wrap">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Historial de Movimientos</h3>
-                <select
+                <SearchableSelect
                   value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value as DateFilter)}
-                  className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 font-medium text-slate-700 dark:text-slate-200"
-                >
-                  <option value="all">Todo el historial</option>
-                  <option value="this_week">Semana Actual</option>
-                  <option value="last_week">Última Semana</option>
-                  <option value="this_month">Último Mes</option>
-                  <option value="last_3_months">Últimos 3 Meses</option>
-                </select>
+                  onChange={(v) => setDateFilter(v as DateFilter)}
+                  options={[
+                    { value: 'all', label: 'Todo el historial' },
+                    { value: 'this_week', label: 'Semana Actual' },
+                    { value: 'last_week', label: 'Última Semana' },
+                    { value: 'this_month', label: 'Último Mes' },
+                    { value: 'last_3_months', label: 'Últimos 3 Meses' },
+                  ]}
+                  placeholder="Filtrar historial…"
+                  className="min-w-[11rem]"
+                  inputClassName="px-3 py-2 pr-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 font-medium text-slate-700 dark:text-slate-200"
+                />
               </div>
               
               <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">

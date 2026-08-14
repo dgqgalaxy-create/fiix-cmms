@@ -1,5 +1,7 @@
 export { Button } from './Button';
 export { Input, Select, Textarea, Field } from './Input';
+export { SearchableSelect } from './SearchableSelect';
+export type { SearchableSelectOption } from './SearchableSelect';
 export { Card, CardHeader } from './Card';
 export { Badge } from './Badge';
 export { statusTone } from './statusTone';

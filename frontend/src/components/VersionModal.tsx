@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.53";
+export const APP_VERSION = "1.56.54";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: En la ficha de repuesto, el Nombre ocupa el ancho completo (como Descripción); el código interno queda en una fila compacta arriba.",
+    "Mejora: En la ficha de repuesto (crear/editar), Categoría, Ubicación, Proveedor, Unidad y demás listas permiten escribir para filtrar opciones (ya no solo despliegue largo).",
     "Mejora: Compras — la fila o tarjeta de cada orden abre el detalle al tocarla (la flecha queda como indicador).",
     "Nuevo: Compras — búsqueda por folio, proveedor, ítem y SP/OC (SAP); campos SP (SAP) / OC (SAP), fecha estimada editable y adjuntos PDF/Word en el detalle.",
     "Mejora: Logo de marca actualizado (login, menú lateral y modal de versión).",
