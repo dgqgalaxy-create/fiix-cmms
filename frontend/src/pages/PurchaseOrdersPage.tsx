@@ -6,6 +6,7 @@ import { PODetailModal } from '../components/PODetailModal';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatDate } from '../utils/dateUtils';
 import { formatCurrency } from '../utils/currency';
+import { poTaxBreakdown } from '../utils/poTax';
 
 const ORDERS_PER_PAGE = 20;
 
@@ -63,8 +64,12 @@ export const PurchaseOrdersPage = () => {
 
   useSocketRefresh('refresh_purchase_orders', () => fetchOrders(true));
 
-  const calculateTotal = (items: any[]) => {
-    return items.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
+  const calculateTotal = (order: { items: any[]; iva_percent?: number | null }) => {
+    const subtotal = (order.items || []).reduce(
+      (sum, item) => sum + item.quantity * item.unit_cost,
+      0
+    );
+    return poTaxBreakdown(subtotal, order.iva_percent ?? 0).total;
   };
 
   const sortedOrders = useMemo(() => {
@@ -81,7 +86,7 @@ export const PurchaseOrdersPage = () => {
           cmp = a.status.localeCompare(b.status);
           break;
         case 'total':
-          cmp = calculateTotal(a.items) - calculateTotal(b.items);
+          cmp = calculateTotal(a) - calculateTotal(b);
           break;
         case 'date':
           cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -213,7 +218,7 @@ export const PurchaseOrdersPage = () => {
                       {order.vendor?.name || 'Sin proveedor'}
                     </div>
                     <div className="text-[11px] text-slate-500 dark:text-slate-500 mt-0.5 flex items-center gap-2">
-                      <span>{formatCurrency(calculateTotal(order.items))}</span>
+                      <span>{formatCurrency(calculateTotal(order))}</span>
                       <span>·</span>
                       <span>{order.items.length} ítem(s)</span>
                       <span>·</span>
@@ -286,7 +291,7 @@ export const PurchaseOrdersPage = () => {
                         {getStatusBadge(order.status)}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="font-medium text-slate-700 dark:text-slate-300">{formatCurrency(calculateTotal(order.items))}</div>
+                        <div className="font-medium text-slate-700 dark:text-slate-300">{formatCurrency(calculateTotal(order))}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 text-slate-600 text-sm">

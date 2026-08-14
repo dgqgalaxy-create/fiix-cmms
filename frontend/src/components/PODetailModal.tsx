@@ -28,6 +28,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { formatDate, formatDateOnly, parseDateOnly } from '../utils/dateUtils';
 import { formatCurrency } from '../utils/currency';
+import { normalizeIvaPercent, poTaxBreakdown } from '../utils/poTax';
 import { mediaUrl } from '../utils/mediaUrl';
 import { ItemModal } from './inventory/ItemModal';
 import { SearchableSelect } from './ui/SearchableSelect';
@@ -72,6 +73,8 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
   const [sapSp, setSapSp] = useState('');
   const [sapOc, setSapOc] = useState('');
   const [expectedDate, setExpectedDate] = useState('');
+  const [ivaPreset, setIvaPreset] = useState<'0' | '8' | '16' | 'custom'>('16');
+  const [ivaPercent, setIvaPercent] = useState(16);
   const [docType, setDocType] = useState<PurchaseOrderDocType>('SP');
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -95,6 +98,12 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
     setSapSp(order.sap_sp_folio || '');
     setSapOc(order.sap_oc_folio || '');
     setExpectedDate(toDateInputValue(order.expected_date));
+    const pct = normalizeIvaPercent(order.iva_percent ?? 0);
+    setIvaPercent(pct);
+    if (pct === 0) setIvaPreset('0');
+    else if (pct === 8) setIvaPreset('8');
+    else if (pct === 16) setIvaPreset('16');
+    else setIvaPreset('custom');
     setError('');
   }, [isOpen, order]);
 
@@ -198,10 +207,11 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
         sap_sp_folio: sapSp.trim() || null,
         sap_oc_folio: sapOc.trim() || null,
         expected_date: expectedDate || null,
+        iva_percent: normalizeIvaPercent(ivaPercent),
       });
       onUpdate();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al guardar datos SAP / fecha');
+      setError(err.response?.data?.error || 'Error al guardar datos SAP / fecha / IVA');
     } finally {
       setIsSubmitting(false);
     }
@@ -329,6 +339,16 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
     return sum + rq * oi.unit_cost;
   }, 0);
 
+  const orderedTax = poTaxBreakdown(totalOrdered, ivaPercent);
+  const receivedTax = poTaxBreakdown(totalReceived, ivaPercent);
+
+  const applyIvaPreset = (preset: '0' | '8' | '16' | 'custom') => {
+    setIvaPreset(preset);
+    if (preset === '0') setIvaPercent(0);
+    if (preset === '8') setIvaPercent(8);
+    if (preset === '16') setIvaPercent(16);
+  };
+
   const showReceivedCol = receivingMode || order.status === 'RECIBIDA';
   const showReceivedTotals = showReceivedCol;
   const catalogMismatch = isDraft
@@ -438,7 +458,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                 {order.status === 'RECIBIDA' && (
                   <th className="px-3 py-2 font-bold text-slate-700 text-center">Recibido</th>
                 )}
-                <th className="px-3 py-2 font-bold text-slate-700 text-right">P. Unitario</th>
+                <th className="px-3 py-2 font-bold text-slate-700 text-right">P. Unit. (sin IVA)</th>
                 <th className="px-3 py-2 font-bold text-slate-700 text-right">Subt. pedido</th>
                 {order.status === 'RECIBIDA' && (
                   <th className="px-3 py-2 font-bold text-slate-700 text-right">Subt. recibido</th>
@@ -468,16 +488,34 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
             </tbody>
           </table>
           <div className="flex justify-end mt-4">
-            <div className="w-1/2 bg-slate-50 p-3 rounded-xl border border-slate-200 text-right space-y-2">
+            <div className="w-1/2 bg-slate-50 p-3 rounded-xl border border-slate-200 text-right space-y-1.5">
               <div>
-                <span className="text-sm font-bold text-slate-500 mr-4">Total pedido:</span>
-                <span className="text-xl font-black text-slate-800">{formatCurrency(totalOrdered)}</span>
+                <span className="text-xs font-bold text-slate-500 mr-3">Subtotal pedido (sin IVA):</span>
+                <span className="text-sm font-bold text-slate-800">{formatCurrency(orderedTax.subtotal)}</span>
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-500 mr-3">IVA ({orderedTax.ivaPercent}%):</span>
+                <span className="text-sm font-bold text-slate-800">{formatCurrency(orderedTax.ivaAmount)}</span>
+              </div>
+              <div>
+                <span className="text-sm font-bold text-slate-600 mr-3">Total pedido con IVA:</span>
+                <span className="text-xl font-black text-slate-800">{formatCurrency(orderedTax.total)}</span>
               </div>
               {order.status === 'RECIBIDA' && (
-                <div>
-                  <span className="text-sm font-bold text-emerald-700 mr-4">Total recibido:</span>
-                  <span className="text-xl font-black text-emerald-700">{formatCurrency(totalReceived)}</span>
-                </div>
+                <>
+                  <div className="pt-2 border-t border-slate-200">
+                    <span className="text-xs font-bold text-emerald-700 mr-3">Subtotal recibido (sin IVA):</span>
+                    <span className="text-sm font-bold text-emerald-800">{formatCurrency(receivedTax.subtotal)}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-emerald-700 mr-3">IVA recibido ({receivedTax.ivaPercent}%):</span>
+                    <span className="text-sm font-bold text-emerald-800">{formatCurrency(receivedTax.ivaAmount)}</span>
+                  </div>
+                  <div>
+                    <span className="text-sm font-bold text-emerald-700 mr-3">Total recibido con IVA:</span>
+                    <span className="text-xl font-black text-emerald-700">{formatCurrency(receivedTax.total)}</span>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -554,9 +592,9 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
 
           <div className="mb-8 p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm print:hidden">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <FileText size={16} /> Referencias SAP y entrega
+              <FileText size={16} /> Referencias SAP, entrega e IVA
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <label className="block">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400">SP (SAP)</span>
                 <input
@@ -589,6 +627,39 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                   className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 disabled:opacity-60"
                 />
               </label>
+              <div>
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">IVA %</span>
+                <SearchableSelect
+                  value={ivaPreset}
+                  onChange={(v) => applyIvaPreset(v as '0' | '8' | '16' | 'custom')}
+                  disabled={!canManagePurchases || isSubmitting}
+                  options={[
+                    { value: '0', label: '0% (sin IVA)' },
+                    { value: '8', label: '8%' },
+                    { value: '16', label: '16%' },
+                    { value: 'custom', label: 'Otro %…' },
+                  ]}
+                  placeholder="IVA…"
+                  className="mt-1"
+                  inputClassName="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 pr-8 text-sm text-slate-800 dark:text-slate-100 disabled:opacity-60"
+                />
+                {ivaPreset === 'custom' && (
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    value={ivaPercent}
+                    onChange={(e) => setIvaPercent(normalizeIvaPercent(e.target.value))}
+                    disabled={!canManagePurchases || isSubmitting}
+                    className="mt-2 w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm disabled:opacity-60"
+                    placeholder="Ej. 16"
+                  />
+                )}
+                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                  Precios de línea sin IVA; el % ajusta el total.
+                </p>
+              </div>
             </div>
             {canManagePurchases && (
               <div className="mt-4 flex justify-end">
@@ -599,7 +670,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                   className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg bg-slate-800 text-white hover:bg-slate-700 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-white disabled:opacity-60"
                 >
                   {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : null}
-                  Guardar SAP / fecha
+                  Guardar SAP / fecha / IVA
                 </button>
               </div>
             )}
@@ -747,7 +818,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                   {showReceivedCol && (
                     <th className="px-4 py-3 font-medium text-right">Recibido</th>
                   )}
-                  <th className="px-4 py-3 font-medium text-right">Costo Unit.</th>
+                  <th className="px-4 py-3 font-medium text-right">Costo Unit. (sin IVA)</th>
                   <th className="px-4 py-3 font-medium text-right">Subt. pedido</th>
                   {showReceivedCol && (
                     <th className="px-4 py-3 font-medium text-right">Subt. recibido</th>
@@ -849,26 +920,72 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                 <tr>
                   <td
                     colSpan={showReceivedCol ? 6 : 4}
+                    className="px-4 py-2 text-right text-sm font-medium text-slate-500 dark:text-slate-400"
+                  >
+                    Subtotal pedido (sin IVA):
+                  </td>
+                  <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">
+                    {formatCurrency(orderedTax.subtotal)}
+                  </td>
+                </tr>
+                <tr>
+                  <td
+                    colSpan={showReceivedCol ? 6 : 4}
+                    className="px-4 py-2 text-right text-sm font-medium text-slate-500 dark:text-slate-400"
+                  >
+                    IVA ({orderedTax.ivaPercent}%):
+                  </td>
+                  <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">
+                    {formatCurrency(orderedTax.ivaAmount)}
+                  </td>
+                </tr>
+                <tr>
+                  <td
+                    colSpan={showReceivedCol ? 6 : 4}
                     className="px-4 py-3 text-right font-bold text-slate-600 dark:text-slate-400"
                   >
-                    Total pedido (orden original):
+                    Total pedido con IVA:
                   </td>
                   <td className="px-4 py-3 text-right font-black text-slate-800 dark:text-slate-100 text-lg">
-                    {formatCurrency(totalOrdered)}
+                    {formatCurrency(orderedTax.total)}
                   </td>
                 </tr>
                 {showReceivedTotals && (
-                  <tr>
-                    <td
-                      colSpan={showReceivedCol ? 6 : 4}
-                      className="px-4 py-3 text-right font-bold text-emerald-800 dark:text-emerald-300"
-                    >
-                      Total recibido (inventario / costo real):
-                    </td>
-                    <td className="px-4 py-3 text-right font-black text-emerald-700 dark:text-emerald-400 text-lg">
-                      {formatCurrency(totalReceived)}
-                    </td>
-                  </tr>
+                  <>
+                    <tr>
+                      <td
+                        colSpan={showReceivedCol ? 6 : 4}
+                        className="px-4 py-2 text-right text-sm font-medium text-emerald-800 dark:text-emerald-300"
+                      >
+                        Subtotal recibido (sin IVA):
+                      </td>
+                      <td className="px-4 py-2 text-right font-semibold text-emerald-700 dark:text-emerald-400">
+                        {formatCurrency(receivedTax.subtotal)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td
+                        colSpan={showReceivedCol ? 6 : 4}
+                        className="px-4 py-2 text-right text-sm font-medium text-emerald-800 dark:text-emerald-300"
+                      >
+                        IVA recibido ({receivedTax.ivaPercent}%):
+                      </td>
+                      <td className="px-4 py-2 text-right font-semibold text-emerald-700 dark:text-emerald-400">
+                        {formatCurrency(receivedTax.ivaAmount)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td
+                        colSpan={showReceivedCol ? 6 : 4}
+                        className="px-4 py-3 text-right font-bold text-emerald-800 dark:text-emerald-300"
+                      >
+                        Total recibido con IVA:
+                      </td>
+                      <td className="px-4 py-3 text-right font-black text-emerald-700 dark:text-emerald-400 text-lg">
+                        {formatCurrency(receivedTax.total)}
+                      </td>
+                    </tr>
+                  </>
                 )}
               </tfoot>
             </table>

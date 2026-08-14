@@ -63,6 +63,8 @@ export interface PurchaseOrder {
   received_at?: string;
   sap_sp_folio?: string | null;
   sap_oc_folio?: string | null;
+  /** Porcentaje de IVA (0–100). Los costos de línea son sin IVA. */
+  iva_percent?: number;
   vendor?: {
     id: string;
     name: string;
@@ -110,7 +112,12 @@ export const getPurchaseOrdersPage = async (
   return { data: list, total: list.length, page: 1, limit: list.length || 20, totalPages: 1 };
 };
 
-export const createPurchaseOrder = async (orderData: { vendor_id: string; expected_date?: string; items: { item_id: string; quantity: number; unit_cost: number }[] }): Promise<PurchaseOrder> => {
+export const createPurchaseOrder = async (orderData: {
+  vendor_id: string;
+  expected_date?: string;
+  iva_percent?: number;
+  items: { item_id: string; quantity: number; unit_cost: number }[];
+}): Promise<PurchaseOrder> => {
   const { data } = await api.post('/purchase-orders', orderData);
   return data;
 };
@@ -159,6 +166,7 @@ export const updatePurchaseOrder = async (
     sap_sp_folio?: string | null;
     sap_oc_folio?: string | null;
     expected_date?: string | null;
+    iva_percent?: number;
   }
 ): Promise<PurchaseOrder> => {
   const { data } = await api.patch(`/purchase-orders/${id}`, payload);

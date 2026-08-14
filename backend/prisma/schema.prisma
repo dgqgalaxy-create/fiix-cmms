@@ -472,6 +472,9 @@ model PurchaseOrder {
   /// Folio Orden de Compra en SAP (texto libre).
   sap_oc_folio    String?
 
+  /// Porcentaje de IVA sobre el subtotal (precios de línea sin IVA). Ej. 16 = 16%.
+  iva_percent     Float    @default(0)
+
   items           PurchaseOrderItem[]
   documents       PurchaseOrderDocument[]
 }

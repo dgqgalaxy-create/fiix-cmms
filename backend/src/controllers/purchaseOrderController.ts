@@ -97,13 +97,23 @@ export const getPurchaseOrders = async (req: AuthRequest, res: Response): Promis
 
 export const createPurchaseOrder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { vendor_id, expected_date, items } = req.body;
+    const { vendor_id, expected_date, items, iva_percent } = req.body;
     const user_id = req.user?.userId;
     const isAdmin = req.user?.role === 'ADMINISTRADOR';
 
     if (!user_id || !vendor_id || !items || !Array.isArray(items) || items.length === 0) {
       res.status(400).json({ error: 'Faltan datos obligatorios (proveedor e ítems)' });
       return;
+    }
+
+    let ivaPercent = 0;
+    if (iva_percent !== undefined && iva_percent !== null && iva_percent !== '') {
+      const n = Number(iva_percent);
+      if (!Number.isFinite(n) || n < 0 || n > 100) {
+        res.status(400).json({ error: 'El IVA debe ser un porcentaje entre 0 y 100' });
+        return;
+      }
+      ivaPercent = Math.round(n * 100) / 100;
     }
 
     const itemIds = [...new Set(items.map((i: any) => String(i.item_id || '')).filter(Boolean))];
@@ -162,6 +172,7 @@ export const createPurchaseOrder = async (req: AuthRequest, res: Response): Prom
           // Admin crea ya aprobada (sin paso de aprobación). Gestionador queda en borrador.
           status: isAdmin ? 'APROBADA' : 'BORRADOR',
           expected_date: expected_date ? parseDateInput(expected_date) : null,
+          iva_percent: ivaPercent,
           items: {
             create: lineData.map(({ item_id, quantity, unit_cost }) => ({
               item_id,
@@ -183,11 +194,11 @@ export const createPurchaseOrder = async (req: AuthRequest, res: Response): Prom
   }
 };
 
-/** Actualiza SP (SAP), OC (SAP) y fecha estimada. */
+/** Actualiza SP (SAP), OC (SAP), fecha estimada e IVA %. */
 export const updatePurchaseOrder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { sap_sp_folio, sap_oc_folio, expected_date } = req.body ?? {};
+    const { sap_sp_folio, sap_oc_folio, expected_date, iva_percent } = req.body ?? {};
 
     const existing = await prisma.purchaseOrder.findUnique({ where: { id } });
     if (!existing) {
@@ -199,6 +210,7 @@ export const updatePurchaseOrder = async (req: AuthRequest, res: Response): Prom
       sap_sp_folio?: string | null;
       sap_oc_folio?: string | null;
       expected_date?: Date | null;
+      iva_percent?: number;
     } = {};
 
     if (sap_sp_folio !== undefined) {
@@ -216,9 +228,17 @@ export const updatePurchaseOrder = async (req: AuthRequest, res: Response): Prom
         data.expected_date = parseDateInput(String(expected_date));
       }
     }
+    if (iva_percent !== undefined) {
+      const n = Number(iva_percent);
+      if (!Number.isFinite(n) || n < 0 || n > 100) {
+        res.status(400).json({ error: 'El IVA debe ser un porcentaje entre 0 y 100' });
+        return;
+      }
+      data.iva_percent = Math.round(n * 100) / 100;
+    }
 
     if (Object.keys(data).length === 0) {
-      res.status(400).json({ error: 'Indica sap_sp_folio, sap_oc_folio o expected_date' });
+      res.status(400).json({ error: 'Indica sap_sp_folio, sap_oc_folio, expected_date o iva_percent' });
       return;
     }
 

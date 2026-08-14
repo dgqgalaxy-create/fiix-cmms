@@ -3,6 +3,7 @@ import { X, Plus, Trash2, Loader2, Search } from 'lucide-react';
 import { createPurchaseOrder } from '../api/purchaseOrders';
 import { getVendors, getItems, type Vendor, type Item } from '../api/inventory';
 import { formatCurrency } from '../utils/currency';
+import { normalizeIvaPercent, poTaxBreakdown } from '../utils/poTax';
 import { useAuth } from '../context/AuthContext';
 import { mediaUrl } from '../utils/mediaUrl';
 import { SearchableSelect } from './ui/SearchableSelect';
@@ -21,6 +22,8 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
 
   const [selectedVendor, setSelectedVendor] = useState<string>('');
   const [expectedDate, setExpectedDate] = useState<string>('');
+  const [ivaPreset, setIvaPreset] = useState<'0' | '8' | '16' | 'custom'>('16');
+  const [ivaPercent, setIvaPercent] = useState<number>(16);
   const [orderItems, setOrderItems] = useState<{ item_id: string; quantity: number; unit_cost: number }[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,6 +45,8 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
     } else {
       setSelectedVendor('');
       setExpectedDate('');
+      setIvaPreset('16');
+      setIvaPercent(16);
       setOrderItems([]);
       setItemSearch('');
       setShowItemDropdown(false);
@@ -109,6 +114,7 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
       await createPurchaseOrder({
         vendor_id: selectedVendor,
         expected_date: expectedDate || undefined,
+        iva_percent: normalizeIvaPercent(ivaPercent),
         items: orderItems,
       });
       onSuccess();
@@ -145,6 +151,16 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
 
   const showCatalog = showItemDropdown && (Boolean(selectedVendor) || search.length > 0);
 
+  const subtotalSinIva = orderItems.reduce((sum, oi) => sum + oi.quantity * oi.unit_cost, 0);
+  const tax = poTaxBreakdown(subtotalSinIva, ivaPercent);
+
+  const applyIvaPreset = (preset: '0' | '8' | '16' | 'custom') => {
+    setIvaPreset(preset);
+    if (preset === '0') setIvaPercent(0);
+    if (preset === '8') setIvaPercent(8);
+    if (preset === '16') setIvaPercent(16);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm">
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col h-[min(92vh,920px)] max-h-[92vh]">
@@ -166,7 +182,7 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
           )}
 
           <form id="create-po-form" onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
                   Proveedor *
@@ -196,6 +212,39 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
                   onChange={(e) => setExpectedDate(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
+                  IVA %
+                </label>
+                <SearchableSelect
+                  value={ivaPreset}
+                  onChange={(v) => applyIvaPreset(v as '0' | '8' | '16' | 'custom')}
+                  options={[
+                    { value: '0', label: '0% (sin IVA)' },
+                    { value: '8', label: '8%' },
+                    { value: '16', label: '16%' },
+                    { value: 'custom', label: 'Otro %…' },
+                  ]}
+                  placeholder="IVA…"
+                  inputClassName="w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                {ivaPreset === 'custom' && (
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    value={ivaPercent}
+                    onChange={(e) => setIvaPercent(normalizeIvaPercent(e.target.value))}
+                    className="mt-2 w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="Ej. 16"
+                  />
+                )}
+                <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                  Los precios de línea son sin IVA; el % se suma al total de la orden.
+                </p>
               </div>
             </div>
 
@@ -387,11 +436,29 @@ export const CreatePOModal = ({ isOpen, onClose, onSuccess }: CreatePOModalProps
                     </tbody>
                     <tfoot className="bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
                       <tr>
-                        <td colSpan={3} className="px-4 py-4 text-right font-bold text-slate-600 dark:text-slate-400">
-                          Total:
+                        <td colSpan={3} className="px-4 py-2 text-right text-sm font-medium text-slate-500 dark:text-slate-400">
+                          Subtotal (sin IVA):
                         </td>
-                        <td className="px-4 py-4 text-right font-black text-emerald-700 dark:text-emerald-400 text-lg">
-                          {formatCurrency(orderItems.reduce((sum, oi) => sum + oi.quantity * oi.unit_cost, 0))}
+                        <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">
+                          {formatCurrency(tax.subtotal)}
+                        </td>
+                        <td></td>
+                      </tr>
+                      <tr>
+                        <td colSpan={3} className="px-4 py-2 text-right text-sm font-medium text-slate-500 dark:text-slate-400">
+                          IVA ({tax.ivaPercent}%):
+                        </td>
+                        <td className="px-4 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">
+                          {formatCurrency(tax.ivaAmount)}
+                        </td>
+                        <td></td>
+                      </tr>
+                      <tr>
+                        <td colSpan={3} className="px-4 py-3 text-right font-bold text-slate-600 dark:text-slate-400">
+                          Total con IVA:
+                        </td>
+                        <td className="px-4 py-3 text-right font-black text-emerald-700 dark:text-emerald-400 text-lg">
+                          {formatCurrency(tax.total)}
                         </td>
                         <td></td>
                       </tr>
