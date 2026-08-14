@@ -24,7 +24,22 @@ export interface PurchaseOrderItem {
   };
 }
 
-export type PurchaseOrderDocType = 'SP' | 'OC' | 'OTRO';
+export type PurchaseOrderDocType = 'SP' | 'OC' | 'COTIZACION' | 'OTRO';
+
+export const purchaseOrderDocTypeLabel = (docType: PurchaseOrderDocType | string): string => {
+  switch (docType) {
+    case 'SP':
+      return 'SP (SAP)';
+    case 'OC':
+      return 'OC (SAP)';
+    case 'COTIZACION':
+      return 'Cotización';
+    case 'OTRO':
+      return 'Otro';
+    default:
+      return docType;
+  }
+};
 
 export interface PurchaseOrderDocument {
   id: string;

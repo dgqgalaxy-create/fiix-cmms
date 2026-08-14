@@ -243,8 +243,8 @@ export const uploadPurchaseOrderDocument = async (req: AuthRequest, res: Respons
     const docTypeRaw = String(req.body?.doc_type || '').toUpperCase();
     const file = req.file;
 
-    if (!['SP', 'OC', 'OTRO'].includes(docTypeRaw)) {
-      res.status(400).json({ error: 'doc_type debe ser SP, OC u OTRO' });
+    if (!['SP', 'OC', 'COTIZACION', 'OTRO'].includes(docTypeRaw)) {
+      res.status(400).json({ error: 'doc_type debe ser SP, OC, COTIZACION u OTRO' });
       return;
     }
     if (!file) {
@@ -261,7 +261,7 @@ export const uploadPurchaseOrderDocument = async (req: AuthRequest, res: Respons
     const doc = await prisma.purchaseOrderDocument.create({
       data: {
         purchase_order_id: id,
-        doc_type: docTypeRaw as 'SP' | 'OC' | 'OTRO',
+        doc_type: docTypeRaw as 'SP' | 'OC' | 'COTIZACION' | 'OTRO',
         file_url: `/uploads/purchase-orders/${file.filename}`,
         file_name: file.originalname || file.filename,
         uploaded_by_id: userId || null,

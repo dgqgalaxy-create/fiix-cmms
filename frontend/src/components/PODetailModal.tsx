@@ -18,6 +18,7 @@ import {
 import {
   type PurchaseOrder,
   type PurchaseOrderDocType,
+  purchaseOrderDocTypeLabel,
   updatePurchaseOrderStatus,
   updatePurchaseOrderLineCosts,
   updatePurchaseOrder,
@@ -606,7 +607,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
 
           <div className="mb-8 p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm print:hidden">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Upload size={16} /> Documentos SAP
+              <Upload size={16} /> Documentos (SAP y cotización)
             </h3>
             {canManagePurchases && (
               <div className="flex flex-wrap items-end gap-3 mb-4">
@@ -618,6 +619,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                     options={[
                       { value: 'SP', label: 'SP (SAP)' },
                       { value: 'OC', label: 'OC (SAP)' },
+                      { value: 'COTIZACION', label: 'Cotización' },
                       { value: 'OTRO', label: 'Otro' },
                     ]}
                     placeholder="Tipo de documento…"
@@ -648,8 +650,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
             ) : (
               <ul className="space-y-2">
                 {(order.documents || []).map((doc) => {
-                  const typeLabel =
-                    doc.doc_type === 'SP' ? 'SP (SAP)' : doc.doc_type === 'OC' ? 'OC (SAP)' : 'Otro';
+                  const typeLabel = purchaseOrderDocTypeLabel(doc.doc_type);
                   return (
                     <li
                       key={doc.id}

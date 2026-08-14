@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.56";
+export const APP_VERSION = "1.56.57";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Compras — puedes adjuntar Cotización (PDF/Word) además de SP (SAP), OC (SAP) y Otro.",
     "Mejora: Nueva Orden de Compra — ventana más alta; catálogo del proveedor en panel amplio; listas desplegables se adaptan a la pantalla sin quedar recortadas.",
     "Mejora: Todos los desplegables de elección en la app permiten escribir para filtrar (órdenes, activos, portal, inventario, compras, roster, KPIs, notas, mensajes, checklist, etc.).",
     "Mejora: En la ficha de repuesto, el Nombre ocupa el ancho completo (como Descripción); el código interno queda en una fila compacta arriba.",

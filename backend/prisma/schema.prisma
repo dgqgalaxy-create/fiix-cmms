@@ -446,6 +446,7 @@ enum PurchaseOrderStatus {
 enum PurchaseOrderDocType {
   SP
   OC
+  COTIZACION
   OTRO
 }
 
