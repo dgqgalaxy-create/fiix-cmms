@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.58";
+export const APP_VERSION = "1.56.59";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "13 de Agosto, 2026";
+  const updateDate = "21 de Agosto, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,9 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Horarios — botón «Importar Calendario» para cargar el calendario anual de turnos desde Excel (.xlsx), día por día por técnico.",
+    "Nuevo: Horarios — turnos importados (Día, Noche, Mixto, T. Extra, Vacaciones, Falta, Permiso S/G, Tiempo por Tiempo, etc.) se muestran con su propio color en el calendario.",
+    "Seguridad: Importar Calendario y Asignar Patrón quedan disponibles solo para Administradores (no Técnicos ni Gestionadores).",
     "Nuevo: Compras — IVA % en la orden (0 / 8 / 16 u otro); precios de línea sin IVA; subtotal + IVA + total en detalle, creación, listado y PDF.",
     "Nuevo: Compras — puedes adjuntar Cotización (PDF/Word) además de SP (SAP), OC (SAP) y Otro.",
     "Mejora: Nueva Orden de Compra — ventana más alta; catálogo del proveedor en panel amplio; listas desplegables se adaptan a la pantalla sin quedar recortadas.",

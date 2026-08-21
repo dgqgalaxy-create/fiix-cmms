@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { emitRefresh } from '../utils/socket';
 import { parseDateInput } from '../utils/parseDateInput';
+import { parseRosterWorkbook, applyRosterImport } from '../utils/rosterImport';
 
 export const getRoster = async (req: Request, res: Response) => {
   try {
@@ -28,6 +29,19 @@ export const getRoster = async (req: Request, res: Response) => {
       }
     });
 
+    const shifts = await prisma.technicianShift.findMany({
+      where: {
+        date: {
+          gte: rangeStart,
+          lte: rangeEnd,
+        }
+      },
+      include: {
+        user: { select: { id: true, name: true } }
+      },
+      orderBy: { date: 'asc' }
+    });
+
     const technicians = await prisma.user.findMany({
       select: { id: true, name: true, role: true },
       orderBy: { name: 'asc' }
@@ -42,10 +56,36 @@ export const getRoster = async (req: Request, res: Response) => {
       }
     });
 
-    res.json({ patterns, exceptions, technicians, holidays });
+    res.json({ patterns, exceptions, shifts, technicians, holidays });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
+  }
+};
+
+/** Importa el calendario anual de turnos desde un .xlsx (reemplaza el rango importado). */
+export const importRosterCalendar = async (req: Request, res: Response) => {
+  try {
+    const file = (req as any).file as Express.Multer.File | undefined;
+    if (!file?.buffer) {
+      res.status(400).json({ message: 'Adjunta el archivo .xlsx del calendario de turnos.' });
+      return;
+    }
+
+    const createMissing =
+      String((req.body as any)?.createMissing || '').toLowerCase() === 'true' ||
+      String((req.body as any)?.createMissing || '') === '1';
+
+    const parsed = parseRosterWorkbook(file.buffer);
+    const summary = await applyRosterImport(parsed, { createMissing });
+
+    emitRefresh('refresh_roster');
+    res.json({ success: true, summary, sheetName: parsed.sheetName });
+  } catch (error: any) {
+    console.error('Roster import error:', error);
+    const message =
+      error instanceof Error ? error.message : 'Error importando el calendario de turnos.';
+    res.status(400).json({ message });
   }
 };
 

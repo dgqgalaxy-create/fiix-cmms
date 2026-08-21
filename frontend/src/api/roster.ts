@@ -24,15 +24,40 @@ export interface TechnicianException {
   };
 }
 
+export interface TechnicianShift {
+  id: string;
+  user_id: string;
+  date: string;
+  shift_code: string;
+  notes?: string;
+  user: {
+    id: string;
+    name: string;
+  };
+}
+
 export interface Holiday {
   id: string;
   name: string;
   date: string;
 }
 
+export interface RosterImportSummary {
+  totalRows: number;
+  matchedTechnicians: number;
+  createdTechnicians: number;
+  unmatched: string[];
+  unknownCodes: string[];
+  createdShifts: number;
+  deletedShifts: number;
+  dateStart: string | null;
+  dateEnd: string | null;
+}
+
 export interface RosterResponse {
   patterns: TechnicianPattern[];
   exceptions: TechnicianException[];
+  shifts: TechnicianShift[];
   technicians: { id: string; name: string; role: string }[];
   holidays: Holiday[];
 }
@@ -55,4 +80,14 @@ export const addException = async (data: { user_id: string; date: string; except
 export const removeException = async (id: string) => {
   const response = await api.delete(`/roster/exception/${id}`);
   return response.data;
+};
+
+export const importRosterCalendar = async (file: File, createMissing: boolean) => {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('createMissing', String(createMissing));
+  const response = await api.post('/roster/import', form, {
+    timeout: 120 * 1000,
+  });
+  return response.data as { success: boolean; summary: RosterImportSummary; sheetName?: string };
 };

@@ -122,6 +122,7 @@ model User {
 
   pattern              TechnicianPattern?
   exceptions           TechnicianException[]
+  shifts               TechnicianShift[]
   preferences          Json?       @default("{}")
 }
 
@@ -142,6 +143,23 @@ model TechnicianException {
   exception_type String   // "FALTA", "VACACIONES", "PERMISO_CG", "PERMISO_SG", "TIEMPO_EXTRA", "FESTIVO"
   notes          String?  
   created_at     DateTime @default(now())
+}
+
+/// Turno explícito por día (calendario importado desde Excel). Sobrescribe el patrón
+/// y las incidencias del técnico para esa fecha. Códigos: D, N, M, D_TE, N_TE, TE,
+/// TXT, V, I, F, PSG, X, CURSO.
+model TechnicianShift {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  date       DateTime @db.Date
+  shift_code String
+  notes      String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([user_id, date])
+  @@index([date])
 }
 
 model Requester {
