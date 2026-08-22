@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.59";
+export const APP_VERSION = "1.56.60";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "21 de Agosto, 2026";
+  const updateDate = "22 de Agosto, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Horarios — filtro de personal (desplegable) para Administrador y Gestionador; el Técnico ve solo su propio horario.",
+    "Mejora: Horarios — al reimportar el calendario se borra todo el rango anterior y se carga el nuevo (reemplazo total, incluso si se quitó a alguien).",
     "Nuevo: Horarios — botón «Importar Calendario» para cargar el calendario anual de turnos desde Excel (.xlsx), día por día por técnico.",
     "Nuevo: Horarios — turnos importados (Día, Noche, Mixto, T. Extra, Vacaciones, Falta, Permiso S/G, Tiempo por Tiempo, etc.) se muestran con su propio color en el calendario.",
     "Seguridad: Importar Calendario y Asignar Patrón quedan disponibles solo para Administradores (no Técnicos ni Gestionadores).",

@@ -64,11 +64,15 @@ export const RosterPage = () => {
   const { hasPermission, user } = useAuth();
   const canManageShifts = hasPermission('MANAGE_SHIFTS');
   const isAdmin = user?.role === 'ADMINISTRADOR';
+  const isGestor = user?.role === 'GESTIONADOR';
+  const isTecnico = user?.role === 'TECNICO';
+  const canFilterByPerson = isAdmin || isGestor;
   const [data, setData] = useState<RosterResponse | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
   const [showPatternModal, setShowPatternModal] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [personFilter, setPersonFilter] = useState('ALL');
   
   const [selectedUser, setSelectedUser] = useState('');
   const [selectedPattern, setSelectedPattern] = useState('4X4_ROTATORIO');
@@ -191,12 +195,28 @@ export const RosterPage = () => {
     });
     const patternMap = new Map<string, TechnicianPattern>();
     (data.patterns || []).forEach((p) => patternMap.set(p.user_id, p));
+
+    // Filtro de personal: el técnico ve solo su propio horario; admin/gestión
+    // ven todos o solo la persona seleccionada en el desplegable.
+    const myId = user?.userId || user?.id || '';
+    const myName = (user?.name || '').trim().toLowerCase();
+    let visibleIds: Set<string> | null = null; // null = todo el personal
+    if (isTecnico) {
+      visibleIds = new Set(
+        data.technicians
+          .filter((t) => t.id === myId || (myName && (t.name || '').toLowerCase() === myName))
+          .map((t) => t.id)
+      );
+    } else if (personFilter !== 'ALL') {
+      visibleIds = new Set([personFilter]);
+    }
     
     let curr = new Date(calStart);
     while (curr <= calEnd) {
       const currStr = format(curr, 'yyyy-MM-dd');
       
       data.technicians.forEach(tech => {
+        if (visibleIds && !visibleIds.has(tech.id)) return;
         const shortName = tech.name.split(' ')[0];
 
         // 1) Turno explícito importado desde Excel (prioridad sobre patrón e incidencias)
@@ -279,7 +299,7 @@ export const RosterPage = () => {
       curr = addDays(curr, 1);
     }
     return _events;
-  }, [data, currentDate]);
+  }, [data, currentDate, user, isTecnico, personFilter]);
 
   const dayPropGetter = useCallback((date: Date) => {
     let className = '';
@@ -353,7 +373,26 @@ export const RosterPage = () => {
             <Printer size={18} />
             <span className="hidden sm:inline">Imprimir / PDF</span>
           </button>
-          
+
+          {canFilterByPerson && (
+            <SearchableSelect
+              value={personFilter}
+              onChange={setPersonFilter}
+              options={[
+                { value: 'ALL', label: 'Todo el personal' },
+                ...(data?.technicians || []).map((t) => ({ value: t.id, label: t.name })),
+              ]}
+              placeholder="Filtrar personal..."
+              inputClassName="w-full min-w-[220px] px-3 py-2 pr-8 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+            />
+          )}
+
+          {isTecnico && (
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-700/50">
+              <Clock size={14} /> Viendo solo tu horario
+            </span>
+          )}
+
           {isAdmin && (
             <button
               onClick={openImportModal}

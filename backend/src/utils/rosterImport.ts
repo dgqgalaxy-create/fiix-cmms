@@ -282,12 +282,14 @@ export async function applyRosterImport(
   const minDate = dateObjs.length ? new Date(Math.min(...dateObjs.map((d) => d.getTime()))) : null;
   const maxDate = dateObjs.length ? new Date(Math.max(...dateObjs.map((d) => d.getTime()))) : null;
 
-  const involvedIds = [...new Set(rows.map((r) => nameToUserId.get(normalizeName(r.name))).filter(Boolean))] as string[];
-
+  // Reemplazo total del rango: se borran TODOS los turnos explícitos dentro del
+  // rango de fechas del archivo (aunque un técnico ya no venga en el nuevo Excel)
+  // y luego se cargan los nuevos. Así re-importar un calendario actualizado deja
+  // el módulo exactamente igual al archivo.
   let deletedShifts = 0;
-  if (minDate && maxDate && involvedIds.length) {
+  if (minDate && maxDate) {
     const del = await prisma.technicianShift.deleteMany({
-      where: { date: { gte: minDate, lte: maxDate }, user_id: { in: involvedIds } },
+      where: { date: { gte: minDate, lte: maxDate } },
     });
     deletedShifts = del.count;
   }
