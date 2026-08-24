@@ -10,7 +10,7 @@ import {
   ChevronRight,
   X,
 } from 'lucide-react';
-import { getLineCosts, getAssetById } from '../api/assets';
+import { getLineCosts, getAssetById, updateLineCostsVisibleZones } from '../api/assets';
 import type {
   LineCostsResponse,
   LineCostZone,
@@ -18,11 +18,11 @@ import type {
   LineCostAsset,
   Asset,
 } from '../api/assets';
-import { formatCurrency } from '../utils/currency';
+import { formatCurrency, formatCurrencyAxis } from '../utils/currency';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
 import { AssetDetailModal } from './AssetDetailModal';
 import { useAuth } from '../context/AuthContext';
-import { updateMyPreferences } from '../api/users';
 
 type PeriodKey = 'THIS_MONTH' | 'LAST_3_MONTHS' | 'THIS_YEAR' | 'CUSTOM';
 
@@ -66,7 +66,8 @@ function CostBar({ value, max }: { value: number; max: number }) {
 }
 
 export const LineCostsExplorer = () => {
-  const { user, updateUserPreferences } = useAuth();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMINISTRADOR';
   const [period, setPeriod] = useState<PeriodKey>('THIS_YEAR');
   const [customStart, setCustomStart] = useState(toYmd(new Date(new Date().getFullYear(), 0, 1)));
   const [customEnd, setCustomEnd] = useState(toYmd(new Date()));
@@ -81,11 +82,10 @@ export const LineCostsExplorer = () => {
   const [configSel, setConfigSel] = useState<string[]>([]);
   const [showObsolete, setShowObsolete] = useState(false);
 
-  // Líneas visibles (configuración persistida por usuario en preferencias).
+  // Líneas visibles (configuración global, editada solo por Admin).
   const visibleZoneIds = useMemo(() => {
-    const v = user?.preferences?.line_costs_visible_zones;
-    return Array.isArray(v) ? (v as string[]) : null; // null = sin configurar → todas
-  }, [user?.preferences]);
+    return Array.isArray(data?.visibleZoneIds) ? (data!.visibleZoneIds as string[]) : null;
+  }, [data?.visibleZoneIds]);
 
   const visibleZones = useMemo(() => {
     if (!data) return [];
@@ -103,10 +103,11 @@ export const LineCostsExplorer = () => {
   };
 
   const saveConfig = async () => {
-    const next = { ...(user?.preferences || {}), line_costs_visible_zones: configSel };
     try {
-      await updateMyPreferences(next);
-      updateUserPreferences(next);
+      await updateLineCostsVisibleZones(configSel);
+      // Refresca los datos para aplicar la nueva configuración global.
+      const res = await getLineCosts({ startDate, endDate, includeObsolete: showObsolete ? 'true' : undefined });
+      setData(res);
     } catch {
       /* ignore */
     }
@@ -257,6 +258,8 @@ export const LineCostsExplorer = () => {
   const maxZoneCost = Math.max(1, ...visibleZones.map((z) => z.cost));
   const maxSectionCost = selectedZone ? Math.max(1, ...selectedZone.sections.map((s) => s.cost)) : 1;
   const maxAssetCost = selectedSection ? Math.max(1, ...selectedSection.assets.map((a) => a.cost)) : 1;
+  const periodLabel = PERIODS.find((p) => p.value === period)?.label || '';
+  const chartData = visibleZones.map((z) => ({ name: z.name, cost: z.cost }));
 
   return (
     <div className="space-y-4">
@@ -303,12 +306,14 @@ export const LineCostsExplorer = () => {
           <Download size={16} /> Exportar Excel
         </button>
 
-        <button
-          onClick={openConfig}
-          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-        >
-          <Settings size={16} /> Configurar líneas
-        </button>
+        {isAdmin && (
+          <button
+            onClick={openConfig}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          >
+            <Settings size={16} /> Configurar líneas
+          </button>
+        )}
 
         <button
           onClick={() => setShowObsolete((v) => !v)}
@@ -430,7 +435,8 @@ export const LineCostsExplorer = () => {
           )}
         </div>
       ) : (
-        /* Nivel 1: Líneas */
+        <>
+        {/* Nivel 1: Líneas */}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
           {visibleZones.map((z) => (
             <button
@@ -457,6 +463,49 @@ export const LineCostsExplorer = () => {
             </div>
           )}
         </div>
+
+        {/* Gráfica de gasto por línea (solo líneas visibles) */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100">Gasto por línea</h3>
+            <span className="text-xs text-slate-400 dark:text-slate-500">{periodLabel}</span>
+          </div>
+          {visibleZones.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="costBarGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#34d399" />
+                    <stop offset="100%" stopColor="#059669" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fill: '#64748b', fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                  interval={0}
+                />
+                <YAxis
+                  tickFormatter={(v) => formatCurrencyAxis(v)}
+                  tick={{ fill: '#64748b', fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={86}
+                />
+                <Tooltip
+                  formatter={(v: any) => [formatCurrency(Number(v)), 'Gasto']}
+                  cursor={{ fill: 'rgba(16,185,129,0.08)' }}
+                />
+                <Bar dataKey="cost" fill="url(#costBarGrad)" radius={[8, 8, 0, 0]} maxBarSize={64} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="text-center text-slate-400 py-10">Sin líneas visibles para graficar.</div>
+          )}
+        </div>
+        </>
       )}
 
       <AssetDetailModal

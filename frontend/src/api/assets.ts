@@ -160,6 +160,8 @@ export interface LineCostZone {
 export interface LineCostsResponse {
   startDate: string;
   endDate: string;
+  /** Configuración global de líneas visibles (null = todas). */
+  visibleZoneIds: string[] | null;
   zones: LineCostZone[];
 }
 
@@ -169,5 +171,11 @@ export const getLineCosts = async (params?: {
   includeObsolete?: string;
 }): Promise<LineCostsResponse> => {
   const response = await api.get('/assets/line-costs', { params });
+  return response.data;
+};
+
+/** Guarda la configuración global de líneas visibles (solo Admin). */
+export const updateLineCostsVisibleZones = async (zoneIds: string[]) => {
+  const response = await api.put('/assets/line-costs/visible-zones', { zoneIds });
   return response.data;
 };

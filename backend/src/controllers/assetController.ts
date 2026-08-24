@@ -658,7 +658,7 @@ export const getLineCosts = async (req: Request, res: Response): Promise<void> =
     const end = parseYmdLocal(req.query.endDate, true) || defaultEnd;
     const includeObsolete = req.query.includeObsolete === 'true' || req.query.includeObsolete === '1';
 
-    const [zones, assets, transactions] = await Promise.all([
+    const [zones, assets, transactions, settings] = await Promise.all([
       prisma.zone.findMany({
         include: { sections: { orderBy: { name: 'asc' } } },
         orderBy: { name: 'asc' },
@@ -697,7 +697,15 @@ export const getLineCosts = async (req: Request, res: Response): Promise<void> =
           item: { select: { purchase_cost: true } },
         },
       }),
+      prisma.systemSettings.findFirst({
+        select: { line_costs_visible_zones: true },
+      }),
     ]);
+
+    // Configuración global de líneas visibles (editada solo por Admin).
+    const visibleZoneIds = Array.isArray(settings?.line_costs_visible_zones)
+      ? (settings.line_costs_visible_zones as string[])
+      : null;
 
     // Gasto por activo: costo = |cantidad| × costo unitario (snapshot congelado).
     const perAsset = new Map<string, { cost: number; wos: Set<string> }>();
@@ -780,9 +788,36 @@ export const getLineCosts = async (req: Request, res: Response): Promise<void> =
       };
     });
 
-    res.json({ startDate: ymd(start), endDate: ymd(end), zones: tree });
+    res.json({ startDate: ymd(start), endDate: ymd(end), visibleZoneIds, zones: tree });
   } catch (error) {
     console.error('Error fetching line costs', error);
     res.status(500).json({ error: 'Error al obtener costos por línea' });
+  }
+};
+
+/** Guarda la configuración global de líneas visibles (solo Admin). */
+export const updateLineCostsVisibleZones = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const zoneIds = req.body?.zoneIds;
+    if (!Array.isArray(zoneIds)) {
+      res.status(400).json({ error: 'zoneIds debe ser un arreglo de ids' });
+      return;
+    }
+    const clean = zoneIds.filter((z): z is string => typeof z === 'string');
+
+    let settings = await prisma.systemSettings.findFirst();
+    if (!settings) {
+      settings = await prisma.systemSettings.create({ data: { line_costs_visible_zones: clean } });
+    } else {
+      settings = await prisma.systemSettings.update({
+        where: { id: settings.id },
+        data: { line_costs_visible_zones: clean },
+      });
+    }
+
+    res.json({ success: true, visibleZoneIds: clean });
+  } catch (error) {
+    console.error('Error updating line costs visible zones', error);
+    res.status(500).json({ error: 'Error al guardar la configuración de líneas visibles' });
   }
 };

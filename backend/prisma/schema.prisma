@@ -577,6 +577,8 @@ model SystemSettings {
   /// (`User.preferences.use_technician_mobile_ui`). Se mantiene por compatibilidad de esquema.
   technician_mobile_ui Boolean @default(true)
   checklist_column_count Int  @default(5)
+  /// Líneas visibles en "Líneas y Costos" (global; editable solo por Admin).
+  line_costs_visible_zones Json?
   updated_at       DateTime @updatedAt
 }
 

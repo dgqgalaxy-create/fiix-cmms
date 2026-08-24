@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.62";
+export const APP_VERSION = "1.56.63";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Líneas y Costos — gráfica de barras de gasto por línea (según las líneas visibles y el periodo seleccionado).",
+    "Mejora: Líneas y Costos — la configuración de líneas visibles ahora es global (aplica a todos) y solo el Administrador puede cambiarla.",
     "Nuevo: Activos — campo «Crítico» (badge + filtro críticos/no críticos) y campo «Obsoleto» (oculto por defecto, con botón Mostrar/Ocultar obsoletos).",
     "Nuevo: Líneas y Costos — botón «Configurar líneas» para elegir qué líneas mostrar (se guarda por usuario) y toggle de obsoletos.",
     "Nuevo: Activos — vista «Líneas y Costos» con explorador por Línea → Sección → Equipo y gasto de repuestos por periodo (selector Este mes / 3 meses / Este año / Personalizado, y exportar a Excel).",
