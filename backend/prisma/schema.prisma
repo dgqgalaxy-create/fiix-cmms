@@ -215,6 +215,10 @@ model Asset {
   zone_section    ZoneSection? @relation(fields: [zone_section_id], references: [id], onDelete: SetNull)
   /// Activo fijo (F) o controlable (C); entra en el código MTTO-…-F/C.
   asset_kind      AssetKind   @default(FIJO)
+  /// Equipo crítico (prioridad alta para mantenimiento).
+  is_critical     Boolean     @default(false)
+  /// Equipo obsoleto (oculto de los listados por defecto).
+  is_obsolete     Boolean     @default(false)
 
   image_url       String?
   document_url    String?

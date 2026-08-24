@@ -232,11 +232,15 @@ export const getAssetMetrics = async (req: Request, res: Response): Promise<void
 };
 export const getAssets = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { page, limit, q, zoneId, zoneSectionId, status } = req.query;
+    const { page, limit, q, zoneId, zoneSectionId, status, critical, includeObsolete } = req.query;
     const and: Record<string, unknown>[] = [];
     if (zoneId) and.push({ zone_id: String(zoneId) });
     if (zoneSectionId) and.push({ zone_section_id: String(zoneSectionId) });
     if (status) and.push({ status: String(status) });
+    if (critical === 'true' || critical === '1') and.push({ is_critical: true });
+    else if (critical === 'false' || critical === '0') and.push({ is_critical: false });
+    // Obsoletos ocultos por defecto (solo se muestran si se pide explícitamente).
+    if (includeObsolete !== 'true' && includeObsolete !== '1') and.push({ is_obsolete: false });
     if (q) {
       const term = String(q).trim();
       if (term) {
@@ -321,6 +325,8 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
       section,
       zone_section_id,
       asset_kind,
+      is_critical,
+      is_obsolete,
     } = req.body;
 
     if (!name || !String(name).trim()) {
@@ -389,6 +395,8 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
               price: price ? parseFloat(price) : null,
               section: sectionResult.section,
               asset_kind: kind,
+              is_critical: is_critical === 'true' || is_critical === '1' || is_critical === true,
+              is_obsolete: is_obsolete === 'true' || is_obsolete === '1' || is_obsolete === true,
               zone: { connect: { id: zone_id } },
             };
 
@@ -450,6 +458,8 @@ export const updateAsset = async (req: Request, res: Response): Promise<void> =>
       section,
       zone_section_id,
       asset_kind,
+      is_critical,
+      is_obsolete,
     } = req.body;
 
     const existing = await prisma.asset.findUnique({
@@ -544,6 +554,12 @@ export const updateAsset = async (req: Request, res: Response): Promise<void> =>
             if (serial_number !== undefined) assetData.serial_number = serial_number || null;
             if (description !== undefined) assetData.description = description || null;
             if (status) assetData.status = status;
+            if (is_critical !== undefined) {
+              assetData.is_critical = is_critical === 'true' || is_critical === '1' || is_critical === true;
+            }
+            if (is_obsolete !== undefined) {
+              assetData.is_obsolete = is_obsolete === 'true' || is_obsolete === '1' || is_obsolete === true;
+            }
             if (price !== undefined) assetData.price = price ? parseFloat(price) : null;
             if (zone_id) assetData.zone = { connect: { id: zone_id } };
             if (vendor_id !== undefined) {
@@ -640,6 +656,7 @@ export const getLineCosts = async (req: Request, res: Response): Promise<void> =
     const defaultEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     const start = parseYmdLocal(req.query.startDate, false) || defaultStart;
     const end = parseYmdLocal(req.query.endDate, true) || defaultEnd;
+    const includeObsolete = req.query.includeObsolete === 'true' || req.query.includeObsolete === '1';
 
     const [zones, assets, transactions] = await Promise.all([
       prisma.zone.findMany({
@@ -647,6 +664,7 @@ export const getLineCosts = async (req: Request, res: Response): Promise<void> =
         orderBy: { name: 'asc' },
       }),
       prisma.asset.findMany({
+        where: includeObsolete ? {} : { is_obsolete: false },
         select: {
           id: true,
           internal_code: true,
@@ -657,6 +675,7 @@ export const getLineCosts = async (req: Request, res: Response): Promise<void> =
           status: true,
           section: true,
           asset_kind: true,
+          is_obsolete: true,
           zone_id: true,
           zone_section_id: true,
           price: true,

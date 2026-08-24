@@ -295,7 +295,15 @@ export const AssetsTable = ({
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug truncate" title={asset.name}>{asset.name}</h3>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug flex items-center gap-1.5" title={asset.name}>
+                  <span className="truncate">{asset.name}</span>
+                  {asset.is_critical && (
+                    <span className="inline-flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Crítico</span>
+                  )}
+                  {asset.is_obsolete && (
+                    <span className="inline-flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">Obsoleto</span>
+                  )}
+                </h3>
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                   {asset.zone?.name || 'Sin Zona'}
                   {(asset.zone_section?.name || asset.section) && (
@@ -407,7 +415,15 @@ export const AssetsTable = ({
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium text-slate-900 dark:text-slate-100 truncate" title={asset.name}>{asset.name}</div>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-medium text-slate-900 dark:text-slate-100 truncate" title={asset.name}>{asset.name}</span>
+                          {asset.is_critical && (
+                            <span className="inline-flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Crítico</span>
+                          )}
+                          {asset.is_obsolete && (
+                            <span className="inline-flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">Obsoleto</span>
+                          )}
+                        </div>
                         <div className="md:hidden text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
                           {zoneName || 'Sin Zona'}
                           {sectionName && <span> · {sectionName}</span>}

@@ -44,6 +44,8 @@ export const AssetsPage = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterZoneId, setFilterZoneId] = useState('');
   const [filterSectionId, setFilterSectionId] = useState('');
+  const [filterCritical, setFilterCritical] = useState('');
+  const [showObsolete, setShowObsolete] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [detailAsset, setDetailAsset] = useState<Asset | null>(null);
   const [qrAsset, setQrAsset] = useState<Asset | null>(null);
@@ -68,6 +70,8 @@ export const AssetsPage = () => {
         q: debouncedSearch || undefined,
         zoneId: filterZoneId || undefined,
         zoneSectionId: filterSectionId || undefined,
+        critical: filterCritical || undefined,
+        includeObsolete: showObsolete ? 'true' : undefined,
       }, ac.signal);
       if (ac.signal.aborted) return;
       setAssets(page.data);
@@ -99,13 +103,13 @@ export const AssetsPage = () => {
 
   useEffect(() => {
     setAssetsPage(1);
-  }, [debouncedSearch, filterZoneId, filterSectionId]);
+  }, [debouncedSearch, filterZoneId, filterSectionId, filterCritical, showObsolete]);
 
   useEffect(() => {
     void fetchAssets();
     return () => assetsAbortRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assetsPage, debouncedSearch, filterZoneId, filterSectionId]);
+  }, [assetsPage, debouncedSearch, filterZoneId, filterSectionId, filterCritical, showObsolete]);
 
   useEffect(() => {
     fetchZones();
@@ -176,7 +180,7 @@ export const AssetsPage = () => {
     if (!showSectionFilter) setFilterSectionId('');
   }, [showSectionFilter]);
 
-  const assetsFilterKey = `${debouncedSearch}|${filterZoneId}|${filterSectionId}`;
+  const assetsFilterKey = `${debouncedSearch}|${filterZoneId}|${filterSectionId}|${filterCritical}|${showObsolete}`;
 
   const handleScan = async (scanned: string) => {
     const scannedId = scanned.replace(/^(?:GTZ|FIIX)-(ASSET|ITEM|LOCATION):/i, '').trim();
@@ -398,6 +402,32 @@ export const AssetsPage = () => {
                 inputClassName="sm:w-40 px-3 py-2 pr-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-700 dark:text-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-emerald-600"
               />
             )}
+            <SearchableSelect
+              value={filterCritical}
+              onChange={setFilterCritical}
+              options={[
+                { value: 'true', label: 'Críticos' },
+                { value: 'false', label: 'No críticos' },
+              ]}
+              allowEmpty
+              emptyLabel="Todos (crítico y no)"
+              placeholder="Buscar…"
+              title="Filtrar por criticidad"
+              className="sm:w-40"
+              inputClassName="sm:w-40 px-3 py-2 pr-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-700 dark:text-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-emerald-600"
+            />
+            <button
+              type="button"
+              onClick={() => setShowObsolete((v) => !v)}
+              className={`sm:w-40 px-3 py-2 rounded-lg text-sm border transition-colors ${
+                showObsolete
+                  ? 'bg-slate-700 text-white border-slate-600'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+              title="Mostrar u ocultar equipos obsoletos"
+            >
+              {showObsolete ? 'Ocultar obsoletos' : 'Mostrar obsoletos'}
+            </button>
             </>
           }
         >

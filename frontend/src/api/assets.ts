@@ -20,6 +20,10 @@ export interface Asset {
   } | null;
   /** Activo fijo (F) o controlable (C). */
   asset_kind: 'FIJO' | 'CONTROLABLE';
+  /** Equipo crítico (prioridad alta para mantenimiento). */
+  is_critical: boolean;
+  /** Equipo obsoleto (oculto de los listados por defecto). */
+  is_obsolete: boolean;
   zone_id: string;
   image_url?: string;
   document_url?: string;
@@ -44,6 +48,8 @@ export type AssetListParams = {
   zoneId?: string;
   zoneSectionId?: string;
   status?: string;
+  critical?: string;
+  includeObsolete?: string;
 };
 
 export type PaginatedAssets = {
@@ -120,6 +126,7 @@ export interface LineCostAsset {
   status: Asset['status'];
   section?: string | null;
   asset_kind: 'FIJO' | 'CONTROLABLE';
+  is_obsolete: boolean;
   zone_id: string;
   zone_section_id?: string | null;
   price?: number | null;
@@ -159,6 +166,7 @@ export interface LineCostsResponse {
 export const getLineCosts = async (params?: {
   startDate?: string;
   endDate?: string;
+  includeObsolete?: string;
 }): Promise<LineCostsResponse> => {
   const response = await api.get('/assets/line-costs', { params });
   return response.data;

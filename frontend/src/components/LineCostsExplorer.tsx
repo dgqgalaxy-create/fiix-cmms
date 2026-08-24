@@ -3,11 +3,12 @@ import {
   ArrowLeft,
   Building2,
   Layers,
-  Wrench,
+  Settings,
   Download,
   Loader2,
   RefreshCw,
   ChevronRight,
+  X,
 } from 'lucide-react';
 import { getLineCosts, getAssetById } from '../api/assets';
 import type {
@@ -20,6 +21,8 @@ import type {
 import { formatCurrency } from '../utils/currency';
 import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
 import { AssetDetailModal } from './AssetDetailModal';
+import { useAuth } from '../context/AuthContext';
+import { updateMyPreferences } from '../api/users';
 
 type PeriodKey = 'THIS_MONTH' | 'LAST_3_MONTHS' | 'THIS_YEAR' | 'CUSTOM';
 
@@ -63,6 +66,7 @@ function CostBar({ value, max }: { value: number; max: number }) {
 }
 
 export const LineCostsExplorer = () => {
+  const { user, updateUserPreferences } = useAuth();
   const [period, setPeriod] = useState<PeriodKey>('THIS_YEAR');
   const [customStart, setCustomStart] = useState(toYmd(new Date(new Date().getFullYear(), 0, 1)));
   const [customEnd, setCustomEnd] = useState(toYmd(new Date()));
@@ -73,6 +77,41 @@ export const LineCostsExplorer = () => {
   const [sectionId, setSectionId] = useState<string | null>(null);
   const [detailAsset, setDetailAsset] = useState<Asset | null>(null);
   const [openingAsset, setOpeningAsset] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [configSel, setConfigSel] = useState<string[]>([]);
+  const [showObsolete, setShowObsolete] = useState(false);
+
+  // Líneas visibles (configuración persistida por usuario en preferencias).
+  const visibleZoneIds = useMemo(() => {
+    const v = user?.preferences?.line_costs_visible_zones;
+    return Array.isArray(v) ? (v as string[]) : null; // null = sin configurar → todas
+  }, [user?.preferences]);
+
+  const visibleZones = useMemo(() => {
+    if (!data) return [];
+    if (!visibleZoneIds) return data.zones;
+    return data.zones.filter((z) => visibleZoneIds.includes(z.id));
+  }, [data, visibleZoneIds]);
+
+  const openConfig = () => {
+    setConfigSel(visibleZoneIds || (data?.zones.map((z) => z.id) || []));
+    setConfigOpen(true);
+  };
+
+  const toggleZoneSel = (id: string) => {
+    setConfigSel((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const saveConfig = async () => {
+    const next = { ...(user?.preferences || {}), line_costs_visible_zones: configSel };
+    try {
+      await updateMyPreferences(next);
+      updateUserPreferences(next);
+    } catch {
+      /* ignore */
+    }
+    setConfigOpen(false);
+  };
 
   const { startDate, endDate } = useMemo(() => {
     const now = new Date();
@@ -90,7 +129,7 @@ export const LineCostsExplorer = () => {
     let cancelled = false;
     setLoading(true);
     setLoadError(false);
-    getLineCosts({ startDate, endDate })
+    getLineCosts({ startDate, endDate, includeObsolete: showObsolete ? 'true' : undefined })
       .then((res) => {
         if (cancelled) return;
         setData(res);
@@ -104,22 +143,22 @@ export const LineCostsExplorer = () => {
     return () => {
       cancelled = true;
     };
-  }, [startDate, endDate]);
+  }, [startDate, endDate, showObsolete]);
 
-  // Mantiene el drill-down consistente si cambian los datos.
+  // Mantiene el drill-down consistente si cambian los datos o las líneas visibles.
   useEffect(() => {
     if (!data) return;
-    if (zoneId && !data.zones.some((z) => z.id === zoneId)) {
+    if (zoneId && !visibleZones.some((z) => z.id === zoneId)) {
       setZoneId(null);
       setSectionId(null);
     }
     if (sectionId) {
-      const zone = data.zones.find((z) => z.id === zoneId);
+      const zone = visibleZones.find((z) => z.id === zoneId);
       if (zone && !zone.sections.some((s) => s.id === sectionId)) setSectionId(null);
     }
-  }, [data, zoneId, sectionId]);
+  }, [data, zoneId, sectionId, visibleZones]);
 
-  const selectedZone: LineCostZone | null = data?.zones.find((z) => z.id === zoneId) || null;
+  const selectedZone: LineCostZone | null = visibleZones.find((z) => z.id === zoneId) || null;
   const selectedSection: LineCostSection | null =
     selectedZone?.sections.find((s) => s.id === sectionId) || null;
 
@@ -168,7 +207,7 @@ export const LineCostsExplorer = () => {
       downloadWorkbook(`lineas-costos-${stamp}`, [
         {
           name: 'Líneas',
-          rows: data.zones.map((z) => ({
+          rows: visibleZones.map((z) => ({
             Línea: z.name,
             Equipos: z.assetCount,
             OTs: z.woCount,
@@ -196,7 +235,7 @@ export const LineCostsExplorer = () => {
           onClick={() => {
             setLoading(true);
             setLoadError(false);
-            getLineCosts({ startDate, endDate })
+            getLineCosts({ startDate, endDate, includeObsolete: showObsolete ? 'true' : undefined })
               .then((res) => {
                 setData(res);
                 setLoading(false);
@@ -214,8 +253,8 @@ export const LineCostsExplorer = () => {
     );
   }
 
-  const totalCost = data.zones.reduce((s, z) => s + z.cost, 0);
-  const maxZoneCost = Math.max(1, ...data.zones.map((z) => z.cost));
+  const totalCost = visibleZones.reduce((s, z) => s + z.cost, 0);
+  const maxZoneCost = Math.max(1, ...visibleZones.map((z) => z.cost));
   const maxSectionCost = selectedZone ? Math.max(1, ...selectedZone.sections.map((s) => s.cost)) : 1;
   const maxAssetCost = selectedSection ? Math.max(1, ...selectedSection.assets.map((a) => a.cost)) : 1;
 
@@ -262,6 +301,25 @@ export const LineCostsExplorer = () => {
           className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
         >
           <Download size={16} /> Exportar Excel
+        </button>
+
+        <button
+          onClick={openConfig}
+          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+        >
+          <Settings size={16} /> Configurar líneas
+        </button>
+
+        <button
+          onClick={() => setShowObsolete((v) => !v)}
+          className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors ${
+            showObsolete
+              ? 'bg-slate-700 text-white border-slate-600'
+              : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+          }`}
+          title="Mostrar u ocultar equipos obsoletos"
+        >
+          {showObsolete ? 'Ocultar obsoletos' : 'Mostrar obsoletos'}
         </button>
       </div>
 
@@ -320,7 +378,14 @@ export const LineCostsExplorer = () => {
                     onClick={() => void openAsset(a.id)}
                     className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors"
                   >
-                    <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{a.name}</td>
+                    <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">
+                      <span className="flex items-center gap-1.5">
+                        {a.name}
+                        {a.is_obsolete && (
+                          <span className="inline-flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">Obsoleto</span>
+                        )}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-slate-500 dark:text-slate-400 font-mono text-xs">{a.internal_code}</td>
                     <td className="px-4 py-3 text-slate-500 dark:text-slate-400 hidden md:table-cell">{a.brand || '—'}</td>
                     <td className="px-4 py-3 text-slate-500 dark:text-slate-400 hidden lg:table-cell">{a.model || '—'}</td>
@@ -367,7 +432,7 @@ export const LineCostsExplorer = () => {
       ) : (
         /* Nivel 1: Líneas */
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
-          {data.zones.map((z) => (
+          {visibleZones.map((z) => (
             <button
               key={z.id}
               onClick={() => setZoneId(z.id)}
@@ -384,9 +449,11 @@ export const LineCostsExplorer = () => {
               <CostBar value={z.cost} max={maxZoneCost} />
             </button>
           ))}
-          {data.zones.length === 0 && (
+          {visibleZones.length === 0 && (
             <div className="col-span-full text-center text-slate-500 py-10">
-              No hay líneas configuradas. Crea zonas en «Administrar zonas».
+              {visibleZoneIds && visibleZoneIds.length === 0
+                ? 'No hay líneas visibles. Usa «Configurar líneas» para elegir cuáles mostrar.'
+                : 'No hay líneas configuradas. Crea zonas en «Administrar zonas».'}
             </div>
           )}
         </div>
@@ -401,6 +468,71 @@ export const LineCostsExplorer = () => {
       {openingAsset && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/20 pointer-events-none">
           <Loader2 size={28} className="animate-spin text-blue-600" />
+        </div>
+      )}
+
+      {configOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setConfigOpen(false)} />
+          <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 dark:text-slate-100">Configurar líneas visibles</h3>
+              <button onClick={() => setConfigOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto">
+              <div className="flex gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setConfigSel((data?.zones || []).map((z) => z.id))}
+                  className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Marcar todas
+                </button>
+                <span className="text-slate-300">·</span>
+                <button
+                  type="button"
+                  onClick={() => setConfigSel([])}
+                  className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Ninguna
+                </button>
+              </div>
+              <div className="space-y-1">
+                {(data?.zones || []).map((z) => (
+                  <label
+                    key={z.id}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={configSel.includes(z.id)}
+                      onChange={() => toggleZoneSel(z.id)}
+                      className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span className="text-sm text-slate-700 dark:text-slate-200">{z.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setConfigOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={saveConfig}
+                className="px-5 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl"
+              >
+                Guardar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

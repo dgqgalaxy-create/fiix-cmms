@@ -33,6 +33,8 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
   const [assetKind, setAssetKind] = useState<AssetKindValue | ''>('');
   const [vendorId, setVendorId] = useState('');
   const [price, setPrice] = useState('');
+  const [isCritical, setIsCritical] = useState(false);
+  const [isObsolete, setIsObsolete] = useState(false);
   
   const [zones, setZones] = useState<Zone[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -88,6 +90,8 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
         setAssetKind(initialData.asset_kind || '');
         setVendorId(initialData.vendor_id || '');
         setPrice(initialData.price?.toString() || '');
+        setIsCritical(initialData.is_critical || false);
+        setIsObsolete(initialData.is_obsolete || false);
       } else {
         setInternalCode('');
         setName('');
@@ -101,6 +105,8 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
         setAssetKind('');
         setVendorId('');
         setPrice('');
+        setIsCritical(false);
+        setIsObsolete(false);
       }
       setImageFile(null);
       setDocumentFile(null);
@@ -166,6 +172,8 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
       submitData.append('price', price);
       submitData.append('zone_section_id', needsSection ? zoneSectionId : '');
       submitData.append('asset_kind', assetKind);
+      submitData.append('is_critical', String(isCritical));
+      submitData.append('is_obsolete', String(isObsolete));
       
       if (imageFile) submitData.append('image', imageFile);
       if (documentFile) submitData.append('document', documentFile);
@@ -311,6 +319,29 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
                 />
                 <p className="text-xs text-slate-400 mt-1">Define la letra final del código (F o C).</p>
               </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <label className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isCritical}
+                  onChange={(e) => setIsCritical(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500"
+                />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Equipo crítico</span>
+                <span className="text-xs text-slate-400">(prioridad alta)</span>
+              </label>
+              <label className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isObsolete}
+                  onChange={(e) => setIsObsolete(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-slate-500 focus:ring-slate-400"
+                />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Equipo obsoleto</span>
+                <span className="text-xs text-slate-400">(se oculta por defecto)</span>
+              </label>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
