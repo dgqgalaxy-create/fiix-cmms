@@ -107,3 +107,59 @@ export const getAssetMetrics = async (id: string) => {
   const response = await api.get(`/assets/${id}/metrics`);
   return response.data;
 };
+
+// ===== Explorador de Líneas y Costos =====
+
+export interface LineCostAsset {
+  id: string;
+  internal_code: string;
+  name: string;
+  brand: string;
+  model: string;
+  serial_number?: string | null;
+  status: Asset['status'];
+  section?: string | null;
+  asset_kind: 'FIJO' | 'CONTROLABLE';
+  zone_id: string;
+  zone_section_id?: string | null;
+  price?: number | null;
+  image_url?: string | null;
+  vendor?: { name: string } | null;
+  /** Gasto del periodo (repuestos consumidos en OTs). */
+  cost: number;
+  /** Órdenes de trabajo con consumo en el periodo. */
+  woCount: number;
+}
+
+export interface LineCostSection {
+  id: string;
+  name: string;
+  cost: number;
+  woCount: number;
+  assetCount: number;
+  assets: LineCostAsset[];
+}
+
+export interface LineCostZone {
+  id: string;
+  name: string;
+  has_sections: boolean;
+  cost: number;
+  woCount: number;
+  assetCount: number;
+  sections: LineCostSection[];
+}
+
+export interface LineCostsResponse {
+  startDate: string;
+  endDate: string;
+  zones: LineCostZone[];
+}
+
+export const getLineCosts = async (params?: {
+  startDate?: string;
+  endDate?: string;
+}): Promise<LineCostsResponse> => {
+  const response = await api.get('/assets/line-costs', { params });
+  return response.data;
+};

@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.60";
+export const APP_VERSION = "1.56.61";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "22 de Agosto, 2026";
+  const updateDate = "24 de Agosto, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Activos — vista «Líneas y Costos» con explorador por Línea → Sección → Equipo y gasto de repuestos por periodo (selector Este mes / 3 meses / Este año / Personalizado, y exportar a Excel).",
+    "Mejora: Horarios — aviso del orden de importación recomendado (primero base de datos CSV, al final el calendario).",
     "Nuevo: Horarios — filtro de personal (desplegable) para Administrador y Gestionador; el Técnico ve solo su propio horario.",
     "Mejora: Horarios — al reimportar el calendario se borra todo el rango anterior y se carga el nuevo (reemplazo total, incluso si se quitó a alguien).",
     "Nuevo: Horarios — botón «Importar Calendario» para cargar el calendario anual de turnos desde Excel (.xlsx), día por día por técnico.",

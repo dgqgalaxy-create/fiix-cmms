@@ -436,3 +436,5 @@ Detalle de pantallas y módulos: [`docs/manual_usuario.md`](docs/manual_usuario.
 Los CSV de ejemplo viven en `data/`. Zips opcionales en Opciones de Desarrollador:
 - Repuestos: `data/Items_Images.zip` / carpeta `Items_Images/` (`MTTO-0001.Image.163526.png`, etc.).
 - Órdenes: `data/Formulario Solicitudes_Images.zip` — solo **FOTO ANTES** / **FOTO DESPUÉS** por FOLIO (firmas ignoradas).
+
+> **Orden de importación recomendado:** importa primero la **base de datos** (los 7 CSV de Opciones de Desarrollador) y deja el **Calendario de Horarios** (`Importar Calendario` en el módulo Horarios) **para el final**. Así los técnicos del calendario se vinculan por nombre con los usuarios ya creados y no se duplican.

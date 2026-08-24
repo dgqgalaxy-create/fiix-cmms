@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Plus, RefreshCw, Search, QrCode, Printer, MapPin, Filter } from 'lucide-react';
 import { AssetsTable } from '../components/AssetsTable';
+import { LineCostsExplorer } from '../components/LineCostsExplorer';
 import { CreateAssetModal } from '../components/CreateAssetModal';
 import { AssetDetailModal } from '../components/AssetDetailModal';
 import { ManageZonesDrawer } from '../components/ManageZonesDrawer';
@@ -47,6 +48,7 @@ export const AssetsPage = () => {
   const [detailAsset, setDetailAsset] = useState<Asset | null>(null);
   const [qrAsset, setQrAsset] = useState<Asset | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
+  const [viewMode, setViewMode] = useState<'table' | 'lines'>('table');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkPrintOpen, setBulkPrintOpen] = useState(false);
   const assetsAbortRef = useRef<AbortController | null>(null);
@@ -302,6 +304,23 @@ export const AssetsPage = () => {
         </div>
       </div>
 
+      <div className="mb-4 inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 gap-1">
+        <button
+          onClick={() => setViewMode('table')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === 'table' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+        >
+          Tabla
+        </button>
+        <button
+          onClick={() => setViewMode('lines')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === 'lines' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+        >
+          Líneas y Costos
+        </button>
+      </div>
+
+      {viewMode === 'table' ? (
+        <>
       {selectionMode && (
         <div className="mb-4 flex flex-wrap items-center gap-3 p-3 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900 rounded-2xl">
           <span className="text-sm text-emerald-800 dark:text-emerald-200 font-medium">
@@ -399,6 +418,10 @@ export const AssetsPage = () => {
             onToggleSelect={toggleSelect}
           />
         </FilterScopeFrame>
+      )}
+        </>
+      ) : (
+        <LineCostsExplorer />
       )}
 
       <CreateAssetModal 

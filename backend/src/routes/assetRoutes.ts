@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAssets, getAssetById, getAssetMetrics, createAsset, updateAsset, deleteAsset } from '../controllers/assetController';
+import { getAssets, getAssetById, getAssetMetrics, createAsset, updateAsset, deleteAsset, getLineCosts } from '../controllers/assetController';
 import { authenticate, requirePermission } from '../middlewares/authMiddleware';
 import { createDiskUploader } from '../middlewares/upload';
 import path from 'path';
@@ -13,6 +13,7 @@ router.use(authenticate);
 
 // Todos pueden leer (Admin, Gestionador, Tecnico)
 router.get('/', getAssets);
+router.get('/line-costs', getLineCosts);
 router.get('/:id', getAssetById);
 router.get('/:id/metrics', getAssetMetrics);
 

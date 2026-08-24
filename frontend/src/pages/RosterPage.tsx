@@ -602,6 +602,11 @@ export const RosterPage = () => {
               técnico se cargan día por día y sobrescriben los patrones del rango del archivo.
             </p>
 
+            <div className="mb-4 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 rounded-xl px-3 py-2 text-xs">
+              <span className="font-semibold">Orden recomendado:</span> importa primero la base de datos (CSV/usuarios) y
+              deja este calendario para el final, así los técnicos se vinculan por nombre y no se duplican.
+            </div>
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Archivo Excel (.xlsx)</label>

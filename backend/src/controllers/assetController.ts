@@ -612,3 +612,158 @@ export const deleteAsset = async (req: Request, res: Response): Promise<void> =>
     res.status(500).json({ error: 'Error al eliminar activo' });
   }
 };
+
+// ===== Costos por línea / sección (Explorador de Líneas y Costos) =====
+
+function parseYmdLocal(raw: unknown, endOfDay: boolean): Date | null {
+  if (typeof raw !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(raw.trim())) return null;
+  const [y, m, d] = raw.trim().split('-').map(Number);
+  if (!y || !m || !d) return null;
+  return endOfDay
+    ? new Date(y, m - 1, d, 23, 59, 59, 999)
+    : new Date(y, m - 1, d, 0, 0, 0, 0);
+}
+
+const ymd = (d: Date): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+/**
+ * Árbol Zona → Sección → Activo con el gasto (repuestos consumidos en OTs)
+ * dentro del rango de fechas. Sin paginación: pensado para el explorador visual.
+ */
+export const getLineCosts = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const now = new Date();
+    const defaultStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+    const defaultEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const start = parseYmdLocal(req.query.startDate, false) || defaultStart;
+    const end = parseYmdLocal(req.query.endDate, true) || defaultEnd;
+
+    const [zones, assets, transactions] = await Promise.all([
+      prisma.zone.findMany({
+        include: { sections: { orderBy: { name: 'asc' } } },
+        orderBy: { name: 'asc' },
+      }),
+      prisma.asset.findMany({
+        select: {
+          id: true,
+          internal_code: true,
+          name: true,
+          brand: true,
+          model: true,
+          serial_number: true,
+          status: true,
+          section: true,
+          asset_kind: true,
+          zone_id: true,
+          zone_section_id: true,
+          price: true,
+          image_url: true,
+          vendor: { select: { name: true } },
+        },
+      }),
+      prisma.inventoryTransaction.findMany({
+        where: {
+          created_at: { gte: start, lte: end },
+          amount: { lt: 0 },
+          work_order_id: { not: null },
+        },
+        select: {
+          amount: true,
+          unit_cost: true,
+          work_order_id: true,
+          work_order: { select: { asset_id: true } },
+          item: { select: { purchase_cost: true } },
+        },
+      }),
+    ]);
+
+    // Gasto por activo: costo = |cantidad| × costo unitario (snapshot congelado).
+    const perAsset = new Map<string, { cost: number; wos: Set<string> }>();
+    for (const tx of transactions) {
+      const assetId = tx.work_order?.asset_id;
+      if (!assetId) continue;
+      const cost = Math.abs(tx.amount) * resolvePartsUnitCost(tx);
+      let agg = perAsset.get(assetId);
+      if (!agg) {
+        agg = { cost: 0, wos: new Set() };
+        perAsset.set(assetId, agg);
+      }
+      agg.cost += cost;
+      if (tx.work_order_id) agg.wos.add(tx.work_order_id);
+    }
+
+    const tree = zones.map((zone) => {
+      const sections = zone.sections.map((s) => ({
+        id: s.id,
+        name: s.name,
+        cost: 0,
+        woCount: 0,
+        assetCount: 0,
+        assets: [] as any[],
+      }));
+      const sectionById = new Map(sections.map((s) => [s.id, s]));
+      const noneSection = {
+        id: '__none__',
+        name: 'Sin sección',
+        cost: 0,
+        woCount: 0,
+        assetCount: 0,
+        assets: [] as any[],
+      };
+
+      let zoneCost = 0;
+      let zoneAssetCount = 0;
+      const zoneWos = new Set<string>();
+
+      for (const a of assets) {
+        if (a.zone_id !== zone.id) continue;
+        const agg = perAsset.get(a.id);
+        const cost = agg ? round2(agg.cost) : 0;
+        const woCount = agg ? agg.wos.size : 0;
+        const node = { ...a, cost, woCount };
+
+        zoneAssetCount += 1;
+        zoneCost += cost;
+        if (agg) agg.wos.forEach((w) => zoneWos.add(w));
+
+        const sec = a.zone_section_id ? sectionById.get(a.zone_section_id) : undefined;
+        if (sec) {
+          sec.assets.push(node);
+          sec.cost += cost;
+          sec.woCount += woCount;
+          sec.assetCount += 1;
+        } else {
+          noneSection.assets.push(node);
+          noneSection.cost += cost;
+          noneSection.woCount += woCount;
+          noneSection.assetCount += 1;
+        }
+      }
+
+      const finalSections = sections
+        .filter((s) => s.assetCount > 0)
+        .map((s) => ({ ...s, cost: round2(s.cost) }));
+      if (noneSection.assetCount > 0) {
+        finalSections.push({ ...noneSection, cost: round2(noneSection.cost) });
+      }
+
+      return {
+        id: zone.id,
+        name: zone.name,
+        has_sections: zone.has_sections,
+        assetCount: zoneAssetCount,
+        woCount: zoneWos.size,
+        cost: round2(zoneCost),
+        sections: finalSections,
+      };
+    });
+
+    res.json({ startDate: ymd(start), endDate: ymd(end), zones: tree });
+  } catch (error) {
+    console.error('Error fetching line costs', error);
+    res.status(500).json({ error: 'Error al obtener costos por línea' });
+  }
+};
