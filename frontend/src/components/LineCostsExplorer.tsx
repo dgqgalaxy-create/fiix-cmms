@@ -436,6 +436,15 @@ export const LineCostsExplorer = () => {
         </div>
       ) : (
         <>
+        {/* Imagen de distribución de secciones por línea */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+          <img
+            src="/secciones-de-linea.jpeg"
+            alt="Distribución de secciones por línea"
+            className="w-full h-auto object-contain bg-slate-50 dark:bg-slate-900"
+          />
+        </div>
+
         {/* Nivel 1: Líneas */}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
           {visibleZones.map((z) => (

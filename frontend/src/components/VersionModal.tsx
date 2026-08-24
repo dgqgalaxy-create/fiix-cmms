@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.63";
+export const APP_VERSION = "1.56.64";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Líneas y Costos — imagen con la distribución de secciones por línea, arriba de las tarjetas de líneas.",
     "Nuevo: Líneas y Costos — gráfica de barras de gasto por línea (según las líneas visibles y el periodo seleccionado).",
     "Mejora: Líneas y Costos — la configuración de líneas visibles ahora es global (aplica a todos) y solo el Administrador puede cambiarla.",
     "Nuevo: Activos — campo «Crítico» (badge + filtro críticos/no críticos) y campo «Obsoleto» (oculto por defecto, con botón Mostrar/Ocultar obsoletos).",
