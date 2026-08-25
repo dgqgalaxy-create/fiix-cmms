@@ -280,23 +280,25 @@ export const AssetsPage = () => {
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={() => {
-              setSelectionMode((v) => !v);
-              setSelectedIds(new Set());
-            }}
-            className={`flex items-center gap-2 px-3 py-2.5 text-sm font-medium rounded-xl border transition-colors ${
-              selectionMode
-                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-            }`}
-          >
-            <Printer size={16} />
-            {selectionMode ? 'Cancelar selección' : 'QR masivo'}
-          </button>
-          
-          {canManage && (
+          {viewMode === 'table' && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectionMode((v) => !v);
+                setSelectedIds(new Set());
+              }}
+              className={`flex items-center gap-2 px-3 py-2.5 text-sm font-medium rounded-xl border transition-colors ${
+                selectionMode
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <Printer size={16} />
+              {selectionMode ? 'Cancelar selección' : 'QR masivo'}
+            </button>
+          )}
+
+          {viewMode === 'table' && canManage && (
             <button 
               onClick={() => { setEditingAsset(null); setIsModalOpen(true); }}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow-sm shadow-emerald-500/20 transition-colors"

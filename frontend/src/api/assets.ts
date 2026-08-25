@@ -1,5 +1,18 @@
 import api from './axios';
 
+export interface AssetPart {
+  id: string;
+  quantity: number;
+  item?: {
+    id: string;
+    name: string;
+    internal_code: string;
+    stock: number;
+    purchase_cost?: number | null;
+    uom: string;
+  } | null;
+}
+
 export interface Asset {
   id: string;
   internal_code: string;
@@ -39,6 +52,8 @@ export interface Asset {
     id: string;
     name: string;
   };
+  /** Refacciones que usa este activo (con su cantidad). */
+  parts?: AssetPart[];
 }
 
 export type AssetListParams = {
@@ -132,8 +147,12 @@ export interface LineCostAsset {
   price?: number | null;
   image_url?: string | null;
   vendor?: { name: string } | null;
+  /** Refacciones que usa este activo (con su cantidad). */
+  parts: AssetPart[];
   /** Gasto del periodo (repuestos consumidos en OTs). */
   cost: number;
+  /** Valor del activo (precio de compra). */
+  assetValue: number;
   /** Órdenes de trabajo con consumo en el periodo. */
   woCount: number;
 }
@@ -142,6 +161,7 @@ export interface LineCostSection {
   id: string;
   name: string;
   cost: number;
+  assetValue: number;
   woCount: number;
   assetCount: number;
   assets: LineCostAsset[];
@@ -152,6 +172,7 @@ export interface LineCostZone {
   name: string;
   has_sections: boolean;
   cost: number;
+  assetValue: number;
   woCount: number;
   assetCount: number;
   sections: LineCostSection[];

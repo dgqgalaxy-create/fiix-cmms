@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.65";
+export const APP_VERSION = "1.56.66";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,10 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Activos — asignación de refacciones por activo (desde inventario, con cantidad) y desglose Zona → Sección → Activo → Refacciones en Líneas y Costos.",
+    "Nuevo: Líneas y Costos — muestra valor de activos y costo de reparación por separado en cada nivel.",
+    "Mejora: Líneas y Costos — imagen de secciones visible en todo el desglose; exportar Excel exporta todo el árbol de líneas visibles.",
+    "Mejora: Activos — los botones QR masivo y Nuevo Activo solo se muestran en la vista Tabla.",
     "Mejora: importación CSV/Sheets — evita duplicar usuarios (empareja por nombre además de por email).",
     "Mejora: respaldo automático — ahora también respalda la carpeta data/ y backend/.env (todo el sitio).",
     "Nuevo: script de borrado de base de datos (backend/scripts/wipe_database.js).",

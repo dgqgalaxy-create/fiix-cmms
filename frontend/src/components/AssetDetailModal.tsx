@@ -380,6 +380,39 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Pr
                 </div>
               </div>
 
+              {/* Refacciones */}
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-2">Refacciones del activo</h3>
+                {asset.parts && asset.parts.length > 0 ? (
+                  <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50 dark:bg-slate-800/60 text-left text-slate-500 dark:text-slate-400">
+                        <tr>
+                          <th className="px-4 py-2.5 font-medium">Refacción</th>
+                          <th className="px-4 py-2.5 font-medium">Código</th>
+                          <th className="px-4 py-2.5 font-medium text-right">Cantidad</th>
+                          <th className="px-4 py-2.5 font-medium text-right">Stock</th>
+                          <th className="px-4 py-2.5 font-medium text-right">Costo unitario</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {asset.parts.map((p) => (
+                          <tr key={p.id}>
+                            <td className="px-4 py-2.5 font-medium text-slate-800 dark:text-slate-100">{p.item?.name || '—'}</td>
+                            <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400 font-mono text-xs">{p.item?.internal_code || '—'}</td>
+                            <td className="px-4 py-2.5 text-right text-slate-700 dark:text-slate-200">{p.quantity} {p.item?.uom || ''}</td>
+                            <td className="px-4 py-2.5 text-right text-slate-600 dark:text-slate-300">{p.item?.stock ?? 0}</td>
+                            <td className="px-4 py-2.5 text-right font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(p.item?.purchase_cost)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Este activo no tiene refacciones asignadas.</p>
+                )}
+              </div>
+
               {/* Document / Manual */}
               {asset.document_url && (
                 <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">

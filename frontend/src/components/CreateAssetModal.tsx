@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Trash2 } from 'lucide-react';
 import type { Asset } from '../api/assets';
 import { getZones } from '../api/zones';
 import type { Zone } from '../api/zones';
-import { getVendors } from '../api/inventory';
-import type { Vendor } from '../api/inventory';
+import { getVendors, getItems } from '../api/inventory';
+import type { Vendor, Item } from '../api/inventory';
 import {
   ASSET_KIND_LABELS,
   assetKindLetter,
@@ -45,6 +45,10 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
   
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [items, setItems] = useState<Item[]>([]);
+  const [parts, setParts] = useState<{ item_id: string; quantity: number }[]>([]);
+  const [selectedPartId, setSelectedPartId] = useState('');
+  const [selectedPartQty, setSelectedPartQty] = useState('1');
 
   const selectedZone = zones.find((z) => z.id === zoneId);
   const zoneSections = selectedZone?.sections || [];
@@ -92,6 +96,11 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
         setPrice(initialData.price?.toString() || '');
         setIsCritical(initialData.is_critical || false);
         setIsObsolete(initialData.is_obsolete || false);
+        setParts(
+          (initialData.parts || [])
+            .map((p) => ({ item_id: p.item?.id || '', quantity: p.quantity }))
+            .filter((p) => p.item_id)
+        );
       } else {
         setInternalCode('');
         setName('');
@@ -107,6 +116,9 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
         setPrice('');
         setIsCritical(false);
         setIsObsolete(false);
+        setParts([]);
+        setSelectedPartId('');
+        setSelectedPartQty('1');
       }
       setImageFile(null);
       setDocumentFile(null);
@@ -134,12 +146,34 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
         .finally(() => {
           setIsLoadingVendors(false);
         });
+
+      getItems()
+        .then((data) => setItems(data))
+        .catch(() => {});
     }
   }, [isOpen, initialData]);
 
   const handleZoneChange = (nextZoneId: string) => {
     setZoneId(nextZoneId);
     setZoneSectionId('');
+  };
+
+  const addPart = () => {
+    if (!selectedPartId) return;
+    const qty = Number(selectedPartQty) || 1;
+    setParts((prev) => {
+      const exists = prev.some((p) => p.item_id === selectedPartId);
+      if (exists) {
+        return prev.map((p) => (p.item_id === selectedPartId ? { ...p, quantity: qty } : p));
+      }
+      return [...prev, { item_id: selectedPartId, quantity: qty }];
+    });
+    setSelectedPartId('');
+    setSelectedPartQty('1');
+  };
+
+  const removePart = (itemId: string) => {
+    setParts((prev) => prev.filter((p) => p.item_id !== itemId));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -174,6 +208,7 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
       submitData.append('asset_kind', assetKind);
       submitData.append('is_critical', String(isCritical));
       submitData.append('is_obsolete', String(isObsolete));
+      submitData.append('parts', JSON.stringify(parts));
       
       if (imageFile) submitData.append('image', imageFile);
       if (documentFile) submitData.append('document', documentFile);
@@ -402,6 +437,63 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Descripción (Opcional)</label>
               <textarea rows={2} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all resize-none" placeholder="Detalles adicionales..." value={description} onChange={(e) => setDescription(e.target.value)} />
+            </div>
+
+            <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Refacciones que usa este activo</label>
+              <p className="text-xs text-slate-400 mb-2">Selecciona del inventario y asigna la cantidad.</p>
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <SearchableSelect
+                    value={selectedPartId}
+                    onChange={setSelectedPartId}
+                    options={items.map((i) => ({ value: i.id, label: `${i.internal_code} · ${i.name}` }))}
+                    placeholder="Buscar refacción…"
+                    inputClassName="w-full px-4 py-2.5 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all"
+                  />
+                </div>
+                <div className="w-24">
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="any"
+                    value={selectedPartQty}
+                    onChange={(e) => setSelectedPartQty(e.target.value)}
+                    placeholder="Cant."
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={addPart}
+                  disabled={!selectedPartId}
+                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium disabled:opacity-50 transition-colors"
+                >
+                  Agregar
+                </button>
+              </div>
+
+              {parts.length > 0 && (
+                <ul className="mt-3 space-y-1.5">
+                  {parts.map((p) => {
+                    const item = items.find((i) => i.id === p.item_id);
+                    return (
+                      <li key={p.item_id} className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm">
+                        <div className="min-w-0 flex items-center gap-2">
+                          <span className="text-slate-700 dark:text-slate-200 truncate">{item?.name || 'Refacción'}</span>
+                          {item?.internal_code && <span className="text-slate-400 text-xs shrink-0">{item.internal_code}</span>}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-slate-600 dark:text-slate-300 font-medium">{p.quantity}</span>
+                          <button type="button" onClick={() => removePart(p.item_id)} className="p-1 text-slate-400 hover:text-red-600 rounded-lg" title="Quitar">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           </form>
         </div>

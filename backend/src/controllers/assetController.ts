@@ -14,7 +14,35 @@ const assetInclude = {
   zone: { include: { sections: { orderBy: { name: 'asc' as const } } } },
   zone_section: true,
   vendor: true,
+  parts: { include: { item: true } },
 };
+
+/** Parsea el campo `parts` (JSON string o array) → lista {item_id, quantity}. */
+function parseParts(raw: unknown): { item_id: string; quantity: number }[] | null {
+  if (raw == null || raw === '') return null;
+  let arr: unknown[] = [];
+  if (typeof raw === 'string') {
+    try {
+      arr = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  } else if (Array.isArray(raw)) {
+    arr = raw;
+  } else {
+    return null;
+  }
+  const out: { item_id: string; quantity: number }[] = [];
+  for (const p of arr) {
+    if (!p || typeof p !== 'object') continue;
+    const item_id = (p as any).item_id;
+    const qty = Number((p as any).quantity);
+    if (item_id && Number.isFinite(qty) && qty > 0) {
+      out.push({ item_id: String(item_id), quantity: qty });
+    }
+  }
+  return out;
+}
 
 async function loadZoneForSection(zoneId: string) {
   return prisma.zone.findUnique({
@@ -327,6 +355,7 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
       asset_kind,
       is_critical,
       is_obsolete,
+      parts,
     } = req.body;
 
     if (!name || !String(name).trim()) {
@@ -430,6 +459,14 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
+    // Refacciones del activo
+    const partsList = parseParts(parts);
+    if (partsList) {
+      await prisma.assetPart.createMany({
+        data: partsList.map((p) => ({ asset_id: newAsset.id, item_id: p.item_id, quantity: p.quantity })),
+      });
+    }
+
     emitRefresh('refresh_assets');
     res.status(201).json(newAsset);
   } catch (error: any) {
@@ -460,6 +497,7 @@ export const updateAsset = async (req: Request, res: Response): Promise<void> =>
       asset_kind,
       is_critical,
       is_obsolete,
+      parts,
     } = req.body;
 
     const existing = await prisma.asset.findUnique({
@@ -610,6 +648,15 @@ export const updateAsset = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
+    // Refacciones del activo (reemplaza la lista)
+    const partsList = parseParts(parts);
+    if (partsList) {
+      await prisma.assetPart.deleteMany({ where: { asset_id: id } });
+      await prisma.assetPart.createMany({
+        data: partsList.map((p) => ({ asset_id: id, item_id: p.item_id, quantity: p.quantity })),
+      });
+    }
+
     emitRefresh('refresh_assets');
     res.json(updatedAsset);
   } catch (error) {
@@ -681,6 +728,13 @@ export const getLineCosts = async (req: Request, res: Response): Promise<void> =
           price: true,
           image_url: true,
           vendor: { select: { name: true } },
+          parts: {
+            select: {
+              id: true,
+              quantity: true,
+              item: { select: { id: true, name: true, internal_code: true, stock: true, purchase_cost: true, uom: true } },
+            },
+          },
         },
       }),
       prisma.inventoryTransaction.findMany({
@@ -727,6 +781,7 @@ export const getLineCosts = async (req: Request, res: Response): Promise<void> =
         id: s.id,
         name: s.name,
         cost: 0,
+        assetValue: 0,
         woCount: 0,
         assetCount: 0,
         assets: [] as any[],
@@ -736,12 +791,14 @@ export const getLineCosts = async (req: Request, res: Response): Promise<void> =
         id: '__none__',
         name: 'Sin sección',
         cost: 0,
+        assetValue: 0,
         woCount: 0,
         assetCount: 0,
         assets: [] as any[],
       };
 
       let zoneCost = 0;
+      let zoneAssetValue = 0;
       let zoneAssetCount = 0;
       const zoneWos = new Set<string>();
 
@@ -750,21 +807,25 @@ export const getLineCosts = async (req: Request, res: Response): Promise<void> =
         const agg = perAsset.get(a.id);
         const cost = agg ? round2(agg.cost) : 0;
         const woCount = agg ? agg.wos.size : 0;
-        const node = { ...a, cost, woCount };
+        const assetValue = a.price ?? 0;
+        const node = { ...a, cost, woCount, assetValue };
 
         zoneAssetCount += 1;
         zoneCost += cost;
+        zoneAssetValue += assetValue;
         if (agg) agg.wos.forEach((w) => zoneWos.add(w));
 
         const sec = a.zone_section_id ? sectionById.get(a.zone_section_id) : undefined;
         if (sec) {
           sec.assets.push(node);
           sec.cost += cost;
+          sec.assetValue += assetValue;
           sec.woCount += woCount;
           sec.assetCount += 1;
         } else {
           noneSection.assets.push(node);
           noneSection.cost += cost;
+          noneSection.assetValue += assetValue;
           noneSection.woCount += woCount;
           noneSection.assetCount += 1;
         }
@@ -772,9 +833,9 @@ export const getLineCosts = async (req: Request, res: Response): Promise<void> =
 
       const finalSections = sections
         .filter((s) => s.assetCount > 0)
-        .map((s) => ({ ...s, cost: round2(s.cost) }));
+        .map((s) => ({ ...s, cost: round2(s.cost), assetValue: round2(s.assetValue) }));
       if (noneSection.assetCount > 0) {
-        finalSections.push({ ...noneSection, cost: round2(noneSection.cost) });
+        finalSections.push({ ...noneSection, cost: round2(noneSection.cost), assetValue: round2(noneSection.assetValue) });
       }
 
       return {
@@ -784,6 +845,7 @@ export const getLineCosts = async (req: Request, res: Response): Promise<void> =
         assetCount: zoneAssetCount,
         woCount: zoneWos.size,
         cost: round2(zoneCost),
+        assetValue: round2(zoneAssetValue),
         sections: finalSections,
       };
     });

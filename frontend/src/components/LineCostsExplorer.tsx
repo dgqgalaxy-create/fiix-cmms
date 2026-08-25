@@ -76,6 +76,7 @@ export const LineCostsExplorer = () => {
   const [loadError, setLoadError] = useState(false);
   const [zoneId, setZoneId] = useState<string | null>(null);
   const [sectionId, setSectionId] = useState<string | null>(null);
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [detailAsset, setDetailAsset] = useState<Asset | null>(null);
   const [openingAsset, setOpeningAsset] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
@@ -152,16 +153,22 @@ export const LineCostsExplorer = () => {
     if (zoneId && !visibleZones.some((z) => z.id === zoneId)) {
       setZoneId(null);
       setSectionId(null);
+      setSelectedAssetId(null);
     }
     if (sectionId) {
       const zone = visibleZones.find((z) => z.id === zoneId);
-      if (zone && !zone.sections.some((s) => s.id === sectionId)) setSectionId(null);
+      if (zone && !zone.sections.some((s) => s.id === sectionId)) {
+        setSectionId(null);
+        setSelectedAssetId(null);
+      }
     }
   }, [data, zoneId, sectionId, visibleZones]);
 
   const selectedZone: LineCostZone | null = visibleZones.find((z) => z.id === zoneId) || null;
   const selectedSection: LineCostSection | null =
     selectedZone?.sections.find((s) => s.id === sectionId) || null;
+  const selectedAsset: LineCostAsset | null =
+    selectedSection?.assets.find((a) => a.id === selectedAssetId) || null;
 
   const openAsset = async (assetId: string) => {
     setOpeningAsset(true);
@@ -177,46 +184,29 @@ export const LineCostsExplorer = () => {
 
   const exportCurrentLevel = () => {
     const stamp = excelDateStamp();
-    if (selectedSection) {
-      downloadWorkbook(`linea-${selectedZone?.name}-seccion-${selectedSection.name}-${stamp}`, [
-        {
-          name: `Sección ${selectedSection.name}`,
-          rows: selectedSection.assets.map((a) => ({
+    // Exporta TODO el árbol visible (líneas configuradas), no solo el nivel actual.
+    const rows: Record<string, string | number>[] = [];
+    for (const z of visibleZones) {
+      for (const s of z.sections) {
+        for (const a of s.assets) {
+          rows.push({
+            Línea: z.name,
+            Sección: s.name,
             Código: a.internal_code,
             Equipo: a.name,
             Marca: a.brand,
             Modelo: a.model,
             Estatus: STATUS_LABELS[a.status] || a.status,
-            'Gasto (MXN)': a.cost,
+            'Valor del activo (MXN)': a.assetValue,
+            'Reparación (MXN)': a.cost,
             OTs: a.woCount,
-          })),
-        },
-      ]);
-    } else if (selectedZone) {
-      downloadWorkbook(`linea-${selectedZone.name}-${stamp}`, [
-        {
-          name: `Línea ${selectedZone.name}`,
-          rows: selectedZone.sections.map((s) => ({
-            Sección: s.name,
-            Equipos: s.assetCount,
-            OTs: s.woCount,
-            'Gasto (MXN)': s.cost,
-          })),
-        },
-      ]);
-    } else if (data) {
-      downloadWorkbook(`lineas-costos-${stamp}`, [
-        {
-          name: 'Líneas',
-          rows: visibleZones.map((z) => ({
-            Línea: z.name,
-            Equipos: z.assetCount,
-            OTs: z.woCount,
-            'Gasto (MXN)': z.cost,
-          })),
-        },
-      ]);
+          });
+        }
+      }
     }
+    downloadWorkbook(`lineas-costos-${stamp}`, [
+      { name: 'Líneas y Costos', rows },
+    ]);
   };
 
   // ===== Render =====
@@ -255,6 +245,7 @@ export const LineCostsExplorer = () => {
   }
 
   const totalCost = visibleZones.reduce((s, z) => s + z.cost, 0);
+  const totalAssetValue = visibleZones.reduce((s, z) => s + z.assetValue, 0);
   const maxZoneCost = Math.max(1, ...visibleZones.map((z) => z.cost));
   const maxSectionCost = selectedZone ? Math.max(1, ...selectedZone.sections.map((s) => s.cost)) : 1;
   const maxAssetCost = selectedSection ? Math.max(1, ...selectedSection.assets.map((a) => a.cost)) : 1;
@@ -328,19 +319,29 @@ export const LineCostsExplorer = () => {
         </button>
       </div>
 
+      {/* Imagen de distribución de secciones por línea (visible en todo el desglose) */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+        <img
+          src="/secciones-de-linea.jpeg"
+          alt="Distribución de secciones por línea"
+          className="w-full h-auto object-contain bg-slate-50 dark:bg-slate-900"
+        />
+      </div>
+
       {/* Encabezado resumen + migas de pan */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
           {selectedZone && (
             <button
               onClick={() => {
-                if (selectedSection) setSectionId(null);
+                if (selectedAsset) setSelectedAssetId(null);
+                else if (selectedSection) setSectionId(null);
                 else setZoneId(null);
               }}
               className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline font-medium"
             >
               <ArrowLeft size={16} />
-              {selectedSection ? `Línea ${selectedZone.name}` : 'Líneas'}
+              {selectedAsset ? `Sección ${selectedSection?.name}` : selectedSection ? `Línea ${selectedZone.name}` : 'Líneas'}
             </button>
           )}
           {!selectedZone && <span className="font-semibold text-slate-700 dark:text-slate-200">Líneas</span>}
@@ -348,20 +349,76 @@ export const LineCostsExplorer = () => {
           {selectedZone && <span className="font-semibold text-slate-700 dark:text-slate-200">Línea {selectedZone.name}</span>}
           {selectedSection && <ChevronRight size={14} className="text-slate-300" />}
           {selectedSection && <span className="font-semibold text-slate-700 dark:text-slate-200">Sección {selectedSection.name}</span>}
+          {selectedAsset && <ChevronRight size={14} className="text-slate-300" />}
+          {selectedAsset && <span className="font-semibold text-slate-700 dark:text-slate-200">{selectedAsset.name}</span>}
         </div>
 
-        <div className="text-sm">
-          <span className="text-slate-500 dark:text-slate-400">Gasto del periodo: </span>
-          <span className="font-bold text-slate-800 dark:text-slate-100">
-            {formatCurrency(
-              selectedSection ? selectedSection.cost : selectedZone ? selectedZone.cost : totalCost
-            )}
+        <div className="text-sm flex items-center gap-4 flex-wrap">
+          <span>
+            <span className="text-slate-500 dark:text-slate-400">Valor de activos: </span>
+            <span className="font-bold text-slate-800 dark:text-slate-100">
+              {formatCurrency(
+                selectedAsset ? selectedAsset.assetValue : selectedSection ? selectedSection.assetValue : selectedZone ? selectedZone.assetValue : totalAssetValue
+              )}
+            </span>
+          </span>
+          <span>
+            <span className="text-slate-500 dark:text-slate-400">Reparación ({periodLabel}): </span>
+            <span className="font-bold text-slate-800 dark:text-slate-100">
+              {formatCurrency(
+                selectedAsset ? selectedAsset.cost : selectedSection ? selectedSection.cost : selectedZone ? selectedZone.cost : totalCost
+              )}
+            </span>
           </span>
         </div>
       </div>
 
-      {/* Nivel 3: Equipos */}
-      {selectedSection ? (
+      {/* Nivel 4: Refacciones */}
+      {selectedAsset ? (
+        <div className="space-y-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="font-bold text-slate-800 dark:text-slate-100 truncate">{selectedAsset.name}</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">{selectedAsset.internal_code}</div>
+            </div>
+            <div className="text-sm shrink-0 flex items-center gap-4 flex-wrap">
+              <span><span className="text-slate-500 dark:text-slate-400">Valor: </span><span className="font-bold text-slate-800 dark:text-slate-100">{formatCurrency(selectedAsset.assetValue)}</span></span>
+              <span><span className="text-slate-500 dark:text-slate-400">Reparación: </span><span className="font-bold text-slate-800 dark:text-slate-100">{formatCurrency(selectedAsset.cost)}</span></span>
+              <span className="text-slate-500 dark:text-slate-400">{selectedAsset.parts?.length || 0} refacciones</span>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 text-left text-slate-500 dark:text-slate-400">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Refacción</th>
+                    <th className="px-4 py-3 font-medium">Código</th>
+                    <th className="px-4 py-3 font-medium text-right">Cantidad</th>
+                    <th className="px-4 py-3 font-medium text-right">Stock</th>
+                    <th className="px-4 py-3 font-medium text-right">Costo unitario</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
+                  {(selectedAsset.parts || []).map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/40">
+                      <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{p.item?.name || '—'}</td>
+                      <td className="px-4 py-3 text-slate-500 dark:text-slate-400 font-mono text-xs">{p.item?.internal_code || '—'}</td>
+                      <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-200">{p.quantity} {p.item?.uom || ''}</td>
+                      <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{p.item?.stock ?? 0}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(p.item?.purchase_cost)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {!(selectedAsset.parts || []).length && (
+              <div className="text-center text-slate-500 py-10">Este activo no tiene refacciones asignadas.</div>
+            )}
+          </div>
+        </div>
+      ) : selectedSection ? (
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -373,7 +430,9 @@ export const LineCostsExplorer = () => {
                   <th className="px-4 py-3 font-medium hidden lg:table-cell">Modelo</th>
                   <th className="px-4 py-3 font-medium">Estatus</th>
                   <th className="px-4 py-3 font-medium text-right">OTs</th>
-                  <th className="px-4 py-3 font-medium text-right">Gasto</th>
+                  <th className="px-4 py-3 font-medium text-right">Valor</th>
+                  <th className="px-4 py-3 font-medium text-right">Reparación</th>
+                  <th className="px-4 py-3 font-medium text-right">Refacciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -400,7 +459,16 @@ export const LineCostsExplorer = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{a.woCount}</td>
+                    <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{formatCurrency(a.assetValue)}</td>
                     <td className="px-4 py-3 text-right font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(a.cost)}</td>
+                    <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => setSelectedAssetId(a.id)}
+                        className="px-2 py-1 text-xs font-medium rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                      >
+                        Refacciones ({a.parts?.length || 0})
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -423,7 +491,9 @@ export const LineCostsExplorer = () => {
                 <Layers size={16} className="text-blue-500" />
                 <span className="font-bold text-slate-800 dark:text-slate-100">Sección {s.name}</span>
               </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">{formatCurrency(s.cost)}</div>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white mb-0.5">{formatCurrency(s.assetValue)}</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">Valor de activos</div>
+              <div className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Reparación: {formatCurrency(s.cost)}</div>
               <div className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                 {s.assetCount} equipos · {s.woCount} OTs
               </div>
@@ -436,15 +506,6 @@ export const LineCostsExplorer = () => {
         </div>
       ) : (
         <>
-        {/* Imagen de distribución de secciones por línea */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
-          <img
-            src="/secciones-de-linea.jpeg"
-            alt="Distribución de secciones por línea"
-            className="w-full h-auto object-contain bg-slate-50 dark:bg-slate-900"
-          />
-        </div>
-
         {/* Nivel 1: Líneas */}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
           {visibleZones.map((z) => (
@@ -457,7 +518,9 @@ export const LineCostsExplorer = () => {
                 <Building2 size={16} className="text-blue-500" />
                 <span className="font-bold text-slate-800 dark:text-slate-100">{z.name}</span>
               </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">{formatCurrency(z.cost)}</div>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white mb-0.5">{formatCurrency(z.assetValue)}</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">Valor de activos</div>
+              <div className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Reparación: {formatCurrency(z.cost)}</div>
               <div className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                 {z.assetCount} equipos · {z.sections.length} secciones · {z.woCount} OTs
               </div>
@@ -476,7 +539,7 @@ export const LineCostsExplorer = () => {
         {/* Gráfica de gasto por línea (solo líneas visibles) */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-slate-800 dark:text-slate-100">Gasto por línea</h3>
+            <h3 className="font-bold text-slate-800 dark:text-slate-100">Reparación por línea</h3>
             <span className="text-xs text-slate-400 dark:text-slate-500">{periodLabel}</span>
           </div>
           {visibleZones.length > 0 ? (

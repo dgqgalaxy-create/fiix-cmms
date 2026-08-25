@@ -236,6 +236,7 @@ model Asset {
   work_orders     WorkOrder[]
   maintenance_plans MaintenancePlan[]
   operational_tasks OperationalTask[]
+  parts           AssetPart[]
 
   @@index([zone_id])
   @@index([status])
@@ -388,12 +389,28 @@ model Item {
   inventory_transactions InventoryTransaction[]
   maintenance_plans      PlanItem[]
   purchase_order_items   PurchaseOrderItem[]
+  asset_parts            AssetPart[]
 
   @@index([category_id])
   @@index([location_id])
   @@index([vendor_id])
   @@index([is_active])
   @@index([name])
+}
+
+/// Refacción (ítem de inventario) que consume un activo, con su cantidad.
+model AssetPart {
+  id         String   @id @default(uuid()) @db.Uuid
+  asset_id   String   @db.Uuid
+  asset      Asset    @relation(fields: [asset_id], references: [id], onDelete: Cascade)
+  item_id    String   @db.Uuid
+  item       Item     @relation(fields: [item_id], references: [id], onDelete: Cascade)
+  quantity   Float    @default(1)
+  created_at DateTime @default(now())
+
+  @@unique([asset_id, item_id])
+  @@index([asset_id])
+  @@index([item_id])
 }
 
 model InventoryTransaction {
