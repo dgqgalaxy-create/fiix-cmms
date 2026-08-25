@@ -57,12 +57,23 @@ export interface InventoryTransaction {
   user?: { id: string; name: string; email: string };
   amount: number;
   reason: string;
+  /** Costo unitario al momento del movimiento. */
+  unit_cost?: number | null;
   created_at: string;
 }
 
 export interface InventorySummary {
   total_items: number;
   low_stock_count: number;
+  /** Valor total del inventario (stock × costo unitario). */
+  total_value?: number;
+}
+
+export interface TransactionsSummary {
+  totalIn: number;
+  totalOut: number;
+  countIn: number;
+  countOut: number;
 }
 
 // Categories
@@ -279,5 +290,20 @@ export const createTransaction = async (data: {
     offline?: boolean;
     idempotent?: boolean;
   }>('/inventory/transactions', data);
+  return response.data;
+};
+
+/** Flujo de costos (total entrado / salido) según los filtros. */
+export const getTransactionsSummary = async (
+  params?: Omit<TransactionListParams, 'page' | 'limit'>
+): Promise<TransactionsSummary> => {
+  const response = await axiosInstance.get('/inventory/transactions/summary', {
+    params: params
+      ? {
+          ...params,
+          movement: params.movement && params.movement !== 'ALL' ? params.movement : undefined,
+        }
+      : undefined,
+  });
   return response.data;
 };

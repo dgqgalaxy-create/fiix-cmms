@@ -23,6 +23,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
 import { AssetDetailModal } from './AssetDetailModal';
 import { useAuth } from '../context/AuthContext';
+import { useSocketRefresh } from '../hooks/useSocketRefresh';
 
 type PeriodKey = 'THIS_MONTH' | 'LAST_3_MONTHS' | 'THIS_YEAR' | 'CUSTOM';
 
@@ -127,25 +128,34 @@ export const LineCostsExplorer = () => {
     return { startDate: toYmd(new Date(now.getFullYear(), 0, 1)), endDate: toYmd(now) };
   }, [period, customStart, customEnd]);
 
+  const loadLineCosts = async (background = false) => {
+    if (!background) {
+      setLoading(true);
+      setLoadError(false);
+    }
+    try {
+      const res = await getLineCosts({ startDate, endDate, includeObsolete: showObsolete ? 'true' : undefined });
+      setData(res);
+      setLoadError(false);
+    } catch {
+      if (!background) setLoadError(true);
+    } finally {
+      if (!background) setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setLoadError(false);
-    getLineCosts({ startDate, endDate, includeObsolete: showObsolete ? 'true' : undefined })
-      .then((res) => {
-        if (cancelled) return;
-        setData(res);
-        setLoading(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setLoadError(true);
-        setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+    void loadLineCosts(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate, showObsolete]);
+
+  // Actualización en vivo: activos, órdenes (reparación) e inventario (stock/costos).
+  useSocketRefresh(
+    ['refresh_assets', 'refresh_work_orders', 'refresh_inventory'],
+    () => {
+      void loadLineCosts(true);
+    }
+  );
 
   // Mantiene el drill-down consistente si cambian los datos o las líneas visibles.
   useEffect(() => {
@@ -223,19 +233,7 @@ export const LineCostsExplorer = () => {
       <div className="text-center py-24">
         <p className="text-slate-500 dark:text-slate-400 mb-3">No se pudieron cargar los costos por línea.</p>
         <button
-          onClick={() => {
-            setLoading(true);
-            setLoadError(false);
-            getLineCosts({ startDate, endDate, includeObsolete: showObsolete ? 'true' : undefined })
-              .then((res) => {
-                setData(res);
-                setLoading(false);
-              })
-              .catch(() => {
-                setLoadError(true);
-                setLoading(false);
-              });
-          }}
+          onClick={() => void loadLineCosts(false)}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
         >
           <RefreshCw size={16} /> Reintentar

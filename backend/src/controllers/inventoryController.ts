@@ -523,15 +523,18 @@ export const getInventorySummary = async (req: Request, res: Response): Promise<
       select: {
         id: true,
         stock: true,
-        minimum_inventory: true
+        minimum_inventory: true,
+        purchase_cost: true
       }
     });
     
     const lowStockCount = items.filter(item => item.stock <= item.minimum_inventory).length;
+    const totalValue = items.reduce((sum, item) => sum + (item.stock * (item.purchase_cost ?? 0)), 0);
     
     res.json({
       total_items: items.length,
-      low_stock_count: lowStockCount
+      low_stock_count: lowStockCount,
+      total_value: Math.round(totalValue * 100) / 100
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener resumen de inventario' });
@@ -611,6 +614,69 @@ export const getTransactions = async (req: Request, res: Response): Promise<void
   } catch (error) {
     console.error('Error al obtener transacciones:', error);
     res.status(500).json({ error: 'Error al obtener transacciones' });
+  }
+};
+
+/** Flujo de costos: total entrado y total salido (en dinero) según los filtros. */
+export const getTransactionsSummary = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { itemId, movement, q, startDate, endDate } = req.query;
+    const and: Record<string, unknown>[] = [];
+
+    if (itemId) and.push({ item_id: String(itemId) });
+    if (movement === 'IN') and.push({ amount: { gt: 0 } });
+    if (movement === 'OUT') and.push({ amount: { lt: 0 } });
+    if (startDate || endDate) {
+      and.push({
+        created_at: {
+          ...(startDate ? { gte: new Date(String(startDate).length <= 10 ? `${startDate}T00:00:00.000` : String(startDate)) } : {}),
+          ...(endDate ? { lte: new Date(String(endDate).length <= 10 ? `${endDate}T23:59:59.999` : String(endDate)) } : {}),
+        },
+      });
+    }
+    if (q) {
+      const term = String(q).trim();
+      if (term) {
+        and.push({
+          OR: [
+            { reason: { contains: term, mode: 'insensitive' } },
+            { item: { name: { contains: term, mode: 'insensitive' } } },
+            { user: { name: { contains: term, mode: 'insensitive' } } },
+          ],
+        });
+      }
+    }
+
+    const where = and.length ? { AND: and } : {};
+    const transactions = await prisma.inventoryTransaction.findMany({
+      where,
+      select: { amount: true, unit_cost: true },
+    });
+
+    let totalIn = 0;
+    let totalOut = 0;
+    let countIn = 0;
+    let countOut = 0;
+    for (const tx of transactions) {
+      const value = Math.abs(tx.amount) * (tx.unit_cost ?? 0);
+      if (tx.amount > 0) {
+        totalIn += value;
+        countIn += 1;
+      } else if (tx.amount < 0) {
+        totalOut += value;
+        countOut += 1;
+      }
+    }
+
+    res.json({
+      totalIn: Math.round(totalIn * 100) / 100,
+      totalOut: Math.round(totalOut * 100) / 100,
+      countIn,
+      countOut,
+    });
+  } catch (error) {
+    console.error('Error al obtener resumen de transacciones:', error);
+    res.status(500).json({ error: 'Error al obtener resumen de transacciones' });
   }
 };
 

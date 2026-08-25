@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.66";
+export const APP_VERSION = "1.56.67";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,9 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Inventario — valor total del inventario (stock × costo) y filtro de periodo en movimientos.",
+    "Nuevo: Inventario — flujo de costos por periodo (total entrado vs total salido) según filtros de tipo y fechas.",
+    "Mejora: Líneas y Costos — actualización en vivo vía socket (activos, órdenes e inventario).",
     "Nuevo: Activos — asignación de refacciones por activo (desde inventario, con cantidad) y desglose Zona → Sección → Activo → Refacciones en Líneas y Costos.",
     "Nuevo: Líneas y Costos — muestra valor de activos y costo de reparación por separado en cada nivel.",
     "Mejora: Líneas y Costos — imagen de secciones visible en todo el desglose; exportar Excel exporta todo el árbol de líneas visibles.",

@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter } from 'lucide-react';
+import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter, DollarSign } from 'lucide-react';
 import { 
-  getItems, getItemsPage, getItemById, getTransactionsPage, getCategories, getLocations, getVendors, getInventorySummary
+  getItems, getItemsPage, getItemById, getTransactionsPage, getTransactionsSummary, getCategories, getLocations, getVendors, getInventorySummary
 } from '../api/inventory';
-import type { Item, InventoryTransaction, ItemCategory, ItemLocation, Vendor, InventorySummary } from '../api/inventory';
+import type { Item, InventoryTransaction, ItemCategory, ItemLocation, Vendor, InventorySummary, TransactionsSummary } from '../api/inventory';
+import { formatCurrency } from '../utils/currency';
 import { createDraftsFromLowStock } from '../api/purchaseOrders';
 import { useAuth } from '../context/AuthContext';
 import { ItemModal } from '../components/inventory/ItemModal';
@@ -52,6 +53,9 @@ export const InventoryPage = () => {
   const [itemsSearchQ, setItemsSearchQ] = useState('');
   const [txSearchQ, setTxSearchQ] = useState('');
   const [movementTypeFilter, setMovementTypeFilter] = useState<'ALL' | 'IN' | 'OUT'>('ALL');
+  const [txStartDate, setTxStartDate] = useState('');
+  const [txEndDate, setTxEndDate] = useState('');
+  const [txSummary, setTxSummary] = useState<TransactionsSummary | null>(null);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [showNoVendorOnly, setShowNoVendorOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'code' | 'category' | 'stock'>('name');
@@ -185,6 +189,8 @@ export const InventoryPage = () => {
         limit: ITEMS_PER_PAGE,
         movement: movementTypeFilter,
         q: txSearchQ || undefined,
+        startDate: txStartDate || undefined,
+        endDate: txEndDate || undefined,
       });
       setServerTransactions(res.data);
       setTxTotal(res.total);
@@ -239,7 +245,20 @@ export const InventoryPage = () => {
     if (activeTab !== 'transactions') return;
     void fetchTransactionsPage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, txCurrentPage, movementTypeFilter, txSearchQ]);
+  }, [activeTab, txCurrentPage, movementTypeFilter, txSearchQ, txStartDate, txEndDate]);
+
+  // Flujo de costos (entradas vs salidas) según los filtros de movimientos.
+  useEffect(() => {
+    if (activeTab !== 'transactions') return;
+    void getTransactionsSummary({
+      movement: movementTypeFilter,
+      q: txSearchQ || undefined,
+      startDate: txStartDate || undefined,
+      endDate: txEndDate || undefined,
+    })
+      .then((res) => setTxSummary(res))
+      .catch(() => setTxSummary(null));
+  }, [activeTab, movementTypeFilter, txSearchQ, txStartDate, txEndDate]);
 
   useSocketRefresh('refresh_inventory', () => {
     refreshInventory(true);
@@ -1129,9 +1148,39 @@ export const InventoryPage = () => {
                   title="Tipo de movimiento"
                   inputClassName="px-3 py-2 pr-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
+                <input
+                  type="date"
+                  value={txStartDate}
+                  onChange={(e) => setTxStartDate(e.target.value)}
+                  title="Desde"
+                  className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <input
+                  type="date"
+                  value={txEndDate}
+                  onChange={(e) => setTxEndDate(e.target.value)}
+                  title="Hasta"
+                  className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
               </>
             }
           >
+          {txSummary && (
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-4 sm:px-6 py-3 bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-700 text-sm">
+              <span className="flex items-center gap-1.5">
+                <ArrowRightLeft size={15} className="text-slate-400" />
+                <span className="text-slate-500 dark:text-slate-400">Entradas:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(txSummary.totalIn)}</span>
+                <span className="text-xs text-slate-400">({txSummary.countIn})</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <ArrowRightLeft size={15} className="text-slate-400" />
+                <span className="text-slate-500 dark:text-slate-400">Salidas:</span>
+                <span className="font-bold text-rose-600 dark:text-rose-400">{formatCurrency(txSummary.totalOut)}</span>
+                <span className="text-xs text-slate-400">({txSummary.countOut})</span>
+              </span>
+            </div>
+          )}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm text-slate-600">
@@ -1531,6 +1580,11 @@ export const InventoryPage = () => {
                 <span className="bg-blue-50 text-blue-700 text-xs sm:text-sm font-semibold px-2.5 py-1 rounded-full border border-blue-100 flex items-center gap-1.5 shadow-sm dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900">
                   <Package size={14} /> {inventorySummary?.total_items} Únicos
                 </span>
+                {inventorySummary?.total_value != null && (
+                  <span className="bg-emerald-50 text-emerald-700 text-xs sm:text-sm font-semibold px-2.5 py-1 rounded-full border border-emerald-100 flex items-center gap-1.5 shadow-sm dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900">
+                    <DollarSign size={14} /> {formatCurrency(inventorySummary.total_value)} en inventario
+                  </span>
+                )}
               </div>
             )}
           </div>

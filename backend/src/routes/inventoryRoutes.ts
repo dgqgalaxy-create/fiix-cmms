@@ -4,7 +4,7 @@ import {
   getLocations, createLocation, updateLocation, deleteLocation,
   getVendors, createVendor, updateVendor, deleteVendor,
   getItems, getItemById, createItem, updateItem,
-  getTransactions, createTransaction,
+  getTransactions, createTransaction, getTransactionsSummary,
   getInventorySummary,
   searchImages, proxyImage
 } from '../controllers/inventoryController';
@@ -58,6 +58,7 @@ router.patch('/items/:id', requireWritable, requirePermission('MANAGE_INVENTORY'
 // RUTAS DE TRANSACCIONES E HISTORIAL
 // ==========================================
 router.get('/transactions', getTransactions);
+router.get('/transactions/summary', getTransactionsSummary);
 // Los técnicos también pueden registrar salidas al usar repuestos
 router.post('/transactions', requireWritable, createTransaction);
 
