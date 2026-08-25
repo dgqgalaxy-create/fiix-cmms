@@ -116,6 +116,7 @@ export const DeveloperOptions = () => {
   const [vendorImagesZip, setVendorImagesZip] = useState<File | null>(null);
   const [workOrderImagesZip, setWorkOrderImagesZip] = useState<File | null>(null);
   const [useGoogleDrive, setUseGoogleDrive] = useState(true);
+  const [skipAssets, setSkipAssets] = useState(true);
   const [driveStatus, setDriveStatus] = useState<{
     configured: boolean;
     itemsFolderConfigured: boolean;
@@ -745,6 +746,9 @@ export const DeveloperOptions = () => {
     if (useGoogleDrive) {
       formData.append('useGoogleDrive', 'true');
     }
+    if (skipAssets) {
+      formData.append('skipAssets', 'true');
+    }
 
     try {
       const res = await axios.post(`/dev/import-csv`, formData, {
@@ -931,7 +935,7 @@ export const DeveloperOptions = () => {
     try {
       const res = await axios.post(
         '/dev/import-sheets',
-        { useGoogleDrive },
+        { useGoogleDrive, skipAssets },
         {
           headers: { 'x-dev-password': password },
           timeout: 120 * 60 * 1000,
@@ -1408,6 +1412,21 @@ export const DeveloperOptions = () => {
                         : driveStatus.configured
                           ? ` Key OK${driveStatus.itemsFolderConfigured ? ' · inventario' : ''}${driveStatus.vendorsFolderConfigured ? ' · proveedores' : ''}${driveStatus.woFolderConfigured ? ' · órdenes' : ''}.`
                           : ' Key no configurada en el servidor.'}
+                    </span>
+                  </span>
+                </label>
+                <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-sky-50">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 rounded border-white/30"
+                    checked={skipAssets}
+                    onChange={(e) => setSkipAssets(e.target.checked)}
+                    disabled={isLoading}
+                  />
+                  <span>
+                    <span className="font-bold text-white">Dejar activos intactos</span>
+                    <span className="mt-0.5 block text-xs text-sky-100">
+                      No crea ni actualiza activos desde los ítems de inventario (categoría Activo/Activos).
                     </span>
                   </span>
                 </label>

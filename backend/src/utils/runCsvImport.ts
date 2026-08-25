@@ -178,6 +178,8 @@ export type ProcessCsvImportOptions = {
   driveItemsFolder?: string | null;
   driveWoFolder?: string | null;
   driveVendorsFolder?: string | null;
+  /** Si true, NO crea ni actualiza activos desde los ítems de categoría Activo/Activos. */
+  skipAssets?: boolean;
 };
 
 function readImportFileUtf8(file: ImportFileLike): string {
@@ -234,6 +236,7 @@ export async function processCsvImportFiles(
 ): Promise<CsvImportResults> {
   const includeLocalPhotoFolders = options.includeLocalPhotoFolders !== false;
   const useGoogleDrive = Boolean(options.useGoogleDrive);
+  const skipAssets = Boolean(options.skipAssets);
   const zipFile = options.zipFile ?? null;
   const vendorZipFile = options.vendorZipFile ?? null;
   const woZipFile = options.woZipFile ?? null;
@@ -456,17 +459,21 @@ if (itemFile) {
 
   // Ítems categoría ACTIVOS → módulo Activos (upsert por nombre / código).
   // No borra filas de inventario; sección queda null (CSV sin columna de sección).
-  try {
-    const assetSync = await syncAssetsFromActivosInventory();
-    results.assets = {
-      created: assetSync.created,
-      updated: assetSync.updated,
-      skipped: assetSync.skipped,
-      zonesEnsured: assetSync.zonesEnsured,
-    };
-  } catch (assetErr) {
-    console.error('Asset inventory sync error:', assetErr);
+  if (skipAssets) {
     results.assets = { created: 0, updated: 0, skipped: 0, zonesEnsured: [] };
+  } else {
+    try {
+      const assetSync = await syncAssetsFromActivosInventory();
+      results.assets = {
+        created: assetSync.created,
+        updated: assetSync.updated,
+        skipped: assetSync.skipped,
+        zonesEnsured: assetSync.zonesEnsured,
+      };
+    } catch (assetErr) {
+      console.error('Asset inventory sync error:', assetErr);
+      results.assets = { created: 0, updated: 0, skipped: 0, zonesEnsured: [] };
+    }
   }
 }
 

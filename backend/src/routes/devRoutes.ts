@@ -507,12 +507,16 @@ router.post(
     const useGoogleDrive =
       String((req.body as any)?.useGoogleDrive || '').toLowerCase() === 'true' ||
       String((req.body as any)?.useGoogleDrive || '') === '1';
+    const skipAssets =
+      String((req.body as any)?.skipAssets || '').toLowerCase() === 'true' ||
+      String((req.body as any)?.skipAssets || '') === '1';
     const authReq = req as AuthRequest;
     const results = await processCsvImportFiles(files, {
       zipFile,
       vendorZipFile,
       woZipFile,
       useGoogleDrive,
+      skipAssets,
     });
     await logImportAudit({
       source: 'csv',
@@ -583,10 +587,15 @@ router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Respo
       // Por defecto: sí usar Drive en sync Sheets si hay key/carpetas (sin zip).
       ((req.body as any)?.useGoogleDrive === undefined && Boolean(getDriveApiKey()));
 
+    const skipAssets =
+      String((req.body as any)?.skipAssets || '').toLowerCase() === 'true' ||
+      String((req.body as any)?.skipAssets || '') === '1';
+
     const authReq = req as AuthRequest;
     const results = await processCsvImportFiles(files, {
       includeLocalPhotoFolders: true,
       useGoogleDrive,
+      skipAssets,
     });
 
     const sheetsMeta = tabs.map((t) => ({
