@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.64";
+export const APP_VERSION = "1.56.65";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "24 de Agosto, 2026";
+  const updateDate = "25 de Agosto, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,9 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: importación CSV/Sheets — evita duplicar usuarios (empareja por nombre además de por email).",
+    "Mejora: respaldo automático — ahora también respalda la carpeta data/ y backend/.env (todo el sitio).",
+    "Nuevo: script de borrado de base de datos (backend/scripts/wipe_database.js).",
     "Nuevo: Líneas y Costos — imagen con la distribución de secciones por línea, arriba de las tarjetas de líneas.",
     "Nuevo: Líneas y Costos — gráfica de barras de gasto por línea (según las líneas visibles y el periodo seleccionado).",
     "Mejora: Líneas y Costos — la configuración de líneas visibles ahora es global (aplica a todos) y solo el Administrador puede cambiarla.",

@@ -473,34 +473,81 @@ if (itemFile) {
 if (userFile) {
   const data = parse(readImportFileUtf8(userFile), { columns: true, skip_empty_lines: true });
   const defaultHash = await bcrypt.hash('CMMS2026*', 10);
+
+  // Normaliza nombres para emparejar (evita duplicados por mayúsculas/acentos).
+  const normalizeUserName = (name: unknown): string =>
+    String(name || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  // Mapas de usuarios existentes por email y por nombre normalizado.
+  const allUsers = await prisma.user.findMany({ select: { id: true, name: true, email: true } });
+  const userByEmail = new Map<string, { id: string; name: string; email: string }>();
+  const userByNormName = new Map<string, { id: string; name: string; email: string }>();
+  for (const u of allUsers) {
+    userByEmail.set((u.email || '').toLowerCase(), u);
+    const key = normalizeUserName(u.name);
+    if (key && !userByNormName.has(key)) userByNormName.set(key, u);
+  }
+
   for (const row of data as any[]) {
     try {
-      const email = row['Email'] ? row['Email'].trim() : null;
+      const email = row['Email'] ? String(row['Email']).trim() : '';
       if (!email) continue;
-      
+
+      const name = row['Name'] ? String(row['Name']).trim() : '';
+
       let role: Role = Role.TECNICO;
-      const csvRol = row['Rol'] ? row['Rol'].toUpperCase() : '';
+      const csvRol = row['Rol'] ? String(row['Rol']).toUpperCase() : '';
       if (csvRol.includes('ADMINISTRADOR')) role = Role.ADMINISTRADOR;
       else if (csvRol.includes('GESTIONADOR')) role = Role.GESTIONADOR;
 
       const isActive = row['¿Active?'] === 'TRUE';
+      const emailKey = email.toLowerCase();
+      const nameKey = normalizeUserName(name);
 
-      await prisma.user.upsert({
-        where: { email: email },
-        update: {
-          name: row['Name'],
-          role: role,
-          is_active: isActive
-        },
-        create: {
-          name: row['Name'],
-          email: email,
+      // 1) Si ya existe por email, actualízalo.
+      const byEmail = userByEmail.get(emailKey);
+      if (byEmail) {
+        await prisma.user.update({
+          where: { id: byEmail.id },
+          data: { name: name || byEmail.name, role, is_active: isActive },
+        });
+        userByEmail.set(emailKey, { ...byEmail, name: name || byEmail.name });
+        results.users++;
+        continue;
+      }
+
+      // 2) Si ya existe por nombre (p. ej. creado por el calendario con @fiix.com),
+      //    reutilízalo y actualiza su email en vez de duplicar.
+      const byName = nameKey ? userByNormName.get(nameKey) : undefined;
+      if (byName) {
+        await prisma.user.update({
+          where: { id: byName.id },
+          data: { name: name || byName.name, email, role, is_active: isActive },
+        });
+        userByEmail.set(emailKey, { ...byName, email, name: name || byName.name });
+        userByNormName.set(nameKey, { ...byName, email, name: name || byName.name });
+        results.users++;
+        continue;
+      }
+
+      // 3) No existe: créalo.
+      const created = await prisma.user.create({
+        data: {
+          name,
+          email,
           password_hash: defaultHash,
-          role: role,
+          role,
           is_active: isActive,
           must_change_password: true,
-        }
+        },
       });
+      userByEmail.set(emailKey, { id: created.id, name: created.name, email: created.email });
+      if (nameKey) userByNormName.set(nameKey, { id: created.id, name: created.name, email: created.email });
       results.users++;
     } catch (e) {
       console.error('User import error', e);

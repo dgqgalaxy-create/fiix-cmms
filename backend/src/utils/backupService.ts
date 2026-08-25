@@ -13,6 +13,10 @@ export const BACKUP_DIR = path.resolve(
 );
 const RETENTION_DAYS = 14;
 const UPLOADS_DIR = path.join(__dirname, '../../uploads');
+/** Carpeta data/ del proyecto (CSVs, Excel, imágenes de referencia). */
+const DATA_DIR = path.join(__dirname, '../../../data');
+/** backend/.env (configuración y secretos). */
+const ENV_FILE = path.join(__dirname, '../../.env');
 const IS_WIN = process.platform === 'win32';
 
 const PG_CLIENT_HINT = IS_WIN
@@ -20,7 +24,7 @@ const PG_CLIENT_HINT = IS_WIN
   : 'Instala el cliente de PostgreSQL (paquete postgresql-client) para disponer de pg_dump y psql.';
 
 const PG_DUMP_HINT = PG_CLIENT_HINT;
-const SAFE_BACKUP_FILE = /^(fiix|uploads)_\d{8}_\d{4}\.(sql\.gz|tar\.gz)$/;
+const SAFE_BACKUP_FILE = /^(fiix|uploads|data|env)_\d{8}_\d{4}\.(sql\.gz|tar\.gz|env)$/;
 /** Gzip vacío ~20 bytes; un dump real de esquema+datos supera holgadamente este mínimo. */
 const MIN_SQL_GZ_BYTES = 64;
 const MIN_SQL_RAW_BYTES = 200;
@@ -261,11 +265,11 @@ async function dumpDatabase(pgDumpPath: string, databaseUrl: string, outFile: st
   }
 }
 
-/** Empaqueta uploads/ con tar (nativo en Linux/macOS y en Windows 10+). */
-function archiveUploads(outFile: string): Promise<void> {
+/** Empaqueta un directorio con tar (nativo en Linux/macOS y en Windows 10+). */
+function archivePath(dir: string, outFile: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const parent = path.dirname(UPLOADS_DIR);
-    const base = path.basename(UPLOADS_DIR);
+    const parent = path.dirname(dir);
+    const base = path.basename(dir);
     const child = spawn('tar', ['-czf', outFile, '-C', parent, base], {
       shell: false,
       stdio: ['ignore', 'ignore', 'pipe'],
@@ -298,6 +302,10 @@ function archiveUploads(outFile: string): Promise<void> {
       }
     });
   });
+}
+
+function archiveUploads(outFile: string): Promise<void> {
+  return archivePath(UPLOADS_DIR, outFile);
 }
 
 export interface BackupResult {
@@ -654,6 +662,31 @@ export const runBackup = async (): Promise<BackupResult> => {
     }
   } else {
     setBackupProgress('uploads', 3, 85, 'Sin carpeta uploads; se omite empaquetado de fotos…');
+  }
+
+  // --- data/ (CSVs, Excel, imágenes de referencia) ---
+  if (fs.existsSync(DATA_DIR)) {
+    const dataFile = path.join(BACKUP_DIR, `data_${stamp}.tar.gz`);
+    try {
+      console.log(`[Backup] tar data/ → ${path.basename(dataFile)}`);
+      await archivePath(DATA_DIR, dataFile);
+      files.push(dataFile);
+      console.log(`[Backup] data/ OK (${fs.statSync(dataFile).size} bytes)`);
+    } catch (error: any) {
+      errors.push(`data/: ${error.message || error}`);
+    }
+  }
+
+  // --- .env (configuración y secretos) ---
+  if (fs.existsSync(ENV_FILE)) {
+    const envBackup = path.join(BACKUP_DIR, `env_${stamp}.env`);
+    try {
+      fs.copyFileSync(ENV_FILE, envBackup);
+      files.push(envBackup);
+      console.log(`[Backup] .env OK → ${path.basename(envBackup)}`);
+    } catch (error: any) {
+      errors.push(`.env: ${error.message || error}`);
+    }
   }
 
   setBackupProgress('cleanup', 4, 92, 'Limpiando respaldos antiguos…');
