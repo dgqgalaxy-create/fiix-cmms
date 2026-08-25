@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowLeft,
   Building2,
   Layers,
   Settings,
@@ -328,27 +327,56 @@ export const LineCostsExplorer = () => {
 
       {/* Encabezado resumen + migas de pan */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-          {selectedZone && (
+        <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 flex-wrap">
+          {selectedZone ? (
             <button
-              onClick={() => {
-                if (selectedAsset) setSelectedAssetId(null);
-                else if (selectedSection) setSectionId(null);
-                else setZoneId(null);
-              }}
-              className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline font-medium"
+              onClick={() => { setZoneId(null); setSectionId(null); setSelectedAssetId(null); }}
+              className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
             >
-              <ArrowLeft size={16} />
-              {selectedAsset ? `Sección ${selectedSection?.name}` : selectedSection ? `Línea ${selectedZone.name}` : 'Líneas'}
+              Líneas
             </button>
+          ) : (
+            <span className="font-semibold text-slate-700 dark:text-slate-200">Líneas</span>
           )}
-          {!selectedZone && <span className="font-semibold text-slate-700 dark:text-slate-200">Líneas</span>}
-          {selectedZone && <ChevronRight size={14} className="text-slate-300" />}
-          {selectedZone && <span className="font-semibold text-slate-700 dark:text-slate-200">Línea {selectedZone.name}</span>}
-          {selectedSection && <ChevronRight size={14} className="text-slate-300" />}
-          {selectedSection && <span className="font-semibold text-slate-700 dark:text-slate-200">Sección {selectedSection.name}</span>}
-          {selectedAsset && <ChevronRight size={14} className="text-slate-300" />}
-          {selectedAsset && <span className="font-semibold text-slate-700 dark:text-slate-200">{selectedAsset.name}</span>}
+
+          {selectedZone && (
+            <>
+              <ChevronRight size={14} className="text-slate-300" />
+              {selectedSection ? (
+                <button
+                  onClick={() => { setSectionId(null); setSelectedAssetId(null); }}
+                  className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Línea {selectedZone.name}
+                </button>
+              ) : (
+                <span className="font-semibold text-slate-700 dark:text-slate-200">Línea {selectedZone.name}</span>
+              )}
+            </>
+          )}
+
+          {selectedSection && (
+            <>
+              <ChevronRight size={14} className="text-slate-300" />
+              {selectedAsset ? (
+                <button
+                  onClick={() => setSelectedAssetId(null)}
+                  className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Sección {selectedSection.name}
+                </button>
+              ) : (
+                <span className="font-semibold text-slate-700 dark:text-slate-200">Sección {selectedSection.name}</span>
+              )}
+            </>
+          )}
+
+          {selectedAsset && (
+            <>
+              <ChevronRight size={14} className="text-slate-300" />
+              <span className="font-semibold text-slate-700 dark:text-slate-200">{selectedAsset.name}</span>
+            </>
+          )}
         </div>
 
         <div className="text-sm flex items-center gap-4 flex-wrap">
