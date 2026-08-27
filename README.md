@@ -1,5 +1,5 @@
 # GTZ CMMS
-*(Última actualización: 22 de Julio de 2026 — v1.35.0)*
+*(Última actualización: 26 de Agosto de 2026 — v1.56.69)*
 
 Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, activos, inventario, preventivos, checklist, KPIs, compras, RCA, roster y notificaciones (Telegram + Web Push PWA).
 
@@ -416,7 +416,10 @@ Las evidencias y fotos viven en **`backend/uploads/`** (disco del servidor), no 
 | Aviso vs GitHub | Opcional: `GITHUB_REPO` / `GITHUB_BRANCH` (default `dgqgalaxy-create/fiix-cmms` / `main`) |
 | GitHub | Cuenta/token de Git — **no** es la contraseña de Postgres |
 
-### Respaldos y restauración (verificar una vez)
+### Respaldos y restauración
+
+**⭐ Ver documentación completa: [`docs/backup-strategy.md`](docs/backup-strategy.md)**
+
 Los respaldos diarios (y el botón **Crear respaldo**) guardan `fiix_*.sql.gz` (BD) y `uploads_*.tar.gz` (fotos) en `~/fiix-backups` (o `BACKUP_DIR`). Requieren **`pg_dump`/`psql`** con versión **≥** la del servidor (p. ej. Postgres 17 → `postgresql-client-17`). `install.sh` / `update.sh` (v1.38.5+) ayudan a instalar el cliente; la UI muestra progreso por fases.
 
 Para comprobar que un respaldo sirve:
@@ -429,8 +432,18 @@ Para comprobar que un respaldo sirve:
    ```
 3. Recarga la app. Requiere `psql` (cliente PostgreSQL) y `tar`.
 
+**Recomendaciones (ver guía completa para detalles):**
+- ✅ Backups automáticos diarios (script cron + PM2)
+- ✅ Retención mínima de 30 días
+- ✅ Test de restauración mensual
+- ✅ Alertas Telegram en caso de fallo
+
 ### Manual de usuario
 Detalle de pantallas y módulos: [`docs/manual_usuario.md`](docs/manual_usuario.md). Roadmap/versiones: [`docs/roadmap.md`](docs/roadmap.md).
+
+### Scripts históricos (legacy)
+
+En la raíz del proyecto encontrarás scripts deprecated como `fix_calendar.py`, `fix_encoding.py`, etc. **No son necesarios para funcionamiento normal.** Para entender su propósito histórico y cuándo fueron usados, ver: **[`docs/legacy-scripts.md`](docs/legacy-scripts.md)**
 
 ### Importación CSV + fotos de repuestos y órdenes
 Los CSV de ejemplo viven en `data/`. Zips opcionales en Opciones de Desarrollador:
