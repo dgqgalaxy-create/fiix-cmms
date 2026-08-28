@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "1.56.70",
+  "version": "1.56.71",
   "type": "module",
   "engines": {
     "node": ">=22"

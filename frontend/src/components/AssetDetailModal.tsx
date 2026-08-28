@@ -29,13 +29,13 @@ const WO_STATUS_LABELS: Record<string, string> = {
 };
 
 export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Props) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'info' | 'metrics' | 'history'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'info' | 'metrics' | 'history'>('info');
   const [metrics, setMetrics] = useState<any>(null);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
 
   useEffect(() => {
     if (isOpen && asset) {
-      setActiveTab('overview');
+      setActiveTab('info');
       fetchMetrics();
     }
   }, [isOpen, asset]);
