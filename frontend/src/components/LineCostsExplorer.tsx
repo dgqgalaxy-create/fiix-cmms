@@ -9,7 +9,7 @@ import {
   ChevronRight,
   X,
 } from 'lucide-react';
-import { getLineCosts, getAssetById, updateLineCostsVisibleZones } from '../api/assets';
+import { getLineCosts, getAssetById, updateLineCostsVisibleZones, updateAsset } from '../api/assets';
 import type {
   LineCostsResponse,
   LineCostZone,
@@ -21,6 +21,7 @@ import { formatCurrency, formatCurrencyAxis } from '../utils/currency';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
 import { AssetDetailModal } from './AssetDetailModal';
+import { CreateAssetModal } from './CreateAssetModal';
 import { useAuth } from '../context/AuthContext';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 
@@ -66,8 +67,9 @@ function CostBar({ value, max }: { value: number; max: number }) {
 }
 
 export const LineCostsExplorer = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const isAdmin = user?.role === 'ADMINISTRADOR';
+  const canManageAssets = hasPermission('MANAGE_ASSETS');
   const [period, setPeriod] = useState<PeriodKey>('THIS_YEAR');
   const [customStart, setCustomStart] = useState(toYmd(new Date(new Date().getFullYear(), 0, 1)));
   const [customEnd, setCustomEnd] = useState(toYmd(new Date()));
@@ -79,6 +81,8 @@ export const LineCostsExplorer = () => {
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [detailAsset, setDetailAsset] = useState<Asset | null>(null);
   const [openingAsset, setOpeningAsset] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [configSel, setConfigSel] = useState<string[]>([]);
   const [showObsolete, setShowObsolete] = useState(false);
@@ -189,6 +193,16 @@ export const LineCostsExplorer = () => {
     } finally {
       setOpeningAsset(false);
     }
+  };
+
+  const handleSubmitAsset = async (data: Partial<Asset>) => {
+    if (editingAsset) {
+      await updateAsset(editingAsset.id, data as any);
+    }
+    setEditOpen(false);
+    setEditingAsset(null);
+    setDetailAsset(null);
+    void loadLineCosts(true);
   };
 
   const exportCurrentLevel = () => {
@@ -610,6 +624,19 @@ export const LineCostsExplorer = () => {
         asset={detailAsset}
         isOpen={!!detailAsset}
         onClose={() => setDetailAsset(null)}
+        canEdit={canManageAssets}
+        onEdit={(asset) => {
+          setDetailAsset(null);
+          setEditingAsset(asset);
+          setEditOpen(true);
+        }}
+      />
+
+      <CreateAssetModal
+        isOpen={editOpen}
+        onClose={() => { setEditOpen(false); setEditingAsset(null); }}
+        onSubmit={handleSubmitAsset}
+        initialData={editingAsset}
       />
 
       {openingAsset && (

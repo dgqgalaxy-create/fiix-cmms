@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.69";
+export const APP_VERSION = "1.56.70";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "25 de Agosto, 2026";
+  const updateDate = "28 de Agosto, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Líneas y Costos — ahora puedes editar el activo desde el detalle (botón Editar, mismo formulario).",
     "Nuevo: Importación CSV/Sheets/Drive — opción «Dejar activos intactos» para no crear ni actualizar activos (marcada por defecto).",
     "Corrección: Líneas y Costos — migas de pan sin duplicar el nivel (Líneas > Línea > Sección > Activo).",
     "Nuevo: Inventario — valor total del inventario (stock × costo) y filtro de periodo en movimientos.",
