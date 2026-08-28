@@ -22,6 +22,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { downloadWorkbook, excelDateStamp } from '../utils/excelExport';
 import { AssetDetailModal } from './AssetDetailModal';
 import { CreateAssetModal } from './CreateAssetModal';
+import { ItemModal } from './inventory/ItemModal';
+import { getItemById, getCategories, getLocations, getVendors } from '../api/inventory';
+import type { Item, ItemCategory, ItemLocation, Vendor } from '../api/inventory';
 import { useAuth } from '../context/AuthContext';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 
@@ -86,6 +89,11 @@ export const LineCostsExplorer = () => {
   const [configOpen, setConfigOpen] = useState(false);
   const [configSel, setConfigSel] = useState<string[]>([]);
   const [showObsolete, setShowObsolete] = useState(false);
+  const [itemDetail, setItemDetail] = useState<Item | null>(null);
+  const [itemDetailCats, setItemDetailCats] = useState<ItemCategory[]>([]);
+  const [itemDetailLocs, setItemDetailLocs] = useState<ItemLocation[]>([]);
+  const [itemDetailVendors, setItemDetailVendors] = useState<Vendor[]>([]);
+  const [openingItem, setOpeningItem] = useState(false);
 
   // Líneas visibles (configuración global, editada solo por Admin).
   const visibleZoneIds = useMemo(() => {
@@ -192,6 +200,27 @@ export const LineCostsExplorer = () => {
       // si no carga el detalle completo, no abrimos
     } finally {
       setOpeningAsset(false);
+    }
+  };
+
+  const openItemDetail = async (itemId: string) => {
+    setOpeningItem(true);
+    try {
+      const [item, cats, locs, vendors] = await Promise.all([
+        getItemById(itemId),
+        getCategories(),
+        getLocations(),
+        getVendors(),
+      ]);
+      if (!item) return;
+      setItemDetailCats(cats);
+      setItemDetailLocs(locs);
+      setItemDetailVendors(vendors);
+      setItemDetail(item);
+    } catch {
+      // si no carga el detalle, no abrimos
+    } finally {
+      setOpeningItem(false);
     }
   };
 
@@ -442,7 +471,11 @@ export const LineCostsExplorer = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
                   {(selectedAsset.parts || []).map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/40">
+                    <tr
+                      key={p.id}
+                      onClick={() => p.item?.id && void openItemDetail(p.item.id)}
+                      className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors"
+                    >
                       <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{p.item?.name || '—'}</td>
                       <td className="px-4 py-3 text-slate-500 dark:text-slate-400 font-mono text-xs">{p.item?.internal_code || '—'}</td>
                       <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-200">{p.quantity} {p.item?.uom || ''}</td>
@@ -639,7 +672,24 @@ export const LineCostsExplorer = () => {
         initialData={editingAsset}
       />
 
+      <ItemModal
+        isOpen={!!itemDetail}
+        onClose={() => setItemDetail(null)}
+        onSaved={() => { setItemDetail(null); void loadLineCosts(true); }}
+        item={itemDetail || undefined}
+        categories={itemDetailCats}
+        locations={itemDetailLocs}
+        vendors={itemDetailVendors}
+        readOnly
+      />
+
       {openingAsset && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/20 pointer-events-none">
+          <Loader2 size={28} className="animate-spin text-blue-600" />
+        </div>
+      )}
+
+      {openingItem && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/20 pointer-events-none">
           <Loader2 size={28} className="animate-spin text-blue-600" />
         </div>

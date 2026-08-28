@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.71";
+export const APP_VERSION = "1.56.72";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Líneas y Costos — clic en una refacción abre el detalle del repuesto (solo lectura).",
     "Mejora: Detalle del activo — se abre por defecto en la pestaña «Información» (antes «De un vistazo»).",
     "Mejora: Líneas y Costos — ahora puedes editar el activo desde el detalle (botón Editar, mismo formulario).",
     "Nuevo: Importación CSV/Sheets/Drive — opción «Dejar activos intactos» para no crear ni actualizar activos (marcada por defecto).",
