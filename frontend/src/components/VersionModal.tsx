@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.76";
+export const APP_VERSION = "1.56.77";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Inventario — la franja «Stock crítico» ahora se llama «Stock bajo» y cambia a color naranja.",
     "Mejora: Inventario — el buscador de repuestos ahora también busca por categoría y ubicación (no solo código o nombre).",
     "Nuevo: Líneas y Costos — botón «Refacciones críticas» que exporta la lista de refacciones (con stock) de los equipos críticos.",
     "Nuevo: Inventario — filtro «Refacciones de equipos críticos» para ver solo repuestos asignados a equipos críticos.",

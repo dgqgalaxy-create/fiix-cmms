@@ -599,14 +599,14 @@ export const InventoryPage = () => {
   const handleCreateDraftPurchaseOrders = async (event?: MouseEvent) => {
     event?.stopPropagation();
     if (lowStockCount === 0) {
-      alert('No hay repuestos con stock crítico.');
+      alert('No hay repuestos con stock bajo.');
       return;
     }
 
     const withVendor = Math.max(0, lowStockCount - criticalNoVendorTotal);
     if (withVendor === 0) {
       alert(
-        `Hay ${lowStockCount} ítem(s) en stock crítico, pero ninguno tiene proveedor asignado.\n\n` +
+        `Hay ${lowStockCount} ítem(s) en stock bajo, pero ninguno tiene proveedor asignado.\n\n` +
         `Ábrelos y asígnales un proveedor antes de generar el borrador:\n` +
         criticalNoVendorItems.map((i) => `- ${i.internal_code} ${i.name}`).join('\n')
       );
@@ -1663,38 +1663,38 @@ export const InventoryPage = () => {
         </div>
       </div>
 
-      {/* Stock crítico: franja propia debajo del encabezado (no pelea con los botones) */}
+      {/* Stock bajo: franja propia debajo del encabezado (no pelea con los botones) */}
       {!isLoading && activeTab === 'items' && lowStockCount > 0 && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50/80 dark:border-rose-900/60 dark:bg-rose-950/30">
+        <div className="rounded-2xl border border-orange-200 bg-orange-50/80 dark:border-orange-900/60 dark:bg-orange-950/30">
           <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:gap-3 sm:px-4 sm:py-3">
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <button
                 type="button"
                 onClick={filterCriticalStock}
-                className="flex min-w-0 flex-1 items-center gap-3 text-left rounded-xl px-1 py-0.5 -mx-1 hover:bg-rose-100/70 dark:hover:bg-rose-900/30 transition-colors"
+                className="flex min-w-0 flex-1 items-center gap-3 text-left rounded-xl px-1 py-0.5 -mx-1 hover:bg-orange-100/70 dark:hover:bg-orange-900/30 transition-colors"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800 shadow-sm">
-                  <AlertCircle className="h-5 w-5 text-rose-500" />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-orange-800 shadow-sm">
+                  <AlertCircle className="h-5 w-5 text-orange-500" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="text-sm font-bold text-rose-700 dark:text-rose-300">Stock crítico</span>
-                    <span className="inline-flex items-center rounded-full bg-rose-600 px-2 py-0.5 text-xs font-black text-white tabular-nums">
+                    <span className="text-sm font-bold text-orange-700 dark:text-orange-300">Stock bajo</span>
+                    <span className="inline-flex items-center rounded-full bg-orange-500 px-2 py-0.5 text-xs font-black text-white tabular-nums">
                       {lowStockCount}
                     </span>
                     <span className="relative flex h-2 w-2 shrink-0" aria-hidden>
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
                     </span>
                   </div>
-                  <p className="mt-0.5 text-xs text-rose-600/80 dark:text-rose-300/80 leading-snug">
+                  <p className="mt-0.5 text-xs text-orange-600/80 dark:text-orange-300/80 leading-snug">
                     Toca para filtrar · Artículos al mínimo o inferior
                   </p>
                 </div>
               </button>
               <InfoTip
                 text="Artículos con stock al mínimo o inferior. Toca la franja para filtrar la lista."
-                label="Ayuda: Stock crítico"
+                label="Ayuda: Stock bajo"
               />
             </div>
 
@@ -1708,7 +1708,7 @@ export const InventoryPage = () => {
                   >
                     {criticalNoVendorTotal} sin proveedor
                   </button>
-                  <InfoTip text="Muestra solo ítems en stock crítico que aún no tienen proveedor asignado." label="Ayuda: sin proveedor" />
+                  <InfoTip text="Muestra solo ítems en stock bajo que aún no tienen proveedor asignado." label="Ayuda: sin proveedor" />
                 </div>
               )}
               {canManagePurchases && (
@@ -1717,11 +1717,11 @@ export const InventoryPage = () => {
                     type="button"
                     disabled={isCreatingDrafts}
                     onClick={handleCreateDraftPurchaseOrders}
-                    className="inline-flex h-10 w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-rose-700 disabled:opacity-60"
+                    className="inline-flex h-10 w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white shadow-sm hover:bg-orange-600 disabled:opacity-60"
                   >
                     {isCreatingDrafts ? <Loader2 size={16} className="animate-spin" /> : <ShoppingCart size={16} />}
                     <span className="sm:hidden">Borrador OC</span>
-                    <span className="hidden sm:inline">Crear borrador OC desde críticos</span>
+                    <span className="hidden sm:inline">Crear borrador OC desde stock bajo</span>
                   </button>
                   <InfoTip text="Crea borradores de Orden de Compra (uno por proveedor) con la cantidad faltante para llegar al mínimo. Omite ítems sin proveedor o que ya estén en una OC abierta." label="Ayuda: borrador OC" />
                 </div>
@@ -1799,13 +1799,13 @@ export const InventoryPage = () => {
               {(showLowStockOnly || showNoVendorOnly) && (
                 <div className="flex flex-wrap items-center gap-2">
                   {showLowStockOnly && !showNoVendorOnly && (
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-50 border border-orange-200 text-orange-700 text-sm font-medium">
                       <AlertCircle size={14} />
-                      Mostrando solo stock crítico ({itemsTotal})
+                      Mostrando solo stock bajo ({itemsTotal})
                       <button
                         type="button"
                         onClick={clearStockFilters}
-                        className="p-0.5 rounded-full hover:bg-rose-100"
+                        className="p-0.5 rounded-full hover:bg-orange-100"
                         title="Quitar filtro"
                       >
                         <X size={14} />
