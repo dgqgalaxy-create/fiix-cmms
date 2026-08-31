@@ -22,6 +22,7 @@ const AVAILABLE_PERMISSIONS = [
   { key: 'MANAGE_CHECKLIST_CATALOG', label: 'Administrar Catálogo de Checklists', description: 'Permite editar, agregar y eliminar las actividades del Checklist Diario.' },
   { key: 'MANAGE_PURCHASES', label: 'Administrar Compras', description: 'Permite acceder al módulo de compras y generar pedidos desde el inventario.' },
   { key: 'MANAGE_INVENTORY', label: 'Administrar Inventario', description: 'Crear, editar y eliminar repuestos, categorías y ubicaciones.' },
+  { key: 'DELETE_ITEMS', label: 'Eliminar Repuestos', description: 'Permite eliminar permanentemente repuestos. Solo aplica si no tienen movimientos de inventario, planes de mantenimiento u órdenes de compra asociados.' },
   { key: 'REGISTER_INVENTORY_ENTRIES', label: 'Registrar Entradas de Inventario', description: 'Permite registrar entradas de stock. Sin este permiso, solo se pueden registrar salidas.' },
   { key: 'MANAGE_SHIFTS', label: 'Administrar Horarios', description: 'Permite asignar patrones de turno e incidencias a los técnicos.' },
   { key: 'VIEW_RCA', label: 'Ver Árbol de Fallas', description: 'Permite consultar el catálogo de Problemas, Causas y Soluciones (RCA).' },

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { X, Save, Upload, ArrowRightLeft, ChevronLeft, ChevronRight, Loader2, Edit2 } from 'lucide-react';
-import { createItem, updateItem, getTransactions } from '../../api/inventory';
+import { X, Save, Upload, ArrowRightLeft, ChevronLeft, ChevronRight, Loader2, Edit2, Trash2 } from 'lucide-react';
+import { createItem, updateItem, deleteItem, getTransactions } from '../../api/inventory';
 import { getUoms } from '../../api/settings';
 import type { UnitOfMeasure } from '../../api/settings';
 import { ImageSearchModal } from '../inventory/ImageSearchModal';
@@ -9,6 +9,7 @@ import { formatDateTime } from '../../utils/dateUtils';
 import { qtyStep, isInvalidQty, type QtyMode } from '../../utils/qtyMode';
 import { mediaUrl } from '../../utils/mediaUrl';
 import { SearchableSelect } from '../ui/SearchableSelect';
+import { useAuth } from '../../context/AuthContext';
 
 type DateFilter = 'all' | 'this_week' | 'last_week' | 'this_month' | 'last_3_months';
 
@@ -77,6 +78,9 @@ export const ItemModal = ({
   onNavigateItem,
   navigationPaused = false,
 }: Props) => {
+  const { hasPermission } = useAuth();
+  const canDeleteItems = hasPermission('DELETE_ITEMS');
+  const [isDeleting, setIsDeleting] = useState(false);
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [itemTransactions, setItemTransactions] = useState<InventoryTransaction[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -304,6 +308,24 @@ export const ItemModal = ({
     }
   };
 
+  const handleDelete = async () => {
+    if (!item) return;
+    const ok = window.confirm(
+      `¿Eliminar permanentemente «${item.name}»?\n\nEsta acción no se puede deshacer. No podrás eliminarlo si tiene movimientos de inventario, planes de mantenimiento u órdenes de compra asociados.`
+    );
+    if (!ok) return;
+    setIsDeleting(true);
+    try {
+      await deleteItem(item.id);
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'No se pudo eliminar el repuesto.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-4xl max-h-[95vh] flex flex-col overflow-hidden">
@@ -332,6 +354,22 @@ export const ItemModal = ({
               >
                 <Edit2 size={16} className="shrink-0" />
                 <span>Editar</span>
+              </button>
+            )}
+            {item && canDeleteItems && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 dark:text-red-300 dark:bg-red-950/40 dark:border-red-800 dark:hover:bg-red-900/50 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-1 dark:focus:ring-offset-slate-900 disabled:opacity-50"
+                title="Eliminar repuesto permanentemente"
+              >
+                {isDeleting ? (
+                  <Loader2 size={16} className="shrink-0 animate-spin" />
+                ) : (
+                  <Trash2 size={16} className="shrink-0" />
+                )}
+                <span>Eliminar</span>
               </button>
             )}
           </div>

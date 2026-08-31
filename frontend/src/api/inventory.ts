@@ -222,6 +222,10 @@ export const updateItem = async (id: string, formData: FormData) => {
   return response.data;
 };
 
+export const deleteItem = async (id: string) => {
+  await axiosInstance.delete(`/inventory/items/${id}`);
+};
+
 // Summary
 export const getInventorySummary = async (signal?: AbortSignal): Promise<InventorySummary> => {
   const response = await axiosInstance.get('/inventory/summary', { signal });

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck, AlertTriangle, Clock, Wrench, Package, CalendarClock, Layers, Pencil } from 'lucide-react';
+import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck, AlertTriangle, Clock, Wrench, Package, CalendarClock, Layers, Pencil, Loader2 } from 'lucide-react';
 import type { Asset } from '../api/assets';
 import { getAssetMetrics } from '../api/assets';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -10,6 +10,10 @@ import { ASSET_KIND_LABELS } from '../utils/assetSection';
 import { formatCurrency } from '../utils/currency';
 import { InfoTip } from './common/InfoTip';
 import { mediaUrl } from '../utils/mediaUrl';
+import { useAuth } from '../context/AuthContext';
+import { ItemModal } from './inventory/ItemModal';
+import { getItemById, getCategories, getLocations, getVendors } from '../api/inventory';
+import type { Item, ItemCategory, ItemLocation, Vendor } from '../api/inventory';
 
 interface Props {
   asset: Asset | null;
@@ -29,9 +33,17 @@ const WO_STATUS_LABELS: Record<string, string> = {
 };
 
 export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Props) => {
+  const { hasPermission } = useAuth();
+  const canManageItems = hasPermission('MANAGE_INVENTORY');
   const [activeTab, setActiveTab] = useState<'overview' | 'info' | 'metrics' | 'history'>('info');
   const [metrics, setMetrics] = useState<any>(null);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
+  const [itemDetail, setItemDetail] = useState<Item | null>(null);
+  const [itemReadOnly, setItemReadOnly] = useState(true);
+  const [itemCats, setItemCats] = useState<ItemCategory[]>([]);
+  const [itemLocs, setItemLocs] = useState<ItemLocation[]>([]);
+  const [itemVendors, setItemVendors] = useState<Vendor[]>([]);
+  const [openingItem, setOpeningItem] = useState(false);
 
   useEffect(() => {
     if (isOpen && asset) {
@@ -50,6 +62,28 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Pr
       console.error("Error fetching metrics", error);
     } finally {
       setIsLoadingMetrics(false);
+    }
+  };
+
+  const openItemDetail = async (itemId: string) => {
+    setOpeningItem(true);
+    try {
+      const [item, cats, locs, vendors] = await Promise.all([
+        getItemById(itemId),
+        getCategories(),
+        getLocations(),
+        getVendors(),
+      ]);
+      if (!item) return;
+      setItemCats(cats);
+      setItemLocs(locs);
+      setItemVendors(vendors);
+      setItemReadOnly(true);
+      setItemDetail(item);
+    } catch {
+      // si no carga el detalle, no abrimos
+    } finally {
+      setOpeningItem(false);
     }
   };
 
@@ -83,6 +117,7 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Pr
   };
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
         
@@ -397,7 +432,11 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Pr
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {asset.parts.map((p) => (
-                          <tr key={p.id}>
+                          <tr
+                            key={p.id}
+                            onClick={() => p.item?.id && void openItemDetail(p.item.id)}
+                            className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                          >
                             <td className="px-4 py-2.5 font-medium text-slate-800 dark:text-slate-100">{p.item?.name || '—'}</td>
                             <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400 font-mono text-xs">{p.item?.internal_code || '—'}</td>
                             <td className="px-4 py-2.5 text-right text-slate-700 dark:text-slate-200">{p.quantity} {p.item?.uom || ''}</td>
@@ -597,5 +636,24 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Pr
         </div>
       </div>
     </div>
+
+    <ItemModal
+      isOpen={!!itemDetail}
+      onClose={() => setItemDetail(null)}
+      onSaved={() => setItemDetail(null)}
+      item={itemDetail || undefined}
+      categories={itemCats}
+      locations={itemLocs}
+      vendors={itemVendors}
+      readOnly={itemReadOnly}
+      onRequestEdit={canManageItems ? () => setItemReadOnly(false) : undefined}
+    />
+
+    {openingItem && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/20 pointer-events-none">
+        <Loader2 size={28} className="animate-spin text-blue-600" />
+      </div>
+    )}
+    </>
   );
 };

@@ -514,6 +514,42 @@ export const updateItem = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
+export const deleteItem = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const item = await prisma.item.findUnique({ where: { id } });
+    if (!item) {
+      res.status(404).json({ error: 'Repuesto no encontrado' });
+      return;
+    }
+
+    // asset_parts tiene onDelete: Cascade (se limpia solo); el resto bloquea para no perder historial.
+    const [txCount, planCount, poCount] = await Promise.all([
+      prisma.inventoryTransaction.count({ where: { item_id: id } }),
+      prisma.planItem.count({ where: { item_id: id } }),
+      prisma.purchaseOrderItem.count({ where: { item_id: id } }),
+    ]);
+
+    if (txCount > 0 || planCount > 0 || poCount > 0) {
+      const refs: string[] = [];
+      if (txCount > 0) refs.push(`${txCount} movimiento(s) de inventario`);
+      if (planCount > 0) refs.push(`${planCount} plan(es) de mantenimiento`);
+      if (poCount > 0) refs.push(`${poCount} orden(es) de compra`);
+      res.status(400).json({
+        error: `No puedes eliminar «${item.name}» porque tiene ${refs.join(', ')} asociado(s). Márcalo como descontinuado para conservar el historial.`,
+      });
+      return;
+    }
+
+    await prisma.item.delete({ where: { id } });
+    emitRefresh('refresh_inventory');
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error al eliminar repuesto:', error);
+    res.status(500).json({ error: 'Error al eliminar repuesto' });
+  }
+};
+
 // ==========================================
 // SUMMARY
 // ==========================================

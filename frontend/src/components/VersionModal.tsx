@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.72";
+export const APP_VERSION = "1.56.73";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "28 de Agosto, 2026";
+  const updateDate = "31 de Agosto, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Inventario — opción de eliminar repuestos, protegida por el permiso «Eliminar Repuestos» (Opciones de Desarrollador → Permisos).",
+    "Mejora: Detalle del activo — clic en una refacción abre el detalle del repuesto; con permiso Administrar Inventario se puede editar.",
     "Mejora: Líneas y Costos — clic en una refacción abre el detalle del repuesto (solo lectura).",
     "Mejora: Detalle del activo — se abre por defecto en la pestaña «Información» (antes «De un vistazo»).",
     "Mejora: Líneas y Costos — ahora puedes editar el activo desde el detalle (botón Editar, mismo formulario).",
