@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.78";
+export const APP_VERSION = "1.56.79";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Líneas y Costos — buscador de activos (por nombre, código, marca o modelo) para saltar directo a un equipo y ver sus refacciones.",
     "Mejora: Líneas y Costos — los activos críticos ahora muestran el badge rojo «Crítico» (como en la tabla de Activos).",
     "Mejora: Inventario — la franja «Stock crítico» ahora se llama «Stock bajo» y cambia a color naranja.",
     "Mejora: Inventario — el buscador de repuestos ahora también busca por categoría y ubicación (no solo código o nombre).",

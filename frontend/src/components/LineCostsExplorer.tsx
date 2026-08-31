@@ -6,6 +6,7 @@ import {
   Download,
   Loader2,
   RefreshCw,
+  Search,
   ChevronRight,
   X,
   AlertTriangle,
@@ -97,6 +98,8 @@ export const LineCostsExplorer = () => {
   const [itemDetailVendors, setItemDetailVendors] = useState<Vendor[]>([]);
   const [itemReadOnly, setItemReadOnly] = useState(true);
   const [openingItem, setOpeningItem] = useState(false);
+  const [assetSearch, setAssetSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
 
   // Líneas visibles (configuración global, editada solo por Admin).
   const visibleZoneIds = useMemo(() => {
@@ -193,6 +196,39 @@ export const LineCostsExplorer = () => {
     selectedZone?.sections.find((s) => s.id === sectionId) || null;
   const selectedAsset: LineCostAsset | null =
     selectedSection?.assets.find((a) => a.id === selectedAssetId) || null;
+
+  // Índice plano de todos los activos visibles (para el buscador).
+  const allAssets = useMemo(() => {
+    const list: { asset: LineCostAsset; zone: LineCostZone; section: LineCostSection }[] = [];
+    for (const z of visibleZones) {
+      for (const s of z.sections) {
+        for (const a of s.assets) {
+          list.push({ asset: a, zone: z, section: s });
+        }
+      }
+    }
+    return list;
+  }, [visibleZones]);
+
+  const assetSearchResults = useMemo(() => {
+    const q = assetSearch.trim().toLowerCase();
+    if (!q) return [];
+    return allAssets
+      .filter(({ asset }) =>
+        [asset.name, asset.internal_code, asset.brand, asset.model]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(q))
+      )
+      .slice(0, 8);
+  }, [assetSearch, allAssets]);
+
+  const jumpToAsset = (entry: { zone: LineCostZone; section: LineCostSection; asset: LineCostAsset }) => {
+    setZoneId(entry.zone.id);
+    setSectionId(entry.section.id);
+    setSelectedAssetId(entry.asset.id);
+    setAssetSearch('');
+    setSearchOpen(false);
+  };
 
   const openAsset = async (assetId: string) => {
     setOpeningAsset(true);
@@ -398,6 +434,63 @@ export const LineCostsExplorer = () => {
         >
           <AlertTriangle size={16} /> Refacciones críticas
         </button>
+      </div>
+
+      {/* Buscador de activos */}
+      <div className="relative">
+        <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 shadow-sm">
+          <Search size={18} className="text-slate-400 shrink-0" />
+          <input
+            type="text"
+            value={assetSearch}
+            onChange={(e) => setAssetSearch(e.target.value)}
+            onFocus={() => setSearchOpen(true)}
+            onBlur={() => { window.setTimeout(() => setSearchOpen(false), 150); }}
+            placeholder="Buscar activo por nombre, código, marca o modelo…"
+            className="w-full bg-transparent border-none focus:ring-0 text-slate-700 dark:text-slate-100 placeholder-slate-400 outline-none text-sm"
+          />
+          {assetSearch && (
+            <button
+              type="button"
+              onClick={() => setAssetSearch('')}
+              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg"
+              aria-label="Limpiar búsqueda"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+        {searchOpen && assetSearchResults.length > 0 && (
+          <div className="absolute z-30 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg overflow-hidden">
+            {assetSearchResults.map((entry) => (
+              <button
+                key={entry.asset.id}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => jumpToAsset(entry)}
+                className="w-full text-left px-4 py-2.5 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate flex items-center gap-1.5">
+                    <span className="truncate">{entry.asset.name}</span>
+                    {entry.asset.is_critical && (
+                      <span className="inline-flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Crítico</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                    {entry.asset.internal_code} · {entry.zone.name} / {entry.section.name}
+                  </div>
+                </div>
+                <ChevronRight size={16} className="text-slate-300 shrink-0" />
+              </button>
+            ))}
+          </div>
+        )}
+        {searchOpen && assetSearch.trim() && assetSearchResults.length === 0 && (
+          <div className="absolute z-30 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
+            No se encontraron activos para «{assetSearch}».
+          </div>
+        )}
       </div>
 
       {/* Imagen de distribución de secciones por línea (visible en todo el desglose) */}
