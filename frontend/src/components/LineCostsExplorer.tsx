@@ -210,10 +210,28 @@ export const LineCostsExplorer = () => {
     return list;
   }, [visibleZones]);
 
+  // Alcance del buscador: solo los activos del nivel actualmente seleccionado.
+  const searchableAssets = useMemo(() => {
+    if (selectedSection) {
+      const zone = selectedZone!;
+      return selectedSection.assets.map((asset) => ({ asset, zone, section: selectedSection }));
+    }
+    if (selectedZone) {
+      const list: { asset: LineCostAsset; zone: LineCostZone; section: LineCostSection }[] = [];
+      for (const s of selectedZone.sections) {
+        for (const a of s.assets) {
+          list.push({ asset: a, zone: selectedZone, section: s });
+        }
+      }
+      return list;
+    }
+    return allAssets;
+  }, [selectedSection, selectedZone, allAssets]);
+
   const assetSearchResults = useMemo(() => {
     const q = assetSearch.trim().toLowerCase();
     if (!q) return [];
-    return allAssets
+    return searchableAssets
       .filter(({ asset }) =>
         [asset.name, asset.internal_code, asset.brand, asset.model]
           .filter(Boolean)
@@ -224,7 +242,7 @@ export const LineCostsExplorer = () => {
         return (a.asset.name || '').localeCompare(b.asset.name || '');
       })
       .slice(0, 8);
-  }, [assetSearch, allAssets]);
+  }, [assetSearch, searchableAssets]);
 
   const jumpToAsset = (entry: { zone: LineCostZone; section: LineCostSection; asset: LineCostAsset }) => {
     setZoneId(entry.zone.id);
@@ -450,7 +468,13 @@ export const LineCostsExplorer = () => {
             onChange={(e) => setAssetSearch(e.target.value)}
             onFocus={() => setSearchOpen(true)}
             onBlur={() => { window.setTimeout(() => setSearchOpen(false), 150); }}
-            placeholder="Buscar activo por nombre, código, marca o modelo…"
+            placeholder={
+              selectedSection
+                ? `Buscar en «${selectedSection.name}» por nombre, código, marca o modelo…`
+                : selectedZone
+                  ? `Buscar en «${selectedZone.name}» por nombre, código, marca o modelo…`
+                  : 'Buscar activo por nombre, código, marca o modelo…'
+            }
             className="w-full bg-transparent border-none focus:ring-0 text-slate-700 dark:text-slate-100 placeholder-slate-400 outline-none text-sm"
           />
           {assetSearch && (
