@@ -256,6 +256,8 @@ export const getItems = async (req: Request, res: Response): Promise<void> => {
           { name: { contains: term, mode: 'insensitive' } },
           { internal_code: { contains: term, mode: 'insensitive' } },
           { description: { contains: term, mode: 'insensitive' } },
+          { category: { name: { contains: term, mode: 'insensitive' } } },
+          { location: { name: { contains: term, mode: 'insensitive' } } },
         ];
         // Deep-link desde Ctrl+K usa UUID; equals por id (solo si parece UUID válido).
         if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(term)) {
