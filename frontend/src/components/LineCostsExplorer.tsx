@@ -219,6 +219,10 @@ export const LineCostsExplorer = () => {
           .filter(Boolean)
           .some((v) => String(v).toLowerCase().includes(q))
       )
+      .sort((a, b) => {
+        if (a.asset.is_critical !== b.asset.is_critical) return a.asset.is_critical ? -1 : 1;
+        return (a.asset.name || '').localeCompare(b.asset.name || '');
+      })
       .slice(0, 8);
   }, [assetSearch, allAssets]);
 

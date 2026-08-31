@@ -293,7 +293,7 @@ export const getAssets = async (req: Request, res: Response): Promise<void> => {
         prisma.asset.findMany({
           where,
           include: assetInclude,
-          orderBy: { created_at: 'desc' },
+          orderBy: { name: 'asc' },
           skip: (pageNum - 1) * limitNum,
           take: limitNum,
         }),
@@ -311,7 +311,7 @@ export const getAssets = async (req: Request, res: Response): Promise<void> => {
     const assets = await prisma.asset.findMany({
       where,
       include: assetInclude,
-      orderBy: { created_at: 'desc' },
+      orderBy: { name: 'asc' },
     });
     res.json(assets);
   } catch (error) {
@@ -737,6 +737,7 @@ export const getLineCosts = async (req: Request, res: Response): Promise<void> =
             },
           },
         },
+        orderBy: [{ is_critical: 'desc' }, { name: 'asc' }],
       }),
       prisma.inventoryTransaction.findMany({
         where: {
