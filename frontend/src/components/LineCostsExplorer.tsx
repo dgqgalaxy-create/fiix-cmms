@@ -73,6 +73,7 @@ export const LineCostsExplorer = () => {
   const { user, hasPermission } = useAuth();
   const isAdmin = user?.role === 'ADMINISTRADOR';
   const canManageAssets = hasPermission('MANAGE_ASSETS');
+  const canManageItems = hasPermission('MANAGE_INVENTORY');
   const [period, setPeriod] = useState<PeriodKey>('THIS_YEAR');
   const [customStart, setCustomStart] = useState(toYmd(new Date(new Date().getFullYear(), 0, 1)));
   const [customEnd, setCustomEnd] = useState(toYmd(new Date()));
@@ -93,6 +94,7 @@ export const LineCostsExplorer = () => {
   const [itemDetailCats, setItemDetailCats] = useState<ItemCategory[]>([]);
   const [itemDetailLocs, setItemDetailLocs] = useState<ItemLocation[]>([]);
   const [itemDetailVendors, setItemDetailVendors] = useState<Vendor[]>([]);
+  const [itemReadOnly, setItemReadOnly] = useState(true);
   const [openingItem, setOpeningItem] = useState(false);
 
   // Líneas visibles (configuración global, editada solo por Admin).
@@ -216,6 +218,7 @@ export const LineCostsExplorer = () => {
       setItemDetailCats(cats);
       setItemDetailLocs(locs);
       setItemDetailVendors(vendors);
+      setItemReadOnly(true);
       setItemDetail(item);
     } catch {
       // si no carga el detalle, no abrimos
@@ -680,7 +683,8 @@ export const LineCostsExplorer = () => {
         categories={itemDetailCats}
         locations={itemDetailLocs}
         vendors={itemDetailVendors}
-        readOnly
+        readOnly={itemReadOnly}
+        onRequestEdit={canManageItems ? () => setItemReadOnly(false) : undefined}
       />
 
       {openingAsset && (
