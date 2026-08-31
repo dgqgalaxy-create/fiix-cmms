@@ -459,6 +459,9 @@ export const LineCostsExplorer = () => {
             <>
               <ChevronRight size={14} className="text-slate-300" />
               <span className="font-semibold text-slate-700 dark:text-slate-200">{selectedAsset.name}</span>
+              {selectedAsset.is_critical && (
+                <span className="inline-flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Crítico</span>
+              )}
             </>
           )}
         </div>
@@ -488,7 +491,12 @@ export const LineCostsExplorer = () => {
         <div className="space-y-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="font-bold text-slate-800 dark:text-slate-100 truncate">{selectedAsset.name}</div>
+              <div className="font-bold text-slate-800 dark:text-slate-100 truncate flex items-center gap-1.5">
+                <span className="truncate">{selectedAsset.name}</span>
+                {selectedAsset.is_critical && (
+                  <span className="inline-flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Crítico</span>
+                )}
+              </div>
               <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">{selectedAsset.internal_code}</div>
             </div>
             <div className="text-sm shrink-0 flex items-center gap-4 flex-wrap">
@@ -559,6 +567,9 @@ export const LineCostsExplorer = () => {
                     <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">
                       <span className="flex items-center gap-1.5">
                         {a.name}
+                        {a.is_critical && (
+                          <span className="inline-flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Crítico</span>
+                        )}
                         {a.is_obsolete && (
                           <span className="inline-flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">Obsoleto</span>
                         )}
