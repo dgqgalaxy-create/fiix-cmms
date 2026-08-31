@@ -153,6 +153,8 @@ export type ItemListParams = {
   locationId?: string;
   vendorId?: string;
   critical?: boolean;
+  /** Refacciones asignadas a al menos un equipo crítico. */
+  criticalAsset?: boolean;
   noVendor?: boolean;
 };
 
@@ -170,6 +172,7 @@ export const getItems = async (params?: ItemListParams) => {
       ? {
           ...params,
           critical: params.critical ? '1' : undefined,
+          criticalAsset: params.criticalAsset ? '1' : undefined,
           noVendor: params.noVendor ? '1' : undefined,
         }
       : undefined,
@@ -188,6 +191,7 @@ export const getItemsPage = async (
       limit: params.limit ?? 20,
       ...params,
       critical: params.critical ? '1' : undefined,
+      criticalAsset: params.criticalAsset ? '1' : undefined,
       noVendor: params.noVendor ? '1' : undefined,
     },
     signal,

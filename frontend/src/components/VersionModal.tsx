@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.74";
+export const APP_VERSION = "1.56.75";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Líneas y Costos — botón «Refacciones críticas» que exporta la lista de refacciones (con stock) de los equipos críticos.",
+    "Nuevo: Inventario — filtro «Refacciones de equipos críticos» para ver solo repuestos asignados a equipos críticos.",
     "Mejora: Activos — clic en una refacción del árbol (Zona → Sección → Activo → Refacciones) ahora permite editar con permiso Administrar Inventario.",
     "Nuevo: Inventario — opción de eliminar repuestos, protegida por el permiso «Eliminar Repuestos» (Opciones de Desarrollador → Permisos).",
     "Mejora: Detalle del activo — clic en una refacción abre el detalle del repuesto; con permiso Administrar Inventario se puede editar.",

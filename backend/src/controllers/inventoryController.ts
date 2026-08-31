@@ -233,12 +233,16 @@ export const deleteVendor = async (req: Request, res: Response): Promise<void> =
 // ==========================================
 export const getItems = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { page, limit, q, categoryId, locationId, vendorId, critical, noVendor } = req.query;
+    const { page, limit, q, categoryId, locationId, vendorId, critical, criticalAsset, noVendor } = req.query;
     const and: Record<string, unknown>[] = [];
     if (categoryId) and.push({ category_id: String(categoryId) });
     if (locationId) and.push({ location_id: String(locationId) });
     if (vendorId) and.push({ vendor_id: String(vendorId) });
     if (noVendor === '1' || noVendor === 'true') and.push({ vendor_id: null });
+    // Refacciones "críticas": asignadas a al menos un equipo marcado como crítico.
+    if (criticalAsset === '1' || criticalAsset === 'true') {
+      and.push({ asset_parts: { some: { asset: { is_critical: true } } } });
+    }
     if (critical === '1' || critical === 'true') {
       and.push({
         is_active: true,

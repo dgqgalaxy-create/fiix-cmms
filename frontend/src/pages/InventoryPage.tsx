@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter, DollarSign } from 'lucide-react';
+import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, AlertTriangle, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter, DollarSign } from 'lucide-react';
 import { 
   getItems, getItemsPage, getItemById, getTransactionsPage, getTransactionsSummary, getCategories, getLocations, getVendors, getInventorySummary
 } from '../api/inventory';
@@ -58,6 +58,7 @@ export const InventoryPage = () => {
   const [txSummary, setTxSummary] = useState<TransactionsSummary | null>(null);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [showNoVendorOnly, setShowNoVendorOnly] = useState(false);
+  const [showCriticalAssetOnly, setShowCriticalAssetOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'code' | 'category' | 'stock'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -151,6 +152,7 @@ export const InventoryPage = () => {
           q: itemsSearchQ || undefined,
           critical: showLowStockOnly || showNoVendorOnly || undefined,
           noVendor: showNoVendorOnly || undefined,
+          criticalAsset: showCriticalAssetOnly || undefined,
         },
         ac.signal
       );
@@ -239,7 +241,7 @@ export const InventoryPage = () => {
     void fetchItemsPage();
     return () => itemsAbortRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, currentPage, itemsSearchQ, showLowStockOnly, showNoVendorOnly]);
+  }, [activeTab, currentPage, itemsSearchQ, showLowStockOnly, showNoVendorOnly, showCriticalAssetOnly]);
 
   useEffect(() => {
     if (activeTab !== 'transactions') return;
@@ -453,7 +455,7 @@ export const InventoryPage = () => {
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, showLowStockOnly, showNoVendorOnly]);
+  }, [searchTerm, showLowStockOnly, showNoVendorOnly, showCriticalAssetOnly]);
 
   useEffect(() => {
     setTxCurrentPage(1);
@@ -517,12 +519,21 @@ export const InventoryPage = () => {
     event?.stopPropagation();
     setShowLowStockOnly(false);
     setShowNoVendorOnly(true);
+    setShowCriticalAssetOnly(false);
+    setActiveTab('items');
+  };
+
+  const filterCriticalAssets = () => {
+    setShowLowStockOnly(false);
+    setShowNoVendorOnly(false);
+    setShowCriticalAssetOnly(true);
     setActiveTab('items');
   };
 
   const clearStockFilters = () => {
     setShowLowStockOnly(false);
     setShowNoVendorOnly(false);
+    setShowCriticalAssetOnly(false);
   };
 
   const sortItemsClient = (list: Item[]) => {
@@ -554,6 +565,7 @@ export const InventoryPage = () => {
         q: itemsSearchQ || undefined,
         critical: showLowStockOnly || showNoVendorOnly || undefined,
         noVendor: showNoVendorOnly || undefined,
+        criticalAsset: showCriticalAssetOnly || undefined,
       });
       // Backend non-paginated critical only marks is_active; enforce stock filter client-side.
       if (showLowStockOnly || showNoVendorOnly) {
@@ -1766,6 +1778,23 @@ export const InventoryPage = () => {
                     </button>
                   )}
                 </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => (showCriticalAssetOnly ? clearStockFilters() : filterCriticalAssets())}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    showCriticalAssetOnly
+                      ? 'bg-rose-600 text-white border-rose-600'
+                      : 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'
+                  }`}
+                  title="Mostrar solo refacciones asignadas a equipos críticos"
+                >
+                  <AlertTriangle size={14} />
+                  {showCriticalAssetOnly
+                    ? `Refacciones de equipos críticos (${itemsTotal})`
+                    : 'Refacciones de equipos críticos'}
+                </button>
               </div>
               {(showLowStockOnly || showNoVendorOnly) && (
                 <div className="flex flex-wrap items-center gap-2">

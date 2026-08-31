@@ -142,6 +142,7 @@ export interface LineCostAsset {
   section?: string | null;
   asset_kind: 'FIJO' | 'CONTROLABLE';
   is_obsolete: boolean;
+  is_critical: boolean;
   zone_id: string;
   zone_section_id?: string | null;
   price?: number | null;

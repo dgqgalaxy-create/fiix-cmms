@@ -723,6 +723,7 @@ export const getLineCosts = async (req: Request, res: Response): Promise<void> =
           section: true,
           asset_kind: true,
           is_obsolete: true,
+          is_critical: true,
           zone_id: true,
           zone_section_id: true,
           price: true,

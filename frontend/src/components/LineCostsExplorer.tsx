@@ -8,6 +8,7 @@ import {
   RefreshCw,
   ChevronRight,
   X,
+  AlertTriangle,
 } from 'lucide-react';
 import { getLineCosts, getAssetById, updateLineCostsVisibleZones, updateAsset } from '../api/assets';
 import type {
@@ -264,6 +265,35 @@ export const LineCostsExplorer = () => {
     ]);
   };
 
+  const exportCriticalParts = () => {
+    const stamp = excelDateStamp();
+    const rows: Record<string, string | number>[] = [];
+    for (const z of visibleZones) {
+      for (const s of z.sections) {
+        for (const a of s.assets) {
+          if (!a.is_critical) continue;
+          if (!a.parts || a.parts.length === 0) continue;
+          for (const p of a.parts) {
+            rows.push({
+              Línea: z.name,
+              Sección: s.name,
+              'Código equipo': a.internal_code,
+              'Equipo (crítico)': a.name,
+              'Código refacción': p.item?.internal_code || '',
+              Refacción: p.item?.name || '(sin nombre)',
+              'Cantidad asignada': p.quantity,
+              'Stock actual': p.item?.stock ?? 0,
+              UOM: p.item?.uom || '',
+            });
+          }
+        }
+      }
+    }
+    downloadWorkbook(`refacciones-criticas-${stamp}`, [
+      { name: 'Refacciones críticas', rows },
+    ]);
+  };
+
   // ===== Render =====
   if (loading && !data) {
     return (
@@ -359,6 +389,14 @@ export const LineCostsExplorer = () => {
           title="Mostrar u ocultar equipos obsoletos"
         >
           {showObsolete ? 'Ocultar obsoletos' : 'Mostrar obsoletos'}
+        </button>
+
+        <button
+          onClick={exportCriticalParts}
+          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors"
+          title="Descargar lista de refacciones (y su stock) de los equipos marcados como críticos"
+        >
+          <AlertTriangle size={16} /> Refacciones críticas
         </button>
       </div>
 
