@@ -572,16 +572,16 @@ export const HomePage = () => {
         <button
           type="button"
           onClick={() => navigate('/inventory?filter=low_stock')}
-          className="mb-4 w-full text-left rounded-2xl border border-rose-200/90 bg-gradient-to-br from-white via-rose-50/60 to-orange-50/30 p-3 sm:p-4 shadow-sm transition hover:border-rose-300 dark:border-rose-900/50 dark:from-slate-900 dark:via-rose-950/25 dark:to-orange-950/10"
+          className="mb-4 w-full text-left rounded-2xl border border-orange-200/90 bg-gradient-to-br from-white via-orange-50/60 to-orange-100/30 p-3 sm:p-4 shadow-sm transition hover:border-orange-300 dark:border-orange-900/50 dark:from-slate-900 dark:via-orange-950/25 dark:to-orange-950/15"
         >
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0 flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300">
                 <Package size={20} />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300">
-                  Stock crítico
+                <p className="text-xs font-bold uppercase tracking-wider text-orange-800 dark:text-orange-300">
+                  Stock bajo
                 </p>
                 <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
                   {inventorySummary!.low_stock_count} artículo
@@ -595,7 +595,7 @@ export const HomePage = () => {
               </div>
             </div>
             {hasPermission('MANAGE_PURCHASES') && (
-              <span className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-rose-600 px-2.5 py-1.5 text-[11px] font-bold text-white">
+              <span className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-orange-500 px-2.5 py-1.5 text-[11px] font-bold text-white">
                 <ShoppingCart size={14} /> OC
               </span>
             )}
