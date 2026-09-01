@@ -523,6 +523,7 @@ export const Dashboard = () => {
 
   const canCreate = hasPermission('CREATE_WORK_ORDERS');
   const canBulkAssign = hasPermission('EDIT_WORK_ORDERS') && user?.role !== 'TECNICO';
+  const canDeleteWO = hasPermission('DELETE_WORK_ORDERS');
 
   const getFilteredWorkOrders = () => applyClientOnlyFilters(workOrders);
 
@@ -725,6 +726,7 @@ export const Dashboard = () => {
                 onRowClick={openWorkOrderDetail}
                 onAssignClick={canQuickActions ? handleAssignClick : undefined}
                 onScheduleClick={canQuickSchedule ? handleScheduleClick : undefined}
+                onDelete={canDeleteWO ? (wo) => handleDeleteWorkOrder(wo.id) : undefined}
               />
               {historyTotal > HISTORY_PER_PAGE && (
                 <div className="flex items-center justify-between bg-white dark:bg-slate-900 px-4 py-3 sm:px-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mt-4 print:hidden">
@@ -953,6 +955,7 @@ export const Dashboard = () => {
               onRowClick={openWorkOrderDetail}
               onAssignClick={canQuickActions ? handleAssignClick : undefined}
               onScheduleClick={canQuickSchedule ? handleScheduleClick : undefined}
+              onDelete={canDeleteWO ? (wo) => handleDeleteWorkOrder(wo.id) : undefined}
             />
 
             {historyTotal > HISTORY_PER_PAGE && (

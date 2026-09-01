@@ -99,6 +99,18 @@ export const UsersPage = () => {
     await fetchUsers();
   };
 
+  const handleToggleActive = async (user: User) => {
+    const next = !user.is_active;
+    const ok = confirm(next ? `¿Dar de baja a «${user.name}»?` : `¿Reactivar a «${user.name}»?`);
+    if (!ok) return;
+    try {
+      await updateUser(user.id, { is_active: next });
+      await fetchUsers();
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'No se pudo actualizar el usuario.');
+    }
+  };
+
   const handleDeleteRequester = async (id: string) => {
     await deleteRequester(id);
     await fetchRequesters();
@@ -220,6 +232,8 @@ export const UsersPage = () => {
               setSelectedUser(u);
               setIsUserModalOpen(true);
             } : undefined}
+            onToggleActive={hasPermission('MANAGE_USERS') ? handleToggleActive : undefined}
+            onDelete={hasPermission('MANAGE_USERS') ? (u) => { if (confirm(`¿Eliminar permanentemente a ${u.name}?`)) handleDelete(u.id); } : undefined}
           />
         </>
       ) : (

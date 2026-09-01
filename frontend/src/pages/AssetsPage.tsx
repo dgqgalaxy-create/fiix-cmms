@@ -230,6 +230,22 @@ export const AssetsPage = () => {
     }
   };
 
+  const handleToggleObsolete = async (asset: Asset) => {
+    const next = !asset.is_obsolete;
+    const ok = confirm(
+      next
+        ? `¿Marcar «${asset.name}» como obsoleto? Dejará de mostrarse por defecto en los listados.`
+        : `¿Quitar la marca de obsoleto a «${asset.name}»? Volverá a aparecer en los listados.`
+    );
+    if (!ok) return;
+    try {
+      await updateAsset(asset.id, { is_obsolete: next });
+      await fetchAssets();
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'No se pudo actualizar el activo.');
+    }
+  };
+
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -444,6 +460,7 @@ export const AssetsPage = () => {
             onEdit={(asset) => { setEditingAsset(asset); setIsModalOpen(true); }}
             onRowClick={(asset) => setDetailAsset(asset)}
             onPrintQR={(asset) => setQrAsset(asset)}
+            onToggleObsolete={handleToggleObsolete}
             canManage={canManage}
             selectionMode={selectionMode}
             selectedIds={selectedIds}

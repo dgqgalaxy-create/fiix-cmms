@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Asset } from '../api/assets';
-import { Activity, Ban, Settings, Trash2, Edit, Database, QrCode, Image as ImageIcon, ChevronUp, ChevronDown } from 'lucide-react';
+import { Activity, Ban, Settings, Trash2, Edit, Database, QrCode, Image as ImageIcon, ChevronUp, ChevronDown, Archive } from 'lucide-react';
 import { mediaUrl } from '../utils/mediaUrl';
+import { ContextMenu } from './common/ContextMenu';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -21,6 +22,7 @@ interface Props {
   onEdit?: (asset: Asset) => void;
   onRowClick?: (asset: Asset) => void;
   onPrintQR?: (asset: Asset) => void;
+  onToggleObsolete?: (asset: Asset) => void;
   canManage: boolean;
   selectionMode?: boolean;
   selectedIds?: Set<string>;
@@ -38,6 +40,7 @@ export const AssetsTable = ({
   onEdit,
   onRowClick,
   onPrintQR,
+  onToggleObsolete,
   canManage,
   selectionMode = false,
   selectedIds,
@@ -46,6 +49,7 @@ export const AssetsTable = ({
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [currentPage, setCurrentPage] = useState(1);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; asset: Asset } | null>(null);
   const serverMode = typeof serverTotal === 'number' && typeof onServerPageChange === 'function';
 
   useEffect(() => {
@@ -253,6 +257,7 @@ export const AssetsTable = ({
           <div
             key={asset.id}
             onClick={() => (selectionMode ? onToggleSelect?.(asset.id) : onRowClick?.(asset))}
+            onContextMenu={(e) => { if (canManage) { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, asset }); } }}
             className={`bg-white dark:bg-slate-900 px-3 py-2.5 rounded-xl border shadow-sm active:bg-slate-50 dark:active:bg-slate-800 transition-colors cursor-pointer ${
               selectionMode && selectedIds?.has(asset.id)
                 ? 'border-emerald-400 ring-2 ring-emerald-200 dark:ring-emerald-900'
@@ -384,6 +389,7 @@ export const AssetsTable = ({
                 <tr
                   key={asset.id}
                   onClick={() => (selectionMode ? onToggleSelect?.(asset.id) : onRowClick?.(asset))}
+                  onContextMenu={(e) => { if (canManage) { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, asset }); } }}
                   className={`transition-colors ${
                     selectionMode && selectedIds?.has(asset.id) ? 'bg-emerald-50/70 dark:bg-emerald-950/30' : ''
                   } ${onRowClick || selectionMode ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}
@@ -498,6 +504,21 @@ export const AssetsTable = ({
       </div>
 
       {paginationControls}
+
+      {ctxMenu && canManage && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          title={ctxMenu.asset.name}
+          onClose={() => setCtxMenu(null)}
+          actions={[
+            ...(onEdit ? [{ key: 'edit', label: 'Editar', icon: <Edit size={15} />, onClick: () => onEdit(ctxMenu.asset) }] : []),
+            ...(onToggleObsolete ? [{ key: 'obsolete', label: ctxMenu.asset.is_obsolete ? 'Quitar obsoleto' : 'Marcar como obsoleto', icon: <Archive size={15} />, onClick: () => onToggleObsolete(ctxMenu.asset) }] : []),
+            ...(onPrintQR ? [{ key: 'qr', label: 'Imprimir QR', icon: <QrCode size={15} />, onClick: () => onPrintQR(ctxMenu.asset) }] : []),
+            { key: 'delete', label: 'Eliminar', icon: <Trash2 size={15} />, danger: true, onClick: () => onDelete(ctxMenu.asset.id) },
+          ]}
+        />
+      )}
     </div>
   );
 };

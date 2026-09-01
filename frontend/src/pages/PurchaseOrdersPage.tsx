@@ -1,16 +1,20 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Plus, Search, Calendar, PackageOpen, ChevronRight, Filter, ExternalLink, ChevronUp, ChevronDown } from 'lucide-react';
-import { getPurchaseOrdersPage, type PurchaseOrder } from '../api/purchaseOrders';
+import { ShoppingCart, Plus, Search, Calendar, PackageOpen, ChevronRight, Filter, ExternalLink, ChevronUp, ChevronDown, Eye, CheckCircle2, Ban } from 'lucide-react';
+import { getPurchaseOrdersPage, updatePurchaseOrderStatus, type PurchaseOrder } from '../api/purchaseOrders';
 import { CreatePOModal } from '../components/CreatePOModal';
 import { PODetailModal } from '../components/PODetailModal';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatDate } from '../utils/dateUtils';
 import { formatCurrency } from '../utils/currency';
 import { poTaxBreakdown } from '../utils/poTax';
+import { useAuth } from '../context/AuthContext';
+import { ContextMenu } from '../components/common/ContextMenu';
 
 const ORDERS_PER_PAGE = 20;
 
 export const PurchaseOrdersPage = () => {
+  const { hasPermission } = useAuth();
+  const canManagePurchases = hasPermission('MANAGE_PURCHASES');
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,6 +28,7 @@ export const PurchaseOrdersPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; order: PurchaseOrder } | null>(null);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedQ(searchTerm.trim()), 300);
@@ -70,6 +75,28 @@ export const PurchaseOrdersPage = () => {
       0
     );
     return poTaxBreakdown(subtotal, order.iva_percent ?? 0).total;
+  };
+
+  const handleApprove = async (order: PurchaseOrder) => {
+    const ok = confirm(`¿Aprobar la orden PO-${order.folio.toString().padStart(4, '0')}?`);
+    if (!ok) return;
+    try {
+      await updatePurchaseOrderStatus(order.id, 'APROBADA');
+      await fetchOrders(true);
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'No se pudo aprobar la orden.');
+    }
+  };
+
+  const handleCancel = async (order: PurchaseOrder) => {
+    const ok = confirm(`¿Cancelar la orden PO-${order.folio.toString().padStart(4, '0')}?`);
+    if (!ok) return;
+    try {
+      await updatePurchaseOrderStatus(order.id, 'CANCELADA');
+      await fetchOrders(true);
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'No se pudo cancelar la orden.');
+    }
   };
 
   const sortedOrders = useMemo(() => {
@@ -195,6 +222,7 @@ export const PurchaseOrdersPage = () => {
                   key={order.id}
                   type="button"
                   onClick={() => setSelectedOrder(order)}
+                  onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, order }); }}
                   className="w-full text-left px-3 py-2.5 active:bg-slate-50 dark:active:bg-slate-800 flex items-center gap-2 cursor-pointer"
                 >
                   <div className="min-w-0 flex-1">
@@ -260,6 +288,7 @@ export const PurchaseOrdersPage = () => {
                       role="button"
                       tabIndex={0}
                       onClick={() => setSelectedOrder(order)}
+                      onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, order }); }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
@@ -396,6 +425,24 @@ export const PurchaseOrdersPage = () => {
           onUpdate={() => {
             void fetchOrders(true);
           }}
+        />
+      )}
+
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          title={`PO-${ctxMenu.order.folio.toString().padStart(4, '0')}`}
+          onClose={() => setCtxMenu(null)}
+          actions={[
+            { key: 'open', label: 'Ver detalle', icon: <Eye size={15} />, onClick: () => setSelectedOrder(ctxMenu.order) },
+            ...(canManagePurchases && ctxMenu.order.status === 'BORRADOR'
+              ? [{ key: 'approve', label: 'Aprobar', icon: <CheckCircle2 size={15} />, onClick: () => void handleApprove(ctxMenu.order) }]
+              : []),
+            ...(canManagePurchases && (ctxMenu.order.status === 'BORRADOR' || ctxMenu.order.status === 'APROBADA')
+              ? [{ key: 'cancel', label: 'Cancelar', icon: <Ban size={15} />, danger: true, onClick: () => void handleCancel(ctxMenu.order) }]
+              : []),
+          ]}
         />
       )}
     </div>

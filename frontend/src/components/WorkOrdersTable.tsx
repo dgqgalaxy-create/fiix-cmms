@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import type { WorkOrder } from '../api/workOrders';
-import { Clock, CheckCircle2, AlertCircle, Wrench, Calendar, MapPin, Tag, User, ChevronUp, ChevronDown, Camera, MessageSquare } from 'lucide-react';
+import { Clock, CheckCircle2, AlertCircle, Wrench, Calendar, MapPin, Tag, User, ChevronUp, ChevronDown, Camera, MessageSquare, Eye, Trash2 } from 'lucide-react';
 import { SlaBadge } from './SlaBadge';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { mediaUrl } from '../utils/mediaUrl';
+import { ContextMenu } from './common/ContextMenu';
 
 interface Props {
   workOrders: WorkOrder[];
@@ -12,6 +13,8 @@ interface Props {
   onAssignClick?: (wo: WorkOrder) => void;
   /** Admin/Gestionador (+ MANAGE_CALENDAR): ir a calendario para agendar. */
   onScheduleClick?: (wo: WorkOrder) => void;
+  /** Eliminar orden (permiso DELETE_WORK_ORDERS). */
+  onDelete?: (wo: WorkOrder) => void;
 }
 
 const getInitials = (name: string) => {
@@ -73,9 +76,10 @@ const commentPreview = (wo: WorkOrder) => {
   return { n, author, text };
 };
 
-export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onScheduleClick }: Props) => {
+export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onScheduleClick, onDelete }: Props) => {
   const [sortField, setSortField] = useState<'folio' | 'asset' | 'date' | 'status'>('folio');
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; wo: WorkOrder } | null>(null);
 
   const sortedWorkOrders = useMemo(() => {
     return [...workOrders].sort((a, b) => {
@@ -173,6 +177,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
         <div 
           key={wo.id} 
           onClick={() => onRowClick && onRowClick(wo)}
+          onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, wo }); }}
           className="group bg-white dark:bg-slate-900 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500 transition-all cursor-pointer overflow-hidden flex flex-col md:flex-row"
         >
           {/* Main Content Area */}
@@ -411,6 +416,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                 <tr
                   key={wo.id} 
                   onClick={() => onRowClick && onRowClick(wo)}
+                  onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, wo }); }}
                   className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group print:break-inside-avoid ${
                     rowPhotoUrl ? 'wo-photo-row' : ''
                   }`}
@@ -563,6 +569,21 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
           </table>
         </div>
       </div>
+
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          title={formatWorkOrderFolio(ctxMenu.wo.folio)}
+          onClose={() => setCtxMenu(null)}
+          actions={[
+            ...(onRowClick ? [{ key: 'open', label: 'Ver detalle', icon: <Eye size={15} />, onClick: () => onRowClick(ctxMenu.wo) }] : []),
+            ...(onAssignClick ? [{ key: 'assign', label: 'Asignar técnicos', icon: <User size={15} />, onClick: () => onAssignClick(ctxMenu.wo) }] : []),
+            ...(onScheduleClick ? [{ key: 'schedule', label: 'Agendar en calendario', icon: <Calendar size={15} />, onClick: () => onScheduleClick(ctxMenu.wo) }] : []),
+            ...(onDelete ? [{ key: 'delete', label: 'Eliminar', icon: <Trash2 size={15} />, danger: true, onClick: () => onDelete(ctxMenu.wo) }] : []),
+          ]}
+        />
+      )}
     </div>
   );
 };

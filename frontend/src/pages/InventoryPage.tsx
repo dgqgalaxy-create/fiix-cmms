@@ -1,14 +1,15 @@
 import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, AlertTriangle, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter, DollarSign } from 'lucide-react';
+import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, AlertTriangle, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter, DollarSign, Trash2 } from 'lucide-react';
 import { 
-  getItems, getItemsPage, getItemById, getTransactionsPage, getTransactionsSummary, getCategories, getLocations, getVendors, getInventorySummary
+  getItems, getItemsPage, getItemById, getTransactionsPage, getTransactionsSummary, getCategories, getLocations, getVendors, getInventorySummary, deleteItem
 } from '../api/inventory';
 import type { Item, InventoryTransaction, ItemCategory, ItemLocation, Vendor, InventorySummary, TransactionsSummary } from '../api/inventory';
 import { formatCurrency } from '../utils/currency';
 import { createDraftsFromLowStock } from '../api/purchaseOrders';
 import { useAuth } from '../context/AuthContext';
 import { ItemModal } from '../components/inventory/ItemModal';
+import { ContextMenu } from '../components/common/ContextMenu';
 import { TransactionModal } from '../components/inventory/TransactionModal';
 import { TransactionDetailModal } from '../components/inventory/TransactionDetailModal';
 import { CatalogModal } from '../components/inventory/CatalogModal';
@@ -30,6 +31,7 @@ export const InventoryPage = () => {
   const canManage = hasPermission('MANAGE_INVENTORY');
   const canManagePurchases = hasPermission('MANAGE_PURCHASES');
   const canUseScanner = hasPermission('USE_QR_SCANNER');
+  const canDeleteItems = hasPermission('DELETE_ITEMS');
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [activeTab, setActiveTab] = useState<'items' | 'transactions' | 'categories' | 'locations' | 'vendors'>('items');
@@ -59,6 +61,7 @@ export const InventoryPage = () => {
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [showNoVendorOnly, setShowNoVendorOnly] = useState(false);
   const [showCriticalAssetOnly, setShowCriticalAssetOnly] = useState(false);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; item: Item } | null>(null);
   const [sortBy, setSortBy] = useState<'name' | 'code' | 'category' | 'stock'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -422,6 +425,19 @@ export const InventoryPage = () => {
       setIsItemReadOnly(true);
     }
     setIsItemModalOpen(true);
+  };
+
+  const handleDeleteItem = async (item: Item) => {
+    const ok = window.confirm(
+      `¿Eliminar permanentemente «${item.name}»?\n\nEsta acción no se puede deshacer. No podrás eliminarlo si tiene movimientos de inventario, planes de mantenimiento u órdenes de compra asociados.`
+    );
+    if (!ok) return;
+    try {
+      await deleteItem(item.id);
+      void refreshInventory(true);
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'No se pudo eliminar el repuesto.');
+    }
   };
 
   const handleOpenTransactionModal = async (itemId?: string) => {
@@ -802,6 +818,7 @@ export const InventoryPage = () => {
                 <div 
                   key={item.id} 
                   onClick={() => itemSelectionMode ? toggleItemSelection(item.id) : handleOpenItemModal(item)}
+                  onContextMenu={(e) => { if (!itemSelectionMode) { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, item }); } }}
                   className={`bg-white p-4 rounded-2xl border shadow-sm active:bg-slate-50 transition-colors cursor-pointer ${
                     itemSelectionMode && selectedItemIds.has(item.id)
                       ? 'border-emerald-400 ring-2 ring-emerald-200'
@@ -939,6 +956,7 @@ export const InventoryPage = () => {
                           itemSelectionMode && selectedItemIds.has(item.id) ? 'bg-emerald-50/70' : ''
                         }`}
                         onClick={() => itemSelectionMode ? toggleItemSelection(item.id) : handleOpenItemModal(item)}
+                        onContextMenu={(e) => { if (!itemSelectionMode) { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, item }); } }}
                       >
                         <td className="px-6 py-4 font-mono text-slate-500 font-medium">
                           <div className="flex items-center gap-3">
@@ -1877,6 +1895,21 @@ export const InventoryPage = () => {
           {renderContent()}
         </div>
       </div>
+
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          title={ctxMenu.item.name}
+          onClose={() => setCtxMenu(null)}
+          actions={[
+            ...(canManage ? [{ key: 'edit', label: 'Editar', icon: <Edit2 size={15} />, onClick: () => handleOpenItemModal(ctxMenu.item, { edit: true }) }] : []),
+            ...(canWriteOps ? [{ key: 'move', label: 'Registrar movimiento', icon: <ArrowRightLeft size={15} />, onClick: () => handleOpenTransactionModal(ctxMenu.item.id) }] : []),
+            ...(canManage ? [{ key: 'qr', label: 'Imprimir QR', icon: <QrCode size={15} />, onClick: () => setQrItem(ctxMenu.item) }] : []),
+            ...(canDeleteItems ? [{ key: 'delete', label: 'Eliminar', icon: <Trash2 size={15} />, danger: true, onClick: () => handleDeleteItem(ctxMenu.item) }] : []),
+          ]}
+        />
+      )}
 
       <ItemModal 
         isOpen={isItemModalOpen} 

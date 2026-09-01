@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { CalendarClock, Plus, Search, CheckCircle2, Clock, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
+import { CalendarClock, Plus, Search, CheckCircle2, Clock, ChevronUp, ChevronDown, ChevronRight, Pencil, Pause, Play, Trash2 } from 'lucide-react';
 import type { MaintenancePlan } from '../api/maintenance';
-import { getMaintenancePlans } from '../api/maintenance';
+import { getMaintenancePlans, updateMaintenancePlan, deleteMaintenancePlan } from '../api/maintenance';
 import type { Asset } from '../api/assets';
 import { getAssets } from '../api/assets';
 import type { Item } from '../api/inventory';
@@ -9,8 +9,12 @@ import { getItems } from '../api/inventory';
 import { MaintenancePlanModal } from '../components/maintenance/MaintenancePlanModal';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatDate } from '../utils/dateUtils';
+import { useAuth } from '../context/AuthContext';
+import { ContextMenu } from '../components/common/ContextMenu';
 
 export const MaintenancePlansPage = () => {
+  const { hasPermission } = useAuth();
+  const canManagePlans = hasPermission('MANAGE_MAINTENANCE_PLANS');
   const [plans, setPlans] = useState<MaintenancePlan[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [items, setItems] = useState<Item[]>([]);
@@ -20,6 +24,7 @@ export const MaintenancePlansPage = () => {
   const [selectedPlan, setSelectedPlan] = useState<MaintenancePlan | undefined>();
   const [sortField, setSortField] = useState<'title' | 'frequency' | 'next_due' | 'status'>('title');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; plan: MaintenancePlan } | null>(null);
 
   const loadData = async () => {
     try {
@@ -50,6 +55,29 @@ export const MaintenancePlansPage = () => {
   const handleEdit = (plan: MaintenancePlan) => {
     setSelectedPlan(plan);
     setIsModalOpen(true);
+  };
+
+  const handleToggleActive = async (plan: MaintenancePlan) => {
+    const next = !plan.is_active;
+    const ok = confirm(next ? `¿Pausar el plan «${plan.title}»?` : `¿Reactivar el plan «${plan.title}»?`);
+    if (!ok) return;
+    try {
+      await updateMaintenancePlan(plan.id, { is_active: next });
+      await loadData();
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'No se pudo actualizar el plan.');
+    }
+  };
+
+  const handleDelete = async (plan: MaintenancePlan) => {
+    const ok = confirm(`¿Eliminar permanentemente el plan «${plan.title}»?`);
+    if (!ok) return;
+    try {
+      await deleteMaintenancePlan(plan.id);
+      await loadData();
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'No se pudo eliminar el plan.');
+    }
   };
 
   const filteredPlans = plans.filter(p =>
@@ -145,6 +173,7 @@ export const MaintenancePlansPage = () => {
                   key={plan.id}
                   type="button"
                   onClick={() => handleEdit(plan)}
+                  onContextMenu={(e) => { if (canManagePlans) { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, plan }); } }}
                   className="w-full text-left px-3 py-2.5 active:bg-slate-50 dark:active:bg-slate-800 flex items-center gap-2"
                 >
                   <div className="min-w-0 flex-1">
@@ -209,6 +238,7 @@ export const MaintenancePlansPage = () => {
                     <tr
                       key={plan.id}
                       onClick={() => handleEdit(plan)}
+                      onContextMenu={(e) => { if (canManagePlans) { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, plan }); } }}
                       className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
                     >
                       <td className="px-6 py-4">
@@ -246,6 +276,20 @@ export const MaintenancePlansPage = () => {
         assets={assets}
         items={items}
       />
+
+      {ctxMenu && canManagePlans && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          title={ctxMenu.plan.title}
+          onClose={() => setCtxMenu(null)}
+          actions={[
+            { key: 'edit', label: 'Editar', icon: <Pencil size={15} />, onClick: () => handleEdit(ctxMenu.plan) },
+            { key: 'active', label: ctxMenu.plan.is_active ? 'Pausar' : 'Reactivar', icon: ctxMenu.plan.is_active ? <Pause size={15} /> : <Play size={15} />, onClick: () => void handleToggleActive(ctxMenu.plan) },
+            { key: 'delete', label: 'Eliminar', icon: <Trash2 size={15} />, danger: true, onClick: () => void handleDelete(ctxMenu.plan) },
+          ]}
+        />
+      )}
     </div>
   );
 };

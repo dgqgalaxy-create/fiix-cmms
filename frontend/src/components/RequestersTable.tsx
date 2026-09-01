@@ -3,6 +3,7 @@ import { Edit2, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import type { Requester } from '../api/requesters';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { ContextMenu } from './common/ContextMenu';
 
 interface Props {
   requesters: Requester[];
@@ -13,6 +14,7 @@ interface Props {
 export const RequestersTable = ({ requesters, onEdit, onDelete }: Props) => {
   const [sortField, setSortField] = useState<'name' | 'email' | 'department' | 'date'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; requester: Requester } | null>(null);
 
   const sortedRequesters = useMemo(() => {
     return [...requesters].sort((a, b) => {
@@ -65,7 +67,7 @@ export const RequestersTable = ({ requesters, onEdit, onDelete }: Props) => {
               </tr>
             ) : (
               sortedRequesters.map((requester) => (
-                <tr key={requester.id} className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                <tr key={requester.id} onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, requester }); }} className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                   <td className="p-4">
                     <div className="font-semibold text-slate-800 dark:text-slate-100">{requester.name}</div>
                   </td>
@@ -108,6 +110,19 @@ export const RequestersTable = ({ requesters, onEdit, onDelete }: Props) => {
           </tbody>
         </table>
       </div>
+
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          title={ctxMenu.requester.name}
+          onClose={() => setCtxMenu(null)}
+          actions={[
+            { key: 'edit', label: 'Editar', icon: <Edit2 size={15} />, onClick: () => onEdit(ctxMenu.requester) },
+            { key: 'delete', label: 'Eliminar', icon: <Trash2 size={15} />, danger: true, onClick: () => { if (window.confirm(`¿Estás seguro de eliminar a ${ctxMenu.requester.name}?`)) onDelete(ctxMenu.requester.id); } },
+          ]}
+        />
+      )}
     </div>
   );
 };

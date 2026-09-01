@@ -1,11 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import type { User } from '../api/users';
-import { Pencil, Shield, Wrench, User as UserIcon, ChevronUp, ChevronDown, Eye } from 'lucide-react';
+import { Pencil, Shield, Wrench, User as UserIcon, ChevronUp, ChevronDown, Eye, Ban, CheckCircle2, Trash2 } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
+import { ContextMenu } from './common/ContextMenu';
 
 interface Props {
   users: User[];
   onRowClick: (user: User) => void;
+  onToggleActive?: (user: User) => void;
+  onDelete?: (user: User) => void;
 }
 
 const getRoleIcon = (role: string) => {
@@ -28,9 +31,10 @@ const getRoleColor = (role: string) => {
   }
 };
 
-export const UsersTable = ({ users, onRowClick }: Props) => {
+export const UsersTable = ({ users, onRowClick, onToggleActive, onDelete }: Props) => {
   const [sortField, setSortField] = useState<'name' | 'email' | 'role' | 'date'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; user: User } | null>(null);
 
   const sortedUsers = useMemo(() => {
     return [...users].sort((a, b) => {
@@ -61,6 +65,7 @@ export const UsersTable = ({ users, onRowClick }: Props) => {
           <div 
             key={user.id} 
             onClick={() => onRowClick(user)}
+            onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, user }); }}
             className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-150 shadow-sm active:bg-slate-50 dark:active:bg-slate-800 transition-colors cursor-pointer"
           >
             <div className="flex justify-between items-center mb-2">
@@ -111,6 +116,7 @@ export const UsersTable = ({ users, onRowClick }: Props) => {
                 <tr 
                   key={user.id} 
                   onClick={() => onRowClick(user)}
+                  onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, user }); }}
                   className="hover:bg-slate-50 dark:hover:bg-slate-800 dark:bg-slate-950/80 transition-colors cursor-pointer group"
                 >
                   <td className="px-6 py-4">
@@ -146,6 +152,20 @@ export const UsersTable = ({ users, onRowClick }: Props) => {
           </table>
         </div>
       </div>
+
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          title={ctxMenu.user.name}
+          onClose={() => setCtxMenu(null)}
+          actions={[
+            { key: 'edit', label: 'Editar', icon: <Pencil size={15} />, onClick: () => onRowClick(ctxMenu.user) },
+            ...(onToggleActive ? [{ key: 'active', label: ctxMenu.user.is_active ? 'Dar de baja' : 'Reactivar', icon: ctxMenu.user.is_active ? <Ban size={15} /> : <CheckCircle2 size={15} />, onClick: () => onToggleActive(ctxMenu.user) }] : []),
+            ...(onDelete ? [{ key: 'delete', label: 'Eliminar', icon: <Trash2 size={15} />, danger: true, onClick: () => onDelete(ctxMenu.user) }] : []),
+          ]}
+        />
+      )}
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.83";
+export const APP_VERSION = "1.56.84";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Menú de clic derecho en Activos, Órdenes, Inventario, Compras, Planes, Usuarios y Solicitantes (acciones rápidas según permisos).",
     "Nuevo: Líneas y Costos — clic derecho (o botón ⋯) sobre un activo de la sección abre un menú con Editar, Marcar como obsoleto y Eliminar.",
     "Mejora: Líneas y Costos — el buscador ahora busca solo dentro del nivel seleccionado (Línea o Sección), no en toda la tabla general.",
     "Mejora: Orden de activos — en Líneas y Costos van primero los críticos y luego alfabético por nombre; en la tabla de Activos el orden por defecto es alfabético por nombre.",
