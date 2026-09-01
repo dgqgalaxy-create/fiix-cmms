@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 import {
   Building2,
   Layers,
@@ -10,8 +10,12 @@ import {
   ChevronRight,
   X,
   AlertTriangle,
+  Pencil,
+  Trash2,
+  Archive,
+  MoreVertical,
 } from 'lucide-react';
-import { getLineCosts, getAssetById, updateLineCostsVisibleZones, updateAsset } from '../api/assets';
+import { getLineCosts, getAssetById, updateLineCostsVisibleZones, updateAsset, deleteAsset } from '../api/assets';
 import type {
   LineCostsResponse,
   LineCostZone,
@@ -100,6 +104,7 @@ export const LineCostsExplorer = () => {
   const [openingItem, setOpeningItem] = useState(false);
   const [assetSearch, setAssetSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; asset: LineCostAsset } | null>(null);
 
   // Líneas visibles (configuración global, editada solo por Admin).
   const visibleZoneIds = useMemo(() => {
@@ -294,6 +299,83 @@ export const LineCostsExplorer = () => {
     setEditingAsset(null);
     setDetailAsset(null);
     void loadLineCosts(true);
+  };
+
+  // --- Menú contextual de la tabla de activos (Sección) ---
+  const openAssetMenu = (e: MouseEvent, asset: LineCostAsset) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCtxMenu({ x: e.clientX, y: e.clientY, asset });
+  };
+
+  const openMenuFromButton = (e: MouseEvent, asset: LineCostAsset) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setCtxMenu({ x: Math.max(8, rect.right - 190), y: rect.bottom + 4, asset });
+  };
+
+  const closeAssetMenu = () => setCtxMenu(null);
+
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const onDocClick = () => setCtxMenu(null);
+    const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') setCtxMenu(null); };
+    document.addEventListener('click', onDocClick);
+    document.addEventListener('scroll', onDocClick, true);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('click', onDocClick);
+      document.removeEventListener('scroll', onDocClick, true);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [ctxMenu]);
+
+  const handleEditAsset = async (assetId: string) => {
+    closeAssetMenu();
+    setOpeningAsset(true);
+    try {
+      const full = await getAssetById(assetId);
+      setDetailAsset(null);
+      setEditingAsset(full);
+      setEditOpen(true);
+    } catch {
+      // si no carga, no abrimos edición
+    } finally {
+      setOpeningAsset(false);
+    }
+  };
+
+  const handleToggleObsolete = async (asset: LineCostAsset) => {
+    closeAssetMenu();
+    const next = !asset.is_obsolete;
+    const ok = window.confirm(
+      next
+        ? `¿Marcar «${asset.name}» como obsoleto? Dejará de mostrarse por defecto en los listados.`
+        : `¿Quitar la marca de obsoleto a «${asset.name}»? Volverá a aparecer en los listados.`
+    );
+    if (!ok) return;
+    try {
+      await updateAsset(asset.id, { is_obsolete: next } as any);
+      void loadLineCosts(true);
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'No se pudo actualizar el activo.');
+    }
+  };
+
+  const handleDeleteAsset = async (asset: LineCostAsset) => {
+    closeAssetMenu();
+    const ok = window.confirm(
+      `¿Eliminar permanentemente «${asset.name}»? No se podrá si tiene órdenes de trabajo asociadas.`
+    );
+    if (!ok) return;
+    try {
+      await deleteAsset(asset.id);
+      if (selectedAssetId === asset.id) setSelectedAssetId(null);
+      void loadLineCosts(true);
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'No se pudo eliminar el activo.');
+    }
   };
 
   const exportCurrentLevel = () => {
@@ -683,6 +765,7 @@ export const LineCostsExplorer = () => {
                   <tr
                     key={a.id}
                     onClick={() => void openAsset(a.id)}
+                    onContextMenu={(e) => { if (canManageAssets) openAssetMenu(e, a); }}
                     className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors"
                   >
                     <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">
@@ -708,12 +791,25 @@ export const LineCostsExplorer = () => {
                     <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">{formatCurrency(a.assetValue)}</td>
                     <td className="px-4 py-3 text-right font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(a.cost)}</td>
                     <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => setSelectedAssetId(a.id)}
-                        className="px-2 py-1 text-xs font-medium rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
-                      >
-                        Refacciones ({a.parts?.length || 0})
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => setSelectedAssetId(a.id)}
+                          className="px-2 py-1 text-xs font-medium rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                        >
+                          Refacciones ({a.parts?.length || 0})
+                        </button>
+                        {canManageAssets && (
+                          <button
+                            type="button"
+                            onClick={(e) => openMenuFromButton(e, a)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                            title="Acciones del activo"
+                            aria-label="Acciones del activo"
+                          >
+                            <MoreVertical size={16} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -856,6 +952,39 @@ export const LineCostsExplorer = () => {
         readOnly={itemReadOnly}
         onRequestEdit={canManageItems ? () => setItemReadOnly(false) : undefined}
       />
+
+      {ctxMenu && canManageAssets && (
+        <div
+          className="fixed z-[80] min-w-[190px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl overflow-hidden"
+          style={{ left: Math.min(ctxMenu.x, window.innerWidth - 200), top: Math.min(ctxMenu.y, window.innerHeight - 170) }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-3 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700 truncate">
+            {ctxMenu.asset.name}
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleEditAsset(ctxMenu.asset.id)}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-left transition-colors"
+          >
+            <Pencil size={15} className="shrink-0 text-slate-400" /> Editar
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleToggleObsolete(ctxMenu.asset)}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-left transition-colors"
+          >
+            <Archive size={15} className="shrink-0 text-slate-400" /> {ctxMenu.asset.is_obsolete ? 'Quitar obsoleto' : 'Marcar como obsoleto'}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleDeleteAsset(ctxMenu.asset)}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 text-left transition-colors"
+          >
+            <Trash2 size={15} className="shrink-0" /> Eliminar
+          </button>
+        </div>
+      )}
 
       {openingAsset && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/20 pointer-events-none">
