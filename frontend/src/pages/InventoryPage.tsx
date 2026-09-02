@@ -799,6 +799,54 @@ export const InventoryPage = () => {
     });
   };
 
+  const handleBulkDeleteItems = async () => {
+    const ids = Array.from(selectedItemIds);
+    if (ids.length === 0) return;
+    const ok = window.confirm(
+      `¿Eliminar ${ids.length} repuesto(s) seleccionado(s)?\n\nEsta acción no se puede deshacer. Los repuestos con movimientos te preguntarán si también quieres borrarlos; los que tengan planes u órdenes de compra no se eliminarán.`
+    );
+    if (!ok) return;
+
+    let deleted = 0;
+    let failed = 0;
+    for (const id of ids) {
+      const item = items.find((i) => i.id === id);
+      const name = item?.name || 'Repuesto';
+      try {
+        await deleteItem(id);
+        deleted++;
+      } catch (err: any) {
+        const data = err?.response?.data;
+        if (data?.code === 'HAS_MOVEMENTS') {
+          const m = data.movementsCount ?? 0;
+          const confirmMovements = window.confirm(
+            `«${name}» tiene ${m} movimiento(s). ¿Eliminar también sus movimientos?\n\n• Aceptar → elimina repuesto + movimientos.\n• Cancelar → omitir este repuesto.`
+          );
+          if (!confirmMovements) {
+            failed++;
+            continue;
+          }
+          try {
+            await deleteItem(id, true);
+            deleted++;
+          } catch {
+            failed++;
+          }
+        } else {
+          failed++;
+        }
+      }
+    }
+
+    setSelectedItemIds(new Set());
+    setItemSelectionMode(false);
+    void refreshInventory(true);
+
+    if (failed > 0) {
+      alert(`Se eliminaron ${deleted} repuesto(s). ${failed} no se pudieron eliminar (planes/OC o error).`);
+    }
+  };
+
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -845,6 +893,16 @@ export const InventoryPage = () => {
                   >
                     <Printer size={14} /> Imprimir ({selectedItemIds.size})
                   </button>
+                  {canDeleteItems && (
+                    <button
+                      type="button"
+                      disabled={selectedItemIds.size === 0}
+                      onClick={() => void handleBulkDeleteItems()}
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg disabled:opacity-50"
+                    >
+                      <Trash2 size={14} /> Eliminar ({selectedItemIds.size})
+                    </button>
+                  )}
                 </>
               )}
             </div>
