@@ -233,7 +233,7 @@ export const deleteVendor = async (req: Request, res: Response): Promise<void> =
 // ==========================================
 export const getItems = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { page, limit, q, categoryId, locationId, vendorId, critical, criticalAsset, noVendor } = req.query;
+    const { page, limit, q, categoryId, locationId, vendorId, critical, criticalAsset, discontinued, noVendor } = req.query;
     const and: Record<string, unknown>[] = [];
     if (categoryId) and.push({ category_id: String(categoryId) });
     if (locationId) and.push({ location_id: String(locationId) });
@@ -242,6 +242,10 @@ export const getItems = async (req: Request, res: Response): Promise<void> => {
     // Refacciones "críticas": asignadas a al menos un equipo marcado como crítico.
     if (criticalAsset === '1' || criticalAsset === 'true') {
       and.push({ asset_parts: { some: { asset: { is_critical: true } } } });
+    }
+    // Solo descontinuados (is_active = false).
+    if (discontinued === '1' || discontinued === 'true') {
+      and.push({ is_active: false });
     }
     if (critical === '1' || critical === 'true') {
       and.push({
@@ -523,31 +527,51 @@ export const updateItem = async (req: Request, res: Response): Promise<void> => 
 export const deleteItem = async (req: Request, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
+    const deleteMovements =
+      req.query.deleteMovements === '1' || req.query.deleteMovements === 'true';
     const item = await prisma.item.findUnique({ where: { id } });
     if (!item) {
       res.status(404).json({ error: 'Repuesto no encontrado' });
       return;
     }
 
-    // asset_parts tiene onDelete: Cascade (se limpia solo); el resto bloquea para no perder historial.
+    // asset_parts tiene onDelete: Cascade (se limpia solo).
     const [txCount, planCount, poCount] = await Promise.all([
       prisma.inventoryTransaction.count({ where: { item_id: id } }),
       prisma.planItem.count({ where: { item_id: id } }),
       prisma.purchaseOrderItem.count({ where: { item_id: id } }),
     ]);
 
-    if (txCount > 0 || planCount > 0 || poCount > 0) {
+    // Planes y órdenes de compra siguen bloqueando (historial de negocio).
+    if (planCount > 0 || poCount > 0) {
       const refs: string[] = [];
-      if (txCount > 0) refs.push(`${txCount} movimiento(s) de inventario`);
       if (planCount > 0) refs.push(`${planCount} plan(es) de mantenimiento`);
       if (poCount > 0) refs.push(`${poCount} orden(es) de compra`);
+      if (txCount > 0) refs.push(`${txCount} movimiento(s) de inventario`);
       res.status(400).json({
-        error: `No puedes eliminar «${item.name}» porque tiene ${refs.join(', ')} asociado(s). Márcalo como descontinuado para conservar el historial.`,
+        error: `No puedes eliminar «${item.name}» porque tiene ${refs.join(', ')} asociado(s). Desmárcalo o reasígnalo antes de eliminarlo.`,
+        code: 'HAS_BUSINESS_REFS',
       });
       return;
     }
 
-    await prisma.item.delete({ where: { id } });
+    // Solo movimientos: el cliente debe confirmar que también se eliminen.
+    if (txCount > 0 && !deleteMovements) {
+      res.status(409).json({
+        error: `«${item.name}» tiene ${txCount} movimiento(s) de inventario. Confirma si también quieres eliminarlos.`,
+        code: 'HAS_MOVEMENTS',
+        movementsCount: txCount,
+      });
+      return;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      if (txCount > 0) {
+        await tx.inventoryTransaction.deleteMany({ where: { item_id: id } });
+      }
+      await tx.item.delete({ where: { id } });
+    });
+
     emitRefresh('refresh_inventory');
     res.status(204).send();
   } catch (error) {
@@ -855,6 +879,32 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
       }
     }
     res.status(500).json({ error: 'Error al registrar transacción de inventario' });
+  }
+};
+
+export const deleteTransaction = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const tx = await prisma.inventoryTransaction.findUnique({ where: { id } });
+    if (!tx) {
+      res.status(404).json({ error: 'Movimiento no encontrado' });
+      return;
+    }
+
+    // Revertir el efecto del movimiento sobre el stock del repuesto.
+    await prisma.$transaction(async (t) => {
+      await t.inventoryTransaction.delete({ where: { id } });
+      await t.item.update({
+        where: { id: tx.item_id },
+        data: { stock: { increment: -tx.amount } },
+      });
+    });
+
+    emitRefresh('refresh_inventory');
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error al eliminar movimiento:', error);
+    res.status(500).json({ error: 'Error al eliminar movimiento' });
   }
 };
 // ==========================================

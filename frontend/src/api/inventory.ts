@@ -155,6 +155,8 @@ export type ItemListParams = {
   critical?: boolean;
   /** Refacciones asignadas a al menos un equipo crítico. */
   criticalAsset?: boolean;
+  /** Solo descontinuados (is_active = false). */
+  discontinued?: boolean;
   noVendor?: boolean;
 };
 
@@ -173,6 +175,7 @@ export const getItems = async (params?: ItemListParams) => {
           ...params,
           critical: params.critical ? '1' : undefined,
           criticalAsset: params.criticalAsset ? '1' : undefined,
+          discontinued: params.discontinued ? '1' : undefined,
           noVendor: params.noVendor ? '1' : undefined,
         }
       : undefined,
@@ -192,6 +195,7 @@ export const getItemsPage = async (
       ...params,
       critical: params.critical ? '1' : undefined,
       criticalAsset: params.criticalAsset ? '1' : undefined,
+      discontinued: params.discontinued ? '1' : undefined,
       noVendor: params.noVendor ? '1' : undefined,
     },
     signal,
@@ -226,8 +230,10 @@ export const updateItem = async (id: string, formData: FormData) => {
   return response.data;
 };
 
-export const deleteItem = async (id: string) => {
-  await axiosInstance.delete(`/inventory/items/${id}`);
+export const deleteItem = async (id: string, deleteMovements = false) => {
+  await axiosInstance.delete(`/inventory/items/${id}`, {
+    params: deleteMovements ? { deleteMovements: '1' } : undefined,
+  });
 };
 
 // Summary
@@ -299,6 +305,10 @@ export const createTransaction = async (data: {
     idempotent?: boolean;
   }>('/inventory/transactions', data);
   return response.data;
+};
+
+export const deleteTransaction = async (id: string) => {
+  await axiosInstance.delete(`/inventory/transactions/${id}`);
 };
 
 /** Flujo de costos (total entrado / salido) según los filtros. */

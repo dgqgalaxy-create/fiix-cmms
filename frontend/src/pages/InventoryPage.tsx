@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, AlertTriangle, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter, DollarSign, Trash2 } from 'lucide-react';
+import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, AlertTriangle, Ban, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter, DollarSign, Trash2 } from 'lucide-react';
 import { 
-  getItems, getItemsPage, getItemById, getTransactionsPage, getTransactionsSummary, getCategories, getLocations, getVendors, getInventorySummary, deleteItem
+  getItems, getItemsPage, getItemById, getTransactionsPage, getTransactionsSummary, getCategories, getLocations, getVendors, getInventorySummary, deleteItem, deleteTransaction
 } from '../api/inventory';
 import type { Item, InventoryTransaction, ItemCategory, ItemLocation, Vendor, InventorySummary, TransactionsSummary } from '../api/inventory';
 import { formatCurrency } from '../utils/currency';
@@ -32,6 +32,7 @@ export const InventoryPage = () => {
   const canManagePurchases = hasPermission('MANAGE_PURCHASES');
   const canUseScanner = hasPermission('USE_QR_SCANNER');
   const canDeleteItems = hasPermission('DELETE_ITEMS');
+  const canDeleteMovements = hasPermission('DELETE_INVENTORY_MOVEMENTS');
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [activeTab, setActiveTab] = useState<'items' | 'transactions' | 'categories' | 'locations' | 'vendors'>('items');
@@ -61,7 +62,9 @@ export const InventoryPage = () => {
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [showNoVendorOnly, setShowNoVendorOnly] = useState(false);
   const [showCriticalAssetOnly, setShowCriticalAssetOnly] = useState(false);
+  const [showDiscontinuedOnly, setShowDiscontinuedOnly] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; item: Item } | null>(null);
+  const [txCtxMenu, setTxCtxMenu] = useState<{ x: number; y: number; tx: InventoryTransaction } | null>(null);
   const [sortBy, setSortBy] = useState<'name' | 'code' | 'category' | 'stock'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -156,6 +159,7 @@ export const InventoryPage = () => {
           critical: showLowStockOnly || showNoVendorOnly || undefined,
           noVendor: showNoVendorOnly || undefined,
           criticalAsset: showCriticalAssetOnly || undefined,
+          discontinued: showDiscontinuedOnly || undefined,
         },
         ac.signal
       );
@@ -244,7 +248,7 @@ export const InventoryPage = () => {
     void fetchItemsPage();
     return () => itemsAbortRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, currentPage, itemsSearchQ, showLowStockOnly, showNoVendorOnly, showCriticalAssetOnly]);
+  }, [activeTab, currentPage, itemsSearchQ, showLowStockOnly, showNoVendorOnly, showCriticalAssetOnly, showDiscontinuedOnly]);
 
   useEffect(() => {
     if (activeTab !== 'transactions') return;
@@ -429,14 +433,42 @@ export const InventoryPage = () => {
 
   const handleDeleteItem = async (item: Item) => {
     const ok = window.confirm(
-      `¿Eliminar permanentemente «${item.name}»?\n\nEsta acción no se puede deshacer. No podrás eliminarlo si tiene movimientos de inventario, planes de mantenimiento u órdenes de compra asociados.`
+      `¿Eliminar permanentemente «${item.name}»?\n\nEsta acción no se puede deshacer.`
     );
     if (!ok) return;
     try {
       await deleteItem(item.id);
       void refreshInventory(true);
     } catch (err: any) {
-      alert(err.response?.data?.error || 'No se pudo eliminar el repuesto.');
+      const data = err?.response?.data;
+      if (data?.code === 'HAS_MOVEMENTS') {
+        const n = data.movementsCount ?? 0;
+        const confirmMovements = window.confirm(
+          `«${item.name}» tiene ${n} movimiento(s) de inventario registrado(s).\n\n¿Deseas eliminar también esos movimientos?\n\n• Aceptar → elimina el repuesto y sus ${n} movimiento(s).\n• Cancelar → no se elimina nada.`
+        );
+        if (!confirmMovements) return;
+        try {
+          await deleteItem(item.id, true);
+          void refreshInventory(true);
+        } catch (err2: any) {
+          alert(err2.response?.data?.error || 'No se pudo eliminar el repuesto.');
+        }
+        return;
+      }
+      alert(data?.error || 'No se pudo eliminar el repuesto.');
+    }
+  };
+
+  const handleDeleteTransaction = async (tx: InventoryTransaction) => {
+    const ok = window.confirm(
+      `¿Eliminar este movimiento de «${tx.item?.name || 'repuesto'}» (${tx.amount > 0 ? '+' : ''}${tx.amount})?\n\nSe revertirá el stock actual del repuesto.`
+    );
+    if (!ok) return;
+    try {
+      await deleteTransaction(tx.id);
+      void refreshInventory(true);
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'No se pudo eliminar el movimiento.');
     }
   };
 
@@ -471,7 +503,7 @@ export const InventoryPage = () => {
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, showLowStockOnly, showNoVendorOnly, showCriticalAssetOnly]);
+  }, [searchTerm, showLowStockOnly, showNoVendorOnly, showCriticalAssetOnly, showDiscontinuedOnly]);
 
   useEffect(() => {
     setTxCurrentPage(1);
@@ -527,6 +559,7 @@ export const InventoryPage = () => {
 
   const filterCriticalStock = () => {
     setShowNoVendorOnly(false);
+    setShowDiscontinuedOnly(false);
     setShowLowStockOnly(true);
     setActiveTab('items');
   };
@@ -534,6 +567,7 @@ export const InventoryPage = () => {
   const filterCriticalWithoutVendor = (event?: MouseEvent) => {
     event?.stopPropagation();
     setShowLowStockOnly(false);
+    setShowDiscontinuedOnly(false);
     setShowNoVendorOnly(true);
     setShowCriticalAssetOnly(false);
     setActiveTab('items');
@@ -542,7 +576,16 @@ export const InventoryPage = () => {
   const filterCriticalAssets = () => {
     setShowLowStockOnly(false);
     setShowNoVendorOnly(false);
+    setShowDiscontinuedOnly(false);
     setShowCriticalAssetOnly(true);
+    setActiveTab('items');
+  };
+
+  const filterDiscontinued = () => {
+    setShowLowStockOnly(false);
+    setShowNoVendorOnly(false);
+    setShowCriticalAssetOnly(false);
+    setShowDiscontinuedOnly(true);
     setActiveTab('items');
   };
 
@@ -550,6 +593,7 @@ export const InventoryPage = () => {
     setShowLowStockOnly(false);
     setShowNoVendorOnly(false);
     setShowCriticalAssetOnly(false);
+    setShowDiscontinuedOnly(false);
   };
 
   const sortItemsClient = (list: Item[]) => {
@@ -582,6 +626,7 @@ export const InventoryPage = () => {
         critical: showLowStockOnly || showNoVendorOnly || undefined,
         noVendor: showNoVendorOnly || undefined,
         criticalAsset: showCriticalAssetOnly || undefined,
+        discontinued: showDiscontinuedOnly || undefined,
       });
       // Backend non-paginated critical only marks is_active; enforce stock filter client-side.
       if (showLowStockOnly || showNoVendorOnly) {
@@ -1249,6 +1294,7 @@ export const InventoryPage = () => {
                       key={tx.id} 
                       className="hover:bg-slate-50/50 transition-colors cursor-pointer"
                       onClick={() => handleOpenTransactionDetail(tx)}
+                      onContextMenu={(e) => { if (canDeleteMovements) { e.preventDefault(); setTxCtxMenu({ x: e.clientX, y: e.clientY, tx }); } }}
                     >
                       <td className="px-6 py-4">{formatDateTime(tx.created_at)}</td>
                       <td className="px-6 py-4 font-medium text-slate-900">{tx.item?.name}</td>
@@ -1813,6 +1859,21 @@ export const InventoryPage = () => {
                     ? `Refacciones de equipos críticos (${itemsTotal})`
                     : 'Refacciones de equipos críticos'}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => (showDiscontinuedOnly ? clearStockFilters() : filterDiscontinued())}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    showDiscontinuedOnly
+                      ? 'bg-slate-700 text-white border-slate-600'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                  title="Mostrar solo refacciones descontinuadas"
+                >
+                  <Ban size={14} />
+                  {showDiscontinuedOnly
+                    ? `Descontinuados (${itemsTotal})`
+                    : 'Descontinuados'}
+                </button>
               </div>
               {(showLowStockOnly || showNoVendorOnly) && (
                 <div className="flex flex-wrap items-center gap-2">
@@ -1907,6 +1968,20 @@ export const InventoryPage = () => {
             ...(canWriteOps ? [{ key: 'move', label: 'Registrar movimiento', icon: <ArrowRightLeft size={15} />, onClick: () => handleOpenTransactionModal(ctxMenu.item.id) }] : []),
             ...(canManage ? [{ key: 'qr', label: 'Imprimir QR', icon: <QrCode size={15} />, onClick: () => setQrItem(ctxMenu.item) }] : []),
             ...(canDeleteItems ? [{ key: 'delete', label: 'Eliminar', icon: <Trash2 size={15} />, danger: true, onClick: () => handleDeleteItem(ctxMenu.item) }] : []),
+          ]}
+        />
+      )}
+
+      {txCtxMenu && (
+        <ContextMenu
+          x={txCtxMenu.x}
+          y={txCtxMenu.y}
+          title={`${txCtxMenu.tx.item?.name || 'Repuesto'} · ${txCtxMenu.tx.amount > 0 ? '+' : ''}${txCtxMenu.tx.amount}`}
+          onClose={() => setTxCtxMenu(null)}
+          actions={[
+            ...(canDeleteMovements
+              ? [{ key: 'delete', label: 'Eliminar movimiento', icon: <Trash2 size={15} />, danger: true, onClick: () => handleDeleteTransaction(txCtxMenu.tx) }]
+              : []),
           ]}
         />
       )}

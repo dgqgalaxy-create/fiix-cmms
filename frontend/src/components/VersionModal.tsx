@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.85";
+export const APP_VERSION = "1.56.86";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Inventario — eliminar movimientos (clic derecho) con permiso «Eliminar Movimientos de Inventario»; eliminar repuestos con movimientos ahora pregunta si también borrarlos; filtro «Descontinuados».",
     "Seguridad: modo mantenimiento durante importaciones (CSV/Sheets/Drive) — los usuarios conectados ven un aviso y las escrituras quedan bloqueadas hasta terminar.",
     "Nuevo: Menú de clic derecho en Activos, Órdenes, Inventario, Compras, Planes, Usuarios y Solicitantes (acciones rápidas según permisos).",
     "Nuevo: Líneas y Costos — clic derecho (o botón ⋯) sobre un activo de la sección abre un menú con Editar, Marcar como obsoleto y Eliminar.",

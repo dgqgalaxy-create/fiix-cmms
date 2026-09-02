@@ -4,7 +4,7 @@ import {
   getLocations, createLocation, updateLocation, deleteLocation,
   getVendors, createVendor, updateVendor, deleteVendor,
   getItems, getItemById, createItem, updateItem, deleteItem,
-  getTransactions, createTransaction, getTransactionsSummary,
+  getTransactions, createTransaction, deleteTransaction, getTransactionsSummary,
   getInventorySummary,
   searchImages, proxyImage
 } from '../controllers/inventoryController';
@@ -62,5 +62,7 @@ router.get('/transactions', getTransactions);
 router.get('/transactions/summary', getTransactionsSummary);
 // Los técnicos también pueden registrar salidas al usar repuestos
 router.post('/transactions', requireWritable, createTransaction);
+// Eliminar un movimiento (revierte el stock). Permiso propio, activable por perfil.
+router.delete('/transactions/:id', requireWritable, requirePermission('DELETE_INVENTORY_MOVEMENTS'), deleteTransaction);
 
 export default router;

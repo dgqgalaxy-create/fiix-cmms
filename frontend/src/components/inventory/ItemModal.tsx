@@ -311,7 +311,7 @@ export const ItemModal = ({
   const handleDelete = async () => {
     if (!item) return;
     const ok = window.confirm(
-      `¿Eliminar permanentemente «${item.name}»?\n\nEsta acción no se puede deshacer. No podrás eliminarlo si tiene movimientos de inventario, planes de mantenimiento u órdenes de compra asociados.`
+      `¿Eliminar permanentemente «${item.name}»?\n\nEsta acción no se puede deshacer.`
     );
     if (!ok) return;
     setIsDeleting(true);
@@ -320,7 +320,23 @@ export const ItemModal = ({
       onSaved();
       onClose();
     } catch (err: any) {
-      alert(err.response?.data?.error || 'No se pudo eliminar el repuesto.');
+      const data = err?.response?.data;
+      if (data?.code === 'HAS_MOVEMENTS') {
+        const n = data.movementsCount ?? 0;
+        const confirmMovements = window.confirm(
+          `«${item.name}» tiene ${n} movimiento(s) de inventario registrado(s).\n\n¿Deseas eliminar también esos movimientos?\n\n• Aceptar → elimina el repuesto y sus ${n} movimiento(s).\n• Cancelar → no se elimina nada.`
+        );
+        if (!confirmMovements) return;
+        try {
+          await deleteItem(item.id, true);
+          onSaved();
+          onClose();
+        } catch (err2: any) {
+          alert(err2.response?.data?.error || 'No se pudo eliminar el repuesto.');
+        }
+        return;
+      }
+      alert(data?.error || 'No se pudo eliminar el repuesto.');
     } finally {
       setIsDeleting(false);
     }
