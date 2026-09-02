@@ -26,6 +26,7 @@ import {
   getDriveVendorsFolderId,
 } from '../utils/googleDriveImport';
 import { getImportProgress, setImportProgress, resetImportProgress } from '../utils/importProgress';
+import { enterMaintenance, exitMaintenance } from '../utils/maintenance';
 import {
   DEV_PASSWORD_CODES,
   DEV_PASSWORD_MAX_ATTEMPTS,
@@ -503,6 +504,8 @@ router.post(
     ...(filesMap?.workOrderImagesZip || []),
   ];
 
+  enterMaintenance('Importación de datos en curso. Modo solo lectura.');
+
   try {
     const useGoogleDrive =
       String((req.body as any)?.useGoogleDrive || '').toLowerCase() === 'true' ||
@@ -545,6 +548,7 @@ router.post(
     console.error('CSV Import error:', error);
     res.status(500).json({ message: 'Error procesando archivos CSV.', error: error.message });
   } finally {
+    exitMaintenance();
     for (const f of uploadedTemps) {
       unlinkUploadedSafe(f);
     }
@@ -556,6 +560,7 @@ router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Respo
   const tempPaths: string[] = [];
   resetImportProgress();
   setImportProgress('sheets', 5, 'Leyendo pestañas de Google Sheets…');
+  enterMaintenance('Importación de datos en curso. Modo solo lectura.');
   try {
     fs.mkdirSync(importTmpDir, { recursive: true });
     const tabs = await fetchAllImportTabs();
@@ -651,6 +656,7 @@ router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Respo
       error: error.message,
     });
   } finally {
+    exitMaintenance();
     for (const p of tempPaths) {
       try {
         fs.unlinkSync(p);

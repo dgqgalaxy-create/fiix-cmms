@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { sendHeartbeat, getUsers } from '../api/users';
-import { Menu, Wifi, WifiOff, Info, Search } from 'lucide-react';
+import { Menu, Wifi, WifiOff, Info, Search, Wrench } from 'lucide-react';
 import { NotificationsBell } from './NotificationsBell';
 import { VersionModal, APP_VERSION } from './VersionModal';
 import { OfflineBanner } from './OfflineBanner';
@@ -13,11 +13,13 @@ import { useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
 import { UpdateBanner } from './UpdateBanner';
 import { ChatMessageToast } from './ChatMessageToast';
 import { useChatDeliveryAck } from '../hooks/useChatDeliveryAck';
+import { useMaintenance } from '../context/MaintenanceContext';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const isTechMobileShell = useTechnicianMobileShell();
   useChatDeliveryAck();
+  const { isMaintenance } = useMaintenance();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -122,6 +124,14 @@ export const Layout = ({ children }: { children: ReactNode }) => {
           isTechMobileShell ? 'pb-24' : ''
         }`}
       >
+        {isMaintenance && (
+          <div className="sticky top-0 z-30 mb-4 flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-white shadow-md print:hidden">
+            <Wrench size={16} className="shrink-0" />
+            <span className="text-sm font-semibold text-center">
+              El servidor está en mantenimiento. Puedes seguir navegando, pero no se pueden hacer cambios.
+            </span>
+          </div>
+        )}
         <div className="flex md:hidden justify-end mb-3 print:hidden">
           <OfflineBanner />
         </div>

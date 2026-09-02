@@ -3,6 +3,7 @@ import { useEffect, lazy, Suspense } from 'react';
 import { syncOfflineQueue } from './utils/offlineSync';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { MaintenanceProvider } from './context/MaintenanceContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
@@ -83,6 +84,7 @@ function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
+        <MaintenanceProvider>
         <BrowserRouter>
           <Suspense fallback={<PageFallback />}>
           <Routes>
@@ -288,7 +290,8 @@ function App() {
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
           </Suspense>
-      </BrowserRouter>
+        </BrowserRouter>
+        </MaintenanceProvider>
       </ThemeProvider>
     </AuthProvider>
   );

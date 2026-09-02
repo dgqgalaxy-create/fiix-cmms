@@ -12,6 +12,7 @@ import { initSocket } from './utils/socket';
 import { assertJwtConfigured } from './utils/auth';
 import { corsOriginDelegate } from './utils/corsOrigins';
 import { requireUploadAccess } from './middlewares/authMiddleware';
+import { isMaintenanceActive } from './utils/maintenance';
 
 assertJwtConfigured();
 
@@ -47,6 +48,24 @@ app.use(
     index: false,
   })
 );
+
+// Modo mantenimiento (p. ej. importación en curso): bloquear mutaciones para todos.
+// Lecturas (GET/HEAD) siguen disponibles; el import en sí ya pasó este middleware
+// antes de activar el modo, así que no se bloquea a sí mismo.
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (
+    isMaintenanceActive() &&
+    ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method.toUpperCase())
+  ) {
+    res.status(503).json({
+      error:
+        'El servidor está en mantenimiento. Puedes seguir navegando, pero las escrituras están deshabilitadas temporalmente.',
+      maintenance: true,
+    });
+    return;
+  }
+  next();
+});
 
 import authRoutes from './routes/authRoutes';
 import assetRoutes from './routes/assetRoutes';
