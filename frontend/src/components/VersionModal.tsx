@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.90";
+export const APP_VERSION = "1.56.91";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Órdenes de Trabajo — al entrar abre directamente «Vista General» (para quien tiene permiso de ver todas); los técnicos siguen en «Mis Órdenes».",
     "Mejora: Portal de Solicitudes — al enviar se muestra el resumen completo: folio, zona, solicitante y equipo/activo reportado.",
     "Mejora: Portal de Solicitudes — al enviar una solicitud ahora se muestra el folio de seguimiento (FOL-XXXX).",
     "Nuevo: Soporte Docker — Dockerfile + docker-compose para despliegue alternativo (sin instalación nativa).",
