@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.89";
+export const APP_VERSION = "1.56.90";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Portal de Solicitudes — al enviar se muestra el resumen completo: folio, zona, solicitante y equipo/activo reportado.",
     "Mejora: Portal de Solicitudes — al enviar una solicitud ahora se muestra el folio de seguimiento (FOL-XXXX).",
     "Nuevo: Soporte Docker — Dockerfile + docker-compose para despliegue alternativo (sin instalación nativa).",
     "Nuevo: Inventario — selección múltiple de repuestos y eliminación en lote (botón «Eliminar (N)»), regida por el permiso «Eliminar Repuestos».",

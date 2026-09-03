@@ -100,7 +100,7 @@ export const RequestPortal = () => {
   const [compressing, setCompressing] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [submitted, setSubmitted] = useState(false);
-  const [submittedFolio, setSubmittedFolio] = useState<string | null>(null);
+  const [submittedSummary, setSubmittedSummary] = useState<{ folio: string | null; zoneName: string; requesterName: string; assetName: string } | null>(null);
   const [error, setError] = useState('');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [draftRestored, setDraftRestored] = useState(Boolean(saved?.title || saved?.zoneId || saved?.imageDataUrl));
@@ -250,7 +250,7 @@ export const RequestPortal = () => {
     clearDraft();
     cachedImageRef.current = null;
     setSubmitted(false);
-    setSubmittedFolio(null);
+    setSubmittedSummary(null);
     setTitle('');
     setDescription('');
     setZoneId('');
@@ -327,7 +327,14 @@ export const RequestPortal = () => {
 
       const response = await axios.post<{ folio?: number }>(`${PUBLIC_API}/requests`, payload);
       const folio = response.data?.folio;
-      setSubmittedFolio(folio != null ? formatWorkOrderFolio(folio) : null);
+      const zoneName = zones.find((z) => z.id === zoneId)?.name || '—';
+      const assetName = assets.find((a) => a.id === assetId)?.name || '—';
+      setSubmittedSummary({
+        folio: folio != null ? formatWorkOrderFolio(folio) : null,
+        zoneName,
+        requesterName: resolvedRequesterName,
+        assetName,
+      });
       clearDraft();
       setSubmitted(true);
     } catch (err) {
@@ -346,12 +353,26 @@ export const RequestPortal = () => {
             <CheckCircle2 size={40} className="text-emerald-500 dark:text-emerald-400" />
           </div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">¡Solicitud Enviada!</h2>
-          {submittedFolio && (
-            <div className="mb-4">
-              <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">Folio de seguimiento</p>
-              <div className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-xl font-bold text-emerald-700 dark:text-emerald-400">
-                {submittedFolio}
+          {submittedSummary && (
+            <div className="mb-5 text-left rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 overflow-hidden">
+              <div className="px-4 py-3 bg-emerald-50 dark:bg-emerald-950/30 border-b border-emerald-100 dark:border-emerald-900">
+                <p className="text-xs uppercase tracking-wider text-emerald-700 dark:text-emerald-300 font-semibold">Folio de seguimiento</p>
+                <div className="font-mono text-2xl font-bold text-emerald-700 dark:text-emerald-300 mt-0.5">{submittedSummary.folio || '—'}</div>
               </div>
+              <dl className="px-4 py-3 space-y-2 text-sm">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-slate-500 dark:text-slate-400 shrink-0">Zona</dt>
+                  <dd className="font-semibold text-slate-800 dark:text-slate-100 text-right">{submittedSummary.zoneName}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-slate-500 dark:text-slate-400 shrink-0">Solicitante</dt>
+                  <dd className="font-semibold text-slate-800 dark:text-slate-100 text-right">{submittedSummary.requesterName}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-slate-500 dark:text-slate-400 shrink-0">Equipo / Activo</dt>
+                  <dd className="font-semibold text-slate-800 dark:text-slate-100 text-right">{submittedSummary.assetName}</dd>
+                </div>
+              </dl>
             </div>
           )}
           <p className="text-slate-600 dark:text-slate-400 mb-8">El equipo de mantenimiento ha sido notificado y la orden se ha creado exitosamente.</p>
