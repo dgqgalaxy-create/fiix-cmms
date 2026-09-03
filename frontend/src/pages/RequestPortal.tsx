@@ -5,6 +5,7 @@ import { Wifi, WifiOff, CheckCircle2, Loader2 } from 'lucide-react';
 import { BACKEND_URL } from '../api/axios';
 import { compressImageFile, dataUrlToFile, fileToDataUrl } from '../utils/imageCompress';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { formatWorkOrderFolio } from '../utils/folio';
 
 interface Zone {
   id: string;
@@ -99,6 +100,7 @@ export const RequestPortal = () => {
   const [compressing, setCompressing] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedFolio, setSubmittedFolio] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [draftRestored, setDraftRestored] = useState(Boolean(saved?.title || saved?.zoneId || saved?.imageDataUrl));
@@ -248,6 +250,7 @@ export const RequestPortal = () => {
     clearDraft();
     cachedImageRef.current = null;
     setSubmitted(false);
+    setSubmittedFolio(null);
     setTitle('');
     setDescription('');
     setZoneId('');
@@ -322,7 +325,9 @@ export const RequestPortal = () => {
         payload.append('request_image', requestImage);
       }
 
-      await axios.post(`${PUBLIC_API}/requests`, payload);
+      const response = await axios.post<{ folio?: number }>(`${PUBLIC_API}/requests`, payload);
+      const folio = response.data?.folio;
+      setSubmittedFolio(folio != null ? formatWorkOrderFolio(folio) : null);
       clearDraft();
       setSubmitted(true);
     } catch (err) {
@@ -341,6 +346,14 @@ export const RequestPortal = () => {
             <CheckCircle2 size={40} className="text-emerald-500 dark:text-emerald-400" />
           </div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">¡Solicitud Enviada!</h2>
+          {submittedFolio && (
+            <div className="mb-4">
+              <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">Folio de seguimiento</p>
+              <div className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-xl font-bold text-emerald-700 dark:text-emerald-400">
+                {submittedFolio}
+              </div>
+            </div>
+          )}
           <p className="text-slate-600 dark:text-slate-400 mb-8">El equipo de mantenimiento ha sido notificado y la orden se ha creado exitosamente.</p>
           <button
             type="button"

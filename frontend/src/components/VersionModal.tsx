@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.88";
+export const APP_VERSION = "1.56.89";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "02 de Septiembre, 2026";
+  const updateDate = "03 de Septiembre, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Portal de Solicitudes — al enviar una solicitud ahora se muestra el folio de seguimiento (FOL-XXXX).",
     "Nuevo: Soporte Docker — Dockerfile + docker-compose para despliegue alternativo (sin instalación nativa).",
     "Nuevo: Inventario — selección múltiple de repuestos y eliminación en lote (botón «Eliminar (N)»), regida por el permiso «Eliminar Repuestos».",
     "Nuevo: Inventario — eliminar movimientos (clic derecho) con permiso «Eliminar Movimientos de Inventario»; eliminar repuestos con movimientos ahora pregunta si también borrarlos; filtro «Descontinuados».",
