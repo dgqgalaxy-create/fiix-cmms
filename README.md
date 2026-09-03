@@ -1,5 +1,5 @@
 # GTZ CMMS
-*(Última actualización: 26 de Agosto de 2026 — v1.56.69)*
+*(Última actualización: 03 de Septiembre de 2026 — v1.56.88)*
 
 Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, activos, inventario, preventivos, checklist, KPIs, compras, RCA, roster y notificaciones (Telegram + Web Push PWA).
 
@@ -24,6 +24,33 @@ En un Ubuntu limpio, el flujo completo es:
 **Qué se conserva en cada update:** `backend/.env`, `backend/uploads/` y la base de datos (Prisma solo ajusta el schema; no vacía datos).
 
 **Producción:** un solo proceso PM2 `fiix-backend` → `node dist/index.js` en **:3000** (API + SPA). Sin nodemon. nginx opcional en **:80**.
+
+---
+
+## Docker (despliegue alternativo sin `install.sh`)
+
+Para quien prefiera contenedores en vez de la instalación nativa (Node + PostgreSQL del sistema):
+
+```bash
+# 1. Requisitos: Docker + Docker Compose
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER   # re-inicia sesión después
+
+# 2. Clonar y levantar
+git clone git@github.com:dgqgalaxy-create/fiix-cmms.git ~/fiix-cmms
+cd ~/fiix-cmms
+
+DB_PASSWORD=una_clave_fuerte \
+JWT_SECRET=otro_secreto_largo \
+docker compose up -d --build
+
+# 3. Abrir
+# http://IP:3000
+```
+
+Levanta PostgreSQL 16 + la app (API + SPA) con un solo comando. Archivos involucrados: `Dockerfile`, `docker-compose.yml`, `.dockerignore` y `docker/entrypoint.sh`.
+
+**Guía completa** (volúmenes, variables de entorno, restaurar un backup con datos reales, HTTPS/cámara): [`docs/guia-docker.md`](docs/guia-docker.md).
 
 ---
 
