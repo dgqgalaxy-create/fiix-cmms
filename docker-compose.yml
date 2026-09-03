@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-fiix_dev_pass}
+      POSTGRES_DB: fiix_cmms
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fiix_cmms"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-fiix_dev_pass}@db:5432/fiix_cmms?schema=public
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:-cambia_este_secreto_jwt}
+      BACKUP_DIR: /backups
+      # Pon 1 para NO aplicar el esquema al arrancar (p. ej. vas a restaurar un backup).
+      SKIP_DB_PUSH: ${SKIP_DB_PUSH:-0}
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - uploads:/app/backend/uploads
+      - data:/app/data
+      - backups:/backups
+
+volumes:
+  pgdata:
+  uploads:
+  data:
+  backups:

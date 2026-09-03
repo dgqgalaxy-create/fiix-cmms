@@ -1,0 +1,22 @@
+# Control de versiones y CI
+.git
+.github
+.gitignore
+
+# Dependencias y artefactos de build (se regeneran dentro de la imagen)
+**/node_modules
+backend/dist
+frontend/dist
+
+# Datos y secretos (se montan como volúmenes o variables de entorno)
+backend/uploads
+data
+.env
+backend/.env
+
+# Documentación y archivos locales
+docs
+.run
+*.log
+.DS_Store
+README.md

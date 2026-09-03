@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.56.87";
+export const APP_VERSION = "1.56.88";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Soporte Docker — Dockerfile + docker-compose para despliegue alternativo (sin instalación nativa).",
     "Nuevo: Inventario — selección múltiple de repuestos y eliminación en lote (botón «Eliminar (N)»), regida por el permiso «Eliminar Repuestos».",
     "Nuevo: Inventario — eliminar movimientos (clic derecho) con permiso «Eliminar Movimientos de Inventario»; eliminar repuestos con movimientos ahora pregunta si también borrarlos; filtro «Descontinuados».",
     "Seguridad: modo mantenimiento durante importaciones (CSV/Sheets/Drive) — los usuarios conectados ven un aviso y las escrituras quedan bloqueadas hasta terminar.",
