@@ -27,6 +27,11 @@ services:
       BACKUP_DIR: /backups
       # Pon 1 para NO aplicar el esquema al arrancar (p. ej. vas a restaurar un backup).
       SKIP_DB_PUSH: ${SKIP_DB_PUSH:-0}
+      # Google Drive (importación de fotos en CSV/Sheets)
+      GOOGLE_DRIVE_API_KEY: ${GOOGLE_DRIVE_API_KEY:-}
+      GOOGLE_DRIVE_ITEMS_FOLDER: ${GOOGLE_DRIVE_ITEMS_FOLDER:-}
+      GOOGLE_DRIVE_VENDORS_FOLDER: ${GOOGLE_DRIVE_VENDORS_FOLDER:-}
+      GOOGLE_DRIVE_WO_FOLDER: ${GOOGLE_DRIVE_WO_FOLDER:-}
     ports:
       - "${PORT:-3000}:3000"
     volumes:

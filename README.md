@@ -36,12 +36,16 @@ Para quien prefiera contenedores en vez de la instalación nativa (Node + Postgr
 curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER   # re-inicia sesión después
 
-# 2. Clonar y levantar
+# 2. Clonar y levantar (con Google Drive para importar fotos, opcional)
 git clone git@github.com:dgqgalaxy-create/fiix-cmms.git ~/fiix-cmms
 cd ~/fiix-cmms
 
 DB_PASSWORD=una_clave_fuerte \
 JWT_SECRET=otro_secreto_largo \
+GOOGLE_DRIVE_API_KEY="tu_api_key_opcional" \
+GOOGLE_DRIVE_ITEMS_FOLDER="https://drive.google.com/drive/folders/ID_inventario" \
+GOOGLE_DRIVE_VENDORS_FOLDER="https://drive.google.com/drive/folders/ID_proveedores" \
+GOOGLE_DRIVE_WO_FOLDER="https://drive.google.com/drive/folders/ID_ordenes" \
 docker compose up -d --build
 
 # 3. Abrir
@@ -49,6 +53,12 @@ docker compose up -d --build
 ```
 
 Levanta PostgreSQL 16 + la app (API + SPA) con un solo comando. Archivos involucrados: `Dockerfile`, `docker-compose.yml`, `.dockerignore` y `docker/entrypoint.sh`.
+
+**Notas sobre Google Drive (opcional):**
+- Si omites `GOOGLE_DRIVE_*`, la app funciona sin descarga de fotos (puedes agregarlas después en Opciones de Desarrollador).
+- `GOOGLE_DRIVE_API_KEY`: clave de API de Google Cloud con Drive API habilitada.
+- Las 3 carpetas deben ser públicas ("Cualquiera con el enlace") y contener imágenes (jpg/png).
+- Ver sección §5 abajo para obtener API key y configurar carpetas.
 
 **Guía completa** (volúmenes, variables de entorno, restaurar un backup con datos reales, HTTPS/cámara): [`docs/guia-docker.md`](docs/guia-docker.md).
 
@@ -438,6 +448,7 @@ Las evidencias y fotos viven en **`backend/uploads/`** (disco del servidor), no 
 |---|---|
 | Postgres + JWT + clave menú dev | `backend/.env` (solo en el servidor/PC) |
 | Login de la aplicación | Usuarios en la BD (seed: `admin@fiix.com` / `password123` — al entrar te pedirá cambiarla) |
+| Google Drive (fotos CSV) | Variables de entorno: `GOOGLE_DRIVE_API_KEY`, `GOOGLE_DRIVE_ITEMS_FOLDER`, `GOOGLE_DRIVE_VENDORS_FOLDER`, `GOOGLE_DRIVE_WO_FOLDER`. Opcional en Docker (pasa al `docker compose up`); en desarrollo copia a `backend/.env`. |
 | Telegram | Opciones de desarrollador en la app, o variables en `.env` |
 | Web Push (PWA) | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` en `backend/.env` (generar con `npx web-push generate-vapid-keys` una sola vez) |
 | Aviso vs GitHub | Opcional: `GITHUB_REPO` / `GITHUB_BRANCH` (default `dgqgalaxy-create/fiix-cmms` / `main`) |
@@ -478,3 +489,56 @@ Los CSV de ejemplo viven en `data/`. Zips opcionales en Opciones de Desarrollado
 - Órdenes: `data/Formulario Solicitudes_Images.zip` — solo **FOTO ANTES** / **FOTO DESPUÉS** por FOLIO (firmas ignoradas).
 
 > **Orden de importación recomendado:** importa primero la **base de datos** (los 7 CSV de Opciones de Desarrollador) y deja el **Calendario de Horarios** (`Importar Calendario` en el módulo Horarios) **para el final**. Así los técnicos del calendario se vinculan por nombre con los usuarios ya creados y no se duplican.
+
+### Google Drive (descarga automática de fotos en importación)
+
+**¿Para qué sirve?**  
+En lugar de subir ZIPs con las fotos, puedes poner las imágenes en carpetas públicas de Google Drive. Al importar CSV o Google Sheets, el backend descarga automáticamente las fotos desde Drive.
+
+**Requisitos:**
+1. **Google API key** con Drive API habilitada (ver abajo).
+2. **Carpetas públicas** en Google Drive ("Cualquiera con el enlace").
+3. Nombrar las carpetas o pasar sus IDs al sistema.
+
+**Cómo obtener Google API key (una sola vez):**
+1. Abre [Google Cloud Console](https://console.cloud.google.com/).
+2. Crea un proyecto (p. ej. "FIIX CMMS").
+3. **Activar APIs:** busca "Drive API" → activa.
+4. **Crear credenciales:** tipo "API key" (público, sin restricciones de app).
+5. Copia la key.
+
+**Configurar carpetas en Drive:**
+1. Crea 3 carpetas (o más, según necesites):
+   - `Inventario_Fotos` (fotos de repuestos / items)
+   - `Proveedores_Logos` (logos de vendors)
+   - `Ordenes_Fotos` (fotos antes/después de órdenes)
+2. Sube las imágenes (jpg/png). **Importante:** nombra los archivos igual que en el CSV (p. ej. `MTTO-0001.jpg`, `ORDEN-123.jpg`).
+3. Comparte cada carpeta: botón derecho → "Compartir" → "Cualquiera con el enlace" (Lector).
+4. Copia la URL de cada carpeta: `https://drive.google.com/drive/folders/CARPETA_ID`.
+
+**Pasar variables a Docker (instalación):**
+
+```bash
+DB_PASSWORD=mi_clave \
+JWT_SECRET=mi_secreto \
+GOOGLE_DRIVE_API_KEY="AIzaXxx..." \
+GOOGLE_DRIVE_ITEMS_FOLDER="https://drive.google.com/drive/folders/1abc123def456" \
+GOOGLE_DRIVE_VENDORS_FOLDER="https://drive.google.com/drive/folders/2xyz789abc123" \
+GOOGLE_DRIVE_WO_FOLDER="https://drive.google.com/drive/folders/3def456xyz789" \
+docker compose up -d --build
+```
+
+**En desarrollo local (sin Docker):**
+Edita `backend/.env`:
+```bash
+GOOGLE_DRIVE_API_KEY="tu_api_key"
+GOOGLE_DRIVE_ITEMS_FOLDER="https://drive.google.com/drive/folders/..."
+GOOGLE_DRIVE_VENDORS_FOLDER="https://drive.google.com/drive/folders/..."
+GOOGLE_DRIVE_WO_FOLDER="https://drive.google.com/drive/folders/..."
+```
+
+**Si algo falla:**
+- **"Drive API HTTP 403"** → API key sin permisos, o carpeta no pública.
+- **"HTML en lugar del archivo"** → carpeta NO es pública ("Cualquiera con el enlace").
+- **Timeout** → red lenta o muchos archivos; espera más.
+- **Archivo vacío / 0 descargas** → nombres de archivos no coinciden con CSV / nombres mal escritos en Drive.
