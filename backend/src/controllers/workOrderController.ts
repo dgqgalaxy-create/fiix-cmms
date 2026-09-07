@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import type { Prisma } from '@prisma/client';
 import prisma from '../config/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import { emitRefresh, emitWorkOrderUpdated } from '../utils/socket';
@@ -10,6 +11,7 @@ import { writeAuditLog } from '../utils/auditLog';
 import { PRODUCTION_LINES, resolveProductionLine } from '../utils/assetSection';
 import { resolvePartsUnitCost } from '../utils/resolvePartsUnitCost';
 import { parseQty } from '../utils/qtyMode';
+import { tryConsumeStock } from '../utils/stockMutation';
 
 const OPEN_WO_STATUSES = ['PENDIENTE', 'EN_PROCESO', 'EN_ESPERA'] as const;
 
@@ -796,96 +798,38 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
       }
     }
     
-    if (status === 'EN_ESPERA') {
-      updateData.hold_reason = hold_reason;
-      if (currentWorkOrder.status !== 'EN_ESPERA') {
-        updateData.paused_at = new Date();
-      }
-    }
+    // Transiciones de pausa/reanudación/cierre y consumo de repuestos: se resuelven
+    // DENTRO de la transacción final, bajo bloqueo de la OT (ver más abajo). Así el
+    // cierre y los descuentos son todo-o-nada: si el cierre falla (p. ej. conflicto 409
+    // por otra actualización en paralelo), ningún repuesto queda descontado.
 
-    if (status && status !== 'EN_ESPERA' && currentWorkOrder.status === 'EN_ESPERA') {
-      updateData.paused_at = null;
-    }
-    
-    let didConsumeInventory = false;
-
-    if (status === 'FINALIZADO' && currentWorkOrder.status !== 'FINALIZADO') {
-      // Preserve CSV-imported completed_at; only stamp now when missing
-      updateData.completed_at = currentWorkOrder.completed_at ?? new Date();
-
-      // Parsear used_items si viene como string (ej. desde FormData)
-      let parsedUsedItems = used_items;
+    // Repuestos usados: llegan como JSON string (FormData) o como arreglo directo.
+    const parsedUsedItems: Array<{ item_id?: string; amount: unknown }> = [];
+    if (used_items !== undefined && used_items !== null && String(used_items).trim() !== '') {
+      let raw: unknown = used_items;
       if (typeof used_items === 'string') {
         try {
-          parsedUsedItems = JSON.parse(used_items);
-        } catch (e) {
-          parsedUsedItems = [];
-        }
-      }
-
-      // Descontar inventario si se enviaron repuestos usados (atómico + ligado a la OT)
-      if (parsedUsedItems && Array.isArray(parsedUsedItems) && parsedUsedItems.length > 0 && userId) {
-        const folioLabel = formatWorkOrderFolio(currentWorkOrder.folio);
-        try {
-          await prisma.$transaction(async (tx) => {
-            for (const part of parsedUsedItems) {
-              if (!part.item_id) continue;
-
-              const item = await tx.item.findUnique({ where: { id: part.item_id } });
-              if (!item) {
-                throw new Error(`Repuesto no encontrado (${part.item_id})`);
-              }
-
-              const amountParsed = parseQty(part.amount, item.qty_mode, {
-                fieldLabel: `La cantidad de "${item.name}"`,
-              });
-              if (!amountParsed.ok) {
-                throw new Error(amountParsed.error);
-              }
-              const amountToDeduct = amountParsed.value;
-
-              if (item.stock < amountToDeduct) {
-                throw new Error(`Stock insuficiente de "${item.name}". Disponible: ${item.stock} ${item.uom}`);
-              }
-
-              await tx.inventoryTransaction.create({
-                data: {
-                  item_id: part.item_id,
-                  user_id: userId,
-                  work_order_id: id,
-                  unit_cost: item.purchase_cost ?? 0,
-                  amount: -amountToDeduct,
-                  reason: `Consumo OT ${folioLabel}`,
-                },
-              });
-              await tx.item.update({
-                where: { id: part.item_id },
-                data: { stock: { decrement: amountToDeduct } },
-              });
-              didConsumeInventory = true;
-            }
-          });
-        } catch (consumeError: any) {
-          res.status(400).json({ error: consumeError.message || 'No se pudo descontar el inventario al cerrar la OT' });
+          raw = JSON.parse(used_items);
+        } catch {
+          res.status(400).json({ error: 'La lista de repuestos utilizados no es válida.' });
           return;
         }
       }
+      if (!Array.isArray(raw)) {
+        res.status(400).json({ error: 'La lista de repuestos utilizados no es válida.' });
+        return;
+      }
+      for (const part of raw) {
+        if (part && typeof part === 'object' && typeof (part as any).item_id === 'string') {
+          parsedUsedItems.push({ item_id: (part as any).item_id, amount: (part as any).amount });
+        }
+      }
     }
 
-    if (status === 'EN_PROCESO' && currentWorkOrder.status !== 'EN_PROCESO') {
-      if (!currentWorkOrder.started_at) {
-        updateData.started_at = new Date();
-      }
-      updateData.last_resumed_at = new Date();
-    }
+    // Cierre: transición a FINALIZADO. completed_at y consumo se resuelven bajo bloqueo.
+    const closing = status === 'FINALIZADO' && currentWorkOrder.status !== 'FINALIZADO';
 
-    if ((status === 'EN_ESPERA' || status === 'FINALIZADO') && currentWorkOrder.status === 'EN_PROCESO') {
-      if (currentWorkOrder.last_resumed_at) {
-        const timeDiffMs = new Date().getTime() - currentWorkOrder.last_resumed_at.getTime();
-        updateData.accumulated_time_ms = currentWorkOrder.accumulated_time_ms + timeDiffMs;
-      }
-      updateData.last_resumed_at = null;
-    }
+    let didConsumeInventory = false;
 
     // Construir URLs de las imágenes
     if (files && files['before_image']) {
@@ -895,24 +839,122 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
       updateData.after_image_url = `/uploads/${files['after_image'][0].filename}`;
     }
 
-    // Comparar-y-actualizar: si el estado cambió en paralelo, 409
+    // Comparar-y-actualizar bajo bloqueo de fila: cierre de la OT + consumo de repuestos
+    // en UNA sola transacción (todo-o-nada). Si algo falla, la transacción revierte y no
+    // queda ni el estado cambiado ni repuestos descontados.
     try {
-      const updated = await prisma.$transaction(async (tx) => {
-        const fresh = await tx.workOrder.findUnique({ where: { id } });
-        if (!fresh) {
-          throw Object.assign(new Error('NOT_FOUND'), { code: 'NOT_FOUND' });
-        }
-        if (status && status !== currentWorkOrder.status && fresh.status !== currentWorkOrder.status) {
-          throw Object.assign(new Error('CONFLICT'), {
-            code: 'CONFLICT',
-            current_status: fresh.status,
+      const updated = await prisma.$transaction(
+        async (tx) => {
+          // 1) Serializar los cambios sobre esta OT (cierres concurrentes se encolan aquí).
+          await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM "WorkOrder" WHERE id = ${id}::uuid FOR UPDATE`;
+
+          const fresh = await tx.workOrder.findUnique({ where: { id } });
+          if (!fresh) {
+            throw Object.assign(new Error('NOT_FOUND'), { code: 'NOT_FOUND' });
+          }
+          // El estado cambió en paralelo respecto a la lectura inicial → 409 (rollback total).
+          if (status && status !== currentWorkOrder.status && fresh.status !== currentWorkOrder.status) {
+            throw Object.assign(new Error('CONFLICT'), {
+              code: 'CONFLICT',
+              current_status: fresh.status,
+            });
+          }
+
+          const merged: any = { ...updateData };
+
+          // Pausar (EN_ESPERA): registrar motivo y momento de pausa.
+          if (status === 'EN_ESPERA') {
+            merged.hold_reason = hold_reason;
+            if (fresh.status !== 'EN_ESPERA') {
+              merged.paused_at = new Date();
+            }
+          }
+
+          // Reanudar desde EN_ESPERA: limpiar la pausa.
+          if (status && status !== 'EN_ESPERA' && fresh.status === 'EN_ESPERA') {
+            merged.paused_at = null;
+          }
+
+          // Aceptar / reanudar trabajo: marcar inicio o última reanudación.
+          if (status === 'EN_PROCESO' && fresh.status !== 'EN_PROCESO') {
+            if (!fresh.started_at) {
+              merged.started_at = new Date();
+            }
+            merged.last_resumed_at = new Date();
+          }
+
+          // Acumular tiempo de labor al pausar o finalizar (usa la fila ya bloqueada).
+          if ((status === 'EN_ESPERA' || status === 'FINALIZADO') && fresh.status === 'EN_PROCESO') {
+            if (fresh.last_resumed_at) {
+              merged.accumulated_time_ms =
+                fresh.accumulated_time_ms + (Date.now() - fresh.last_resumed_at.getTime());
+            }
+            merged.last_resumed_at = null;
+          }
+
+          // Cierre: estampar completed_at y descontar repuestos en la misma transacción.
+          if (closing) {
+            // Preservar completed_at importado por CSV; solo estampar ahora si falta.
+            merged.completed_at = fresh.completed_at ?? new Date();
+
+            if (userId && parsedUsedItems.length > 0) {
+              const folioLabel = formatWorkOrderFolio(fresh.folio);
+              // Orden estable por item_id: evita interbloqueos entre cierres concurrentes
+              // que consuman los mismos repuestos en distinto orden.
+              const ordered = [...parsedUsedItems].sort((a, b) =>
+                String(a.item_id).localeCompare(String(b.item_id))
+              );
+              for (const part of ordered) {
+                if (!part.item_id) continue;
+
+                const item = await tx.item.findUnique({ where: { id: part.item_id } });
+                if (!item) {
+                  throw Object.assign(new Error(`Repuesto no encontrado (${part.item_id})`), {
+                    httpStatus: 400,
+                  });
+                }
+
+                const quantity = parseQty(part.amount, item.qty_mode, {
+                  fieldLabel: `La cantidad de "${item.name}"`,
+                });
+                if (!quantity.ok) {
+                  throw Object.assign(new Error(quantity.error), { httpStatus: 400 });
+                }
+
+                // Baja atómica condicional: nunca deja el stock negativo, aunque otro
+                // proceso retire el mismo ítem al mismo tiempo.
+                const result = await tryConsumeStock(tx, item.id, quantity.value);
+                if (!result.ok) {
+                  throw Object.assign(
+                    new Error(
+                      `Stock insuficiente de "${item.name}". Disponible: ${result.available} ${item.uom}`
+                    ),
+                    { httpStatus: 400 }
+                  );
+                }
+
+                await tx.inventoryTransaction.create({
+                  data: {
+                    item_id: item.id,
+                    user_id: userId,
+                    work_order_id: id,
+                    unit_cost: item.purchase_cost ?? 0,
+                    amount: -quantity.value,
+                    reason: `Consumo OT ${folioLabel}`,
+                  },
+                });
+                didConsumeInventory = true;
+              }
+            }
+          }
+
+          return tx.workOrder.update({
+            where: { id },
+            data: merged,
           });
-        }
-        return tx.workOrder.update({
-          where: { id },
-          data: updateData,
-        });
-      });
+        },
+        { maxWait: 10_000, timeout: 20_000 }
+      );
 
       emitWorkOrderUpdated(id);
       if (didConsumeInventory) emitRefresh('refresh_inventory');
@@ -940,6 +982,12 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
           from_status: currentWorkOrder.status,
           to_status: status || currentWorkOrder.status,
           assigned_technicians_ids: assigned_technicians_ids ?? null,
+          consumed_parts: didConsumeInventory
+            ? (parsedUsedItems.map((p) => ({
+                item_id: p.item_id ?? '',
+                amount: Number.isFinite(Number(p.amount)) ? Number(p.amount) : null,
+              })) as unknown as Prisma.InputJsonValue)
+            : null,
         },
       });
 
@@ -953,6 +1001,14 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
         res.status(409).json({
           error: 'Otro usuario ya actualizó el estado de esta orden. Recarga e inténtalo de nuevo.',
           current_status: txError.current_status,
+        });
+        return;
+      }
+      // Errores de negocio lanzados dentro de la transacción (consumo inválido, stock
+      // insuficiente, repuesto inexistente…). La transacción ya se revirtió completa.
+      if (txError?.httpStatus && Number.isInteger(txError.httpStatus)) {
+        res.status(txError.httpStatus).json({
+          error: txError.message || 'No se pudo cerrar la orden de trabajo',
         });
         return;
       }
