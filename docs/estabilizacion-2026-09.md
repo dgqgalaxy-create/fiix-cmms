@@ -60,7 +60,11 @@ Base: **v1.56.91 (`f0f5587`) = origin/main de GitHub (versión fiable)**.
       correcta verifica 1|1).
 - [ ] **8 (parcial). Auditoría y calidad** — errores de tipos del frontend CORREGIDOS
       (`npx tsc -b` en 0, 85 errores, sin cambios de comportamiento). Pendiente: bitácora
-      con valores anteriores/nuevos y motivos; expediente anual (órdenes, fotos, consumos).
+
+      con valores anteriores/nuevos y motivos. Hecho: transiciones de OC (`PO_STATUS`/`PO_RECEIVED`
+      con de→a y cantidades recibidas) y corrección de movimientos (`INVENTORY_TX_DELETE` con
+      movimiento original y motivo opcional). Pendiente: diffs antes/después en ediciones de
+      catálogo/usuario/OT y el expediente anual.
 - [ ] 9. **Centro de calidad de datos** — fotos faltantes, tiempos atípicos, repuestos sin precio,
       diferencias de inventario, con acceso directo a corregir.
 

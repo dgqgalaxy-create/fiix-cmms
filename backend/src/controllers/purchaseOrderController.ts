@@ -4,6 +4,7 @@ import path from 'path';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import prisma from '../config/prisma';
 import { emitRefresh } from '../utils/socket';
+import { writeAuditLog } from '../utils/auditLog';
 import { parseDateInput } from '../utils/parseDateInput';
 
 const poDetailInclude = {
@@ -700,6 +701,24 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
 
       emitRefresh('refresh_purchase_orders');
       emitRefresh('refresh_inventory');
+
+      const actorNameR = (
+        await prisma.user.findUnique({ where: { id: user_id }, select: { name: true } })
+      )?.name;
+      await writeAuditLog({
+        userId: user_id,
+        userName: actorNameR,
+        action: 'PO_RECEIVED',
+        entity: 'purchase_order',
+        entityId: id,
+        summary: `OC PO-${existingOrder.folio} recibida (${existingOrder.items.length} líneas)`,
+        meta: {
+          from_status: existingOrder.status,
+          to_status: 'RECIBIDA',
+          received_quantities: Object.fromEntries(receivedMap),
+        },
+      });
+
       res.json(updatedOrder);
       return;
     }
@@ -712,6 +731,20 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
     });
 
     emitRefresh('refresh_purchase_orders');
+
+    const actorNameS = (
+      await prisma.user.findUnique({ where: { id: user_id }, select: { name: true } })
+    )?.name;
+    await writeAuditLog({
+      userId: user_id,
+      userName: actorNameS,
+      action: 'PO_STATUS',
+      entity: 'purchase_order',
+      entityId: id,
+      summary: `OC PO-${existingOrder.folio}: ${existingOrder.status} → ${status}`,
+      meta: { from_status: existingOrder.status, to_status: status },
+    });
+
     res.json(updatedOrder);
   } catch (error: any) {
     if (error?.code === 'ALREADY_CLOSED' || error?.code === 'NOT_FOUND') {

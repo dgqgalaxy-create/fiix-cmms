@@ -893,6 +893,11 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
 export const deleteTransaction = async (req: Request, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
+    const motivoRaw = (req.body as { reason?: unknown })?.reason;
+    const motivo =
+      typeof motivoRaw === 'string' && motivoRaw.trim()
+        ? motivoRaw.trim().slice(0, 300)
+        : null;
     const tx = await prisma.inventoryTransaction.findUnique({ where: { id } });
     if (!tx) {
       res.status(404).json({ error: 'Movimiento no encontrado' });
@@ -926,6 +931,27 @@ export const deleteTransaction = async (req: Request, res: Response): Promise<vo
         await addStock(t, tx.item_id, Math.abs(tx.amount));
       }
       await t.inventoryTransaction.delete({ where: { id } });
+    });
+
+    // Bitácora: qué movimiento se corrigió, con qué efecto sobre el stock y (si lo dio
+    // el usuario) el motivo de la corrección.
+    const actorU = (req as any).user?.userId as string | undefined;
+    const actorN = actorU
+      ? (await prisma.user.findUnique({ where: { id: actorU }, select: { name: true } }))?.name
+      : null;
+    await writeAuditLog({
+      userId: actorU ?? null,
+      userName: actorN,
+      action: 'INVENTORY_TX_DELETE',
+      entity: 'inventory',
+      entityId: tx.item_id,
+      summary: `Movimiento ${tx.amount > 0 ? 'entrada' : 'salida'} ${Math.abs(tx.amount)} corregido (efecto sobre stock revertido)${motivo ? ` · ${motivo}` : ''}`,
+      meta: {
+        deleted_transaction_id: id,
+        item_id: tx.item_id,
+        amount: tx.amount,
+        motivo,
+      },
     });
 
     emitRefresh('refresh_inventory');
