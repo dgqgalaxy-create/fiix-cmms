@@ -15,6 +15,7 @@ import { authenticate, type AuthRequest } from '../middlewares/authMiddleware';
 import { processCsvImportFiles, CsvImportError } from '../utils/runCsvImport';
 import { importInventoryTransactionsFile } from '../utils/inventoryCsvImport';
 import { buildAnnualFileData } from '../utils/annualFile';
+import { buildDataQualityReport } from '../utils/dataQuality';
 import { logImportAudit } from '../utils/importAuditLog';
 import {
   fetchAllImportTabs,
@@ -606,6 +607,17 @@ router.get('/annual-file', verifyDevPassword, async (req: Request, res: Response
   } catch (error: any) {
     console.error('Error generando expediente anual:', error);
     res.status(500).json({ message: error?.message || 'No se pudo generar el expediente anual.' });
+  }
+});
+
+/** Centro de calidad de datos (solo lectura): inventario, precios, fotos y tiempos. */
+router.get('/data-quality', verifyDevPassword, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const report = await buildDataQualityReport();
+    res.json({ success: true, report });
+  } catch (error: any) {
+    console.error('Error generando reporte de calidad:', error);
+    res.status(500).json({ message: error?.message || 'No se pudo generar el reporte de calidad.' });
   }
 });
 
