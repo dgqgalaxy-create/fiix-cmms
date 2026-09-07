@@ -13,6 +13,7 @@ import {
 } from '../utils/uploadsCleanup';
 import { authenticate, type AuthRequest } from '../middlewares/authMiddleware';
 import { processCsvImportFiles, CsvImportError } from '../utils/runCsvImport';
+import { importInventoryTransactionsFile } from '../utils/inventoryCsvImport';
 import { logImportAudit } from '../utils/importAuditLog';
 import {
   fetchAllImportTabs,
@@ -554,6 +555,45 @@ router.post(
     }
   }
 });
+
+/** Vista previa SIN aplicar: qué haría el import del CSV de movimientos (crea/omite/ignora). */
+router.post(
+  '/import-csv-preview',
+  verifyDevPassword,
+  uploadImportFields,
+  async (req: Request, res: Response): Promise<void> => {
+    const filesMap = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const csvFiles = (filesMap?.csvFiles || []).filter((f) => !/\.zip$/i.test(f.originalname || ''));
+    const uploadedTemps = csvFiles.slice();
+
+    try {
+      const invFile = csvFiles.find((f) => (f.originalname || '').includes('Inventory'));
+      if (!invFile) {
+        res.status(400).json({
+          message:
+            'Para la vista previa selecciona el CSV de movimientos (Items - Inventory.csv). No se aplicó nada.',
+        });
+        return;
+      }
+      const details = await importInventoryTransactionsFile(invFile, { dryRun: true });
+      res.json({
+        success: true,
+        dryRun: true,
+        filename: invFile.originalname,
+        inventory: details,
+        note:
+          'Vista previa de MOVIMIENTOS únicamente (no se aplicó nada). Los demás CSV usan upsert y no borran historial.',
+      });
+    } catch (error: any) {
+      console.error('CSV import preview error:', error);
+      res.status(400).json({ message: error?.message || 'No se pudo calcular la vista previa.' });
+    } finally {
+      for (const f of uploadedTemps) {
+        unlinkUploadedSafe(f);
+      }
+    }
+  }
+);
 
 /** Importa las 7 pestañas mapeadas desde Google Sheets (mismo motor que CSV). */
 router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {

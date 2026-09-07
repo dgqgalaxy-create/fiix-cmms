@@ -53,7 +53,8 @@ const parseNumber = (val: unknown): number => {
  *   histórico (comportamiento v1.11.10).
  */
 export async function importInventoryTransactionsFile(
-  file: ImportFileLike
+  file: ImportFileLike,
+  opts?: { dryRun?: boolean }
 ): Promise<InventoryImportDetails> {
   const details: InventoryImportDetails = {
     created: 0,
@@ -76,29 +77,36 @@ export async function importInventoryTransactionsFile(
   );
 
   // Usuarios que aparecen en movimientos pero no existen → auto-crear (inactivos).
+  // En modo vista previa (dryRun) no se crea nada: solo se informa cuántos se crearían.
   const invDefaultHash = await bcrypt.hash('CMMS2026*', 10);
   const missingEmails = new Set<string>();
   for (const row of data) {
     const email = row['User ID'] ? row['User ID'].trim() : '';
     if (email && !userMap[email]) missingEmails.add(email);
   }
-  for (const email of missingEmails) {
-    try {
-      const created = await prisma.user.create({
-        data: {
-          name: email.split('@')[0],
-          email,
-          password_hash: invDefaultHash,
-          role: Role.TECNICO,
-          is_active: false,
-          must_change_password: true,
-        },
-      });
-      userMap[email] = created.id;
-      details.autoCreatedUsers++;
-    } catch (e) {
-      // Carrera con otra creación simultánea; se reporta la fila como ignorada.
-      console.error('Inventory user auto-create error', email, e);
+  if (opts?.dryRun) {
+    details.autoCreatedUsers = missingEmails.size;
+    // Marcador virtual: en la vista previa las filas de esos usuarios SÍ se contarían.
+    for (const email of missingEmails) userMap[email] = '__auto__';
+  } else {
+    for (const email of missingEmails) {
+      try {
+        const created = await prisma.user.create({
+          data: {
+            name: email.split('@')[0],
+            email,
+            password_hash: invDefaultHash,
+            role: Role.TECNICO,
+            is_active: false,
+            must_change_password: true,
+          },
+        });
+        userMap[email] = created.id;
+        details.autoCreatedUsers++;
+      } catch (e) {
+        // Carrera con otra creación simultánea; se reporta la fila como ignorada.
+        console.error('Inventory user auto-create error', email, e);
+      }
     }
   }
 
@@ -187,15 +195,17 @@ export async function importInventoryTransactionsFile(
     });
   });
 
-  if (creates.length > 0) {
+  if (opts?.dryRun) {
+    details.created = creates.length;
+  } else if (creates.length > 0) {
     // skipDuplicates: red de seguridad extra si dos procesos importan a la vez.
     const res = await prisma.inventoryTransaction.createMany({
       data: creates,
       skipDuplicates: true,
     });
     details.created = res.count;
+    details.skippedExisting += creates.length - details.created;
   }
-  details.skippedExisting += creates.length - details.created;
 
   return details;
 }

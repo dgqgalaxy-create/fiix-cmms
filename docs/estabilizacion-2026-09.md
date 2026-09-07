@@ -23,7 +23,11 @@ Base: **v1.56.91 (`f0f5587`) = origin/main de GitHub (versión fiable)**.
   - Pruebas: `backend/scripts/run-atomic-close-test.sh` (base temporal `fiix_cmms_test_*`).
     Cubren: cierre exitoso, revierte todo ante stock insuficiente, 6 cierres concurrentes → 1
     descuento, replay de cierre no descuenta 2 veces, JSON inválido → 400.
-- [ ] 2. **Importación segura** — vista previa crear/actualizar/omitir; conservar historial capturado en la app.
+- [x] **2. Importación segura** — sin TRUNCATE (dedupe por Inventory ID/tupla), reporte por fila
+      (ver commit 9213c5b) y ahora con **vista previa dry-run**: POST /dev/import-csv-preview
+      calcula cuántos movimientos se crearían/omitirían/ignorarían SIN escribir; botón en
+      Opciones de Desarrollador (Paso 1) «Vista previa de movimientos» + «Confirmar e
+      importar movimientos». Prueba: run-import-safety-test.sh incluye assertions de preview.
 - [x] **3. Protección del stock** — salidas manuales con baja atómica condicional (nunca
       negativas, ni con retiros simultáneos); borrar una ENTRADA ya consumida queda bloqueado
       (evita stock negativo); borrar un consumo ligado a una OT queda bloqueado (trazabilidad);

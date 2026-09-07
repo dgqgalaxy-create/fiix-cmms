@@ -50,6 +50,23 @@ async function main() {
   rows.push(',,1/1/2026 10:00:00,-1,' + techEmail + ',Roto'); // fila incompleta
   const buffer = Buffer.from(['Inventory ID,Item ID,DateTime,Amount,User ID,Reason', ...rows].join('\n'), 'utf8');
 
+  // 0) Vista previa (dry-run): calcula lo mismo SIN escribir nada.
+  const preview = await importInventoryTransactionsFile(
+    { originalname: 'Items - Inventory.csv', buffer },
+    { dryRun: true }
+  );
+  assert.equal(preview.created, 2, 'preview: creados');
+  assert.equal(preview.skippedExisting, 2, 'preview: omitidos');
+  assert.equal(preview.autoCreatedUsers, 1, 'preview: usuarios que se crearían');
+  assert.equal(preview.ignored.length, 2, 'preview: ignorados');
+  assert.equal(
+    await prisma.inventoryTransaction.count(),
+    1,
+    'la vista previa NO debe escribir nada (solo el movimiento de la app)'
+  );
+  assert.equal(await prisma.user.count({ where: { email: 'ghost-import@test.local' } }), 0);
+  console.log('  ✓ Vista previa: calcula sin escribir (crea 2, omite 2, ignora 2, crearía 1 usuario)');
+
   const details = await importInventoryTransactionsFile({ originalname: 'Items - Inventory.csv', buffer });
 
   console.log('Detalles del import:', JSON.stringify(details, null, 2));

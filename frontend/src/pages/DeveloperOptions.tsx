@@ -115,6 +115,18 @@ export const DeveloperOptions = () => {
   const [itemImagesZip, setItemImagesZip] = useState<File | null>(null);
   const [vendorImagesZip, setVendorImagesZip] = useState<File | null>(null);
   const [workOrderImagesZip, setWorkOrderImagesZip] = useState<File | null>(null);
+  const [invPreviewFile, setInvPreviewFile] = useState<File | null>(null);
+  const [invPreviewBusy, setInvPreviewBusy] = useState(false);
+  const [invPreview, setInvPreview] = useState<null | {
+    filename: string;
+    details: {
+      created: number;
+      skippedExisting: number;
+      ignoredTotal: number;
+      ignored: Array<{ row: number; reason: string }>;
+      autoCreatedUsers: number;
+    };
+  }>(null);
   const [useGoogleDrive, setUseGoogleDrive] = useState(true);
   const [skipAssets, setSkipAssets] = useState(true);
   const [driveStatus, setDriveStatus] = useState<{
@@ -822,6 +834,80 @@ export const DeveloperOptions = () => {
     }
   };
 
+  /** Vista previa de movimientos (dry-run): calcula crear/omitir/ignorar SIN aplicar nada. */
+  const runInventoryPreview = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!/inventory/i.test(file.name)) {
+      setError('Para la vista previa selecciona el CSV de movimientos (Items - Inventory.csv). No se aplicó nada.');
+      return;
+    }
+    setInvPreviewBusy(true);
+    setError(null);
+    setInvPreview(null);
+    try {
+      const fd = new FormData();
+      fd.append('csvFiles', file);
+      const res = await axios.post(`/dev/import-csv-preview`, fd, {
+        headers: { 'x-dev-password': password },
+        timeout: 120000,
+      });
+      setInvPreviewFile(file);
+      setInvPreview({ filename: res.data.filename, details: res.data.inventory });
+    } catch (err: unknown) {
+      const msg = isAxiosError(err)
+        ? err.response?.data?.message || err.message
+        : err instanceof Error
+          ? err.message
+          : 'Error desconocido';
+      setError(`Vista previa: ${msg}`);
+    } finally {
+      setInvPreviewBusy(false);
+    }
+  };
+
+  /** Importa SOLO el CSV de movimientos que pasó la vista previa (confirmación explícita). */
+  const confirmInventoryPreviewImport = async () => {
+    if (!invPreviewFile) return;
+    setIsLoading(true);
+    setLoadingMessage('Importando movimientos (solo este CSV)…');
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append('csvFiles', invPreviewFile);
+      const res = await axios.post(`/dev/import-csv`, fd, {
+        headers: { 'x-dev-password': password },
+        timeout: 120 * 60 * 1000,
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+      });
+      const results = res.data.results;
+      const d = invPreview?.details;
+      const extras = [
+        d && d.skippedExisting > 0 ? `${d.skippedExisting} ya existentes (omitidos)` : '',
+        d && d.ignoredTotal > 0 ? `${d.ignoredTotal} sin importar (ver bitácora)` : '',
+        d && d.autoCreatedUsers > 0 ? `${d.autoCreatedUsers} usuarios auto-creados (inactivos)` : '',
+      ].filter(Boolean);
+      setSuccessMsg(
+        `Movimientos importados: ${results.inventory} nuevos${extras.length ? ` · ${extras.join(' · ')}` : ''}.`
+      );
+      setInvPreview(null);
+      setInvPreviewFile(null);
+      setTimeout(() => setSuccessMsg(null), 12000);
+    } catch (err: unknown) {
+      const msg = isAxiosError(err)
+        ? err.response?.data?.message || err.message
+        : err instanceof Error
+          ? err.message
+          : 'Error desconocido';
+      setError(`Fallo al importar movimientos: ${msg}`);
+    } finally {
+      setIsLoading(false);
+      setLoadingMessage(null);
+    }
+  };
+
   const formatImportResultsMessage = (results: any, prefix: string) => {
     let msg = `${prefix}: ${results.categories} Categorías, ${results.locations} Ubicaciones, ${results.vendors} Proveedores, ${results.items} Repuestos, ${results.users} Usuarios, ${results.inventory} Movimientos, ${results.orders} Órdenes.`;
     if (results.assets) {
@@ -1308,6 +1394,78 @@ export const DeveloperOptions = () => {
                       disabled={isLoading}
                     />
                   </label>
+
+                  <div className="mt-3 rounded-xl border border-white/20 bg-black/10 p-3">
+                    <p className="text-xs font-bold text-white">
+                      Vista previa de movimientos (recomendada antes de importar)
+                    </p>
+                    <p className="mt-1 text-[11px] leading-4 text-indigo-100">
+                      Selecciona <strong>Items - Inventory.csv</strong>: se calcula cuántos
+                      movimientos se crearían, cuántos ya existen y cuáles no se pueden importar,
+                      <strong> sin aplicar nada</strong>.
+                    </p>
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={(e) => void runInventoryPreview(e)}
+                      disabled={isLoading || invPreviewBusy}
+                      className="mt-2 block w-full text-xs text-indigo-100 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-indigo-700 disabled:opacity-50"
+                    />
+                    {invPreviewBusy && (
+                      <p className="mt-2 text-xs text-indigo-100">Calculando vista previa…</p>
+                    )}
+                    {invPreview && (
+                      <div className="mt-3 space-y-1 rounded-lg bg-white/10 p-3 text-xs text-indigo-50">
+                        <p className="font-bold text-white">{invPreview.filename}</p>
+                        <p>
+                          • Se crearían <strong>{invPreview.details.created}</strong> movimientos
+                          nuevos
+                        </p>
+                        <p>
+                          • Ya existentes (se omiten): <strong>{invPreview.details.skippedExisting}</strong>
+                        </p>
+                        <p>
+                          • Sin importar: <strong>{invPreview.details.ignoredTotal}</strong>
+                        </p>
+                        {invPreview.details.autoCreatedUsers > 0 && (
+                          <p>
+                            • Usuarios inexistentes que se crearían (inactivos):{' '}
+                            <strong>{invPreview.details.autoCreatedUsers}</strong>
+                          </p>
+                        )}
+                        {invPreview.details.ignored.slice(0, 5).map((ig, ix) => (
+                          <p key={ix} className="text-[11px] leading-4 text-indigo-200/90">
+                            Fila {ig.row}: {ig.reason}
+                          </p>
+                        ))}
+                        {invPreview.details.ignoredTotal > 5 && (
+                          <p className="text-[11px] text-indigo-200/90">
+                            …y {invPreview.details.ignoredTotal - 5} más.
+                          </p>
+                        )}
+                        <div className="mt-2 flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => void confirmInventoryPreviewImport()}
+                            disabled={isLoading}
+                            className="rounded-lg bg-white px-3 py-1.5 text-xs font-black text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
+                          >
+                            Confirmar e importar movimientos
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setInvPreview(null);
+                              setInvPreviewFile(null);
+                            }}
+                            className="text-[11px] font-semibold text-indigo-200 underline hover:text-white"
+                          >
+                            Descartar vista previa
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mt-4 rounded-2xl border border-white/25 bg-white/10 p-4">
