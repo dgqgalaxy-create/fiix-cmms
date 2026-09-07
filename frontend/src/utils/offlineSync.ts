@@ -3,6 +3,9 @@ import {
   getOfflineRequests,
   removeOfflineRequest,
   setOfflineRequestRetries,
+  parkOfflineRequest,
+  scopeOfflineRequests,
+  getOfflineUserId,
   type OfflineQueuedRequest,
 } from './offlineQueue';
 import {
@@ -26,7 +29,8 @@ export type SyncFailureReason = {
 export type SyncResult = {
   synced: number;
   failed: number;
-  discarded: number;
+  /** Peticiones que pasaron a la BANDEJA de pendientes (se conservan con sus fotos). */
+  parked: number;
   failures: SyncFailureReason[];
 };
 
@@ -72,11 +76,14 @@ function reasonFromError(error: unknown): { reason: string; status?: number } {
 }
 
 /**
- * Reproduce la cola IndexedDB en segundo plano.
- * - Usa bareAxios (sin interceptores) para no re-encolar.
- * - 2xx → elimina.
- * - 4xx → elimina (petición inválida / ya no aplicable).
- * - Red / 5xx → incrementa retries; tras MAX descarta.
+ * Reproduce la cola IndexedDB en segundo plano SOLO del usuario actual.
+ *
+ * Reglas de conservación de evidencia (fotos):
+ * - 2xx → elimina la petición y limpia sus fotos (ya entregadas).
+ * - Cualquier fallo (red, 5xx, 4xx, sesión) NUNCA elimina la petición ni sus fotos:
+ *   pasa a la BANDEJA de pendientes (parked) para reintento o descarte MANUAL.
+ * - Los reintentos automáticos solo ocurren mientras quedan intentos (MAX); al llegar
+ *   al límite la petición también se conserva en la bandeja (no se descarta).
  */
 export async function syncOfflineQueue(): Promise<SyncResult> {
   if (syncInFlight) return syncInFlight;
@@ -84,14 +91,16 @@ export async function syncOfflineQueue(): Promise<SyncResult> {
   syncInFlight = (async () => {
     let synced = 0;
     let failed = 0;
-    let discarded = 0;
+    let parked = 0;
     const failures: SyncFailureReason[] = [];
 
     if (!navigator.onLine) {
-      return { synced, failed, discarded, failures };
+      return { synced, failed, parked, failures };
     }
 
-    const requests = await getOfflineRequests();
+    const myRequests = scopeOfflineRequests(await getOfflineRequests(), getOfflineUserId());
+    const requests = myRequests.filter((r) => !r.parked);
+
     for (const req of requests) {
       try {
         await replayRequest(req);
@@ -100,20 +109,20 @@ export async function syncOfflineQueue(): Promise<SyncResult> {
       } catch (error: unknown) {
         const { reason, status } = reasonFromError(error);
 
-        // 401/403: sesión — no descartar; reintentar (el usuario puede volver a entrar).
+        // Sesión (401/403): reintentar hasta el tope; después → bandeja (conservada).
         if (status === 401 || status === 403) {
           const nextRetries = (req.retries || 0) + 1;
           if (nextRetries >= MAX_OFFLINE_SYNC_RETRIES) {
-            if (isOfflineMultipartBody(req.body)) {
-              await removeOfflinePhotoBlobs(req.body.files.map((f) => f.blobKey));
-            }
-            await removeOfflineRequest(req.id);
-            discarded += 1;
+            await parkOfflineRequest(
+              req.id,
+              `${reason} (tras ${nextRetries} intentos; conservado en pendientes — inicia sesión y reintenta)`
+            );
+            parked += 1;
             failures.push({
               id: req.id,
               method: req.method,
               url: req.url,
-              reason: `${reason} (sesión; descartado tras ${nextRetries} intentos — vuelve a iniciar sesión)`,
+              reason: `${reason} (conservado en pendientes — inicia sesión y reintenta)`,
               status,
             });
           } else {
@@ -123,52 +132,45 @@ export async function syncOfflineQueue(): Promise<SyncResult> {
               id: req.id,
               method: req.method,
               url: req.url,
-              reason: `${reason} (sesión expirada o sin permiso — inicia sesión y reintenta)`,
+              reason: `${reason} (intento ${nextRetries}/${MAX_OFFLINE_SYNC_RETRIES})`,
               status,
             });
           }
           continue;
         }
 
-        // 409: conflicto — informar y descartar (no reintentar ciegamente).
-        // Otros 4xx (validación / 404): descartar.
+        // 4xx (validación, conflicto, no encontrado): no reintentar en automático,
+        // pero CONSERVAR en la bandeja (con fotos) para decisión manual.
         if (status && status >= 400 && status < 500) {
-          if (isOfflineMultipartBody(req.body)) {
-            await removeOfflinePhotoBlobs(req.body.files.map((f) => f.blobKey));
-          }
-          await removeOfflineRequest(req.id);
-          discarded += 1;
+          await parkOfflineRequest(
+            req.id,
+            `${reason} (conservado en pendientes — revisa o descarta manualmente)`
+          );
+          parked += 1;
           failures.push({
             id: req.id,
             method: req.method,
             url: req.url,
-            reason:
-              status === 409
-                ? `${reason} (conflicto — revisa stock/estado en el servidor)`
-                : reason,
+            reason: `${reason} (conservado en pendientes, no se descartó)`,
             status,
           });
-          console.warn(`[OfflineSync] Descartado ${req.id} por HTTP ${status}: ${req.method} ${req.url}`);
+          console.warn(`[OfflineSync] En bandeja ${req.id} por HTTP ${status}: ${req.method} ${req.url}`);
           continue;
         }
 
+        // Red / 5xx: reintentar hasta el tope; después → bandeja (conservada).
         const nextRetries = (req.retries || 0) + 1;
         if (nextRetries >= MAX_OFFLINE_SYNC_RETRIES) {
-          if (isOfflineMultipartBody(req.body)) {
-            await removeOfflinePhotoBlobs(req.body.files.map((f) => f.blobKey));
-          }
-          await removeOfflineRequest(req.id);
-          discarded += 1;
+          await parkOfflineRequest(req.id, `${reason} (tras ${nextRetries} intentos; conservado en pendientes)`);
+          parked += 1;
           failures.push({
             id: req.id,
             method: req.method,
             url: req.url,
-            reason: `${reason} (descartado tras ${nextRetries} intentos)`,
+            reason: `${reason} (conservado en pendientes tras ${nextRetries} intentos)`,
             status,
           });
-          console.warn(
-            `[OfflineSync] Descartado ${req.id} tras ${nextRetries} intentos: ${req.method} ${req.url}`
-          );
+          console.warn(`[OfflineSync] En bandeja ${req.id} tras ${nextRetries} intentos: ${req.method} ${req.url}`);
         } else {
           await setOfflineRequestRetries(req.id, nextRetries);
           failed += 1;
@@ -184,7 +186,7 @@ export async function syncOfflineQueue(): Promise<SyncResult> {
       }
     }
 
-    const result = { synced, failed, discarded, failures };
+    const result = { synced, failed, parked, failures };
     notifySyncDone(result);
     return result;
   })().finally(() => {

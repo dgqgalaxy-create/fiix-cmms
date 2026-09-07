@@ -28,7 +28,13 @@ Base: **v1.56.91 (`f0f5587`) = origin/main de GitHub (versión fiable)**.
       negativas, ni con retiros simultáneos); borrar una ENTRADA ya consumida queda bloqueado
       (evita stock negativo); borrar un consumo ligado a una OT queda bloqueado (trazabilidad);
       borrar salida = reversión de stock. Pendiente pulido: etiqueta de «reversión» explícita en UI.
-- [ ] 4. **Evidencias offline recuperables** — bandeja de pendientes con fotos, reintento manual, separación por usuario.
+- [x] **4. Evidencias offline recuperables** — la cola offline YA NO elimina fotos tras
+      intentos fallidos: todo fallo (red, 5xx, 4xx, sesión) conserva la petición y sus fotos en
+      una BANDEJA de pendientes. La cola se etiqueta por usuario (separación por usuario en
+      sync y bandeja). UI: banner «Ver pendientes (N)» abre la bandeja con miniaturas de las
+      fotos, motivo del fallo y acciones Reintentar (individual/todos) o Eliminar (explícito).
+      Reintento automático solo mientras quedan intentos; al tope → bandeja. Verificación:
+      typecheck + vite build OK (comportamiento en navegador pendiente de probar en sitio).
 - [x] **5. Permisos de compras** — `PATCH /:id/status` exige permiso `MANAGE_PURCHASES` +
       guardas en controlador (rol, estado válido, cancelación solo Admin/Gestionador);
       recepción con `FOR UPDATE` + rechequeo (dos recepciones simultáneas suman stock una

@@ -4,6 +4,7 @@ import { jwtDecode } from 'jwt-decode';
 import { getMyPermissions } from '../api/permissions';
 import { getMe } from '../api/users';
 import { setSocketAuth, socket } from '../api/socket';
+import { syncOfflineQueue } from '../utils/offlineSync';
 import { MustChangePasswordModal } from '../components/MustChangePasswordModal';
 
 interface User {
@@ -71,6 +72,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(decoded);
         loadPermissions();
         setSocketAuth(token);
+        // Replay de la cola offline del usuario apenas hay sesión (separación por usuario).
+        if (navigator.onLine) {
+          void syncOfflineQueue();
+        }
         getMe().then((fullUser) => {
           setUser(prev => prev ? {
             ...prev,
