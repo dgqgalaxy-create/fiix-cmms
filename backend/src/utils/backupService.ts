@@ -366,8 +366,23 @@ export const listBackups = (): BackupListEntry[] => {
   }
 };
 
-/** Restaura un dump gzip (plain SQL) vía psql stdin, tras recrear el schema public. */
-async function restoreDatabase(psqlPath: string, databaseUrl: string, sqlGzFile: string): Promise<void> {
+/** Conteos de verificación tras una restauración (prueba de que la BD responde). */
+export type RestoreVerification = { users: number; workOrders: number; items: number };
+
+/**
+ * Restaura un dump gzip (plain SQL) vía psql stdin DENTRO de una sola transacción:
+ * `BEGIN; DROP SCHEMA public CASCADE; CREATE SCHEMA public; <dump>; COMMIT;`.
+ *
+ * Si el dump falla a mitad, psql se detiene (ON_ERROR_STOP) sin llegar al COMMIT y la
+ * conexión se cierra → PostgreSQL revierte TODO (incluido el DROP del esquema). Así una
+ * restauración fallida NUNCA deja la base a medias (antes, el DROP quedaba aplicado y la
+ * base incompleta si el dump fallaba después de recrear el esquema).
+ */
+async function restoreDatabase(
+  psqlPath: string,
+  databaseUrl: string,
+  sqlGzFile: string
+): Promise<RestoreVerification> {
   const gzSize = fs.statSync(sqlGzFile).size;
   if (gzSize < MIN_SQL_GZ_BYTES) {
     throw new Error(
@@ -388,9 +403,11 @@ async function restoreDatabase(psqlPath: string, databaseUrl: string, sqlGzFile:
   }
 
   const pgUrl = sanitizeDatabaseUrlForPgClients(databaseUrl);
-  // Recrear public evita «relation already exists» al restaurar un dump completo sobre tablas ya creadas (p. ej. tras wipe).
+  // Recrear public evita «relation already exists» al restaurar un dump completo sobre tablas ya creadas.
+  // Todo dentro de BEGIN…COMMIT: cualquier fallo revierte el DROP y deja la BD como estaba.
   const preamble = Buffer.from(
     [
+      'BEGIN;',
       'DROP SCHEMA IF EXISTS public CASCADE;',
       'CREATE SCHEMA public;',
       'GRANT ALL ON SCHEMA public TO public;',
@@ -399,7 +416,8 @@ async function restoreDatabase(psqlPath: string, databaseUrl: string, sqlGzFile:
     ].join('\n'),
     'utf8'
   );
-  const sqlPayload = Buffer.concat([preamble, sqlRaw]);
+  const commitTail = Buffer.from('\nCOMMIT;\n', 'utf8');
+  const sqlPayload = Buffer.concat([preamble, sqlRaw, commitTail]);
 
   const child = spawn(psqlPath, [pgUrl, '-v', 'ON_ERROR_STOP=1'], {
     shell: false,
@@ -436,8 +454,62 @@ async function restoreDatabase(psqlPath: string, databaseUrl: string, sqlGzFile:
   }
   if (spawnError) throw spawnError;
   if (code !== 0) {
+    // La transacción abierta (BEGIN) se aborta al cerrar la conexión → rollback total.
     throw new Error(stderr.trim() || `psql terminó con código ${code}`);
   }
+
+  // Recuperación COMPROBADA: verificar que la base restaurada responde con sus tablas.
+  return verifyRestoredDatabase(psqlPath, pgUrl);
+}
+
+/** Consulta de verificación tras restaurar: la BD debe responder con sus tablas core. */
+async function verifyRestoredDatabase(
+  psqlPath: string,
+  pgUrl: string
+): Promise<RestoreVerification> {
+  const query =
+    "SELECT (SELECT count(*) FROM \"User\")::text || '|' || " +
+    "(SELECT count(*) FROM \"WorkOrder\")::text || '|' || " +
+    '(SELECT count(*) FROM "Item")::text;';
+  return new Promise((resolve, reject) => {
+    const child = spawn(psqlPath, [pgUrl, '-tAc', query], {
+      shell: false,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout?.on('data', (c: Buffer) => {
+      stdout += c.toString();
+    });
+    child.stderr?.on('data', (c: Buffer) => {
+      stderr += c.toString();
+    });
+    child.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'ENOENT') {
+        reject(new Error(`No se pudo ejecutar psql. ${PG_CLIENT_HINT}`));
+      } else {
+        reject(err);
+      }
+    });
+    child.on('close', (exitCode) => {
+      if (exitCode !== 0) {
+        reject(
+          new Error(
+            `La base restaurada no pasó la verificación (código ${exitCode}): ${stderr.trim() || 'consulta de verificación fallida'}`
+          )
+        );
+        return;
+      }
+      const parts = stdout.trim().split('|').map((v) => parseInt(v, 10));
+      const [users, workOrders, items] = parts;
+      if (!Number.isFinite(users) || !Number.isFinite(workOrders) || !Number.isFinite(items)) {
+        reject(new Error(`La base restaurada no pasó la verificación: respuesta inesperada "${stdout.trim()}"`));
+        return;
+      }
+      resolve({ users, workOrders, items });
+    });
+  });
 }
 
 /** Extrae uploads_*.tar.gz sobre backend/ (reemplaza/mezcla la carpeta uploads). */
@@ -521,10 +593,11 @@ export const runRestore = async (
 
   let restoredDb = false;
   let restoredUploads = false;
+  let verification: RestoreVerification | null = null;
   const errors: string[] = [];
 
   try {
-    await restoreDatabase(psqlPath, databaseUrl, sqlPath);
+    verification = await restoreDatabase(psqlPath, databaseUrl, sqlPath);
     restoredDb = true;
   } catch (error: any) {
     return {
@@ -552,6 +625,11 @@ export const runRestore = async (
   }
 
   const parts = [`BD restaurada desde ${base}`];
+  if (verification) {
+    parts.push(
+      `verificación OK: ${verification.users} usuarios, ${verification.workOrders} órdenes, ${verification.items} repuestos`
+    );
+  }
   if (restoredUploads) parts.push('uploads restaurados');
   const message = `${parts.join('; ')}.${errors.length ? ` Avisos: ${errors.join(' | ')}` : ''} Recarga la aplicación para ver los datos.`;
 
