@@ -34,8 +34,16 @@ Base: **v1.56.91 (`f0f5587`) = origin/main de GitHub (versión fiable)**.
       recepción con `FOR UPDATE` + rechequeo (dos recepciones simultáneas suman stock una
       sola vez). Pendiente pulido UI: entregas parciales explícitas (por ahora cantidad por
       línea ≤ pedido queda documentada en el movimiento).
-- [ ] 6. **Indicadores precisos** — sin doble conteo de paros solapados; MTBF sin supuestos de operación;
-      duraciones largas sin recorte; periodos KPI fijos en hora de planta (`America/Mexico_City`).
+- [x] **6. Indicadores precisos (parcial)** — la disponibilidad YA NO cuenta dos veces los paros
+      superpuestos: por línea/zona se unen los intervalos y solo se suma la cobertura efectiva
+      (dos OT solapadas = misma disponibilidad que una sola con la misma cobertura; dos líneas
+      paradas a la vez sí suman). Periodos KPI (THIS_WEEK/LAST_WEEK/THIS_MONTH/LAST_MONTH/THIS_YEAR/
+      CUSTOM/ALL + intervalos de gráficas) fijos en hora de planta real (America/Mexico_City),
+      independientes del TZ del proceso. El recorte de duraciones largas en el import ya avisa por
+      fila (en vez de silenciarse).
+  - Pendiente documentado: MTBF usa el supuesto 24/7 × activos operativos (requiere calendario de
+    operación para ser exacto); `accumulated_time_ms` es entero de 32 bits (~24.8 días máx.) —
+    valorar migración a BigInt. Prueba: `backend/scripts/run-kpi-periods-test.sh`.
 - [ ] 7. **Respaldos y actualizaciones** — recuperación comprobada post-restauración; Docker sin pérdida de datos.
 - [ ] 8. **Auditoría y calidad** — bitácora con valores anteriores/nuevos y motivos; expediente anual
       (órdenes, fotos, consumos); errores de tipos del frontend verificables antes de publicar.

@@ -2,6 +2,15 @@ import { Response } from 'express';
 import prisma from '../config/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import { resolvePartsUnitCost } from '../utils/resolvePartsUnitCost';
+import {
+  plantDateParts,
+  plantWallClockToDate,
+  plantAddDays,
+  plantUtcWeekday,
+  plantStartOfMonth,
+  plantShiftMonthStart,
+  plantEndOfMonth,
+} from '../utils/plantTimezone';
 
 const MS_PER_HOUR = 3_600_000;
 const DEFAULT_REWORK_WINDOW_DAYS = 7;
@@ -30,66 +39,70 @@ const clip = (value: number, min: number, max: number) => Math.min(Math.max(valu
 
 type DateRangeOpts = { startDate?: unknown; endDate?: unknown };
 
-const parseYmdLocal = (raw: unknown, endOfDay: boolean): Date | null => {
+/** YYYY-MM-DD → instante UTC de medianoche (o 23:59:59.999) del día civil de PLANTA. */
+const parseYmdPlant = (raw: unknown, endOfDay: boolean): Date | null => {
   if (typeof raw !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(raw.trim())) return null;
   const [y, m, d] = raw.trim().split('-').map(Number);
   if (!y || !m || !d) return null;
-  return endOfDay
-    ? new Date(y, m - 1, d, 23, 59, 59, 999)
-    : new Date(y, m - 1, d, 0, 0, 0, 0);
+  const base = plantWallClockToDate(y, m, d);
+  if (!base) return null;
+  return endOfDay ? new Date(base.getTime() + 86_399_999) : base;
 };
 
+/**
+ * Rango del periodo expresado en hora de planta (America/Mexico_City), independiente
+ * del TZ del proceso: el mismo periodo da los mismos límites en un servidor UTC y en
+ * una Mac en hora de México.
+ */
 const getDateRange = (
   period: string | undefined,
   opts?: DateRangeOpts,
 ): { start: Date; end: Date; effectiveEnd: Date } => {
   const now = new Date();
-  let start = new Date(now.getFullYear(), now.getMonth(), 1);
-  let end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  const p = plantDateParts(now);
+  const atPlantMidnight = (year: number, month: number, day: number): Date =>
+    plantWallClockToDate(year, month, day) ?? now;
+  const DAY_MS = 86_400_000;
+
+  let start: Date;
+  let end: Date;
 
   if (period === 'CUSTOM') {
-    start = parseYmdLocal(opts?.startDate, false) || new Date(now.getFullYear(), now.getMonth(), 1);
-    end =
-      parseYmdLocal(opts?.endDate, true) ||
-      new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    start = parseYmdPlant(opts?.startDate, false) || plantStartOfMonth(now.getTime());
+    const parsedEnd = parseYmdPlant(opts?.endDate, true);
+    end = parsedEnd || new Date(atPlantMidnight(p.year, p.month, p.day).getTime() + DAY_MS - 1);
     if (end < start) {
-      end = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 23, 59, 59, 999);
+      // Terminar el mismo día civil de planta en que inicia el rango.
+      const sp = plantDateParts(start);
+      end = new Date(atPlantMidnight(sp.year, sp.month, sp.day).getTime() + DAY_MS - 1);
     }
-  } else if (period === 'THIS_WEEK') {
-    start = new Date(now);
-    const day = start.getDay();
-    const diff = start.getDate() - day + (day === 0 ? -6 : 1);
-    start.setDate(diff);
-    start.setHours(0, 0, 0, 0);
-    end = new Date(start);
-    end.setDate(end.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
-  } else if (period === 'LAST_WEEK') {
-    start = new Date(now);
-    const day = start.getDay();
-    const diff = start.getDate() - day + (day === 0 ? -6 : 1) - 7;
-    start.setDate(diff);
-    start.setHours(0, 0, 0, 0);
-    end = new Date(start);
-    end.setDate(end.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
+  } else if (period === 'THIS_WEEK' || period === 'LAST_WEEK') {
+    // Lunes de la semana en curso/anterior, en hora de planta real (00:00).
+    const dayStart = atPlantMidnight(p.year, p.month, p.day).getTime();
+    const weekday = plantUtcWeekday(now.getTime()); // 0 = domingo
+    const backToMonday = weekday === 0 ? 6 : weekday - 1;
+    const weeksBack = period === 'LAST_WEEK' ? 7 : 0;
+    start = new Date(dayStart - (backToMonday + weeksBack) * DAY_MS);
+    end = new Date(start.getTime() + 7 * DAY_MS - 1);
   } else if (period === 'THIS_MONTH') {
-    start = new Date(now.getFullYear(), now.getMonth(), 1);
-    end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    start = plantStartOfMonth(now.getTime());
+    end = plantEndOfMonth(now.getTime());
   } else if (period === 'LAST_MONTH') {
-    start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    start = plantShiftMonthStart(now.getTime(), -1);
+    end = new Date(plantStartOfMonth(now.getTime()).getTime() - 1);
   } else if (period === 'THIS_YEAR') {
-    start = new Date(now.getFullYear(), 0, 1);
-    end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    start = atPlantMidnight(p.year, 1, 1);
+    end = new Date(atPlantMidnight(p.year + 1, 1, 1).getTime() - 1);
   } else if (period === 'LAST_12_MONTHS') {
-    start = new Date(now);
-    start.setFullYear(start.getFullYear() - 1);
-    start.setHours(0, 0, 0, 0);
+    start = atPlantMidnight(p.year - 1, p.month, p.day);
     end = new Date(now);
   } else if (period === 'ALL') {
     start = new Date(0);
     end = new Date(now);
+  } else {
+    // Default: mes en curso (hora de planta).
+    start = plantStartOfMonth(now.getTime());
+    end = plantEndOfMonth(now.getTime());
   }
 
   const effectiveEnd = end.getTime() > now.getTime() ? now : end;
@@ -114,12 +127,6 @@ const normalizeGoal = (metricKey: string, targetValue: number, unit?: string | n
   }
 
   return { targetValue: value, unit: resolvedUnit };
-};
-
-const overlapMs = (from: Date, to: Date, start: Date, end: Date) => {
-  const left = Math.max(from.getTime(), start.getTime());
-  const right = Math.min(to.getTime(), end.getTime());
-  return Math.max(0, right - left);
 };
 
 const avg = (values: number[]) =>
@@ -244,7 +251,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
         select: {
           created_at: true,
           completed_at: true,
-          started_at: true,
+          asset: { select: { id: true, zone_id: true } },
         },
       }),
       prisma.zone.findMany({ select: { id: true } }),
@@ -286,17 +293,45 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
     // Backlog: stock abierto actual
     const backlog = openOrders.length;
 
-    // Disponibilidad: solo paros con machine_stopped, recortados al periodo
+    // Disponibilidad: paros con machine_stopped, recortados al periodo y SIN contar dos
+    // veces los paros superpuestos: por cada línea/zona se unen los intervalos solapados
+    // y solo se suma la cobertura efectiva (una línea parada = un tramo, haya 1 o N OT).
     const lineCount = Math.max(zones.length, 1);
     const periodMs = Math.max(effectiveEnd.getTime() - start.getTime(), 1);
     const totalTheoreticalMs = lineCount * periodMs * (PRODUCTIVE_HOURS_PER_YEAR / HOURS_PER_YEAR);
 
     let totalDowntimeMs = 0;
-    downtimeOrders.forEach((wo) => {
-      const from = wo.created_at;
-      const to = wo.completed_at || effectiveEnd;
-      totalDowntimeMs += overlapMs(from, to, start, effectiveEnd);
-    });
+    {
+      const groups = new Map<string, Array<[number, number]>>();
+      for (const wo of downtimeOrders) {
+        const left = Math.max(wo.created_at.getTime(), start.getTime());
+        const right = Math.min(
+          wo.completed_at ? wo.completed_at.getTime() : effectiveEnd.getTime(),
+          effectiveEnd.getTime(),
+        );
+        if (right <= left) continue;
+        const key = wo.asset?.zone_id || `asset:${wo.asset?.id ?? 'sin-activo'}`;
+        const list = groups.get(key) ?? [];
+        list.push([left, right]);
+        groups.set(key, list);
+      }
+      for (const intervals of groups.values()) {
+        intervals.sort((a, b) => a[0] - b[0]);
+        let curFrom = intervals[0][0];
+        let curTo = intervals[0][1];
+        for (let i = 1; i < intervals.length; i++) {
+          const [f, t] = intervals[i];
+          if (f <= curTo) {
+            if (t > curTo) curTo = t;
+          } else {
+            totalDowntimeMs += curTo - curFrom;
+            curFrom = f;
+            curTo = t;
+          }
+        }
+        totalDowntimeMs += curTo - curFrom;
+      }
+    }
 
     let assetAvailability = 100;
     if (totalTheoreticalMs > 0) {
@@ -455,80 +490,76 @@ const getChartIntervals = (period: string | undefined, opts?: DateRangeOpts) => 
   const { start, effectiveEnd } = getDateRange(period, opts);
   const intervals: { label: string; start: Date; end: Date; days: number }[] = [];
 
+  const plantStartOfDayInstant = (d: Date): Date => {
+    const pd = plantDateParts(d);
+    return plantWallClockToDate(pd.year, pd.month, pd.day) ?? d;
+  };
+
   const pushDaily = (labelFn: (d: Date) => string) => {
-    const cursor = new Date(start);
-    cursor.setHours(0, 0, 0, 0);
-    while (cursor <= effectiveEnd) {
-      const dStart = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate());
-      const dEnd = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate(), 23, 59, 59, 999);
+    let guard = 0;
+    let cursor = plantStartOfDayInstant(start); // 00:00 real del día civil de planta
+    while (cursor.getTime() <= effectiveEnd.getTime() && guard < 4000) {
+      guard++;
+      const dStart = cursor;
+      const dEnd = new Date(
+        Math.min(plantAddDays(cursor.getTime(), 1).getTime() - 1, effectiveEnd.getTime()),
+      );
       intervals.push({
-        label: labelFn(cursor),
+        label: labelFn(dStart),
         start: dStart,
-        end: dEnd > effectiveEnd ? effectiveEnd : dEnd,
+        end: dEnd,
         days: 1,
       });
-      cursor.setDate(cursor.getDate() + 1);
+      cursor = plantAddDays(cursor.getTime(), 1);
     }
   };
 
   if (period === 'THIS_WEEK') {
     const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    for (let i = 0; i < 7; i++) {
-      const dStart = new Date(start);
-      dStart.setDate(start.getDate() + i);
-      dStart.setHours(0, 0, 0, 0);
-      const dEnd = new Date(dStart);
-      dEnd.setHours(23, 59, 59, 999);
-      if (dStart > effectiveEnd) break;
-      intervals.push({
-        label: days[dStart.getDay()],
-        start: dStart,
-        end: dEnd > effectiveEnd ? effectiveEnd : dEnd,
-        days: 1,
-      });
-    }
+    pushDaily((d) => days[plantUtcWeekday(d.getTime())]);
   } else if (period === 'THIS_MONTH' || period === 'LAST_MONTH') {
-    pushDaily((d) => `${d.getDate()}`);
+    pushDaily((d) => `${plantDateParts(d).day}`);
   } else if (period === 'CUSTOM') {
     const spanDays =
       Math.ceil((effectiveEnd.getTime() - start.getTime()) / 86_400_000) + 1;
     if (spanDays <= 62) {
-      pushDaily((d) => `${d.getDate()}/${d.getMonth() + 1}`);
+      pushDaily((d) => {
+        const pd = plantDateParts(d);
+        return `${pd.day}/${pd.month}`;
+      });
     } else {
       const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-      const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
-      while (cursor <= effectiveEnd) {
-        const dStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-        const dEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59, 999);
+      let cursorMs = plantStartOfMonth(start.getTime()).getTime();
+      const lastMonthStartMs = plantStartOfMonth(effectiveEnd.getTime()).getTime();
+      while (cursorMs <= lastMonthStartMs) {
+        const dStart = new Date(cursorMs);
+        const dEnd = new Date(plantShiftMonthStart(cursorMs, 1).getTime() - 1);
+        const s = dStart.getTime() < start.getTime() ? start : dStart;
+        const e = dEnd.getTime() > effectiveEnd.getTime() ? effectiveEnd : dEnd;
         intervals.push({
-          label: monthNames[dStart.getMonth()],
-          start: dStart < start ? start : dStart,
-          end: dEnd > effectiveEnd ? effectiveEnd : dEnd,
-          days: Math.max(
-            1,
-            Math.ceil(
-              ((dEnd > effectiveEnd ? effectiveEnd : dEnd).getTime() -
-                (dStart < start ? start : dStart).getTime()) /
-                86_400_000
-            )
-          ),
+          label: monthNames[plantDateParts(dStart).month - 1],
+          start: s,
+          end: e,
+          days: Math.max(1, Math.ceil((e.getTime() - s.getTime()) / 86_400_000)),
         });
-        cursor.setMonth(cursor.getMonth() + 1);
+        cursorMs = plantShiftMonthStart(cursorMs, 1).getTime();
       }
     }
   } else {
     const monthsToShow = period === 'THIS_YEAR' ? 12 : period === 'LAST_12_MONTHS' || period === 'ALL' ? 12 : 6;
     const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    const now = new Date();
+    const nowMs = Date.now();
     for (let i = monthsToShow - 1; i >= 0; i--) {
-      const dStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const dEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59, 999);
-      if (dEnd < start) continue;
+      const dStartMs = plantShiftMonthStart(nowMs, -i).getTime();
+      const dEndMs = plantShiftMonthStart(nowMs, -i + 1).getTime() - 1;
+      if (dEndMs < start.getTime()) continue;
+      const s = dStartMs < start.getTime() ? start : new Date(dStartMs);
+      const e = dEndMs > effectiveEnd.getTime() ? effectiveEnd : new Date(dEndMs);
       intervals.push({
-        label: monthNames[dStart.getMonth()],
-        start: dStart < start ? start : dStart,
-        end: dEnd > effectiveEnd ? effectiveEnd : dEnd,
-        days: Math.max(1, Math.ceil(((dEnd > effectiveEnd ? effectiveEnd : dEnd).getTime() - (dStart < start ? start : dStart).getTime()) / 86_400_000)),
+        label: monthNames[plantDateParts(new Date(dStartMs)).month - 1],
+        start: s,
+        end: e,
+        days: Math.max(1, Math.ceil((e.getTime() - s.getTime()) / 86_400_000)),
       });
     }
   }

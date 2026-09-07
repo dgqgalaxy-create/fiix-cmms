@@ -69,3 +69,39 @@ export function plantWallClockToDate(
   if (p.year !== year || p.month !== month || p.day !== day) return null;
   return new Date(utcMs);
 }
+
+/** Día civil (0 = domingo … 6 = sábado) de un instante en hora de planta. */
+export function plantUtcWeekday(utcMs: number): number {
+  return new Date(plantDayStartMs(new Date(utcMs))).getUTCDay();
+}
+
+/** Instante UTC del inicio del día civil de planta (00:00) `days` después de `utcMs`. */
+export function plantAddDays(utcMs: number, days: number): Date {
+  const p = readParts(new Date(utcMs));
+  return (
+    plantWallClockToDate(p.year, p.month, p.day + days) ??
+    plantWallClockToDate(p.year, p.month, p.day) ??
+    new Date(utcMs)
+  );
+}
+
+/** Instante UTC del inicio del mes civil de planta que contiene a `utcMs`. */
+export function plantStartOfMonth(utcMs: number): Date {
+  const p = readParts(new Date(utcMs));
+  return plantWallClockToDate(p.year, p.month, 1) ?? new Date(utcMs);
+}
+
+/** Instante UTC del inicio del mes civil de planta desplazado `months` (puede ser negativo). */
+export function plantShiftMonthStart(utcMs: number, months: number): Date {
+  const p = readParts(new Date(utcMs));
+  const total = p.month - 1 + months;
+  const year = p.year + Math.floor(total / 12);
+  const month = ((total % 12) + 12) % 12 + 1;
+  return plantWallClockToDate(year, month, 1) ?? plantWallClockToDate(p.year, p.month, 1) ?? new Date(utcMs);
+}
+
+/** Instante UTC del fin inclusivo del mes civil de planta (23:59:59.999 del último día). */
+export function plantEndOfMonth(utcMs: number): Date {
+  const next = plantShiftMonthStart(utcMs, 1);
+  return new Date(next.getTime() - 1);
+}
