@@ -44,9 +44,17 @@ Base: **v1.56.91 (`f0f5587`) = origin/main de GitHub (versión fiable)**.
   - Pendiente documentado: MTBF usa el supuesto 24/7 × activos operativos (requiere calendario de
     operación para ser exacto); `accumulated_time_ms` es entero de 32 bits (~24.8 días máx.) —
     valorar migración a BigInt. Prueba: `backend/scripts/run-kpi-periods-test.sh`.
-- [ ] 7. **Respaldos y actualizaciones** — recuperación comprobada post-restauración; Docker sin pérdida de datos.
-- [ ] 8. **Auditoría y calidad** — bitácora con valores anteriores/nuevos y motivos; expediente anual
-      (órdenes, fotos, consumos); errores de tipos del frontend verificables antes de publicar.
+- [x] **7. Respaldos y actualizaciones** — restauración de BD en UNA transacción
+      (BEGIN → DROP/CREATE schema → dump → COMMIT): si el dump falla a mitad se revierte
+      TODO (la base queda como estaba). Tras restaurar, verificación de conteos
+      (User/WorkOrder/Item) incluida en el resultado. Docker y `update.sh` ya no aplican
+      `db push --accept-data-loss` por defecto: abortan si el esquema exige cambios
+      destructivos; opt-in explícito `ALLOW_DB_PUSH_DATA_LOSS=1` / `FIIX_ALLOW_DB_PUSH_DATA_LOSS=1`.
+      Evidencia: prueba real en Postgres local (fallo inyectado revierte; restauración
+      correcta verifica 1|1).
+- [ ] **8 (parcial). Auditoría y calidad** — errores de tipos del frontend CORREGIDOS
+      (`npx tsc -b` en 0, 85 errores, sin cambios de comportamiento). Pendiente: bitácora
+      con valores anteriores/nuevos y motivos; expediente anual (órdenes, fotos, consumos).
 - [ ] 9. **Centro de calidad de datos** — fotos faltantes, tiempos atípicos, repuestos sin precio,
       diferencias de inventario, con acceso directo a corregir.
 

@@ -167,8 +167,18 @@ fiix_npm_ci "${APP_DIR}/backend" "--include=dev"
 chmod +x "${APP_DIR}/scripts/ensure-vapid-env.sh" 2>/dev/null || true
 "${APP_DIR}/scripts/ensure-vapid-env.sh" "${APP_DIR}/backend/.env" || true
 npx prisma generate
-# --accept-data-loss: cambios de schema (p. ej. unique nuevo) no deben abortar el deploy.
-npx prisma db push --accept-data-loss
+# Sincronización de esquema CONTROLADA: por defecto sin pérdida de datos. Si el
+# esquema pendiente exige cambios destructivos, db push falla y abortamos el update
+# (se preservan los datos). Solo con FIIX_ALLOW_DB_PUSH_DATA_LOSS=1 se aplican igual.
+if [ "${FIIX_ALLOW_DB_PUSH_DATA_LOSS:-0}" = "1" ]; then
+  info "Sincronizando esquema (db push --accept-data-loss por FIIX_ALLOW_DB_PUSH_DATA_LOSS=1)..."
+  npx prisma db push --accept-data-loss
+else
+  info "Sincronizando esquema (db push, sin pérdida de datos)..."
+  if ! npx prisma db push; then
+    die "El esquema pendiente exige cambios destructivos. Crea un respaldo (scripts/backup.sh) y, si entiendes el riesgo, repite con: FIIX_ALLOW_DB_PUSH_DATA_LOSS=1 ./update.sh"
+  fi
+fi
 # One-shot: congelar unit_cost de consumos OT históricos (null/0 → catálogo). Solo una vez por servidor.
 FREEZE_COST_MARKER="${APP_DIR}/backend/data/.freeze_wo_parts_unit_cost_v151"
 if [ ! -f "${FREEZE_COST_MARKER}" ]; then
