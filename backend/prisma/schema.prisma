@@ -428,6 +428,11 @@ model InventoryTransaction {
   /// Idempotencia offline: mismo client_request_id no crea dos salidas.
   client_request_id String? @unique
 
+  /// ID del movimiento en el sistema de origen (p. ej. columna "Inventory ID" de Fiix).
+  /// Permite reimportar CSVs sin duplicar movimientos y SIN borrar el historial
+  /// capturado en la app (los movimientos de la app no llevan external_id).
+  external_id String? @unique
+
   unit_cost   Float?   // Costo unitario al momento del consumo (para ligar costo a la OT)
   amount      Float    // Positivo para entradas, negativo para salidas
   reason      String   // Texto libre

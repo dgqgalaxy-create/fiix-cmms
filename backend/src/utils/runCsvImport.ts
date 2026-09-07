@@ -42,6 +42,7 @@ import {
   type DriveDownloadProgress,
 } from './googleDriveImport';
 import { setImportProgress } from './importProgress';
+import { importInventoryTransactionsFile } from './inventoryCsvImport';
 
 export class CsvImportError extends Error {
   status: number;
@@ -79,6 +80,15 @@ export type CsvImportResults = {
     beforeAssigned: number;
     afterAssigned: number;
   };
+  /** Detalle del import de movimientos (por fila) cuando hubo omisiones/errores. */
+  inventoryDetails?: {
+    created: number;
+    skippedExisting: number;
+    ignoredTotal: number;
+    ignored: Array<{ row: number; reason: string }>;
+  };
+  /** Órdenes que no se pudieron importar (fila CSV + motivo), tope de 100. */
+  workOrderWarnings?: string[];
 };
 
 export type PhotoSource = 'zip' | 'google_drive' | 'data_folder';
@@ -102,6 +112,17 @@ export function formatImportResultsMessage(
   prefix: string
 ): string {
   let msg = `${prefix}: ${results.categories} Categorías, ${results.locations} Ubicaciones, ${results.vendors} Proveedores, ${results.items} Repuestos, ${results.users} Usuarios, ${results.inventory} Movimientos, ${results.orders} Órdenes.`;
+  if (results.inventoryDetails) {
+    const d = results.inventoryDetails;
+    msg += ` Movimientos: ${d.created} creados, ${d.skippedExisting} ya existentes (omitidos)`;
+    if (d.ignoredTotal > 0) {
+      msg += `, ${d.ignoredTotal} sin importar`;
+    }
+    msg += '.';
+  }
+  if (results.workOrderWarnings && results.workOrderWarnings.length > 0) {
+    msg += ` ${results.workOrderWarnings.length} órdene(s) sin importar por error de fila.`;
+  }
   if (results.assets) {
     msg += ` Activos (desde inventario ACTIVOS): ${results.assets.created} creados, ${results.assets.updated} actualizados`;
     if (results.assets.skipped > 0) {
@@ -278,27 +299,15 @@ const userFile = files.find(f => f.originalname.includes('Users'));
 const invFile = files.find(f => f.originalname.includes('Inventory'));
 const woFile = files.find(f => f.originalname.includes('Solicitudes Mantenimiento'));
 
-const results: {
-  categories: number;
-  locations: number;
-  vendors: number;
-  items: number;
-  users: number;
-  inventory: number;
-  orders: number;
-  assets?: {
-    created: number;
-    updated: number;
-    skipped: number;
-    zonesEnsured: string[];
-  };
-  itemImages?: PhotoImportSummary & { assetsMatched?: number };
-  vendorImages?: PhotoImportSummary;
-  workOrderImages?: PhotoImportSummary & {
-    beforeAssigned: number;
-    afterAssigned: number;
-  };
-} = { categories: 0, locations: 0, vendors: 0, items: 0, users: 0, inventory: 0, orders: 0 };
+const results: CsvImportResults = {
+  categories: 0,
+  locations: 0,
+  vendors: 0,
+  items: 0,
+  users: 0,
+  inventory: 0,
+  orders: 0,
+};
 
 const woPhotoMappings: WorkOrderPhotoMapping[] = [];
 
@@ -563,60 +572,19 @@ if (userFile) {
 }
 
 if (invFile) {
-  const data = parse(readImportFileUtf8(invFile), { columns: true, skip_empty_lines: true });
-  const allUsers = await prisma.user.findMany();
-  const allItems = await prisma.item.findMany();
-  const userMap: Record<string, string> = Object.fromEntries(allUsers.map(u => [u.email, u.id]));
-  const itemMap = Object.fromEntries(allItems.map(i => [i.internal_code, i.id]));
-
-  // Auto-crear usuarios que aparecen en movimientos pero no vienen en Users.csv,
-  // para no perder transacciones históricas de inventario.
-  const invDefaultHash = await bcrypt.hash('CMMS2026*', 10);
-  const missingEmails = new Set<string>();
-  for (const row of data as any[]) {
-    const email = row['User ID'] ? row['User ID'].trim() : '';
-    if (email && !userMap[email]) missingEmails.add(email);
+  // Importe seguro de movimientos: SIN truncar el historial. Solo crea filas que
+  // no existan (dedupe por Inventory ID / tupla) y reporta filas ignoradas.
+  const inv = await importInventoryTransactionsFile(invFile);
+  results.inventory = inv.created;
+  results.users += inv.autoCreatedUsers;
+  if (inv.skippedExisting > 0 || inv.ignored.length > 0) {
+    results.inventoryDetails = {
+      created: inv.created,
+      skippedExisting: inv.skippedExisting,
+      ignoredTotal: inv.ignored.length,
+      ignored: inv.ignored.slice(0, 200),
+    };
   }
-  for (const email of missingEmails) {
-    try {
-      const created = await prisma.user.create({
-        data: {
-          name: email.split('@')[0],
-          email,
-          password_hash: invDefaultHash,
-          role: Role.TECNICO,
-          is_active: false,
-          must_change_password: true,
-        }
-      });
-      userMap[email] = created.id;
-      results.users++;
-    } catch (e) {
-      console.error('Inventory user auto-create error', email, e);
-    }
-  }
-
-  await prisma.$executeRawUnsafe(`TRUNCATE TABLE "InventoryTransaction" CASCADE;`);
-  
-  const invCreates = [];
-  for (const row of data as any[]) {
-    const email = row['User ID'] ? row['User ID'].trim() : null;
-    const itemCode = row['Item ID'] ? row['Item ID'].trim() : null;
-    
-    if (email && itemCode && userMap[email] && itemMap[itemCode]) {
-      let date = parseSafeDate(row['DateTime']) || new Date();
-
-      invCreates.push({
-        item_id: itemMap[itemCode],
-        user_id: userMap[email],
-        amount: parseNumber(row['Amount']),
-        reason: row['Reason'] || 'Sin motivo',
-        created_at: date
-      });
-    }
-  }
-  await prisma.inventoryTransaction.createMany({ data: invCreates });
-  results.inventory = invCreates.length;
 }
 
 if (woFile) {
@@ -625,7 +593,9 @@ if (woFile) {
   const adminUser = allUsers.find(u => u.role === 'ADMINISTRADOR') || allUsers[0];
   
   if (adminUser) {
+    let csvRowNum = 1; // la fila 1 es el encabezado
     for (const row of data as any[]) {
+      csvRowNum++;
       try {
         const folioCsv = parseWorkOrderFolio(row['FOLIO']);
         if (!folioCsv) continue;
@@ -779,8 +749,15 @@ if (woFile) {
            });
         }
         results.orders++;
-      } catch(e) { 
+      } catch(e) {
         console.error('Work order row error', e);
+        // No silenciar del todo: se reporta la fila con su motivo (tope 100).
+        if ((results.workOrderWarnings?.length ?? 0) < 100) {
+          const motivo = e instanceof Error ? e.message : String(e);
+          (results.workOrderWarnings ??= []).push(
+            `Fila ${csvRowNum}${row && row['FOLIO'] ? ` (folio ${row['FOLIO']})` : ''}: ${motivo}`
+          );
+        }
       }
     }
 
