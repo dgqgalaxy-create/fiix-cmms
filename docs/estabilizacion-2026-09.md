@@ -88,6 +88,9 @@ Base: **v1.56.91 (`f0f5587`) = origin/main de GitHub (versión fiable)**.
 - [ ] 14. Rendimiento e interacción de listas.
 
 ## Cómo validar sin tocar la operación
-- Backend: `cd backend && bash scripts/run-atomic-close-test.sh` (base temporal auto-gestionada).
+- Smoke del servidor REAL: `cd backend && bash scripts/run-runtime-smoke.sh` (compila dist,
+  arranca el servidor contra base temporal, login y verifica /kpis, /work-orders,
+  /inventory y /charts).
+- Suites backend: `cd backend && bash scripts/run-atomic-close-test.sh` (base temporal auto-gestionada).
 - Typecheck backend (gate CI): `cd backend && npx tsc --noEmit`.
 - Nunca apuntar las pruebas a `fiix_cmms` (los scripts lo bloquean por nombre).
