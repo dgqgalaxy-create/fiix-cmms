@@ -25,6 +25,19 @@ const parseReworkWindowDays = (raw: unknown): number => {
 const PRODUCTIVE_HOURS_PER_YEAR = 8467.27;
 const HOURS_PER_YEAR = 365 * 24;
 
+/**
+ * Horas de operación al día que asume el MTBF (antes fijas en 24). El supuesto es
+ * ahora EXPLÍCITO y configurable por entorno (FIIX_OPERATING_HOURS_PER_DAY, 1–24);
+ * por defecto 24 solo si la planta opera las 24 h. Cambiar a 24 no altera el
+ * comportamiento histórico.
+ */
+export function getOperatingHoursPerDay(): number {
+  const raw = process.env.FIIX_OPERATING_HOURS_PER_DAY;
+  const parsed = raw != null && raw.trim() !== '' ? Number(raw) : NaN;
+  if (!Number.isFinite(parsed)) return 24;
+  return Math.min(24, Math.max(1, parsed));
+}
+
 const DEFAULT_GOALS: Record<string, { targetValue: number; unit: string }> = {
   COMPLETED_MONTHLY: { targetValue: 50, unit: 'órdenes' },
   MTTR: { targetValue: 4, unit: 'horas' },
@@ -624,9 +637,11 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
         return sum + Math.abs(tx.amount) * resolvePartsUnitCost(tx);
       }, 0);
 
-      // MTBF aproximado de flota: horas operativas / fallas correctivas con paro o correctivas finalizadas
+      // MTBF de flota: horas operativas / fallas correctivas. El supuesto de horas/día
+      // es ahora explícito (getOperatingHoursPerDay) en vez de un 24 fijo implícito.
       const failures = correctiveCompleted.length;
-      const operationalHours = interval.days * 24 * Math.max(operativeAssets, 1);
+      const hoursPerDay = getOperatingHoursPerDay();
+      const operationalHours = interval.days * hoursPerDay * Math.max(operativeAssets, 1);
       const mtbfHours = failures > 0 ? operationalHours / failures : null;
 
       return {
@@ -635,6 +650,7 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
         mttr: Number(mttrHours.toFixed(2)),
         mtbf: mtbfHours === null ? 0 : Number(mtbfHours.toFixed(2)),
         mtbfSample: failures,
+        mtbfAssumptionHoursPerDay: hoursPerDay,
       };
     });
 

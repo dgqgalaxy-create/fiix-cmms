@@ -51,9 +51,11 @@ Base: **v1.56.91 (`f0f5587`) = origin/main de GitHub (versión fiable)**.
       CUSTOM/ALL + intervalos de gráficas) fijos en hora de planta real (America/Mexico_City),
       independientes del TZ del proceso. El recorte de duraciones largas en el import ya avisa por
       fila (en vez de silenciarse).
-  - Pendiente documentado: MTBF usa el supuesto 24/7 × activos operativos (requiere calendario de
-    operación para ser exacto); `accumulated_time_ms` es entero de 32 bits (~24.8 días máx.) —
-    valorar migración a BigInt. Prueba: `backend/scripts/run-kpi-periods-test.sh`.
+  - MTBF: supuesto de horas/día ahora explícito y configurable (`FIIX_OPERATING_HOURS_PER_DAY`,
+    1–24, default 24) y expuesto en cada punto como `mtbfAssumptionHoursPerDay`.
+    `accumulated_time_ms` (int32 ~24.8 días): el cierre ya no puede romper por overflow (recorte
+    al máximo) y el import avisa por fila; migración a BigInt queda documentada como mejora
+    futura. Prueba: `backend/scripts/run-kpi-periods-test.sh`.
 - [x] **7. Respaldos y actualizaciones** — restauración de BD en UNA transacción
       (BEGIN → DROP/CREATE schema → dump → COMMIT): si el dump falla a mitad se revierte
       TODO (la base queda como estaba). Tras restaurar, verificación de conteos

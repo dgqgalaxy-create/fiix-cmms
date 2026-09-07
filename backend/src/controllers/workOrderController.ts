@@ -887,8 +887,13 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
           // Acumular tiempo de labor al pausar o finalizar (usa la fila ya bloqueada).
           if ((status === 'EN_ESPERA' || status === 'FINALIZADO') && fresh.status === 'EN_PROCESO') {
             if (fresh.last_resumed_at) {
-              merged.accumulated_time_ms =
-                fresh.accumulated_time_ms + (Date.now() - fresh.last_resumed_at.getTime());
+              // La columna es entero de 32 bits (~24.8 días): se recorta al máximo para
+              // no romper el cierre con un overflow de PostgreSQL; el import CSV ya avisa
+              // cuando recorta un tiempo histórico.
+              merged.accumulated_time_ms = Math.min(
+                2_147_483_647,
+                fresh.accumulated_time_ms + (Date.now() - fresh.last_resumed_at.getTime())
+              );
             }
             merged.last_resumed_at = null;
           }
