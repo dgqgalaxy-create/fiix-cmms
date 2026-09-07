@@ -15,7 +15,7 @@ import { authenticate, type AuthRequest } from '../middlewares/authMiddleware';
 import { processCsvImportFiles, CsvImportError } from '../utils/runCsvImport';
 import { importInventoryTransactionsFile } from '../utils/inventoryCsvImport';
 import { buildAnnualFileData } from '../utils/annualFile';
-import { buildDataQualityReport } from '../utils/dataQuality';
+import { buildDataQualityReport, fixStockToLedger, fixItemPrice } from '../utils/dataQuality';
 import { logImportAudit } from '../utils/importAuditLog';
 import {
   fetchAllImportTabs,
@@ -607,6 +607,53 @@ router.get('/annual-file', verifyDevPassword, async (req: Request, res: Response
   } catch (error: any) {
     console.error('Error generando expediente anual:', error);
     res.status(500).json({ message: error?.message || 'No se pudo generar el expediente anual.' });
+  }
+});
+
+/** Corrección del centro de calidad: alinear stock con el saldo de movimientos (auditado). */
+router.post('/data-quality/fix-stock', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const itemId = String((req.body as any)?.item_id || '');
+    const reason = (req.body as any)?.reason ?? null;
+    if (!itemId) {
+      res.status(400).json({ message: 'Falta item_id' });
+      return;
+    }
+    const actor = (req as AuthRequest).user;
+    const result = await fixStockToLedger(itemId, {
+      reason,
+      actorId: actor?.userId ?? null,
+    });
+    res.json({ success: true, result });
+  } catch (error: any) {
+    console.error('Error corrigiendo stock:', error);
+    res.status(error?.message === 'ITEM_NOT_FOUND' ? 404 : 400).json({
+      message: error?.message || 'No se pudo corregir el stock.',
+    });
+  }
+});
+
+/** Corrección del centro de calidad: asignar precio a un repuesto (auditado). */
+router.post('/data-quality/fix-price', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const itemId = String((req.body as any)?.item_id || '');
+    const price = Number((req.body as any)?.purchase_cost);
+    const reason = (req.body as any)?.reason ?? null;
+    if (!itemId) {
+      res.status(400).json({ message: 'Falta item_id' });
+      return;
+    }
+    const actor = (req as AuthRequest).user;
+    const result = await fixItemPrice(itemId, price, {
+      reason,
+      actorId: actor?.userId ?? null,
+    });
+    res.json({ success: true, result });
+  } catch (error: any) {
+    console.error('Error corrigiendo precio:', error);
+    res.status(error?.message === 'ITEM_NOT_FOUND' ? 404 : 400).json({
+      message: error?.message || 'No se pudo corregir el precio.',
+    });
   }
 });
 

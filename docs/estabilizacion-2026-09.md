@@ -69,11 +69,14 @@ Base: **v1.56.91 (`f0f5587`) = origin/main de GitHub (versión fiable)**.
       con de→a y cantidades recibidas) y corrección de movimientos (`INVENTORY_TX_DELETE` con
       movimiento original y motivo opcional). Pendiente: diffs antes/después en ediciones de
       catálogo/usuario/OT y el expediente anual.
-- [ ] **9. Centro de calidad de datos (backend hecho, UI pendiente)** — detector solo lectura
-      `GET /dev/data-quality`: (a) stock vs saldo de movimientos, (b) repuestos sin precio con
-      movimiento/stock, (c) OT finalizadas sin foto «después», (d) tiempos atípicos (labor >3 d
-      o vida total >30 d). Prueba: `backend/scripts/run-data-quality-test.sh`. Pendiente: panel
-      en Opciones de Desarrollador con acceso directo a corregir cada caso.
+- [x] **9. Centro de calidad de datos** — detector `GET /dev/data-quality`: (a) stock vs saldo de
+      movimientos, (b) repuestos sin precio con movimiento/stock, (c) OT finalizadas sin foto
+      «después», (d) tiempos atípicos (labor >3 d o vida total >30 d). Correcciones auditadas:
+      `POST /dev/data-quality/fix-stock` (alinea stock al saldo; `INVENTORY_STOCK_CORRECTION` con
+      antes/después) y `/dev/data-quality/fix-price` (`ITEM_PRICE_CORRECTION`). Panel en Opciones
+      de Desarrollador → «Centro de calidad de datos» con acciones directas (Corregir saldo,
+      Asignar precio, Copiar folio) y estado por sección. Prueba: `run-data-quality-test.sh`
+      (detección + correcciones + auditoría).
 
 ## Checklist ampliado (del diagnóstico original)
 - [ ] 10. Controles de seguridad separados de preferencias.

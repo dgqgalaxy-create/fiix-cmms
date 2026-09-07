@@ -1,4 +1,5 @@
 import prisma from '../config/prisma';
+import { writeAuditLog } from './auditLog';
 
 /**
  * Centro de calidad de datos (solo lectura): detecta problemas accionables.
@@ -162,4 +163,81 @@ export async function buildDataQualityReport(): Promise<DataQualityReport> {
     },
     items: sections,
   };
+}
+
+/**
+ * Corrección 1: alinea el stock del ítem con el saldo de sus movimientos (la fuente
+ * fiable es el historial). Audita antes/después. No crea movimientos (un movimiento
+ * cambiaría también el saldo y no corregiría la diferencia).
+ */
+export async function fixStockToLedger(
+  itemId: string,
+  opts?: { reason?: string | null; actorId?: string | null; actorName?: string | null }
+): Promise<{ before: number; after: number; ledger: number }> {
+  const balance = await prisma.inventoryTransaction.aggregate({
+    where: { item_id: itemId },
+    _sum: { amount: true },
+  });
+  const ledger = Math.round((balance._sum.amount ?? 0) * 100) / 100;
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const item = await tx.item.findUnique({ where: { id: itemId } });
+    if (!item) throw new Error('ITEM_NOT_FOUND');
+    const before = Math.round(item.stock * 100) / 100;
+    if (Math.abs(before - ledger) < 0.009) return { before, after: before };
+    const after = await tx.item.update({
+      where: { id: itemId },
+      data: { stock: ledger },
+      select: { stock: true },
+    });
+    return { before, after: Math.round(after.stock * 100) / 100 };
+  });
+
+  const reason = opts?.reason?.trim() || 'Corrección de saldo desde el centro de calidad de datos';
+  await writeAuditLog({
+    userId: opts?.actorId ?? null,
+    userName: opts?.actorName ?? null,
+    action: 'INVENTORY_STOCK_CORRECTION',
+    entity: 'inventory',
+    entityId: itemId,
+    summary: `Stock corregido: ${updated.before} → ${updated.after} (saldo de movimientos) · ${reason}`,
+    meta: { item_id: itemId, before: updated.before, after: updated.after, motivo: reason },
+  });
+  return { ...updated, ledger };
+}
+
+/** Corrección 2: asigna un precio (purchase_cost) a un repuesto que no lo tenía. Audita antes/después. */
+export async function fixItemPrice(
+  itemId: string,
+  price: number,
+  opts?: { reason?: string | null; actorId?: string | null; actorName?: string | null }
+): Promise<{ before: number | null; after: number }> {
+  if (!Number.isFinite(price) || price <= 0) {
+    throw new Error('El precio debe ser un número mayor a 0');
+  }
+  const normalized = Math.round(price * 100) / 100;
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const item = await tx.item.findUnique({ where: { id: itemId } });
+    if (!item) throw new Error('ITEM_NOT_FOUND');
+    const before = item.purchase_cost;
+    const afterItem = await tx.item.update({
+      where: { id: itemId },
+      data: { purchase_cost: normalized },
+      select: { purchase_cost: true },
+    });
+    return { before, after: afterItem.purchase_cost ?? normalized };
+  });
+
+  const reason = opts?.reason?.trim() || 'Precio asignado desde el centro de calidad de datos';
+  await writeAuditLog({
+    userId: opts?.actorId ?? null,
+    userName: opts?.actorName ?? null,
+    action: 'ITEM_PRICE_CORRECTION',
+    entity: 'inventory',
+    entityId: itemId,
+    summary: `Precio del repuesto: ${updated.before ?? 'sin precio'} → ${updated.after} · ${reason}`,
+    meta: { item_id: itemId, before: updated.before, after: updated.after, motivo: reason },
+  });
+  return updated;
 }

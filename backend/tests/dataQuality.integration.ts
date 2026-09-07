@@ -5,7 +5,7 @@
  */
 import assert from 'node:assert/strict';
 import prisma from '../src/config/prisma';
-import { buildDataQualityReport } from '../src/utils/dataQuality';
+import { buildDataQualityReport, fixStockToLedger, fixItemPrice } from '../src/utils/dataQuality';
 
 async function main() {
   const dbName = process.env.DATABASE_URL ?? '';
@@ -100,6 +100,32 @@ async function main() {
     report.items.atypicalTimes.some((r) => r.label.includes('OT larga') && /días/.test(r.detail)),
     'debe detectar la OT con vida total atípica'
   );
+
+  // ---- Correcciones (auditadas) ----
+  const mismatchItem = await prisma.item.findUniqueOrThrow({ where: { internal_code: 'DQ-MISMATCH' } });
+  const fixStock = await fixStockToLedger(mismatchItem.id, { reason: 'Ajuste de prueba' });
+  assert.equal(fixStock.before, 10);
+  assert.equal(fixStock.after, 0, 'el stock debe quedar igual al saldo (0 movimientos)');
+  const fixPrice = await fixItemPrice(noPrice.id, 25.5, { reason: 'Precio de prueba' });
+  assert.equal(fixPrice.before, null);
+  assert.equal(fixPrice.after, 25.5);
+
+  const after2 = await buildDataQualityReport();
+  assert.ok(
+    !after2.items.stockMismatches.some((r) => r.label.startsWith('DQ-MISMATCH')),
+    'tras la corrección ya no debe aparecer la diferencia de inventario'
+  );
+  assert.ok(
+    !after2.items.noPrice.some((r) => r.label.startsWith('DQ-NOPRICE')),
+    'tras la corrección ya no debe aparecer el repuesto sin precio'
+  );
+  const audit = await prisma.auditLog.findMany({
+    where: { action: { in: ['INVENTORY_STOCK_CORRECTION', 'ITEM_PRICE_CORRECTION'] } },
+    orderBy: { created_at: 'desc' },
+  });
+  assert.equal(audit.length, 2, 'ambas correcciones deben quedar auditadas');
+  const metas = audit.map((a) => (a.meta as { after?: number | null })?.after);
+  assert.ok(metas.includes(25.5), 'el meta de la corrección de precio debe contener el nuevo precio');
 
   console.log(
     `  ✓ Calidad de datos: stock=${report.counts.stockMismatches}, sinPrecio=${report.counts.noPrice}, fotos=${report.counts.photosMissing}, tiempos=${report.counts.atypicalTimes}`

@@ -347,6 +347,91 @@ export const DeveloperOptions = () => {
     }
   };
 
+  const [qualityOpen, setQualityOpen] = useState(false);
+  const [qualityLoading, setQualityLoading] = useState(false);
+  const [qualityError, setQualityError] = useState<string | null>(null);
+  const [qualityReport, setQualityReport] = useState<null | {
+    generatedAt: string;
+    counts: { stockMismatches: number; noPrice: number; photosMissing: number; atypicalTimes: number };
+    items: {
+      stockMismatches: Array<{ id: string; label: string; detail: string; amount: number }>;
+      noPrice: Array<{ id: string; label: string; detail: string; amount: number }>;
+      photosMissing: Array<{ id: string; label: string; detail: string; amount: number }>;
+      atypicalTimes: Array<{ id: string; label: string; detail: string; amount: number }>;
+    };
+  }>(null);
+  const [qualityBusyId, setQualityBusyId] = useState<string | null>(null);
+
+  const loadQuality = async () => {
+    setQualityLoading(true);
+    setQualityError(null);
+    try {
+      const res = await axios.get('/dev/data-quality', { timeout: 60000 });
+      setQualityReport(res.data.report);
+    } catch (err) {
+      const msg = isAxiosError(err)
+        ? (err.response?.data as { message?: string } | undefined)?.message || err.message
+        : 'No se pudo consultar la calidad de datos';
+      setQualityError(msg);
+    } finally {
+      setQualityLoading(false);
+    }
+  };
+
+  const applyStockFix = async (itemId: string) => {
+    if (!window.confirm('Alinear el stock con el saldo de movimientos (corrección auditada)?')) return;
+    setQualityBusyId(itemId);
+    setQualityError(null);
+    try {
+      await axios.post(
+        '/dev/data-quality/fix-stock',
+        { item_id: itemId, reason: 'Corrección desde centro de calidad' },
+        { headers: { 'x-dev-password': password }, timeout: 30000 }
+      );
+      await loadQuality();
+    } catch (err) {
+      const msg = isAxiosError(err)
+        ? (err.response?.data as { message?: string } | undefined)?.message || err.message
+        : 'No se pudo corregir el stock';
+      setQualityError(`Corregir stock: ${msg}`);
+    } finally {
+      setQualityBusyId(null);
+    }
+  };
+
+  const applyPriceFix = async (itemId: string) => {
+    const raw = window.prompt('Nuevo precio (MXN, mayor a 0):');
+    if (raw == null) return;
+    const price = Number(raw);
+    if (!Number.isFinite(price) || price <= 0) {
+      setQualityError('El precio debe ser un número mayor a 0');
+      return;
+    }
+    setQualityBusyId(itemId);
+    setQualityError(null);
+    try {
+      await axios.post(
+        '/dev/data-quality/fix-price',
+        { item_id: itemId, purchase_cost: price, reason: 'Precio asignado desde centro de calidad' },
+        { headers: { 'x-dev-password': password }, timeout: 30000 }
+      );
+      await loadQuality();
+    } catch (err) {
+      const msg = isAxiosError(err)
+        ? (err.response?.data as { message?: string } | undefined)?.message || err.message
+        : 'No se pudo corregir el precio';
+      setQualityError(`Corregir precio: ${msg}`);
+    } finally {
+      setQualityBusyId(null);
+    }
+  };
+
+  const copyLabel = (label: string) => {
+    if (navigator.clipboard) {
+      void navigator.clipboard.writeText(label.split(' · ')[0] || label);
+    }
+  };
+
   const fetchDriveStatus = async () => {
     try {
       const driveRes = await axios.get('/dev/google-drive-status');
@@ -1924,6 +2009,7 @@ export const DeveloperOptions = () => {
         </section>
 
         {isAdmin && (
+          <>
           <section className="rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
             <button
               type="button"
@@ -2123,6 +2209,168 @@ export const DeveloperOptions = () => {
               </div>
             )}
           </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+            <button
+              type="button"
+              onClick={() => {
+                const next = !qualityOpen;
+                setQualityOpen(next);
+                if (next && !qualityReport && !qualityLoading) {
+                  void loadQuality();
+                }
+              }}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                  <ShieldCheck size={21} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-400">
+                    Calidad de datos
+                  </p>
+                  <h2 className="mt-0.5 text-lg font-black text-slate-900 dark:text-white">Centro de calidad de datos</h2>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                    Detecta y corrige con trazabilidad: diferencias de inventario, repuestos sin precio,
+                    órdenes finalizadas sin foto y tiempos atípicos. Solo lectura hasta que corrijas un caso.
+                  </p>
+                  {qualityReport && (
+                    <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      {qualityReport.counts.stockMismatches} diferencias · {qualityReport.counts.noPrice} sin precio ·{' '}
+                      {qualityReport.counts.photosMissing} fotos faltantes · {qualityReport.counts.atypicalTimes} tiempos atípicos
+                    </p>
+                  )}
+                </div>
+              </div>
+              <ChevronDown size={20} className={`shrink-0 text-slate-400 transition-transform ${qualityOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {qualityOpen && (
+              <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">
+                <div className="mb-3 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void loadQuality()}
+                    disabled={qualityLoading}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    <RefreshCw size={12} className={qualityLoading ? 'animate-spin' : ''} />
+                    {qualityLoading ? 'Analizando…' : 'Actualizar análisis'}
+                  </button>
+                  <span className="text-[11px] text-slate-400">
+                    {qualityReport ? `generado ${new Date(qualityReport.generatedAt).toLocaleString()}` : 'sin análisis aún'}
+                  </span>
+                </div>
+                {qualityError && (
+                  <p className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-200">
+                    {qualityError}
+                  </p>
+                )}
+
+                {!qualityReport && !qualityLoading && (
+                  <p className="py-4 text-center text-sm text-slate-400">
+                    Pulsa «Actualizar análisis» para detectar problemas.
+                  </p>
+                )}
+
+                {qualityReport && (
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {(
+                      [
+                        {
+                          title: 'Diferencias de inventario',
+                          rows: qualityReport.items.stockMismatches,
+                          total: qualityReport.counts.stockMismatches,
+                          tone: 'rose',
+                          render: (r: { id: string; label: string; detail: string; amount: number }) => (
+                            <button
+                              type="button"
+                              disabled={qualityBusyId === r.id}
+                              onClick={() => void applyStockFix(r.id)}
+                              className="rounded-lg bg-slate-800 px-2 py-1 text-[11px] font-bold text-white hover:bg-slate-900 disabled:opacity-50 dark:bg-slate-200 dark:text-slate-900"
+                            >
+                              {qualityBusyId === r.id ? 'Corrigiendo…' : 'Corregir saldo'}
+                            </button>
+                          ),
+                        },
+                        {
+                          title: 'Repuestos sin precio',
+                          rows: qualityReport.items.noPrice,
+                          total: qualityReport.counts.noPrice,
+                          tone: 'amber',
+                          render: (r: { id: string; label: string; detail: string; amount: number }) => (
+                            <button
+                              type="button"
+                              disabled={qualityBusyId === r.id}
+                              onClick={() => void applyPriceFix(r.id)}
+                              className="rounded-lg bg-amber-600 px-2 py-1 text-[11px] font-bold text-white hover:bg-amber-700 disabled:opacity-50"
+                            >
+                              {qualityBusyId === r.id ? 'Guardando…' : 'Asignar precio'}
+                            </button>
+                          ),
+                        },
+                        {
+                          title: 'Fotos faltantes (evidencia)',
+                          rows: qualityReport.items.photosMissing,
+                          total: qualityReport.counts.photosMissing,
+                          tone: 'sky',
+                          render: (r: { id: string; label: string; detail: string; amount: number }) => (
+                            <button
+                              type="button"
+                              onClick={() => copyLabel(r.label)}
+                              className="rounded-lg bg-sky-600 px-2 py-1 text-[11px] font-bold text-white hover:bg-sky-700"
+                              title="Copia el folio para adjuntar la foto en la OT (módulo Órdenes)"
+                            >
+                              Copiar folio
+                            </button>
+                          ),
+                        },
+                        {
+                          title: 'Tiempos atípicos',
+                          rows: qualityReport.items.atypicalTimes,
+                          total: qualityReport.counts.atypicalTimes,
+                          tone: 'slate',
+                          render: (_r: { id: string; label: string; detail: string; amount: number }) => null,
+                        },
+                      ]
+                    ).map((section) => (
+                      <div
+                        key={section.title}
+                        className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/50"
+                      >
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                          {section.title}{' '}
+                          <span className="font-semibold text-slate-400">({section.total})</span>
+                        </p>
+                        {section.rows.length === 0 ? (
+                          <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400">
+                            Sin casos detectados ✔
+                          </p>
+                        ) : (
+                          <ul className="mt-2 space-y-1.5">
+                            {section.rows.slice(0, 8).map((r) => (
+                              <li key={r.id} className="flex items-start justify-between gap-2 text-[11px] leading-4 text-slate-600 dark:text-slate-300">
+                                <span className="min-w-0">
+                                  <span className="block font-semibold text-slate-800 dark:text-slate-100">{r.label}</span>
+                                  <span className="block text-slate-500 dark:text-slate-400">{r.detail}</span>
+                                </span>
+                                {section.render(r)}
+                              </li>
+                            ))}
+                            {section.total > 8 && (
+                              <li className="text-[11px] text-slate-400">…y {section.total - 8} más.</li>
+                            )}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+          </>
         )}
 
         <section className="rounded-3xl border border-red-200 bg-red-50/70 p-5 dark:border-red-900/50 dark:bg-red-950/20 sm:p-6">
