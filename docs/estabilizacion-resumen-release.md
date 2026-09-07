@@ -36,7 +36,10 @@ Todos los cambios están en la laptop; nada se publicó todavía.
 
 ## Checklist de despliegue (cuando se autorice)
 1. `git pull` + `./update.sh` (aplica esquema con `db push` **sin** pérdida de datos por defecto; si el esquema exigiera un cambio destructivo, `update.sh` abortará y pedirá `FIIX_ALLOW_DB_PUSH_DATA_LOSS=1` tras respaldar).
-2. La columna nueva `InventoryTransaction.external_id` (única, nullable) la aplica el `db push` del despliegue; también existe la migración explícita `20260907000000_inventory_tx_external_id` si se usa `prisma migrate deploy`.
+2. Los dos cambios aditivos (`InventoryTransaction.external_id` única sobre NULLs y
+   `accumulated_time_ms` INT→BIGINT) los aplica `update.sh`/Docker con SQL idempotente
+   ANTES del `db push` (`prisma db execute`), para que Prisma no los marque como posible
+   pérdida de datos y el push quede sin pendientes.
 3. `FIIX_OPERATING_HOURS_PER_DAY` (1–24): opcional; default 24 (sin cambio histórico del MTBF).
 4. En Docker: mismo comportamiento seguro; `ALLOW_DB_PUSH_DATA_LOSS=1` solo si se entiende el riesgo.
 5. Ningún cambio de esquema destructivo incluido en esta fase.

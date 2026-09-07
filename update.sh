@@ -167,6 +167,18 @@ fiix_npm_ci "${APP_DIR}/backend" "--include=dev"
 chmod +x "${APP_DIR}/scripts/ensure-vapid-env.sh" 2>/dev/null || true
 "${APP_DIR}/scripts/ensure-vapid-env.sh" "${APP_DIR}/backend/.env" || true
 npx prisma generate
+# Cambios de esquema ADITIVOS y seguros (columna nueva con índice único sobre NULLs,
+# ampliación INT→BIGINT): se aplican con SQL idempotente ANTES del db push, para que
+# Prisma no los trate como "posible pérdida de datos" y el push quede sin pendientes.
+info "Aplicando cambios de esquema aditivos (idempotentes)..."
+for _mig in \
+  "${APP_DIR}/backend/prisma/migrations/20260907000000_inventory_tx_external_id/migration.sql" \
+  "${APP_DIR}/backend/prisma/migrations/20260907010000_accumulated_time_ms_bigint/migration.sql"; do
+  if [ -f "${_mig}" ]; then
+    npx prisma db execute --file "${_mig}" || die "No se pudo aplicar ${_mig}"
+    ok "Aplicado $(basename "$(dirname "${_mig}")")"
+  fi
+done
 # Sincronización de esquema CONTROLADA: por defecto sin pérdida de datos. Si el
 # esquema pendiente exige cambios destructivos, db push falla y abortamos el update
 # (se preservan los datos). Solo con FIIX_ALLOW_DB_PUSH_DATA_LOSS=1 se aplican igual.
