@@ -152,6 +152,8 @@ export const DeveloperOptions = () => {
   const [auditFrom, setAuditFrom] = useState('');
   const [auditTo, setAuditTo] = useState('');
   const [auditExporting, setAuditExporting] = useState(false);
+  const [annualYear, setAnnualYear] = useState(() => String(new Date().getFullYear()));
+  const [annualBusy, setAnnualBusy] = useState(false);
 
   /** Por archivo: alineado con multer. Nginx permite ~1100 MB de body (2 zips). */
   const ZIP_MAX_BYTES = 500 * 1024 * 1024;
@@ -255,6 +257,93 @@ export const DeveloperOptions = () => {
       setAuditError(msg);
     } finally {
       setAuditExporting(false);
+    }
+  };
+
+  /** Expediente anual: órdenes + consumos + fotos (URLs) del año en un .xlsx (solo lectura). */
+  const handleExportAnnualFile = async () => {
+    if (!isAdmin) return;
+    const year = Number(annualYear);
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+      setAuditError('Indica un año válido (2000–2100).');
+      return;
+    }
+    setAnnualBusy(true);
+    setAuditError(null);
+    try {
+      const res = await axios.get('/dev/annual-file', {
+        params: { year },
+        timeout: 120000,
+      });
+      const data = res.data.data as {
+        counts: { orders: number; consumptions: number; photos: number };
+        orders: Array<Record<string, unknown>>;
+        consumptions: Array<Record<string, unknown>>;
+        photos: string[];
+      };
+
+      const folioLabel = (folio: unknown) =>
+        typeof folio === 'number' && folio > 0
+          ? `FOL-${String(folio).padStart(4, '0')}`
+          : '';
+
+      const wb = XLSX.utils.book_new();
+
+      const ordersWs = XLSX.utils.json_to_sheet(
+        (data.orders.length > 0 ? data.orders : [{}]).map((o: any) => ({
+          Folio: folioLabel(o.folio),
+          Título: o.title ?? '',
+          Estado: o.status ?? '',
+          Tipo: o.maintenance_type ?? '',
+          Activo: o.asset_name ?? '',
+          'Código activo': o.asset_code ?? '',
+          Zona: o.zone_name ?? '',
+          Solicitante: o.requester_name ?? '',
+          Creado: o.created_at ? String(o.created_at).slice(0, 19).replace('T', ' ') : '',
+          Iniciado: o.started_at ? String(o.started_at).slice(0, 19).replace('T', ' ') : '',
+          Finalizado: o.completed_at ? String(o.completed_at).slice(0, 19).replace('T', ' ') : '',
+          'Labor (min)': o.labor_minutes ?? 0,
+          'Foto solicitud': o.photo_request ?? '',
+          'Foto antes': o.photo_before ?? '',
+          'Foto después': o.photo_after ?? '',
+          'Notas de resolución': o.resolution_notes ?? '',
+        }))
+      );
+      XLSX.utils.book_append_sheet(wb, ordersWs, 'Órdenes');
+
+      const consWs = XLSX.utils.json_to_sheet(
+        (data.consumptions.length > 0 ? data.consumptions : [{}]).map((c: any) => ({
+          'Folio OT': folioLabel(c.work_order_folio),
+          'OT': c.work_order_title ?? '',
+          Activo: c.asset_name ?? '',
+          'Código repuesto': c.item_code ?? '',
+          Repuesto: c.item_name ?? '',
+          Cantidad: c.amount ?? 0,
+          'Costo unitario': c.unit_cost ?? 0,
+          Fecha: c.created_at ? String(c.created_at).slice(0, 19).replace('T', ' ') : '',
+        }))
+      );
+      XLSX.utils.book_append_sheet(wb, consWs, 'Consumos');
+
+      const fotosWs = XLSX.utils.json_to_sheet(
+        (data.photos.length > 0 ? data.photos : ['']).map((u) => ({ 'URL de foto': u }))
+      );
+      XLSX.utils.book_append_sheet(wb, fotosWs, 'Fotos (URLs)');
+
+      const stamp = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `expediente_anual_${year}_${stamp}.xlsx`);
+      setSuccessMsg(
+        `Expediente anual ${year} descargado: ${data.counts.orders} órdenes, ${data.counts.consumptions} consumos, ${data.counts.photos} fotos.`
+      );
+      setTimeout(() => setSuccessMsg(null), 10000);
+    } catch (err) {
+      console.error(err);
+      const msg = isAxiosError(err)
+        ? (err.response?.data as { message?: string } | undefined)?.message || err.message
+        : 'No se pudo generar el expediente anual';
+      setAuditError(`Expediente anual: ${msg}`);
+    } finally {
+      setAnnualBusy(false);
     }
   };
 
@@ -1924,6 +2013,39 @@ export const DeveloperOptions = () => {
                 <p className="mb-3 text-[11px] leading-4 text-slate-500 dark:text-slate-400">
                   Las fechas del Excel usan día civil de México. Si dejas vacío Desde o Hasta, el periodo se abre hacia ese extremo; «Histórico completo» ignora las fechas.
                 </p>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Expediente anual (órdenes + consumos + fotos)
+                  </h3>
+                  <p className="mt-1 text-xs leading-4 text-slate-600 dark:text-slate-400">
+                    Genera un .xlsx con hojas <strong>Órdenes</strong> (incluye notas y URLs de
+                    fotos Antes/Después/Solicitud), <strong>Consumos</strong> de refacciones y{' '}
+                    <strong>Fotos (URLs)</strong> para el año indicado, en hora de planta. Solo lectura; no modifica datos.
+                  </p>
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+                      Año
+                      <input
+                        type="number"
+                        min={2000}
+                        max={2100}
+                        value={annualYear}
+                        onChange={(e) => setAnnualYear(e.target.value)}
+                        className="mt-1 block w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white sm:w-32"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => void handleExportAnnualFile()}
+                      disabled={annualBusy}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-900 disabled:opacity-50 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-white"
+                    >
+                      <Download size={14} />
+                      {annualBusy ? 'Generando…' : 'Descargar expediente anual'}
+                    </button>
+                  </div>
+                </div>
                 {auditError && (
                   <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
                     {auditError}

@@ -14,6 +14,7 @@ import {
 import { authenticate, type AuthRequest } from '../middlewares/authMiddleware';
 import { processCsvImportFiles, CsvImportError } from '../utils/runCsvImport';
 import { importInventoryTransactionsFile } from '../utils/inventoryCsvImport';
+import { buildAnnualFileData } from '../utils/annualFile';
 import { logImportAudit } from '../utils/importAuditLog';
 import {
   fetchAllImportTabs,
@@ -594,6 +595,19 @@ router.post(
     }
   }
 );
+
+/** Expediente anual (solo lectura): órdenes + consumos + fotos del año en hora de planta. */
+router.get('/annual-file', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const rawYear = Number(req.query.year);
+    const year = Number.isInteger(rawYear) && rawYear >= 2000 && rawYear <= 2100 ? rawYear : new Date().getFullYear();
+    const data = await buildAnnualFileData(year);
+    res.json({ success: true, data });
+  } catch (error: any) {
+    console.error('Error generando expediente anual:', error);
+    res.status(500).json({ message: error?.message || 'No se pudo generar el expediente anual.' });
+  }
+});
 
 /** Importa las 7 pestañas mapeadas desde Google Sheets (mismo motor que CSV). */
 router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
