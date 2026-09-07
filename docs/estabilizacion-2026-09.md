@@ -53,9 +53,9 @@ Base: **v1.56.91 (`f0f5587`) = origin/main de GitHub (versión fiable)**.
       fila (en vez de silenciarse).
   - MTBF: supuesto de horas/día ahora explícito y configurable (`FIIX_OPERATING_HOURS_PER_DAY`,
     1–24, default 24) y expuesto en cada punto como `mtbfAssumptionHoursPerDay`.
-    `accumulated_time_ms` (int32 ~24.8 días): el cierre ya no puede romper por overflow (recorte
-    al máximo) y el import avisa por fila; migración a BigInt queda documentada como mejora
-    futura. Prueba: `backend/scripts/run-kpi-periods-test.sh`.
+    `accumulated_time_ms` migrado a **BigInt (int64)** — sin recorte de tiempos largos (ni en el
+    cierre ni en el import). Serialización global BigInt→number en el arranque. Migración:
+    `20260907010000_accumulated_time_ms_bigint`. Pruebas: matriz completa en verde.
 - [x] **7. Respaldos y actualizaciones** — restauración de BD en UNA transacción
       (BEGIN → DROP/CREATE schema → dump → COMMIT): si el dump falla a mitad se revierte
       TODO (la base queda como estaba). Tras restaurar, verificación de conteos

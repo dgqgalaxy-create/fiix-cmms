@@ -833,8 +833,6 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
     let didConsumeInventory = false;
     // Cantidades YA validadas (parseQty) por ítem consumido, para auditar con precisión.
     const consumedByItem = new Map<string, number>();
-    // Si el cierre recorta la labor acumulada al tope int32, se deja constancia en la bitácora.
-    let laborClampedAtClose = false;
 
     // Construir URLs de las imágenes
     if (files && files['before_image']) {
@@ -891,15 +889,9 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
           // Acumular tiempo de labor al pausar o finalizar (usa la fila ya bloqueada).
           if ((status === 'EN_ESPERA' || status === 'FINALIZADO') && fresh.status === 'EN_PROCESO') {
             if (fresh.last_resumed_at) {
-              // La columna es entero de 32 bits (~24.8 días): se recorta al máximo para
-              // no romper el cierre con un overflow de PostgreSQL y se deja constancia
-              // en la bitácora (laborClampedAtClose); el import CSV ya avisa por fila.
-              const rawAccumulated =
-                fresh.accumulated_time_ms + (Date.now() - fresh.last_resumed_at.getTime());
-              if (rawAccumulated > 2_147_483_647) {
-                laborClampedAtClose = true;
-              }
-              merged.accumulated_time_ms = Math.min(2_147_483_647, rawAccumulated);
+              // Columna int64 (BigInt): sin recorte por overflow.
+              merged.accumulated_time_ms =
+                Number(fresh.accumulated_time_ms) + (Date.now() - fresh.last_resumed_at.getTime());
             }
             merged.last_resumed_at = null;
           }
@@ -1059,7 +1051,6 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
                 amount,
               })) as unknown as Prisma.InputJsonValue)
             : null,
-          labor_clamped_at_close: laborClampedAtClose || undefined,
         },
       });
 

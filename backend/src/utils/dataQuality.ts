@@ -128,9 +128,9 @@ export async function buildDataQualityReport(): Promise<DataQualityReport> {
     for (const wo of wos) {
       const created = wo.created_at?.getTime() ?? wo.completed_at!.getTime();
       const lifespan = Math.max(0, wo.completed_at!.getTime() - created);
-      const laborH = round2((wo.accumulated_time_ms ?? 0) / 3_600_000);
+      const laborH = round2(Number(wo.accumulated_time_ms ?? 0) / 3_600_000);
       const lifespanDays = round2(lifespan / 86_400_000);
-      const isLabor = (wo.accumulated_time_ms ?? 0) > laborMsAtypical;
+      const isLabor = Number(wo.accumulated_time_ms ?? 0) > laborMsAtypical;
       const isLife = lifespan > lifespanMsAtypical;
       if (!isLabor && !isLife) continue;
       atypicalTimes.push({
@@ -139,7 +139,7 @@ export async function buildDataQualityReport(): Promise<DataQualityReport> {
         detail: `${isLabor ? `labor ${laborH} h` : ''}${isLabor && isLife ? ' · ' : ''}${
           isLife ? `vida total ${lifespanDays} días` : ''
         }`,
-        amount: isLabor ? wo.accumulated_time_ms ?? 0 : lifespan,
+        amount: isLabor ? Number(wo.accumulated_time_ms ?? 0) : lifespan,
       });
     }
     atypicalTimes.sort((a, b) => b.amount - a.amount);

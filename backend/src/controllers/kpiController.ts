@@ -283,8 +283,8 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
     // MTTR: tiempo activo de labor en correctivas finalizadas (horas)
     const mttrHours = avg(
       correctiveCompleted
-        .filter((wo) => wo.accumulated_time_ms > 0)
-        .map((wo) => wo.accumulated_time_ms / MS_PER_HOUR),
+        .filter((wo) => Number(wo.accumulated_time_ms) > 0)
+        .map((wo) => Number(wo.accumulated_time_ms) / MS_PER_HOUR),
     );
 
     // Tiempo de respuesta: created_at → started_at (horas)
@@ -298,7 +298,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
     // Cumplimiento MTTR (antes etiquetado como SLA)
     const mttrGoalHours = goals.MTTR.targetValue;
     const mttrCompliance = correctiveCompleted.length
-      ? (correctiveCompleted.filter((wo) => wo.accumulated_time_ms / MS_PER_HOUR <= mttrGoalHours).length /
+      ? (correctiveCompleted.filter((wo) => Number(wo.accumulated_time_ms) / MS_PER_HOUR <= mttrGoalHours).length /
           correctiveCompleted.length) *
         100
       : null;
@@ -626,8 +626,8 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
       const correctiveCompleted = intervalCompleted.filter((wo) => wo.maintenance_type === 'CORRECTIVO');
       const mttrHours = avg(
         correctiveCompleted
-          .filter((wo) => wo.accumulated_time_ms > 0)
-          .map((wo) => wo.accumulated_time_ms / MS_PER_HOUR),
+          .filter((wo) => Number(wo.accumulated_time_ms) > 0)
+          .map((wo) => Number(wo.accumulated_time_ms) / MS_PER_HOUR),
       );
 
       const intervalTx = inventoryTransactions.filter(
@@ -792,8 +792,8 @@ export const getTechnicianPerformance = async (req: AuthRequest, res: Response):
             wo.completed_at <= effectiveEnd,
         );
         const waitMs = paused.reduce((sum, wo) => sum + holdElapsedMs(wo, now), 0);
-        const laborMs = completedThisWeek.reduce((sum, wo) => sum + (wo.accumulated_time_ms || 0), 0);
-        const laborPeriodMs = completedInPeriod.reduce((sum, wo) => sum + (wo.accumulated_time_ms || 0), 0);
+        const laborMs = completedThisWeek.reduce((sum, wo) => sum + Number(wo.accumulated_time_ms || 0), 0);
+        const laborPeriodMs = completedInPeriod.reduce((sum, wo) => sum + Number(wo.accumulated_time_ms || 0), 0);
 
         const Finalizadas = completedInPeriod.length;
         const EnProceso = inPeriodOrOpen.filter((wo) => wo.status === 'EN_PROCESO').length;

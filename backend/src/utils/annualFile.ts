@@ -81,7 +81,7 @@ export async function buildAnnualFileData(year: number): Promise<AnnualFileData>
     created_at: wo.created_at.toISOString(),
     started_at: wo.started_at?.toISOString() ?? null,
     completed_at: wo.completed_at?.toISOString() ?? null,
-    labor_minutes: Math.round(wo.accumulated_time_ms / 60000),
+    labor_minutes: Math.round(Number(wo.accumulated_time_ms) / 60000),
     resolution_notes: wo.resolution_notes,
     created_by_name: wo.created_by?.name ?? null,
     photo_before: wo.before_image_url,

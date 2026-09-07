@@ -268,7 +268,8 @@ model WorkOrder {
   started_at          DateTime?
   paused_at           DateTime?
   last_resumed_at     DateTime?
-  accumulated_time_ms Int             @default(0)
+  /// Tiempo de labor acumulado en ms (entero 64 bits desde v1.57: sin recorte a ~24.8 días).
+  accumulated_time_ms BigInt            @default(0)
   resolution_notes    String?
   request_image_url   String?
   before_image_url    String?

@@ -706,17 +706,9 @@ if (woFile) {
            resolutionNotes = 'Anulada según registro histórico (CSV).';
         }
 
-        // La columna accumulated_time_ms es entero de 32 bits (~24.8 días): si el
-        // tiempo histórico lo excede se recorta; se avisa en vez de silenciarlo.
+        // Columna accumulated_time_ms es int64 (BigInt) desde v1.57: sin recorte,
+        // el tiempo histórico se conserva completo (antes se limitaba a ~24.8 días).
         const repairMs = Math.max(0, Math.floor(parseNumber(row['TIEMPO REPARACIÓN']) * 60000));
-        const clippedRepairMs = Math.min(2147483647, repairMs);
-        if (clippedRepairMs < repairMs) {
-          if ((results.workOrderWarnings?.length ?? 0) < 100) {
-            (results.workOrderWarnings ??= []).push(
-              `Fila ${csvRowNum}${row['FOLIO'] ? ` (folio ${row['FOLIO']})` : ''}: el tiempo de reparación (${Math.round(repairMs / 60000)} min) excede el límite de la columna (~24.8 días) y se recortó.`
-            );
-          }
-        }
 
         const woData = {
            title: row['Descripción de la falla:']?.substring(0, 100) || 'Sin título',
@@ -736,7 +728,7 @@ if (woFile) {
            started_at,
            paused_at: parseSafeDate(row['HORA PAUSA']) || null,
            completed_at: status === WorkOrderStatus.ANULADO && !completed_at ? new Date() : completed_at,
-           accumulated_time_ms: clippedRepairMs,
+           accumulated_time_ms: repairMs,
            assigned_technicians: { connect: assignedUserIds }
         };
 

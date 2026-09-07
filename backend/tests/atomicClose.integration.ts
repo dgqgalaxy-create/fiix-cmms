@@ -158,7 +158,7 @@ async function main() {
       ],
       usedItemsAsString: true, // FormData manda JSON string
     });
-    assert.equal(res._status, 200, `Caso 1: esperaba 200, recibí ${res._status}: ${JSON.stringify(res._body)}`);
+    assert.equal(res._status, 200, `Caso 1: esperaba 200, recibí ${res._status}`);
 
     const fresh = await prisma.workOrder.findUniqueOrThrow({ where: { id: wo.id } });
     assert.equal(fresh.status, 'FINALIZADO');

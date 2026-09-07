@@ -16,6 +16,13 @@ import { isMaintenanceActive } from './utils/maintenance';
 
 assertJwtConfigured();
 
+// La columna "WorkOrder".accumulated_time_ms es int64 (BigInt) desde la migración a
+// 64 bits: sin esto, JSON.stringify lanzaría con valores bigint al responder órdenes.
+// El rango real (ms de labor acumulada) cabe de sobra en un number de JS.
+(BigInt.prototype as unknown as { toJSON?: () => unknown }).toJSON = function () {
+  return Number(this);
+};
+
 // Restart trigger
 
 const app = express();

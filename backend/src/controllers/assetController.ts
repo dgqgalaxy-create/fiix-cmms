@@ -82,7 +82,7 @@ export const getAssetMetrics = async (req: Request, res: Response): Promise<void
     correctiveOrders.forEach(wo => {
       const end = wo.completed_at ? new Date(wo.completed_at).getTime() : 0;
       const start = wo.started_at ? new Date(wo.started_at).getTime() : new Date(wo.created_at).getTime();
-      let repairTimeMs = wo.accumulated_time_ms;
+      let repairTimeMs = Number(wo.accumulated_time_ms);
       if (!repairTimeMs || repairTimeMs <= 0) {
         if (end && end > start) {
           repairTimeMs = end - start;

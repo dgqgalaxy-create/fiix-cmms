@@ -42,6 +42,6 @@ Todos los cambios están en la laptop; nada se publicó todavía.
 5. Ningún cambio de esquema destructivo incluido en esta fase.
 
 ## Limitaciones conocidas / mejoras opcionales (documentadas)
-- `accumulated_time_ms` es `Int` (32 bits ≈ 24.8 días de labor): el cierre ya no puede romper por overflow (recorte) y el import avisa por fila; migrar a `BigInt` eliminaría el recorte (mejora futura, cambio amplio).
+- ~~`accumulated_time_ms` Int (32 bits)~~ → migrado a **BigInt/int64**: sin recorte de tiempos largos; serialización BigInt→number global (commit posterior a esta tabla: `20260907010000_accumulated_time_ms_bigint`).
 - MTBF asume `FIIX_OPERATING_HOURS_PER_DAY` × activos operativos; un calendario real de operación por activo daría una métrica exacta.
 - La bandeja offline, la vista previa de importación, el expediente anual y el panel de calidad están listos para validación en navegador (pendiente reporte del usuario).
