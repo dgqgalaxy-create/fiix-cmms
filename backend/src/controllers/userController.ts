@@ -1,8 +1,11 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
+import type { Prisma } from '@prisma/client';
 import prisma from '../config/prisma';
 import { Role } from '@prisma/client';
 import { emitRefresh, getConnectedUserIds } from '../utils/socket';
+import { writeAuditLog } from '../utils/auditLog';
+import { diffRequestedChanges } from '../utils/auditChanges';
 
 export const getUsers = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -64,20 +67,72 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
   try {
     const id = req.params.id as string;
     const { name, email, password, role, is_active } = req.body;
-    
+
+    const beforeUser = await prisma.user.findUnique({
+      where: { id },
+      select: { name: true, email: true, role: true, is_active: true },
+    });
+    if (!beforeUser) {
+      res.status(404).json({ error: 'Usuario no encontrado' });
+      return;
+    }
+
     const updateData: any = { name, email, role };
     if (is_active !== undefined) {
       updateData.is_active = is_active;
     }
+    let passwordChanged = false;
     if (password && password.trim() !== '') {
-       updateData.password_hash = await bcrypt.hash(password, 10);
+      updateData.password_hash = await bcrypt.hash(password, 10);
+      passwordChanged = true;
     }
-    
+
     const user = await prisma.user.update({
       where: { id },
       data: updateData
     });
-    
+
+    // Bitácora: valores anteriores → nuevos (solo campos presentes en el request).
+    const labels: Record<string, string> = {
+      name: 'nombre',
+      email: 'correo',
+      role: 'rol',
+      is_active: 'activo',
+    };
+    const requestedDiff: Record<string, unknown> = {};
+    if (name !== undefined) requestedDiff.name = name;
+    if (email !== undefined) requestedDiff.email = email;
+    if (role !== undefined) requestedDiff.role = role;
+    if (is_active !== undefined) requestedDiff.is_active = is_active;
+    const changes = diffRequestedChanges(
+      {
+        name: beforeUser.name,
+        email: beforeUser.email,
+        role: beforeUser.role,
+        is_active: beforeUser.is_active,
+      },
+      requestedDiff,
+      labels
+    );
+    if (passwordChanged) {
+      changes.push({ campo: 'contraseña', antes: '(oculta)', despues: '(cambiada)' });
+    }
+    if (changes.length > 0) {
+      const actorU = (req as any).user?.userId as string | undefined;
+      const actorN = actorU
+        ? (await prisma.user.findUnique({ where: { id: actorU }, select: { name: true } }))?.name
+        : null;
+      await writeAuditLog({
+        userId: actorU ?? null,
+        userName: actorN,
+        action: 'USER_UPDATE',
+        entity: 'user',
+        entityId: id,
+        summary: `Usuario ${user.name} actualizado (${changes.length} campo${changes.length === 1 ? '' : 's'})`,
+        meta: { user_id: id, changes: changes as unknown as Prisma.InputJsonValue },
+      });
+    }
+
     emitRefresh('refresh_users');
     res.json({ id: user.id, name: user.name, email: user.email, role: user.role });
   } catch(error: any) {

@@ -1009,7 +1009,22 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
           title: currentWorkOrder.title,
           description: currentWorkOrder.description,
         };
-        editChanges = diffRequestedChanges(beforeRec, updateData, labels).slice(0, MAX_AUDIT_CHANGES);
+        // Solo campos que el cliente tocó (evita "cambios" por claves undefined).
+        const has = (k: string) => (req.body as Record<string, unknown>)[k] !== undefined;
+        const requestedEdit: Record<string, unknown> = {};
+        if (has('priority')) requestedEdit.priority = updateData.priority;
+        if (has('maintenance_type')) requestedEdit.maintenance_type = updateData.maintenance_type;
+        if (has('machine_stopped')) requestedEdit.machine_stopped = updateData.machine_stopped;
+        if (has('requester_name')) requestedEdit.requester_name = updateData.requester_name;
+        if (has('production_group')) requestedEdit.production_group = updateData.production_group;
+        if (has('zone_id')) requestedEdit.zone_id = updateData.zone_id;
+        if (has('scheduled_date')) requestedEdit.scheduled_date = updateData.scheduled_date;
+        if (has('due_date')) requestedEdit.due_date = updateData.due_date;
+        if (has('resolution_notes')) requestedEdit.resolution_notes = updateData.resolution_notes;
+        if (has('hold_reason')) requestedEdit.hold_reason = updateData.hold_reason;
+        if (has('signature_clean_area')) requestedEdit.signature_clean_area = updateData.signature_clean_area;
+        if (has('signature_delivery')) requestedEdit.signature_delivery = updateData.signature_delivery;
+        editChanges = diffRequestedChanges(beforeRec, requestedEdit, labels).slice(0, MAX_AUDIT_CHANGES);
       }
 
       await writeAuditLog({
