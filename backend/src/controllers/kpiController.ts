@@ -192,10 +192,14 @@ export const getAssetFailureOrders = async (req: AuthRequest, res: Response): Pr
     const assetId = req.params.assetId as string;
     const { start, effectiveEnd } = rangeFromReq(req);
 
+    // machineStopped=1 → solo paros (máquina detenida); por defecto todas las correctivas.
+    const machineStoppedOnly = req.query.machineStopped === '1';
+
     const workOrders = await prisma.workOrder.findMany({
       where: {
         asset_id: assetId,
         maintenance_type: 'CORRECTIVO',
+        ...(machineStoppedOnly ? { machine_stopped: true } : {}),
         status: { not: 'ANULADO' },
         OR: [
           { completed_at: { gte: start, lte: effectiveEnd } },
@@ -208,6 +212,7 @@ export const getAssetFailureOrders = async (req: AuthRequest, res: Response): Pr
         title: true,
         created_at: true,
         status: true,
+        machine_stopped: true,
         accumulated_time_ms: true,
         zone: { select: { name: true } },
         assigned_technicians: { select: { name: true } },
@@ -957,5 +962,124 @@ export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promis
   } catch (error) {
     console.error('Error fetching MTTR/MTBF by line:', error);
     res.status(500).json({ error: 'Error al calcular MTTR/MTBF por línea' });
+  }
+};
+
+/**
+ * Desglose por equipo de una línea (L1–L5): MTTR/MTBF por activo en el periodo.
+ * Misma definición que /by-line, a nivel equipo:
+ * - fallas = paros correctivos (machine_stopped) del equipo creados en el periodo.
+ * - MTTR = promedio de accumulated_time_ms de sus paros finalizados.
+ * - MTBF = horas operativas del equipo (solo si está OPERATIVO) / fallas.
+ */
+export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const line = String(req.params.line ?? '').trim().toUpperCase();
+    if (!(PRODUCTION_LINES as readonly string[]).includes(line)) {
+      res.status(400).json({ error: `Línea inválida. Usa: ${PRODUCTION_LINES.join(', ')}` });
+      return;
+    }
+
+    const { start, effectiveEnd } = rangeFromReq(req);
+    const hoursPerDay = getOperatingHoursPerDay();
+    const DAY_MS = 86_400_000;
+    const days = Math.max(1, Math.ceil((effectiveEnd.getTime() - start.getTime()) / DAY_MS));
+
+    const lineAssets = await prisma.asset.findMany({
+      where: { zone: { name: { equals: line, mode: 'insensitive' } } },
+      select: { id: true, name: true, internal_code: true, status: true },
+      orderBy: { name: 'asc' },
+    });
+    const assetIds = lineAssets.map((a) => a.id);
+
+    const stoppages = assetIds.length
+      ? await prisma.workOrder.findMany({
+          where: {
+            asset_id: { in: assetIds },
+            maintenance_type: 'CORRECTIVO',
+            machine_stopped: true,
+            status: { not: 'ANULADO' },
+            OR: [
+              { created_at: { gte: start, lte: effectiveEnd } },
+              { completed_at: { gte: start, lte: effectiveEnd } },
+            ],
+          },
+          select: {
+            id: true,
+            asset_id: true,
+            status: true,
+            created_at: true,
+            started_at: true,
+            completed_at: true,
+            accumulated_time_ms: true,
+          },
+        })
+      : [];
+
+    const byAsset = new Map<string, typeof stoppages>();
+    for (const wo of stoppages) {
+      const list = byAsset.get(wo.asset_id) ?? [];
+      list.push(wo);
+      byAsset.set(wo.asset_id, list);
+    }
+
+    const assets = lineAssets.map((asset) => {
+      const orders = byAsset.get(asset.id) ?? [];
+      const failures = orders.filter(
+        (wo) => wo.created_at >= start && wo.created_at <= effectiveEnd,
+      );
+      const finalized = orders.filter(
+        (wo) =>
+          wo.status === 'FINALIZADO' &&
+          wo.completed_at &&
+          wo.completed_at >= start &&
+          wo.completed_at <= effectiveEnd,
+      );
+
+      let totalRepairMs = 0;
+      let repairSample = 0;
+      for (const wo of finalized) {
+        let repairMs = Number(wo.accumulated_time_ms);
+        if (!repairMs || repairMs <= 0) {
+          const end = wo.completed_at!.getTime();
+          const begin = wo.started_at ? wo.started_at.getTime() : wo.created_at.getTime();
+          repairMs = end > begin ? end - begin : 0;
+        }
+        if (repairMs > 0) {
+          totalRepairMs += repairMs;
+          repairSample += 1;
+        }
+      }
+      const mttrHours = repairSample > 0 ? totalRepairMs / repairSample / MS_PER_HOUR : null;
+
+      // MTBF por equipo: sus horas operativas (solo si está OPERATIVO) / sus fallas.
+      const operationalHours = asset.status === 'OPERATIVO' ? days * hoursPerDay : 0;
+      const mtbfHours =
+        failures.length > 0 && operationalHours > 0 ? operationalHours / failures.length : null;
+
+      return {
+        id: asset.id,
+        name: asset.name,
+        internalCode: asset.internal_code,
+        status: asset.status,
+        failures: failures.length,
+        mttrHours: mttrHours === null ? null : Number(mttrHours.toFixed(2)),
+        mtbfHours: mtbfHours === null ? null : Number(mtbfHours.toFixed(2)),
+        operationalHours: Math.round(operationalHours),
+      };
+    });
+
+    assets.sort((a, b) => b.failures - a.failures || a.name.localeCompare(b.name));
+
+    res.json({
+      line,
+      period: { start: start.toISOString(), end: effectiveEnd.toISOString() },
+      days,
+      hoursPerDay,
+      assets,
+    });
+  } catch (error) {
+    console.error('Error fetching line assets MTTR/MTBF:', error);
+    res.status(500).json({ error: 'Error al calcular MTTR/MTBF de los equipos de la línea' });
   }
 };

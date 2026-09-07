@@ -121,6 +121,7 @@ export interface FailureOrder {
   title: string;
   created_at: string;
   status: string;
+  machine_stopped?: boolean;
   accumulated_time_ms: number;
   zone?: { name: string } | null;
   assigned_technicians?: { name: string }[];
@@ -129,12 +130,15 @@ export interface FailureOrder {
 export const getAssetFailureOrders = async (
   assetId: string,
   periodOrQuery?: string | KpiPeriodQuery,
+  machineStoppedOnly = false,
 ): Promise<FailureOrder[]> => {
   const params: KpiPeriodQuery =
     typeof periodOrQuery === 'object' && periodOrQuery
       ? periodOrQuery
       : { period: periodOrQuery };
-  const response = await api.get(`/kpis/top-failures/${assetId}/orders${buildKpiQuery(params)}`);
+  const base = `/kpis/top-failures/${assetId}/orders${buildKpiQuery(params)}`;
+  const sep = buildKpiQuery(params) ? '&' : '?';
+  const response = await api.get(`${base}${machineStoppedOnly ? `${sep}machineStopped=1` : ''}`);
   return response.data;
 };
 
@@ -200,5 +204,38 @@ export const getMttrMtbfByLine = async (
       ? periodOrQuery
       : { period: periodOrQuery };
   const response = await api.get(`/kpis/by-line${buildKpiQuery(params)}`);
+  return response.data;
+};
+
+export interface LineAssetMttrMtbf {
+  id: string;
+  name: string;
+  internalCode: string;
+  status: string;
+  /** Paros correctivos (machine_stopped) del equipo creados en el periodo. */
+  failures: number;
+  mttrHours: number | null;
+  /** MTBF del equipo = horas operativas (si está OPERATIVO) / fallas. null sin fallas o no operativo. */
+  mtbfHours: number | null;
+  operationalHours: number;
+}
+
+export interface LineAssetsMttrMtbfResponse {
+  line: string;
+  period: { start: string; end: string };
+  days: number;
+  hoursPerDay: number;
+  assets: LineAssetMttrMtbf[];
+}
+
+export const getLineAssetsMttrMtbf = async (
+  line: string,
+  periodOrQuery?: string | KpiPeriodQuery,
+): Promise<LineAssetsMttrMtbfResponse> => {
+  const params: KpiPeriodQuery =
+    typeof periodOrQuery === 'object' && periodOrQuery
+      ? periodOrQuery
+      : { period: periodOrQuery };
+  const response = await api.get(`/kpis/by-line/${encodeURIComponent(line)}/assets${buildKpiQuery(params)}`);
   return response.data;
 };

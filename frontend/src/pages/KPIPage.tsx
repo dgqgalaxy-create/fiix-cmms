@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -10,6 +10,7 @@ import {
   getAssetFailureOrders,
   getTechnicianPerformance,
   getMttrMtbfByLine,
+  getLineAssetsMttrMtbf,
 } from '../api/kpis';
 import type {
   KPIResponse,
@@ -20,6 +21,7 @@ import type {
   FailureOrder,
   TechnicianPerformance,
   LineMttrMtbfResponse,
+  LineAssetsMttrMtbfResponse,
 } from '../api/kpis';
 import { useAuth } from '../context/AuthContext';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
@@ -43,6 +45,8 @@ import {
   CalendarCheck,
   CalendarClock,
   Filter,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import {
   LineChart,
@@ -169,6 +173,10 @@ export const KPIPage = () => {
   const [topFailingAssets, setTopFailingAssets] = useState<TopFailingAsset[]>([]);
   const [techPerformance, setTechPerformance] = useState<TechnicianPerformance[]>([]);
   const [lineMttrMtbf, setLineMttrMtbf] = useState<LineMttrMtbfResponse | null>(null);
+  const [expandedLine, setExpandedLine] = useState<string | null>(null);
+  const [lineAssets, setLineAssets] = useState<LineAssetsMttrMtbfResponse | null>(null);
+  const [isLoadingLineAssets, setIsLoadingLineAssets] = useState(false);
+  const [failureOrdersParosOnly, setFailureOrdersParosOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [period, setPeriod] = useState('THIS_MONTH');
@@ -286,16 +294,36 @@ export const KPIPage = () => {
     }
   };
 
-  const handleAssetClick = async (assetId: string, assetName: string) => {
+  const handleAssetClick = async (assetId: string, assetName: string, machineStoppedOnly = false) => {
     setSelectedFailureAsset({ id: assetId, name: assetName });
+    setFailureOrdersParosOnly(machineStoppedOnly);
     setIsFetchingOrders(true);
     try {
-      setFailureOrders(await getAssetFailureOrders(assetId, periodQuery));
+      setFailureOrders(await getAssetFailureOrders(assetId, periodQuery, machineStoppedOnly));
     } catch (error) {
       console.error(error);
       alert('Error al obtener el detalle de fallas');
     } finally {
       setIsFetchingOrders(false);
+    }
+  };
+
+  const handleLineExpand = async (line: string) => {
+    if (expandedLine === line) {
+      setExpandedLine(null);
+      setLineAssets(null);
+      return;
+    }
+    setExpandedLine(line);
+    setLineAssets(null);
+    setIsLoadingLineAssets(true);
+    try {
+      setLineAssets(await getLineAssetsMttrMtbf(line, periodQuery));
+    } catch (error) {
+      console.error(error);
+      setLineAssets(null);
+    } finally {
+      setIsLoadingLineAssets(false);
     }
   };
 
@@ -366,10 +394,26 @@ export const KPIPage = () => {
       'Horas/día': lineMttrMtbf?.hoursPerDay ?? '',
       Periodo: periodLabel,
     }));
+    const equiposLineaRows = lineAssets
+      ? lineAssets.assets.map((a) => ({
+          Línea: lineAssets.line,
+          Equipo: a.name,
+          Código: a.internalCode,
+          Estado: a.status,
+          'Paros (fallas)': a.failures,
+          'MTTR (h)': a.mttrHours ?? '',
+          'MTBF (h)': a.mtbfHours ?? '',
+          'Horas operativas': a.operationalHours,
+          Periodo: periodLabel,
+        }))
+      : [];
 
     downloadWorkbook(`kpis_${excelDateStamp()}.xlsx`, [
       { name: 'Resumen', rows: resumenRows },
       { name: 'MTTR-MTBF por linea', rows: lineasRows },
+      ...(equiposLineaRows.length
+        ? [{ name: `Equipos ${lineAssets?.line ?? ''}`.trim(), rows: equiposLineaRows }]
+        : []),
       { name: 'Top fallas', rows: ordenesRows },
       { name: 'Costos por equipo', rows: costosRows },
       { name: 'Tecnicos', rows: tecnicosRows },
@@ -931,17 +975,84 @@ export const KPIPage = () => {
                     </thead>
                     <tbody>
                       {lineMttrMtbf.lines.map((l) => (
-                        <tr key={l.line} className="border-b border-slate-100 dark:border-slate-800/60 last:border-0">
-                          <td className="py-2.5 pr-3 font-bold text-slate-800 dark:text-slate-100">{l.line}</td>
-                          <td className="py-2.5 pr-3 text-right text-slate-700 dark:text-slate-200">{l.failures}</td>
-                          <td className="py-2.5 pr-3 text-right text-amber-600 dark:text-amber-400">
-                            {l.mttrHours !== null ? l.mttrHours.toFixed(2) : '—'}
-                          </td>
-                          <td className="py-2.5 pr-3 text-right text-emerald-600 dark:text-emerald-400">
-                            {l.mtbfHours !== null ? Math.round(l.mtbfHours).toLocaleString('es-MX') : 'Sin fallas'}
-                          </td>
-                          <td className="py-2.5 text-right text-slate-700 dark:text-slate-200">{l.assets}</td>
-                        </tr>
+                        <Fragment key={l.line}>
+                          <tr
+                            className={`border-b border-slate-100 dark:border-slate-800/60 last:border-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors ${expandedLine === l.line ? 'bg-slate-50 dark:bg-slate-800/40' : ''}`}
+                            onClick={() => handleLineExpand(l.line)}
+                            title={expandedLine === l.line ? 'Ocultar equipos' : 'Ver equipos de la línea'}
+                          >
+                            <td className="py-2.5 pr-3 font-bold text-slate-800 dark:text-slate-100">
+                              <span className="inline-flex items-center gap-1">
+                                {expandedLine === l.line ? (
+                                  <ChevronDown size={14} className="text-slate-400" />
+                                ) : (
+                                  <ChevronRight size={14} className="text-slate-400" />
+                                )}
+                                {l.line}
+                              </span>
+                            </td>
+                            <td className="py-2.5 pr-3 text-right text-slate-700 dark:text-slate-200">{l.failures}</td>
+                            <td className="py-2.5 pr-3 text-right text-amber-600 dark:text-amber-400">
+                              {l.mttrHours !== null ? l.mttrHours.toFixed(2) : '—'}
+                            </td>
+                            <td className="py-2.5 pr-3 text-right text-emerald-600 dark:text-emerald-400">
+                              {l.mtbfHours !== null ? Math.round(l.mtbfHours).toLocaleString('es-MX') : 'Sin fallas'}
+                            </td>
+                            <td className="py-2.5 text-right text-slate-700 dark:text-slate-200">{l.assets}</td>
+                          </tr>
+                          {expandedLine === l.line && (
+                            <tr className="border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/60 dark:bg-slate-800/20">
+                              <td colSpan={5} className="p-3">
+                                {isLoadingLineAssets ? (
+                                  <div className="py-4 text-center text-xs text-slate-400 dark:text-slate-500">Cargando equipos…</div>
+                                ) : lineAssets && lineAssets.line === l.line ? (
+                                  lineAssets.assets.length === 0 ? (
+                                    <div className="py-4 text-center text-xs text-slate-400 dark:text-slate-500">Sin equipos en esta línea</div>
+                                  ) : (
+                                    <table className="w-full text-[13px]">
+                                      <thead>
+                                        <tr className="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-200 dark:border-slate-700">
+                                          <th className="py-1.5 pr-3 font-medium">Equipo</th>
+                                          <th className="py-1.5 pr-3 text-right font-medium">Paros</th>
+                                          <th className="py-1.5 pr-3 text-right font-medium">MTTR (h)</th>
+                                          <th className="py-1.5 pr-3 text-right font-medium">MTBF (h)</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {lineAssets.assets.map((a) => (
+                                          <tr
+                                            key={a.id}
+                                            className="border-b border-slate-100 dark:border-slate-800/50 last:border-0 cursor-pointer hover:bg-white dark:hover:bg-slate-900/40"
+                                            onClick={() => handleAssetClick(a.id, a.name, true)}
+                                            title="Ver paros de este equipo"
+                                          >
+                                            <td className="py-1.5 pr-3">
+                                              <div className="font-medium text-slate-700 dark:text-slate-200">{a.name}</div>
+                                              <div className="text-[10px] text-slate-400">{a.internalCode}</div>
+                                            </td>
+                                            <td className="py-1.5 pr-3 text-right text-slate-600 dark:text-slate-300">{a.failures}</td>
+                                            <td className="py-1.5 pr-3 text-right text-amber-600 dark:text-amber-400">
+                                              {a.mttrHours !== null ? a.mttrHours.toFixed(2) : '—'}
+                                            </td>
+                                            <td className="py-1.5 pr-3 text-right text-emerald-600 dark:text-emerald-400">
+                                              {a.mtbfHours !== null
+                                                ? Math.round(a.mtbfHours).toLocaleString('es-MX')
+                                                : a.failures > 0
+                                                  ? 'No operativo'
+                                                  : 'Sin paros'}
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  )
+                                ) : (
+                                  <div className="py-4 text-center text-xs text-slate-400 dark:text-slate-500">No se pudieron cargar los equipos</div>
+                                )}
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
                       ))}
                     </tbody>
                   </table>
@@ -1447,6 +1558,11 @@ export const KPIPage = () => {
                 </h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                   Equipo: <span className="font-semibold text-slate-700 dark:text-slate-300">{selectedFailureAsset.name}</span>
+                  {failureOrdersParosOnly && (
+                    <span className="ml-2 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 px-2 py-0.5 text-[11px] font-medium">
+                      Solo paros (máquina detenida)
+                    </span>
+                  )}
                 </p>
               </div>
               <button
