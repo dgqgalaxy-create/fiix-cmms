@@ -571,6 +571,24 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
       return;
     }
 
+    // Defensa en profundidad (además del middleware de permiso): solo roles que
+    // gestionan compras cambian el estado. Un Técnico no puede cancelar ni recibir.
+    const MANAGERIAL_ROLES = ['ADMINISTRADOR', 'GESTIONADOR'];
+    if (!MANAGERIAL_ROLES.includes(req.user?.role ?? '')) {
+      res.status(403).json({ error: 'No tienes permisos para cambiar el estado de órdenes de compra' });
+      return;
+    }
+    const ALLOWED_STATUSES = ['BORRADOR', 'APROBADA', 'ENVIADA', 'RECIBIDA', 'CANCELADA'];
+    if (typeof status !== 'string' || !ALLOWED_STATUSES.includes(status)) {
+      res.status(400).json({ error: `Estado inválido: ${String(status)}` });
+      return;
+    }
+    // Cancelar: solo Administrador y Gestionador (idéntico al permiso MANAGE_PURCHASES).
+    if (status === 'CANCELADA' && req.user?.role !== 'ADMINISTRADOR' && req.user?.role !== 'GESTIONADOR') {
+      res.status(403).json({ error: 'No tienes permisos para cancelar órdenes de compra' });
+      return;
+    }
+
     const existingOrder = await prisma.purchaseOrder.findUnique({
       where: { id: id },
       include: { items: true }
@@ -619,6 +637,23 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
       }
 
       const updatedOrder = await prisma.$transaction(async (tx) => {
+        // Bloquear la OC: dos recepciones simultáneas se serializan y la segunda
+        // comprueba el estado ya actualizado → no recibe dos veces ni duplica stock.
+        await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM "PurchaseOrder" WHERE id = ${id}::uuid FOR UPDATE`;
+        const lockedOrder = await tx.purchaseOrder.findUnique({
+          where: { id },
+          select: { status: true },
+        });
+        if (!lockedOrder) {
+          throw Object.assign(new Error('Orden de compra no encontrada'), { code: 'NOT_FOUND' });
+        }
+        if (lockedOrder.status === 'RECIBIDA' || lockedOrder.status === 'CANCELADA') {
+          throw Object.assign(
+            new Error('La orden ya fue recibida o cancelada. Recarga e inténtalo de nuevo.'),
+            { code: 'ALREADY_CLOSED' }
+          );
+        }
+
         await tx.purchaseOrder.update({
           where: { id: id },
           data: updateData
@@ -678,7 +713,12 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
 
     emitRefresh('refresh_purchase_orders');
     res.json(updatedOrder);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'ALREADY_CLOSED' || error?.code === 'NOT_FOUND') {
+      const statusCode = error?.code === 'NOT_FOUND' ? 404 : 409;
+      res.status(statusCode).json({ error: error.message || 'No se pudo actualizar la orden' });
+      return;
+    }
     console.error('Error updating purchase order status:', error);
     res.status(500).json({ error: 'Error al actualizar el estado de la orden' });
   }

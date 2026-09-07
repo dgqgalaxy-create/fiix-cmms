@@ -55,7 +55,7 @@ router.post('/', requireWritable, requirePermission('MANAGE_PURCHASES'), createP
 router.post('/draft-from-low-stock', requireWritable, requirePermission('MANAGE_PURCHASES'), createDraftsFromLowStock);
 router.patch('/:id', requireWritable, requirePermission('MANAGE_PURCHASES'), updatePurchaseOrder);
 router.patch('/:id/line-costs', requireWritable, requirePermission('MANAGE_PURCHASES'), updatePurchaseOrderLineCosts);
-router.patch('/:id/status', requireWritable, updatePurchaseOrderStatus);
+router.patch('/:id/status', requireWritable, requirePermission('MANAGE_PURCHASES'), updatePurchaseOrderStatus);
 router.post(
   '/:id/documents',
   requireWritable,

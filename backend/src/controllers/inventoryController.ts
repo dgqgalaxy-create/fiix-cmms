@@ -6,6 +6,7 @@ import axios from 'axios';
 import { emitRefresh } from '../utils/socket';
 import { writeAuditLog } from '../utils/auditLog';
 import { parseQty } from '../utils/qtyMode';
+import { tryConsumeStock, addStock } from '../utils/stockMutation';
 
 // ==========================================
 // ITEM CATEGORY
@@ -797,10 +798,6 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
       }
       const transactionAmount = signedRaw < 0 ? -absParsed.value : absParsed.value;
 
-      if (transactionAmount < 0 && currentItem.stock < Math.abs(transactionAmount)) {
-        throw new Error('INSUFFICIENT_STOCK');
-      }
-
       // Snapshot del costo de catálogo al momento del movimiento (histórico congelado).
       const snappedCost = currentItem.purchase_cost ?? 0;
 
@@ -816,16 +813,27 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
         }
       });
 
-      // 2. Actualizar el stock del Item
-      const updatedItem = await tx.item.update({
-        where: { id: item_id },
-        data: {
-          stock: {
-            increment: transactionAmount
-          }
+      // 2. Actualizar el stock con primitivo atómico:
+      //    - Salidas: UPDATE condicional (stock >= cantidad). Dos salidas simultáneas
+      //      nunca dejan el stock negativo (no depende de leer y luego escribir).
+      //    - Entradas: incremento simple.
+      // Si la salida no alcanza, la transacción revierte y no queda ni historial.
+      if (transactionAmount < 0) {
+        const consumed = await tryConsumeStock(tx, item_id, Math.abs(transactionAmount));
+        if (!consumed.ok) {
+          throw new Error('INSUFFICIENT_STOCK');
         }
-      });
+      } else {
+        await addStock(tx, item_id, transactionAmount);
+      }
 
+      const updatedItem = await tx.item.findUnique({
+        where: { id: item_id },
+        select: { id: true, stock: true, name: true },
+      });
+      if (!updatedItem) {
+        throw new Error('ITEM_NOT_FOUND');
+      }
       return [newTx, updatedItem];
     });
 
@@ -891,18 +899,45 @@ export const deleteTransaction = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    // Revertir el efecto del movimiento sobre el stock del repuesto.
-    await prisma.$transaction(async (t) => {
-      await t.inventoryTransaction.delete({ where: { id } });
-      await t.item.update({
-        where: { id: tx.item_id },
-        data: { stock: { increment: -tx.amount } },
+    // No se puede borrar un consumo ligado a una orden de trabajo: rompería la
+    // trazabilidad del cierre. La corrección es una reversión con motivo.
+    if (tx.work_order_id) {
+      res.status(400).json({
+        error:
+          'No se puede eliminar un consumo ligado a una orden de trabajo. Para corregirlo registra una entrada de ajuste con su motivo (reversión).',
       });
+      return;
+    }
+
+    await prisma.$transaction(async (t) => {
+      if (tx.amount > 0) {
+        // Borrar una ENTRADA equivale a restar su cantidad del stock. Solo se
+        // permite si no deja el stock negativo (es decir, la entrada aún no fue
+        // consumida por completo). El UPDATE es condicional y atómico.
+        const removed = await t.item.updateMany({
+          where: { id: tx.item_id, stock: { gte: tx.amount } },
+          data: { stock: { decrement: tx.amount } },
+        });
+        if (removed.count === 0) {
+          throw Object.assign(new Error('CONSUMED_ENTRY'), { code: 'CONSUMED_ENTRY' });
+        }
+      } else {
+        // Borrar una SALIDA revierte su efecto: el stock vuelve a subir.
+        await addStock(t, tx.item_id, Math.abs(tx.amount));
+      }
+      await t.inventoryTransaction.delete({ where: { id } });
     });
 
     emitRefresh('refresh_inventory');
     res.status(204).send();
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'CONSUMED_ENTRY') {
+      res.status(400).json({
+        error:
+          'No se puede eliminar esta entrada: su cantidad ya fue consumida y el stock quedaría negativo. Regístrala como reversión (entrada/salida de ajuste) con su motivo para conservar el historial.',
+      });
+      return;
+    }
     console.error('Error al eliminar movimiento:', error);
     res.status(500).json({ error: 'Error al eliminar movimiento' });
   }
