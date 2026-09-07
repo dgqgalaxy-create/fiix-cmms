@@ -9,6 +9,7 @@ import {
   getTopFailingAssets,
   getAssetFailureOrders,
   getTechnicianPerformance,
+  getMttrMtbfByLine,
 } from '../api/kpis';
 import type {
   KPIResponse,
@@ -18,6 +19,7 @@ import type {
   TopFailingAsset,
   FailureOrder,
   TechnicianPerformance,
+  LineMttrMtbfResponse,
 } from '../api/kpis';
 import { useAuth } from '../context/AuthContext';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
@@ -46,6 +48,7 @@ import {
   LineChart,
   Line,
   BarChart,
+  ComposedChart,
   Bar,
   XAxis,
   YAxis,
@@ -165,6 +168,7 @@ export const KPIPage = () => {
   const [assetCosts, setAssetCosts] = useState<AssetCostData[]>([]);
   const [topFailingAssets, setTopFailingAssets] = useState<TopFailingAsset[]>([]);
   const [techPerformance, setTechPerformance] = useState<TechnicianPerformance[]>([]);
+  const [lineMttrMtbf, setLineMttrMtbf] = useState<LineMttrMtbfResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [period, setPeriod] = useState('THIS_MONTH');
@@ -196,12 +200,13 @@ export const KPIPage = () => {
         setIsLoading(true);
         setLoadError(false);
       }
-      const [kpiData, chartData, costData, topFailingData, techData] = await Promise.all([
+      const [kpiData, chartData, costData, topFailingData, techData, lineData] = await Promise.all([
         getKPIs(periodQuery),
         getChartData(periodQuery).catch(() => []),
         getCostsByAsset(periodQuery).catch(() => []),
         getTopFailingAssets(periodQuery).catch(() => []),
         getTechnicianPerformance(periodQuery).catch(() => []),
+        getMttrMtbfByLine(periodQuery).catch(() => null),
       ]);
       setData(kpiData);
 
@@ -223,6 +228,7 @@ export const KPIPage = () => {
       setAssetCosts(costData);
       setTopFailingAssets(topFailingData);
       setTechPerformance(techData);
+      setLineMttrMtbf(lineData);
 
       const formState: Record<string, number> = {};
       Object.entries(kpiData.metrics).forEach(([key, metric]) => {
@@ -349,9 +355,21 @@ export const KPIPage = () => {
       MTBF: c.mtbf,
       'Muestra MTBF': c.mtbfSample ?? '',
     }));
+    const lineasRows = (lineMttrMtbf?.lines ?? []).map((l) => ({
+      Línea: l.line,
+      'Paros (fallas)': l.failures,
+      'MTTR (h)': l.mttrHours ?? '',
+      'MTBF (h)': l.mtbfHours ?? '',
+      'Activos operativos': l.assets,
+      'Horas operativas': l.operationalHours,
+      Días: lineMttrMtbf?.days ?? '',
+      'Horas/día': lineMttrMtbf?.hoursPerDay ?? '',
+      Periodo: periodLabel,
+    }));
 
     downloadWorkbook(`kpis_${excelDateStamp()}.xlsx`, [
       { name: 'Resumen', rows: resumenRows },
+      { name: 'MTTR-MTBF por linea', rows: lineasRows },
       { name: 'Top fallas', rows: ordenesRows },
       { name: 'Costos por equipo', rows: costosRows },
       { name: 'Tecnicos', rows: tecnicosRows },
@@ -869,6 +887,111 @@ export const KPIPage = () => {
                   </ResponsiveContainer>
                 ) : (
                   <div className="h-full flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm">Sin consumos en el periodo</div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* MTTR/MTBF por línea de producción (L1–L5) */}
+          <section className={panelClass}>
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="text-violet-600 dark:text-violet-400" size={20} />
+              <div>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100">MTTR y MTBF por línea (L1–L5)</h3>
+                <p className="text-xs text-slate-400">
+                  Paros correctivos con máquina detenida ·{' '}
+                  {lineMttrMtbf
+                    ? `${lineMttrMtbf.days} días × ${lineMttrMtbf.hoursPerDay} h/día × activos operativos de cada línea`
+                    : 'Cargando periodo…'}
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+              <span className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
+                <strong>MTTR:</strong> promedio de reparación de paros finalizados (↓ mejor)
+              </span>
+              <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <strong>MTBF:</strong> horas operativas ÷ fallas (↑ mejor)
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+              <div className="xl:col-span-2">
+                {lineMttrMtbf ? (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-200 dark:border-slate-700">
+                        <th className="py-2 pr-3 font-medium">Línea</th>
+                        <th className="py-2 pr-3 text-right font-medium">Paros</th>
+                        <th className="py-2 pr-3 text-right font-medium">MTTR (h)</th>
+                        <th className="py-2 pr-3 text-right font-medium">MTBF (h)</th>
+                        <th className="py-2 text-right font-medium">Activos</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lineMttrMtbf.lines.map((l) => (
+                        <tr key={l.line} className="border-b border-slate-100 dark:border-slate-800/60 last:border-0">
+                          <td className="py-2.5 pr-3 font-bold text-slate-800 dark:text-slate-100">{l.line}</td>
+                          <td className="py-2.5 pr-3 text-right text-slate-700 dark:text-slate-200">{l.failures}</td>
+                          <td className="py-2.5 pr-3 text-right text-amber-600 dark:text-amber-400">
+                            {l.mttrHours !== null ? l.mttrHours.toFixed(2) : '—'}
+                          </td>
+                          <td className="py-2.5 pr-3 text-right text-emerald-600 dark:text-emerald-400">
+                            {l.mtbfHours !== null ? Math.round(l.mtbfHours).toLocaleString('es-MX') : 'Sin fallas'}
+                          </td>
+                          <td className="py-2.5 text-right text-slate-700 dark:text-slate-200">{l.assets}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="min-h-[10rem] flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm">
+                    Sin datos por línea en el periodo
+                  </div>
+                )}
+              </div>
+
+              <div className="xl:col-span-3 h-80">
+                {lineMttrMtbf && lineMttrMtbf.lines.some((l) => l.failures > 0) ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart
+                      data={lineMttrMtbf.lines.map((l) => ({ line: l.line, mttr: l.mttrHours ?? 0, mtbf: l.mtbfHours ?? null }))}
+                      margin={{ top: 4, right: 16, left: 8, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
+                      <XAxis dataKey="line" tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <YAxis
+                        yAxisId="left"
+                        width={44}
+                        tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                        label={{ value: 'MTTR (h)', angle: -90, position: 'insideLeft', offset: 0, fill: 'var(--color-fg-muted)', fontSize: 11 }}
+                      />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        width={56}
+                        tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                        label={{ value: 'MTBF (h)', angle: 90, position: 'insideRight', offset: 0, fill: 'var(--color-fg-muted)', fontSize: 11 }}
+                      />
+                      <Tooltip
+                        formatter={(val, name) => [
+                          name === 'MTTR (horas)' ? `${Number(val).toFixed(2)} h` : `${Number(val).toFixed(0)} h`,
+                          name ?? '',
+                        ]}
+                        contentStyle={{ borderRadius: 12, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-fg)', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)' }}
+                      />
+                      <Legend verticalAlign="top" height={32} />
+                      <Bar yAxisId="left" dataKey="mttr" name="MTTR (horas)" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={32} />
+                      <Line yAxisId="right" dataKey="mtbf" name="MTBF (horas)" stroke="#059669" strokeWidth={2.5} dot={{ r: 4 }} connectNulls={false} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm">Sin paros en el periodo</div>
                 )}
               </div>
             </div>

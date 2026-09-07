@@ -11,6 +11,7 @@ import {
   plantShiftMonthStart,
   plantEndOfMonth,
 } from '../utils/plantTimezone';
+import { PRODUCTION_LINES, resolveProductionLine } from '../utils/assetSection';
 
 const MS_PER_HOUR = 3_600_000;
 const DEFAULT_REWORK_WINDOW_DAYS = 7;
@@ -835,5 +836,126 @@ export const getTechnicianPerformance = async (req: AuthRequest, res: Response):
   } catch (error) {
     console.error('Error fetching technician performance:', error);
     res.status(500).json({ error: 'Error al calcular desempeño de técnicos' });
+  }
+};
+
+/**
+ * MTTR/MTBF por línea de producción (L1–L5), para el periodo seleccionado.
+ *
+ * Alcance acordado:
+ * - Fallas = paros correctivos con machine_stopped=true (cualquier estado salvo ANULADO)
+ *   creados dentro del periodo (evento de paro).
+ * - MTTR = promedio de accumulated_time_ms (fallback completed_at − started_at) de los
+ *   paros FINALIZADOS dentro del periodo, en horas.
+ * - MTBF = horas operativas de la línea / nº de fallas. Horas operativas =
+ *   días del periodo × horas/día (FIIX_OPERATING_HOURS_PER_DAY, default 24) × nº de
+ *   activos OPERATIVOS de esa línea. null cuando no hay fallas en el periodo.
+ */
+export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { start, effectiveEnd } = rangeFromReq(req);
+    const hoursPerDay = getOperatingHoursPerDay();
+    const DAY_MS = 86_400_000;
+    const days = Math.max(1, Math.ceil((effectiveEnd.getTime() - start.getTime()) / DAY_MS));
+
+    const [workOrders, operativeAssets] = await Promise.all([
+      prisma.workOrder.findMany({
+        where: {
+          maintenance_type: 'CORRECTIVO',
+          machine_stopped: true,
+          status: { not: 'ANULADO' },
+          OR: [
+            { created_at: { gte: start, lte: effectiveEnd } },
+            { completed_at: { gte: start, lte: effectiveEnd } },
+          ],
+        },
+        select: {
+          id: true,
+          status: true,
+          created_at: true,
+          started_at: true,
+          completed_at: true,
+          accumulated_time_ms: true,
+          zone: { select: { name: true } },
+          asset: { select: { zone: { select: { name: true } } } },
+        },
+      }),
+      prisma.asset.findMany({
+        where: { status: 'OPERATIVO' },
+        select: { zone: { select: { name: true } } },
+      }),
+    ]);
+
+    // Activos operativos por línea (L1–L5) para las horas operativas del MTBF.
+    const operativeByLine = new Map<string, number>();
+    for (const line of PRODUCTION_LINES) operativeByLine.set(line, 0);
+    for (const asset of operativeAssets) {
+      const line = resolveProductionLine(asset.zone?.name ?? null);
+      if (line) operativeByLine.set(line, (operativeByLine.get(line) ?? 0) + 1);
+    }
+
+    const lines = PRODUCTION_LINES.map((line) => {
+      const lineOrders = workOrders.filter((wo) => {
+        const resolved =
+          resolveProductionLine(wo.zone?.name ?? null) ??
+          resolveProductionLine(wo.asset?.zone?.name ?? null);
+        return resolved === line;
+      });
+
+      // Fallas del periodo: eventos de paro creados dentro del periodo.
+      const failures = lineOrders.filter(
+        (wo) => wo.created_at >= start && wo.created_at <= effectiveEnd,
+      );
+
+      // MTTR: paros finalizados dentro del periodo con tiempo de reparación válido.
+      const finalized = lineOrders.filter(
+        (wo) =>
+          wo.status === 'FINALIZADO' &&
+          wo.completed_at &&
+          wo.completed_at >= start &&
+          wo.completed_at <= effectiveEnd,
+      );
+
+      let totalRepairMs = 0;
+      let repairSample = 0;
+      for (const wo of finalized) {
+        let repairMs = Number(wo.accumulated_time_ms);
+        if (!repairMs || repairMs <= 0) {
+          const end = wo.completed_at!.getTime();
+          const begin = wo.started_at ? wo.started_at.getTime() : wo.created_at.getTime();
+          repairMs = end > begin ? end - begin : 0;
+        }
+        if (repairMs > 0) {
+          totalRepairMs += repairMs;
+          repairSample += 1;
+        }
+      }
+      const mttrHours = repairSample > 0 ? totalRepairMs / repairSample / MS_PER_HOUR : null;
+
+      // MTBF: horas operativas de la línea / fallas del periodo.
+      const operativeCount = operativeByLine.get(line) ?? 0;
+      const operationalHours = days * hoursPerDay * operativeCount;
+      const mtbfHours = failures.length > 0 ? operationalHours / failures.length : null;
+
+      return {
+        line,
+        failures: failures.length,
+        mttrHours: mttrHours === null ? null : Number(mttrHours.toFixed(2)),
+        mttrSample: repairSample,
+        mtbfHours: mtbfHours === null ? null : Number(mtbfHours.toFixed(2)),
+        assets: operativeCount,
+        operationalHours: Math.round(operationalHours),
+      };
+    });
+
+    res.json({
+      period: { start: start.toISOString(), end: effectiveEnd.toISOString() },
+      days,
+      hoursPerDay,
+      lines,
+    });
+  } catch (error) {
+    console.error('Error fetching MTTR/MTBF by line:', error);
+    res.status(500).json({ error: 'Error al calcular MTTR/MTBF por línea' });
   }
 };

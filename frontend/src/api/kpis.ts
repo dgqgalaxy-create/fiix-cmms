@@ -170,3 +170,35 @@ export const getTechnicianPerformance = async (
   const response = await api.get(`/kpis/technician-performance${buildKpiQuery(params)}`);
   return response.data;
 };
+
+export interface LineMttrMtbf {
+  line: string;
+  /** Paros correctivos (machine_stopped) creados en el periodo. */
+  failures: number;
+  /** MTTR en horas (promedio de tiempo de reparación de paros finalizados). null sin muestra. */
+  mttrHours: number | null;
+  mttrSample: number;
+  /** MTBF en horas = horas operativas / fallas. null sin fallas en el periodo. */
+  mtbfHours: number | null;
+  /** Activos OPERATIVOS de la línea. */
+  assets: number;
+  operationalHours: number;
+}
+
+export interface LineMttrMtbfResponse {
+  period: { start: string; end: string };
+  days: number;
+  hoursPerDay: number;
+  lines: LineMttrMtbf[];
+}
+
+export const getMttrMtbfByLine = async (
+  periodOrQuery?: string | KpiPeriodQuery,
+): Promise<LineMttrMtbfResponse> => {
+  const params: KpiPeriodQuery =
+    typeof periodOrQuery === 'object' && periodOrQuery
+      ? periodOrQuery
+      : { period: periodOrQuery };
+  const response = await api.get(`/kpis/by-line${buildKpiQuery(params)}`);
+  return response.data;
+};

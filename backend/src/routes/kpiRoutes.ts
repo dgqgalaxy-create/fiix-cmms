@@ -7,6 +7,7 @@ import {
   getTopFailingAssets,
   getAssetFailureOrders,
   getTechnicianPerformance,
+  getMttrMtbfByLine,
 } from '../controllers/kpiController';
 import { authenticate, requirePermission } from '../middlewares/authMiddleware';
 
@@ -20,6 +21,7 @@ router.get('/costs-by-asset', getCostsByAsset);
 router.get('/top-failures', getTopFailingAssets);
 router.get('/top-failures/:assetId/orders', getAssetFailureOrders);
 router.get('/technician-performance', getTechnicianPerformance);
+router.get('/by-line', getMttrMtbfByLine);
 router.put('/goals', requirePermission('MANAGE_KPIS'), updateGoals);
 
 export default router;
