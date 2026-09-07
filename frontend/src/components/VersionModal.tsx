@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.57.0";
+export const APP_VERSION = "1.58.0";
 
 interface VersionModalProps {
   isOpen: boolean;
