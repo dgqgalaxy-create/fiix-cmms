@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import type { Event } from 'react-big-calendar';
-import withDragAndDrop, { withDragAndDropProps } from 'react-big-calendar/lib/addons/dragAndDrop';
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
-import startOfWeek from 'date-fns/startOfWeek';
-import getDay from 'date-fns/getDay';
-import es from 'date-fns/locale/es';
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
+import { format } from 'date-fns/format';
+import { parse } from 'date-fns/parse';
+import { startOfWeek } from 'date-fns/startOfWeek';
+import { getDay } from 'date-fns/getDay';
+import { es } from 'date-fns/locale/es';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useAuth } from '../context/AuthContext';
@@ -25,6 +25,7 @@ const DnDCalendar = (withDragAndDropRaw.default ? withDragAndDropRaw.default(Cal
 
 interface RosterEvent extends Event {
   id: string;
+  title: string;
   isException: boolean;
   exceptionId?: string;
   user_id: string;
@@ -147,7 +148,7 @@ export const RosterPage = () => {
   };
 
   const handleDropFromOutside = useCallback(
-    ({ start, allDay: isAllDay }: { start: Date, end: Date, allDay?: boolean }) => {
+    ({ start }: { start: Date, end: Date, allDay?: boolean }) => {
       if (!draggedException) return;
 
       const dateStr = format(start, 'yyyy-MM-dd');
@@ -447,7 +448,7 @@ export const RosterPage = () => {
               eventPropGetter={eventPropGetter}
               onSelectEvent={handleSelectEvent}
               selectable={true}
-              onSelectSlot={(slotInfo) => setSelectedDay(slotInfo.start)}
+              onSelectSlot={(slotInfo: { start: Date }) => setSelectedDay(slotInfo.start)}
               draggableAccessor={() => false}
               onDropFromOutside={handleDropFromOutside}
               popup={true}

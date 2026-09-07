@@ -118,7 +118,6 @@ export const WorkOrderDetailModal = ({
   const [afterImage, setAfterImage] = useState<File | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [error, setError] = useState('');
 
   const [sigCleanAreaEmpty, setSigCleanAreaEmpty] = useState(true);
@@ -363,8 +362,6 @@ export const WorkOrderDetailModal = ({
     (user?.role === 'TECNICO' && workOrder.assigned_technicians?.some(t => t.id === (user as any).userId || t.id === (user as any).id))
   );
 
-  const pdfRef = useRef<HTMLDivElement>(null);
-
   const handleDownloadPDF = async () => {
     try {
       setIsSubmitting(true);
@@ -601,7 +598,7 @@ export const WorkOrderDetailModal = ({
   const handleJoin = async () => {
     if (!onJoin) return;
     setIsSubmitting(true);
-    setError(null);
+    setError('');
     try {
       await onJoin(workOrder.id);
       // El padre refresca la OT abierta; no cerramos para que pueda operar de inmediato.

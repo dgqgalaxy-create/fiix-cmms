@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, Loader2, Save } from 'lucide-react';
+import { Shield, Loader2 } from 'lucide-react';
 import { getAllPermissions, updateRolePermissions } from '../api/permissions';
 import type { RolePermission } from '../api/permissions';
 import { useAuth } from '../context/AuthContext';
@@ -38,7 +38,7 @@ export const PermissionsPage = () => {
   const [loading, setLoading] = useState(true);
   const [savingRole, setSavingRole] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const [successMsg, _setSuccessMsg] = useState('');
 
   const fetchPermissions = async (background = false) => {
     try {

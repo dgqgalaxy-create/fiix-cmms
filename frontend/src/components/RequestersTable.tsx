@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Edit2, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import type { Requester } from '../api/requesters';
 import { format } from 'date-fns';

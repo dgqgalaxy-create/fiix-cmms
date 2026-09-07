@@ -13,7 +13,7 @@ import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { PageLoadError, PageLoadingState, isLikelyServerUnreachable } from '../components/PageLoadState';
 
 export const UsersPage = () => {
-  const { user: currentUser, hasPermission } = useAuth();
+  const { hasPermission } = useAuth();
   
   const [activeTab, setActiveTab] = useState<'users' | 'requesters'>('users');
   
@@ -153,7 +153,7 @@ export const UsersPage = () => {
         
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <button 
-            onClick={activeTab === 'users' ? fetchUsers : fetchRequesters}
+            onClick={activeTab === 'users' ? () => void fetchUsers(true) : () => void fetchRequesters(true)}
             className="p-2.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors shadow-sm"
             title="Actualizar"
           >
@@ -259,7 +259,7 @@ export const UsersPage = () => {
         isOpen={isRequesterModalOpen}
         onClose={() => setIsRequesterModalOpen(false)}
         requester={selectedRequester}
-        onSuccess={fetchRequesters}
+        onSuccess={() => void fetchRequesters(true)}
       />
     </>
   );

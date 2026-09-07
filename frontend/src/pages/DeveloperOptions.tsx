@@ -444,7 +444,7 @@ export const DeveloperOptions = () => {
       setConfirmPasswordInput('');
       setTimeout(() => setSuccessMsg(null), 5000);
     } catch (err: unknown) {
-      const detail = axios.isAxiosError(err)
+      const detail = isAxiosError(err)
         ? err.response?.data?.message || err.message
         : err instanceof Error ? err.message : 'Error desconocido';
       setError(`No se pudo cambiar la contraseña: ${detail}`);
@@ -510,7 +510,7 @@ export const DeveloperOptions = () => {
       }
       setTimeout(() => { setSuccessMsg(null); }, 12000);
     } catch (err: unknown) {
-      const detail = axios.isAxiosError(err)
+      const detail = isAxiosError(err)
         ? (err.code === 'ECONNABORTED'
           ? 'Tiempo de espera agotado (el tar de fotos puede tardar mucho). Revisa en el servidor: pm2 logs fiix-backend --lines 50 y la carpeta de respaldos.'
           : err.response?.data?.message || err.message)
@@ -552,7 +552,7 @@ export const DeveloperOptions = () => {
         setSelectedBackupFile('');
       }
     } catch (err: unknown) {
-      const detail = axios.isAxiosError(err)
+      const detail = isAxiosError(err)
         ? err.response?.data?.message || err.message
         : err instanceof Error ? err.message : 'Error desconocido';
       setError(`No se pudieron listar los respaldos: ${detail}`);
@@ -609,7 +609,7 @@ export const DeveloperOptions = () => {
       setRestoreModalError(failMsg);
       setError(failMsg);
     } catch (err: unknown) {
-      const detail = axios.isAxiosError(err)
+      const detail = isAxiosError(err)
         ? err.response?.data?.message || err.message
         : err instanceof Error ? err.message : 'Error desconocido';
       const failMsg = `Fallo al restaurar: ${detail}`;
@@ -1003,7 +1003,7 @@ export const DeveloperOptions = () => {
       setOrphanPreview(res.data);
       setIsOrphanModalOpen(true);
     } catch (err: unknown) {
-      const detail = axios.isAxiosError(err)
+      const detail = isAxiosError(err)
         ? err.response?.data?.message || err.message
         : err instanceof Error ? err.message : 'Error desconocido';
       setError(`No se pudo escanear fotos huérfanas: ${detail}`);
@@ -1037,7 +1037,7 @@ export const DeveloperOptions = () => {
       );
       setTimeout(() => setSuccessMsg(null), 8000);
     } catch (err: unknown) {
-      const detail = axios.isAxiosError(err)
+      const detail = isAxiosError(err)
         ? err.response?.data?.message || err.message
         : err instanceof Error ? err.message : 'Error desconocido';
       setError(`Fallo al limpiar fotos huérfanas: ${detail}`);

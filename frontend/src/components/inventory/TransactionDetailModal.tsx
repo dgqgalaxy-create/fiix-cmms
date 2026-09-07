@@ -1,4 +1,3 @@
-import React from 'react';
 import { X } from 'lucide-react';
 import type { InventoryTransaction } from '../../api/inventory';
 import { formatDateTime } from '../../utils/dateUtils';

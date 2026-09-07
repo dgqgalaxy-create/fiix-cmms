@@ -1002,7 +1002,7 @@ const cardColors: Record<string, string> = {
 };
 
 /** One gentle scale pulse when a numeric value changes (skips first mount). */
-const PulsingValue = ({ value, className }: { value: number; className?: string }) => {
+const PulsingValue = ({ value, className }: { value?: number | undefined; className?: string }) => {
   const [pulse, setPulse] = useState(false);
   const mountedRef = useRef(false);
   const prevRef = useRef(value);

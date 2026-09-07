@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar as BigCalendar, dateFnsLocalizer, Views } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
-import es from 'date-fns/locale/es';
+import { es } from 'date-fns/locale/es';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import withDragAndDropRaw from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+import type { Event as BigCalendarEvent, View } from 'react-big-calendar';
+import type { DragFromOutsideItemArgs, EventInteractionArgs } from 'react-big-calendar/lib/addons/dragAndDrop';
 import { useAuth } from '../context/AuthContext';
 import { Calendar, LayoutList, CheckCircle2, X, GripVertical } from 'lucide-react';
 import { getWorkOrders, getWorkOrderById, updateWorkOrder, joinWorkOrder, deleteWorkOrder } from '../api/workOrders';
@@ -391,9 +393,9 @@ export const CalendarPage = () => {
               endAccessor="end"
               defaultDate={new Date()}
               date={currentDate}
-              onNavigate={(date) => setCurrentDate(date)}
+              onNavigate={(date: Date) => setCurrentDate(date)}
               view={currentView}
-              onView={(view) => setCurrentView(view)}
+              onView={(view: View) => setCurrentView(view)}
               views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
               culture="es"
               style={{ height: '100%', minHeight: 420 }}
@@ -411,7 +413,7 @@ export const CalendarPage = () => {
               }}
               onSelectEvent={handleEventClick}
               className={`dark:text-slate-200 ${isUpdating ? 'opacity-50 pointer-events-none' : ''}`}
-              eventPropGetter={(event) => {
+              eventPropGetter={(event: BigCalendarEvent) => {
                 const e = event as CustomEvent;
                 // Preview de arrastre desde fuera no trae order completo a veces; no tumbar la página.
                 if (!e?.order) {
@@ -432,7 +434,7 @@ export const CalendarPage = () => {
                   bg = '#22c55e';
                 }
 
-                if (e.order.priority === 'ALTA' || e.order.priority === 'URGENTE') {
+                if (e.order.priority === 'URGENTE') {
                   bg = '#ef4444';
                 }
 
@@ -460,15 +462,15 @@ export const CalendarPage = () => {
                     }
                   : null
               }
-              onEventDrop={({ event, start, end }) => {
+              onEventDrop={({ event, start, end }: EventInteractionArgs<CustomEvent>) => {
                 if (!canManageCalendar) return;
                 handleSchedule((event as CustomEvent).order.id, new Date(start), new Date(end));
               }}
-              onEventResize={({ event, start, end }) => {
+              onEventResize={({ event, start, end }: EventInteractionArgs<CustomEvent>) => {
                 if (!canManageCalendar) return;
                 handleSchedule((event as CustomEvent).order.id, new Date(start), new Date(end));
               }}
-              onDropFromOutside={({ start, end }) => {
+              onDropFromOutside={({ start, end }: DragFromOutsideItemArgs) => {
                 if (!canManageCalendar) return;
                 if (draggedOrder) {
                   handleSchedule(draggedOrder.id, new Date(start), end ? new Date(end) : null);
@@ -554,8 +556,7 @@ export const CalendarPage = () => {
                           <div className="text-slate-600 dark:text-slate-400 line-clamp-2 mt-1">{order.title}</div>
                           <div className="mt-2 flex items-center justify-between">
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                              order.priority === 'ALTA' || order.priority === 'URGENTE' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                              order.priority === 'MEDIA' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                              order.priority === 'URGENTE' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
                               'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                             }`}>
                               {order.priority}

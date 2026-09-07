@@ -19,7 +19,7 @@ type Props = {
  * Palomitas tipo WhatsApp: enviando / enviado / entregado / leído.
  */
 export function MessageTicks({ status = 'sent', onMineBubble = true }: Props) {
-  const label = LABELS[status] || LABELS.sent;
+  const label = (status && LABELS[status]) || LABELS.sent;
   const tone =
     status === 'read'
       ? onMineBubble

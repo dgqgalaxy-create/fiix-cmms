@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { CalendarClock, Plus, Search, CheckCircle2, Clock, ChevronUp, ChevronDown, ChevronRight, Pencil, Pause, Play, Trash2 } from 'lucide-react';
 import type { MaintenancePlan } from '../api/maintenance';
 import { getMaintenancePlans, updateMaintenancePlan, deleteMaintenancePlan } from '../api/maintenance';

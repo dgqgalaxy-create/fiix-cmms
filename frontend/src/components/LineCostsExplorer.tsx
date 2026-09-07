@@ -461,7 +461,6 @@ export const LineCostsExplorer = () => {
   const totalAssetValue = visibleZones.reduce((s, z) => s + z.assetValue, 0);
   const maxZoneCost = Math.max(1, ...visibleZones.map((z) => z.cost));
   const maxSectionCost = selectedZone ? Math.max(1, ...selectedZone.sections.map((s) => s.cost)) : 1;
-  const maxAssetCost = selectedSection ? Math.max(1, ...selectedSection.assets.map((a) => a.cost)) : 1;
   const periodLabel = PERIODS.find((p) => p.value === period)?.label || '';
   const chartData = visibleZones.map((z) => ({ name: z.name, cost: z.cost }));
 

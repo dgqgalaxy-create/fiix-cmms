@@ -832,7 +832,7 @@ export const KPIPage = () => {
                         label={{ value: 'Horas', angle: -90, position: 'insideLeft', offset: 0, fill: 'var(--color-fg-muted)', fontSize: 11 }}
                       />
                       <Tooltip
-                        formatter={(val: number, name: string) => [`${Number(val).toFixed(2)} h`, name]}
+                        formatter={(val, name) => [`${Number(val).toFixed(2)} h`, name ?? '']}
                         contentStyle={{ borderRadius: 12, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-fg)', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)' }}
                       />
                       <Line type="monotone" dataKey="mttr" name="MTTR (horas)" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 3 }} />
@@ -861,7 +861,7 @@ export const KPIPage = () => {
                       <XAxis dataKey="month" tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyAxis(v)} />
                       <Tooltip
-                        formatter={(val: number) => [formatCurrency(val), 'Refacciones']}
+                        formatter={(val) => [formatCurrency(Number(val)), 'Refacciones']}
                         contentStyle={{ borderRadius: 12, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-fg)', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)' }}
                       />
                       <Bar dataKey="costos" fill="#059669" radius={[4, 4, 0, 0]} />
@@ -942,7 +942,7 @@ export const KPIPage = () => {
                         tickFormatter={(val) => (val.length > 16 ? `${val.slice(0, 16)}…` : val)}
                       />
                       <Tooltip
-                        formatter={(val: number) => [formatCurrency(val), 'Costo']}
+                        formatter={(val) => [formatCurrency(Number(val)), 'Costo']}
                         contentStyle={{ borderRadius: 12, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-fg)', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)' }}
                       />
                       <Bar dataKey="totalCost" fill="#e11d48" radius={[0, 4, 4, 0]} barSize={18} />
@@ -985,8 +985,8 @@ export const KPIPage = () => {
                         tickLine={false}
                       />
                       <Tooltip
-                        formatter={(val: number) => [val, 'Finalizadas']}
-                        labelFormatter={(_: string, payload) => payload?.[0]?.payload?.fullName || _}
+                        formatter={(val) => [val, 'Finalizadas']}
+                        labelFormatter={(_, payload) => payload?.[0]?.payload?.fullName || _}
                         contentStyle={{
                           borderRadius: 12,
                           border: '1px solid var(--color-border)',
@@ -1037,11 +1037,11 @@ export const KPIPage = () => {
                         tickLine={false}
                       />
                       <Tooltip
-                        formatter={(val: number, _key: string, item: { payload?: { finalizadas?: number } }) => [
+                        formatter={(val, _key, item) => [
                           formatHours(Number(val)),
                           `Promedio (${item?.payload?.finalizadas ?? 0} OT)`,
                         ]}
-                        labelFormatter={(_: string, payload) => payload?.[0]?.payload?.fullName || _}
+                        labelFormatter={(_, payload) => payload?.[0]?.payload?.fullName || _}
                         contentStyle={{
                           borderRadius: 12,
                           border: '1px solid var(--color-border)',
@@ -1280,10 +1280,10 @@ export const KPIPage = () => {
                         <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                         <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
                         <Tooltip
-                          formatter={(val: number, key: string) =>
+                          formatter={(val, key) =>
                             key === 'horas' ? [formatHours(Number(val)), 'Horas labor'] : [val, 'Finalizadas']
                           }
-                          labelFormatter={(_: string, payload) => payload?.[0]?.payload?.fullName || _}
+                          labelFormatter={(_, payload) => payload?.[0]?.payload?.fullName || _}
                           contentStyle={{
                             borderRadius: 12,
                             border: '1px solid var(--color-border)',

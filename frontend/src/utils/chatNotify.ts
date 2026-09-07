@@ -75,7 +75,7 @@ export async function showIncomingChatSystemNotification(opts: IncomingChatNotif
     return;
   }
 
-  const options: NotificationOptions & { vibrate?: number[]; silent?: boolean } = {
+  const options: NotificationOptions & { vibrate?: number[]; silent?: boolean; renotify?: boolean } = {
     body: opts.body,
     icon: '/icono_app.jpg',
     badge: '/icono_app.jpg',

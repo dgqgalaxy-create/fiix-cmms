@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Users } from 'lucide-react';
 import { getOnlineUsers } from '../../api/users';
 import type { User } from '../../api/users';

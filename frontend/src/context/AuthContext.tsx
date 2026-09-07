@@ -10,6 +10,7 @@ interface User {
   userId: string;
   role: string;
   name?: string;
+  email?: string;
   preferences?: any;
   must_change_password?: boolean;
   id?: string;

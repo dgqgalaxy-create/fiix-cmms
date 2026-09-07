@@ -1,4 +1,4 @@
-import { LayoutDashboard, Database, LogOut, Users, Activity, Shield, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Database, LogOut, Users, Activity, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote, MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { VersionModal, APP_VERSION } from './VersionModal';
@@ -6,6 +6,7 @@ import { OnlineUsersBadge } from './common/OnlineUsersBadge';
 import { updateMyPreferences } from '../api/users';
 import { canUseTechnicianMobileUi, isTechnicianMobileUiPrefOn, useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
 import { useState, useEffect, useCallback } from 'react';
+import type { ReactElement } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getNotesSummary } from '../api/notes';
 import { getChatUnreadSummary } from '../api/chat';
@@ -30,7 +31,7 @@ import { CSS } from '@dnd-kit/utilities';
 interface NavItem {
   name: string;
   path: string;
-  icon: JSX.Element;
+  icon: ReactElement;
   badge?: number;
 }
 
