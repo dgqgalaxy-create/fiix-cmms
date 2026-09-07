@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import type { Prisma } from '@prisma/client';
 import prisma from '../config/prisma';
 import { generateInventoryCode } from '../utils/codeGenerator';
 import { imageSearch } from '@mudbill/duckduckgo-images-api';
@@ -7,6 +8,7 @@ import { emitRefresh } from '../utils/socket';
 import { writeAuditLog } from '../utils/auditLog';
 import { parseQty } from '../utils/qtyMode';
 import { tryConsumeStock, addStock } from '../utils/stockMutation';
+import { diffRequestedChanges } from '../utils/auditChanges';
 
 // ==========================================
 // ITEM CATEGORY
@@ -465,11 +467,39 @@ export const updateItem = async (req: Request, res: Response): Promise<void> => 
       purchase_cost, minimum_inventory, is_active, uom, qty_mode
     } = req.body;
 
-    const existing = await prisma.item.findUnique({ where: { id }, select: { qty_mode: true } });
+    const existing = await prisma.item.findUnique({
+      where: { id },
+      select: {
+        qty_mode: true,
+        name: true,
+        description: true,
+        purchase_cost: true,
+        minimum_inventory: true,
+        is_active: true,
+        uom: true,
+        category_id: true,
+        vendor_id: true,
+        location_id: true,
+        image_url: true,
+      },
+    });
     if (!existing) {
       res.status(404).json({ error: 'Artículo no encontrado' });
       return;
     }
+    const before = {
+      name: existing.name,
+      description: existing.description,
+      purchase_cost: existing.purchase_cost,
+      minimum_inventory: existing.minimum_inventory,
+      is_active: existing.is_active,
+      uom: existing.uom,
+      qty_mode: existing.qty_mode,
+      category_id: existing.category_id,
+      vendor_id: existing.vendor_id,
+      location_id: existing.location_id,
+      image_url: existing.image_url,
+    };
     const mode =
       qty_mode === 'DECIMAL' || qty_mode === 'INTEGER' ? qty_mode : existing.qty_mode;
 
@@ -518,6 +548,54 @@ export const updateItem = async (req: Request, res: Response): Promise<void> => 
       where: { id },
       data: itemData
     });
+
+    // Bitácora con qué cambió (valores anteriores → nuevos).
+    const requested: Record<string, unknown> = {};
+    const labels: Record<string, string> = {
+      name: 'nombre',
+      description: 'descripción',
+      purchase_cost: 'precio',
+      minimum_inventory: 'stock mínimo',
+      is_active: 'activo',
+      uom: 'unidad',
+      qty_mode: 'modo de cantidad',
+      category_id: 'categoría',
+      vendor_id: 'proveedor',
+      location_id: 'ubicación',
+      image_url: 'foto',
+    };
+    if (name) requested.name = name;
+    if (description !== undefined) requested.description = description || null;
+    if (purchase_cost !== undefined) requested.purchase_cost = purchase_cost ? parseFloat(purchase_cost) : null;
+    if (minimum_inventory !== undefined) {
+      const minParsedForLog = parseQty(minimum_inventory, mode, { allowZero: true, fieldLabel: 'El stock mínimo' });
+      if (minParsedForLog.ok) requested.minimum_inventory = minParsedForLog.value;
+    }
+    if (is_active !== undefined) requested.is_active = is_active === 'true' || is_active === true;
+    if (uom) requested.uom = uom;
+    if (qty_mode === 'DECIMAL' || qty_mode === 'INTEGER') requested.qty_mode = qty_mode;
+    if (category_id !== undefined) requested.category_id = category_id || null;
+    if (vendor_id !== undefined) requested.vendor_id = vendor_id || null;
+    if (location_id !== undefined) requested.location_id = location_id || null;
+    if (files?.['image']) requested.image_url = `/uploads/inventory/${files['image'][0].filename}`;
+
+    const changes = diffRequestedChanges(before, requested, labels);
+    if (changes.length > 0) {
+      const actorU = (req as any).user?.userId as string | undefined;
+      const actorN = actorU
+        ? (await prisma.user.findUnique({ where: { id: actorU }, select: { name: true } }))?.name
+        : null;
+      await writeAuditLog({
+        userId: actorU ?? null,
+        userName: actorN,
+        action: 'ITEM_UPDATE',
+        entity: 'inventory',
+        entityId: id,
+        summary: `Repuesto ${updatedItem.internal_code} actualizado (${changes.length} campo${changes.length === 1 ? '' : 's'})`,
+        meta: { item_id: id, changes: changes as unknown as Prisma.InputJsonValue },
+      });
+    }
+
     emitRefresh('refresh_inventory');
     res.json(updatedItem);
   } catch (error) {

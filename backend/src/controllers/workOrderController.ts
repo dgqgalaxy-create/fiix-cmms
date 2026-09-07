@@ -12,6 +12,7 @@ import { PRODUCTION_LINES, resolveProductionLine } from '../utils/assetSection';
 import { resolvePartsUnitCost } from '../utils/resolvePartsUnitCost';
 import { parseQty } from '../utils/qtyMode';
 import { tryConsumeStock } from '../utils/stockMutation';
+import { diffRequestedChanges, MAX_AUDIT_CHANGES } from '../utils/auditChanges';
 
 const OPEN_WO_STATUSES = ['PENDIENTE', 'EN_PROCESO', 'EN_ESPERA'] as const;
 
@@ -971,17 +972,60 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
         userRole !== 'TECNICO' && assigned_technicians_ids !== undefined
           ? `; técnicos: ${assigned_technicians_ids.length}`
           : '';
+
+      // Cambios concretos (antes → después) cuando es edición de datos (no transición).
+      let editChanges: Array<{ campo: string; antes: unknown; despues: unknown }> = [];
+      const isTransition = status && status !== currentWorkOrder.status;
+      if (!isTransition) {
+        const labels: Record<string, string> = {
+          priority: 'prioridad',
+          maintenance_type: 'tipo de mantenimiento',
+          machine_stopped: 'paro de máquina',
+          requester_name: 'solicitante',
+          production_group: 'grupo',
+          zone_id: 'zona',
+          scheduled_date: 'fecha programada',
+          due_date: 'fecha límite',
+          resolution_notes: 'notas de resolución',
+          hold_reason: 'motivo de espera',
+          signature_clean_area: 'firma área limpia',
+          signature_delivery: 'firma entrega',
+          title: 'título',
+          description: 'descripción',
+        };
+        const beforeRec: Record<string, unknown> = {
+          priority: currentWorkOrder.priority,
+          maintenance_type: currentWorkOrder.maintenance_type,
+          machine_stopped: currentWorkOrder.machine_stopped,
+          requester_name: currentWorkOrder.requester_name,
+          production_group: currentWorkOrder.production_group,
+          zone_id: currentWorkOrder.zone_id,
+          scheduled_date: currentWorkOrder.scheduled_date,
+          due_date: currentWorkOrder.due_date,
+          resolution_notes: currentWorkOrder.resolution_notes,
+          hold_reason: currentWorkOrder.hold_reason,
+          signature_clean_area: currentWorkOrder.signature_clean_area,
+          signature_delivery: currentWorkOrder.signature_delivery,
+          title: currentWorkOrder.title,
+          description: currentWorkOrder.description,
+        };
+        editChanges = diffRequestedChanges(beforeRec, updateData, labels).slice(0, MAX_AUDIT_CHANGES);
+      }
+
       await writeAuditLog({
         userId,
         userName: actorName,
-        action: status && status !== currentWorkOrder.status ? 'UPDATE_WO_STATUS' : 'UPDATE_WORK_ORDER',
+        action: isTransition ? 'UPDATE_WO_STATUS' : 'UPDATE_WORK_ORDER',
         entity: 'work_order',
         entityId: id,
-        summary: `${folioLabel}: ${statusPart}${assignPart}`,
+        summary: `${folioLabel}: ${statusPart}${assignPart}${editChanges.length ? ` · ${editChanges.length} campo(s) editado(s)` : ''}`,
         meta: {
           from_status: currentWorkOrder.status,
           to_status: status || currentWorkOrder.status,
           assigned_technicians_ids: assigned_technicians_ids ?? null,
+          ...(editChanges.length > 0
+            ? { changes: editChanges as unknown as Prisma.InputJsonValue }
+            : {}),
           consumed_parts: didConsumeInventory
             ? (parsedUsedItems.map((p) => ({
                 item_id: p.item_id ?? '',
