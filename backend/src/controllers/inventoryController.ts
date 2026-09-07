@@ -525,6 +525,8 @@ export const updateItem = async (req: Request, res: Response): Promise<void> => 
     if (category_id !== undefined) itemData.category = category_id ? { connect: { id: category_id } } : { disconnect: true };
     if (vendor_id !== undefined) itemData.vendor = vendor_id ? { connect: { id: vendor_id } } : { disconnect: true };
     
+    // Ubicación efectiva tras resolver "vacío = Sin Asignación" (para auditar el valor real).
+    let resolvedLocationId: string | null = null;
     if (location_id !== undefined) {
       let finalLocationId = location_id;
       if (!finalLocationId) {
@@ -536,6 +538,7 @@ export const updateItem = async (req: Request, res: Response): Promise<void> => 
         }
         finalLocationId = unassignedLoc.id;
       }
+      resolvedLocationId = finalLocationId;
       itemData.location = { connect: { id: finalLocationId } };
     }
 
@@ -576,7 +579,7 @@ export const updateItem = async (req: Request, res: Response): Promise<void> => 
     if (qty_mode === 'DECIMAL' || qty_mode === 'INTEGER') requested.qty_mode = qty_mode;
     if (category_id !== undefined) requested.category_id = category_id || null;
     if (vendor_id !== undefined) requested.vendor_id = vendor_id || null;
-    if (location_id !== undefined) requested.location_id = location_id || null;
+    if (location_id !== undefined) requested.location_id = resolvedLocationId ?? null;
     if (files?.['image']) requested.image_url = `/uploads/inventory/${files['image'][0].filename}`;
 
     const changes = diffRequestedChanges(before, requested, labels);
@@ -994,9 +997,26 @@ export const deleteTransaction = async (req: Request, res: Response): Promise<vo
 
     await prisma.$transaction(async (t) => {
       if (tx.amount > 0) {
-        // Borrar una ENTRADA equivale a restar su cantidad del stock. Solo se
-        // permite si no deja el stock negativo (es decir, la entrada aún no fue
-        // consumida por completo). El UPDATE es condicional y atómico.
+        // Borrar una ENTRADA equivale a restar su cantidad del saldo. Se permite solo si:
+        // (a) en NINGÚN punto posterior el saldo reconstruido sin esa entrada hubiera sido
+        //     negativo (si una salida posterior dependió de su monto, la entrada ya fue
+        //     consumida → bloquear y recomendar asiento de ajuste), y
+        // (b) el stock final no quedaría negativo (UPDATE condicional y atómico).
+        const rows = await t.inventoryTransaction.findMany({
+          where: { item_id: tx.item_id },
+          select: { id: true, amount: true },
+          orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+        });
+        const idx = rows.findIndex((r) => r.id === id);
+        if (idx !== -1) {
+          let cum = 0;
+          for (let i = 0; i < rows.length; i++) {
+            cum += rows[i].amount;
+            if (i >= idx && cum - tx.amount < -0.000001) {
+              throw Object.assign(new Error('CONSUMED_ENTRY'), { code: 'CONSUMED_ENTRY' });
+            }
+          }
+        }
         const removed = await t.item.updateMany({
           where: { id: tx.item_id, stock: { gte: tx.amount } },
           data: { stock: { decrement: tx.amount } },

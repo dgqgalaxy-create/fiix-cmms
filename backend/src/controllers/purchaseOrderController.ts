@@ -723,12 +723,42 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
       return;
     }
 
-    // If not receiving, just update the status
-    const updatedOrder = await prisma.purchaseOrder.update({
-      where: { id: id },
-      data: updateData,
-      include: poDetailInclude,
-    });
+    // Transiciones de estado SIN recepción también se serializan con FOR UPDATE y se
+    // re-valida el estado fresco: evita la carrera donde A recibe (stock +, movimiento)
+    // y B, que leyó ENVIADA antes, cancela después sin ver el estado nuevo (quedaría una
+    // OC CANCELADA con stock ya incrementado e imposible de revertir desde la app).
+    const updatedOrder = await prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM "PurchaseOrder" WHERE id = ${id}::uuid FOR UPDATE`;
+        const lockedOrder = await tx.purchaseOrder.findUnique({
+          where: { id },
+          select: { status: true },
+        });
+        if (!lockedOrder) {
+          throw Object.assign(new Error('Orden de compra no encontrada'), { code: 'NOT_FOUND' });
+        }
+        if (lockedOrder.status === 'RECIBIDA' || lockedOrder.status === 'CANCELADA') {
+          throw Object.assign(
+            new Error('La orden ya fue recibida o cancelada. Recarga e inténtalo de nuevo.'),
+            { code: 'ALREADY_CLOSED' }
+          );
+        }
+        if (status && lockedOrder.status !== existingOrder.status) {
+          throw Object.assign(
+            new Error(
+              `La orden cambió de estado a ${lockedOrder.status} mientras se procesaba. Recarga e inténtalo de nuevo.`
+            ),
+            { code: 'STATUS_CONFLICT' }
+          );
+        }
+        return tx.purchaseOrder.update({
+          where: { id: id },
+          data: updateData,
+          include: poDetailInclude,
+        });
+      },
+      { maxWait: 10_000, timeout: 20_000 }
+    );
 
     emitRefresh('refresh_purchase_orders');
 
@@ -747,7 +777,11 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
 
     res.json(updatedOrder);
   } catch (error: any) {
-    if (error?.code === 'ALREADY_CLOSED' || error?.code === 'NOT_FOUND') {
+    if (
+      error?.code === 'ALREADY_CLOSED' ||
+      error?.code === 'STATUS_CONFLICT' ||
+      error?.code === 'NOT_FOUND'
+    ) {
       const statusCode = error?.code === 'NOT_FOUND' ? 404 : 409;
       res.status(statusCode).json({ error: error.message || 'No se pudo actualizar la orden' });
       return;

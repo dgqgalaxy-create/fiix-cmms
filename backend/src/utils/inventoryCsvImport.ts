@@ -170,21 +170,26 @@ export async function importInventoryTransactionsFile(
     const amount = parseNumber(row['Amount']);
     const reason = row['Reason'] || 'Sin motivo';
 
-    // ¿Ya existe? (por external_id o por tupla idéntica)
-    const tup = tupleKey(itemId, userId, amount, reason, date);
-    if ((externalId && seenExternalInFile.has(externalId)) || (externalId && byExternalId.has(externalId))) {
-      if (externalId) seenExternalInFile.add(externalId);
-      details.skippedExisting++;
-      return;
-    }
-    if (existingTuples.has(tup) || seenTupleInFile.has(tup)) {
-      if (externalId) seenExternalInFile.add(externalId);
-      details.skippedExisting++;
-      return;
+    // Dedupe: con external_id ("Inventory ID" de Fiix) la clave ES exclusiva — dos
+    // movimientos legítimos idénticos pero con IDs distintos NUNCA se descartan. La tupla
+    // (item|usuario|cantidad|motivo|fecha) solo se usa como respaldo para filas SIN
+    // external_id (CSVs antiguos o datos previos sin clave).
+    if (externalId) {
+      if (seenExternalInFile.has(externalId) || byExternalId.has(externalId)) {
+        seenExternalInFile.add(externalId);
+        details.skippedExisting++;
+        return;
+      }
+      seenExternalInFile.add(externalId);
+    } else {
+      const tup = tupleKey(itemId, userId, amount, reason, date);
+      if (existingTuples.has(tup) || seenTupleInFile.has(tup)) {
+        details.skippedExisting++;
+        return;
+      }
+      seenTupleInFile.add(tup);
     }
 
-    if (externalId) seenExternalInFile.add(externalId);
-    seenTupleInFile.add(tup);
     creates.push({
       item_id: itemId,
       user_id: userId,

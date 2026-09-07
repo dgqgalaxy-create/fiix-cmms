@@ -225,6 +225,47 @@ async function main() {
     console.log('  ✓ G: recepciones simultáneas → una sola suma stock (anti-duplicado)');
   }
 
+  // ---- H: carrera RECIBIDA vs CANCELADA en paralelo → una sola gana y sin estados mezclados ----
+  {
+    const vendor = await prisma.vendor.create({ data: { internal_id: 'PROV-STKH', name: 'Proveedor Stock H' } });
+    const item = await makeItem('STK-H-OC', 0);
+    const po = await prisma.purchaseOrder.create({
+      data: {
+        vendor_id: vendor.id,
+        status: 'APROBADA',
+        created_by_id: admin.id,
+        items: { create: { item_id: item.id, quantity: 5, unit_cost: 3 } },
+      },
+      include: { items: true },
+    });
+    const lineId = po.items[0].id;
+    const attempts = await Promise.all([
+      changePoStatus({ id: po.id, status: 'CANCELADA', actorId: admin.id, role: 'ADMINISTRADOR' }),
+      changePoStatus({
+        id: po.id,
+        status: 'RECIBIDA',
+        actorId: admin.id,
+        role: 'ADMINISTRADOR',
+        receivedItems: [{ id: lineId, received_quantity: 5 }],
+      }),
+    ]);
+    const winners = attempts.filter((r) => r._status === 200).length;
+    assert.equal(winners, 1, `solo una operación debe triunfar (status=${attempts.map((r) => r._status).join(',')})`);
+    const final = await prisma.purchaseOrder.findUniqueOrThrow({ where: { id: po.id } });
+    const stock = await prisma.item.findUniqueOrThrow({ where: { id: item.id } });
+    if (final.status === 'RECIBIDA') {
+      assert.equal(stock.stock, 5, 'si ganó la recepción, el stock debe sumar');
+      assert.equal(await prisma.inventoryTransaction.count({ where: { item_id: item.id } }), 1);
+    } else {
+      assert.equal(final.status, 'CANCELADA');
+      assert.equal(stock.stock, 0, 'si ganó la cancelación, NO debe haber sumado stock');
+      assert.equal(await prisma.inventoryTransaction.count({ where: { item_id: item.id } }), 0);
+    }
+    console.log(
+      `  ✓ H: RECIBIDA vs CANCELADA en paralelo → estado final ${final.status} sin stock fantasma`
+    );
+  }
+
   console.log('\nTodas las comprobaciones de stock y compras pasaron ✔');
 }
 

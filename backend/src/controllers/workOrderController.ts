@@ -831,6 +831,10 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
     const closing = status === 'FINALIZADO' && currentWorkOrder.status !== 'FINALIZADO';
 
     let didConsumeInventory = false;
+    // Cantidades YA validadas (parseQty) por ítem consumido, para auditar con precisión.
+    const consumedByItem = new Map<string, number>();
+    // Si el cierre recorta la labor acumulada al tope int32, se deja constancia en la bitácora.
+    let laborClampedAtClose = false;
 
     // Construir URLs de las imágenes
     if (files && files['before_image']) {
@@ -888,12 +892,14 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
           if ((status === 'EN_ESPERA' || status === 'FINALIZADO') && fresh.status === 'EN_PROCESO') {
             if (fresh.last_resumed_at) {
               // La columna es entero de 32 bits (~24.8 días): se recorta al máximo para
-              // no romper el cierre con un overflow de PostgreSQL; el import CSV ya avisa
-              // cuando recorta un tiempo histórico.
-              merged.accumulated_time_ms = Math.min(
-                2_147_483_647,
-                fresh.accumulated_time_ms + (Date.now() - fresh.last_resumed_at.getTime())
-              );
+              // no romper el cierre con un overflow de PostgreSQL y se deja constancia
+              // en la bitácora (laborClampedAtClose); el import CSV ya avisa por fila.
+              const rawAccumulated =
+                fresh.accumulated_time_ms + (Date.now() - fresh.last_resumed_at.getTime());
+              if (rawAccumulated > 2_147_483_647) {
+                laborClampedAtClose = true;
+              }
+              merged.accumulated_time_ms = Math.min(2_147_483_647, rawAccumulated);
             }
             merged.last_resumed_at = null;
           }
@@ -949,6 +955,7 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
                     reason: `Consumo OT ${folioLabel}`,
                   },
                 });
+                consumedByItem.set(item.id, quantity.value);
                 didConsumeInventory = true;
               }
             }
@@ -1047,11 +1054,12 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
             ? { changes: editChanges as unknown as Prisma.InputJsonValue }
             : {}),
           consumed_parts: didConsumeInventory
-            ? (parsedUsedItems.map((p) => ({
-                item_id: p.item_id ?? '',
-                amount: Number.isFinite(Number(p.amount)) ? Number(p.amount) : null,
+            ? (Array.from(consumedByItem.entries()).map(([itemId, amount]) => ({
+                item_id: itemId,
+                amount,
               })) as unknown as Prisma.InputJsonValue)
             : null,
+          labor_clamped_at_close: laborClampedAtClose || undefined,
         },
       });
 

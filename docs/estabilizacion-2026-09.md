@@ -80,6 +80,22 @@ Base: **v1.56.91 (`f0f5587`) = origin/main de GitHub (versión fiable)**.
       Asignar precio, Copiar folio) y estado por sección. Prueba: `run-data-quality-test.sh`
       (detección + correcciones + auditoría).
 
+## Revisión independiente (ronda 2026-09) — correcciones aplicadas
+- **MAJOR (compras):** transiciones de estado NO-RECIBIDA (cancelar/aprobar/enviar) ahora se
+  serializan con `FOR UPDATE` y re-validan el estado fresco (antes, una OC leída ENVIADA podía
+  quedar CANCELADA con stock ya incrementado por una recepción paralela). Prueba H en
+  `run-stock-purchase-test.sh`.
+- **MINOR:** borrar una ENTRADA ahora reconstruye el saldo y bloquea si en algún punto posterior
+  la entrada ya era necesaria (evita historiales internamente inconsistentes).
+- **MINOR:** dedupe del import usa `external_id` como clave exclusiva cuando existe (la tupla solo
+  aplica a filas sin ID): dos movimientos legítimos idénticos con IDs distintos ya no se descartan.
+- **MINOR/INFO:** recorte de labor en el cierre queda marcado en la bitácora
+  (`labor_clamped_at_close`); `consumed_parts` audita la cantidad ya validada; auditoría de
+  ubicación refleja «Sin Asignación» persistido.
+- **No aplica:** el hallazgo sobre audit post-commit (writeAuditLog ya es best-effort, nunca 500).
+- **Documentado sin cambio:** parseo numérico del CSV (coma = miles, punto = decimal; cambiar
+  rompería el formato Fiix actual) y escalabilidad del dedupe para historiales muy grandes.
+
 ## Checklist ampliado (del diagnóstico original)
 - [ ] 10. Controles de seguridad separados de preferencias.
 - [ ] 11. Descarga segura de imágenes.
