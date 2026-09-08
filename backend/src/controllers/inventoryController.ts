@@ -129,7 +129,9 @@ export const deleteLocation = async (req: Request, res: Response): Promise<void>
 // ==========================================
 export const getVendors = async (req: Request, res: Response): Promise<void> => {
   try {
-    const vendors = await prisma.vendor.findMany();
+    const vendors = await prisma.vendor.findMany({
+      orderBy: { name: 'asc' },
+    });
     res.json(vendors);
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener proveedores' });
