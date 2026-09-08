@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Asset } from '../api/assets';
-import { Activity, Ban, Settings, Trash2, Edit, Database, QrCode, Image as ImageIcon, ChevronUp, ChevronDown, Archive } from 'lucide-react';
+import { Activity, Ban, Settings, Trash2, Edit, Database, QrCode, Image as ImageIcon, ChevronUp, ChevronDown, Archive, Package } from 'lucide-react';
 import { mediaUrl } from '../utils/mediaUrl';
 import { ContextMenu } from './common/ContextMenu';
 
 const ITEMS_PER_PAGE = 20;
 
-type SortField = 'zone' | 'section' | 'vendor' | 'status' | 'name' | 'internal_code' | 'brand_model' | null;
+type SortField = 'zone' | 'section' | 'vendor' | 'status' | 'name' | 'internal_code' | 'brand_model' | 'parts' | null;
 type SortDirection = 'asc' | 'desc';
 
 interface Props {
@@ -127,6 +127,11 @@ export const AssetsTable = ({
           valA = `${a.brand || ''} ${a.model || ''}`;
           valB = `${b.brand || ''} ${b.model || ''}`;
           break;
+        case 'parts': {
+          const numA = a.parts?.length ?? 0;
+          const numB = b.parts?.length ?? 0;
+          return sortDirection === 'asc' ? numA - numB : numB - numA;
+        }
       }
       const cmp = valA.localeCompare(valB);
       return sortDirection === 'asc' ? cmp : -cmp;
@@ -377,7 +382,11 @@ export const AssetsTable = ({
               <th className={`${thClass} w-[7rem]`} onClick={() => handleSort('status')}>
                 <div className="flex items-center gap-1">Estado {sortField === 'status' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 shrink-0"/> : <ChevronDown size={14} className="text-emerald-500 shrink-0"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity shrink-0" />}</div>
               </th>
-              {canManage && <th className="px-2 py-2.5 w-[6.5rem] text-right uppercase tracking-wider text-[11px] font-bold">Acciones</th>}
+              {/* Solo escritorio (lg+): en móvil/tablet se usa la vista de tarjetas y las
+                  acciones quedan disponibles con clic derecho (menú contextual). */}
+              <th className={`${thClass} hidden lg:table-cell w-[6.5rem]`} onClick={() => handleSort('parts')}>
+                <div className="flex items-center justify-center gap-1">Refacciones {sortField === 'parts' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 shrink-0"/> : <ChevronDown size={14} className="text-emerald-500 shrink-0"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity shrink-0" />}</div>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -465,37 +474,12 @@ export const AssetsTable = ({
                   <td className={tdClass}>
                     {getStatusBadge(asset.status, true)}
                   </td>
-                  {canManage && (
-                    <td className={`${tdClass} text-right`} onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-0.5">
-                        {onPrintQR && (
-                          <button
-                            onClick={() => onPrintQR(asset)}
-                            className="p-1.5 text-slate-400 hover:text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:bg-emerald-950/50 rounded-lg transition-colors"
-                            title="Imprimir QR"
-                          >
-                            <QrCode size={16} />
-                          </button>
-                        )}
-                        {onEdit && (
-                          <button
-                            onClick={() => onEdit(asset)}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                            title="Editar"
-                          >
-                            <Edit size={16} />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => onDelete(asset.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Eliminar"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  )}
+                  <td className={`${tdClass} hidden lg:table-cell text-center`}>
+                    <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-200 font-medium tabular-nums">
+                      <Package size={14} className="text-slate-400" />
+                      {asset.parts?.length ?? 0}
+                    </span>
+                  </td>
                 </tr>
               );
             })}
