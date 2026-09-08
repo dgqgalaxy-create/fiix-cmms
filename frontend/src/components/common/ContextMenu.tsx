@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 
 export interface ContextMenuAction {
@@ -28,27 +28,38 @@ interface ContextMenuProps {
  * scroll o tecla Escape. Se posiciona pegado a (x, y) y se recorta al viewport.
  */
 export const ContextMenu = ({ x, y, title, actions, onClose, zIndex = 80 }: ContextMenuProps) => {
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     const onDocClick = () => onClose();
     const onKey = (ev: KeyboardEvent) => {
       if (ev.key === 'Escape') onClose();
     };
+    const onDocScroll = (ev: Event) => {
+      // El scroll DENTRO del propio menú (lista larga con overflow) no debe cerrarlo.
+      if (menuRef.current && ev.target instanceof Node && menuRef.current.contains(ev.target)) return;
+      onClose();
+    };
     document.addEventListener('click', onDocClick);
-    document.addEventListener('scroll', onDocClick, true);
+    document.addEventListener('scroll', onDocScroll, true);
     document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('click', onDocClick);
-      document.removeEventListener('scroll', onDocClick, true);
+      document.removeEventListener('scroll', onDocScroll, true);
       document.removeEventListener('keydown', onKey);
     };
   }, [onClose]);
 
-  const left = Math.min(x, window.innerWidth - 208);
-  const top = Math.min(y, window.innerHeight - (actions.length * 40 + 64));
+  // Recorta la posición al viewport: nunca se sale por arriba, abajo ni por los lados;
+  // si el menú es más alto que la pantalla queda anclado arriba y hace scroll interno.
+  const left = Math.max(8, Math.min(x, window.innerWidth - 224));
+  const estimatedHeight = Math.min(actions.length * 40 + 64, Math.round(window.innerHeight * 0.7));
+  const top = Math.max(8, Math.min(y, window.innerHeight - estimatedHeight));
 
   return (
     <div
-      className="fixed min-w-[190px] max-w-[240px] max-h-[70vh] overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl"
+      ref={menuRef}
+      className="fixed min-w-[190px] max-w-[240px] max-h-[70vh] overflow-y-auto overscroll-contain rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl"
       style={{ left, top, zIndex }}
       onClick={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.preventDefault()}
