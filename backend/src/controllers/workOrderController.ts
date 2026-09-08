@@ -5,6 +5,7 @@ import { AuthRequest } from '../middlewares/authMiddleware';
 import { emitRefresh, emitWorkOrderUpdated } from '../utils/socket';
 import { triggerNewWorkOrderNotification } from '../services/NotificationService';
 import { computeWorkOrderSla, getSlaSettings } from '../services/SlaService';
+import type { SlaPolicy } from '../services/SlaService';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { parseDateInput } from '../utils/parseDateInput';
 import { writeAuditLog } from '../utils/auditLog';
@@ -369,7 +370,7 @@ function buildWorkOrderWhere(req: AuthRequest): Record<string, unknown> {
   return and.length ? { AND: and } : {};
 }
 
-function mapWorkOrdersWithSla(workOrders: any[], sla_policy: any) {
+function mapWorkOrdersWithSla(workOrders: any[], sla_policy: SlaPolicy | null) {
   return workOrders.map((wo) => {
     const { _count, comments, ...rest } = wo;
     const latest = comments[0] || null;
@@ -385,7 +386,8 @@ function mapWorkOrdersWithSla(workOrders: any[], sla_policy: any) {
             author: latest.author,
           }
         : null,
-      sla: computeWorkOrderSla(wo, sla_policy),
+      // Con SLA desactivado no se expone el indicador: la UI oculta badges («Vencido», etc.).
+      sla: sla_policy ? computeWorkOrderSla(wo, sla_policy) : null,
     };
   });
 }
@@ -422,7 +424,8 @@ export const getWorkOrders = async (req: AuthRequest, res: Response): Promise<vo
     else if (sort === 'newest') orderBy = { folio: 'desc' };
     else if (sort === 'priority') orderBy = [{ priority: 'desc' }, { folio: 'desc' }];
 
-    const { sla_policy } = await getSlaSettings();
+    const { sla_enabled, sla_policy } = await getSlaSettings();
+    const effectiveSlaPolicy = sla_enabled ? sla_policy : null;
 
     if (wantsPage) {
       const pageNum = Math.max(1, parseInt(String(page || '1'), 10) || 1);
@@ -437,7 +440,7 @@ export const getWorkOrders = async (req: AuthRequest, res: Response): Promise<vo
           take: limitNum,
         }),
       ]);
-      const data = mapWorkOrdersWithSla(workOrders, sla_policy);
+      const data = mapWorkOrdersWithSla(workOrders, effectiveSlaPolicy);
       res.json({
         data,
         total,
@@ -454,7 +457,7 @@ export const getWorkOrders = async (req: AuthRequest, res: Response): Promise<vo
       select: WO_LIST_SELECT,
       orderBy,
     });
-    res.json(mapWorkOrdersWithSla(workOrders, sla_policy));
+    res.json(mapWorkOrdersWithSla(workOrders, effectiveSlaPolicy));
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al obtener órdenes de trabajo' });
@@ -530,11 +533,11 @@ export const getWorkOrderById = async (req: AuthRequest, res: Response): Promise
       const qty = Math.abs(tx.amount);
       return sum + qty * resolvePartsUnitCost(tx);
     }, 0);
-    const { sla_policy } = await getSlaSettings();
+    const { sla_enabled, sla_policy } = await getSlaSettings();
     res.json({
       ...workOrder,
       parts_cost_total: parseFloat(parts_cost_total.toFixed(2)),
-      sla: computeWorkOrderSla(workOrder, sla_policy),
+      sla: sla_enabled ? computeWorkOrderSla(workOrder, sla_policy) : null,
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener orden de trabajo' });

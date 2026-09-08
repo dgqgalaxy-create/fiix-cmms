@@ -11,6 +11,8 @@ export interface User {
   current_path?: string | null;
   preferences?: any;
   must_change_password?: boolean;
+  /** Flag global: si SLA está desactivado, el frontend oculta sus indicativos. */
+  sla_enabled?: boolean;
 }
 
 const USERS_CACHE_KEY = 'fiix_users_cache_v1';

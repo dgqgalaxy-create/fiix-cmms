@@ -77,7 +77,7 @@ function pickMessage(list: string[], seed = Date.now()): string {
 
 export const HomePage = () => {
   const navigate = useNavigate();
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, slaEnabled } = useAuth();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [summary, setSummary] = useState<Record<string, number>>({});
   const [lineStoppage, setLineStoppage] = useState<LineStoppageStatus | null>(null);
@@ -161,6 +161,7 @@ export const HomePage = () => {
   useSocketRefresh('refresh_notes', () => fetchDashboard(true));
   useSocketRefresh('refresh_inventory', () => fetchDashboard(true));
   useSocketRefresh('refresh_purchase_orders', () => fetchDashboard(true));
+  useSocketRefresh('refresh_settings', () => fetchDashboard(true));
 
   useEffect(() => {
     const fetchSummary = async () => {
@@ -659,24 +660,28 @@ export const HomePage = () => {
               </p>
               <PulsingValue value={controlCounts.unassigned} className="mt-1 text-2xl font-black text-slate-900 dark:text-white" />
             </button>
-            <button
-              type="button"
-              onClick={() => goControlRoom('sla=RISK')}
-              className="rounded-xl border border-orange-200 bg-white p-3 text-left shadow-sm transition hover:border-orange-400 dark:border-orange-900 dark:bg-slate-900"
-            >
-              <p className="text-[11px] font-semibold uppercase text-orange-700 flex items-center gap-1">
-                <ShieldAlert size={12} /> SLA en riesgo
-              </p>
-              <PulsingValue value={controlCounts.slaRisk} className="mt-1 text-2xl font-black text-slate-900 dark:text-white" />
-            </button>
-            <button
-              type="button"
-              onClick={() => goControlRoom('sla=BREACHED')}
-              className="rounded-xl border border-rose-300 bg-white p-3 text-left shadow-sm transition hover:border-rose-500 dark:border-rose-800 dark:bg-slate-900"
-            >
-              <p className="text-[11px] font-semibold uppercase text-rose-800">SLA vencido</p>
-              <PulsingValue value={controlCounts.slaBreached} className="mt-1 text-2xl font-black text-slate-900 dark:text-white" />
-            </button>
+            {slaEnabled && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => goControlRoom('sla=RISK')}
+                  className="rounded-xl border border-orange-200 bg-white p-3 text-left shadow-sm transition hover:border-orange-400 dark:border-orange-900 dark:bg-slate-900"
+                >
+                  <p className="text-[11px] font-semibold uppercase text-orange-700 flex items-center gap-1">
+                    <ShieldAlert size={12} /> SLA en riesgo
+                  </p>
+                  <PulsingValue value={controlCounts.slaRisk} className="mt-1 text-2xl font-black text-slate-900 dark:text-white" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goControlRoom('sla=BREACHED')}
+                  className="rounded-xl border border-rose-300 bg-white p-3 text-left shadow-sm transition hover:border-rose-500 dark:border-rose-800 dark:bg-slate-900"
+                >
+                  <p className="text-[11px] font-semibold uppercase text-rose-800">SLA vencido</p>
+                  <PulsingValue value={controlCounts.slaBreached} className="mt-1 text-2xl font-black text-slate-900 dark:text-white" />
+                </button>
+              </>
+            )}
           </div>
         </section>
       )}
@@ -700,7 +705,9 @@ export const HomePage = () => {
                   <th className="py-1.5 px-0.5 sm:pb-2 sm:px-1 font-semibold text-center w-[12%]" title="Pendientes">Pend</th>
                   <th className="py-1.5 px-0.5 sm:pb-2 sm:px-1 font-semibold text-center w-[12%]" title="En proceso">Proc</th>
                   <th className="py-1.5 px-0.5 sm:pb-2 sm:px-1 font-semibold text-center w-[12%]" title="En espera">Esp</th>
-                  <th className="py-1.5 pl-0.5 pr-1.5 sm:pb-2 sm:pl-1 font-semibold text-right w-[28%]" title="SLA">SLA</th>
+                  {slaEnabled && (
+                    <th className="py-1.5 pl-0.5 pr-1.5 sm:pb-2 sm:pl-1 font-semibold text-right w-[28%]" title="SLA">SLA</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -725,30 +732,32 @@ export const HomePage = () => {
                     <td className="py-1.5 sm:py-2 px-0.5 sm:px-1 text-center tabular-nums">
                       <span className={row.enEspera ? 'font-bold text-violet-600' : 'text-slate-300'}>{row.enEspera}</span>
                     </td>
-                    <td className="py-1.5 sm:py-2 pl-0.5 pr-1.5 sm:pl-1 text-right">
-                      {(row.slaRisk > 0 || row.slaBreached > 0) ? (
-                        <span className="inline-flex flex-wrap justify-end gap-0.5">
-                          {row.slaRisk > 0 && (
-                            <span
-                              className="rounded bg-orange-100 px-1 py-0.5 text-[9px] sm:text-[10px] font-bold text-orange-700 dark:bg-orange-950/50 dark:text-orange-300"
-                              title={`${row.slaRisk} en riesgo`}
-                            >
-                              {row.slaRisk}R
-                            </span>
-                          )}
-                          {row.slaBreached > 0 && (
-                            <span
-                              className="rounded bg-rose-100 px-1 py-0.5 text-[9px] sm:text-[10px] font-bold text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"
-                              title={`${row.slaBreached} vencidas`}
-                            >
-                              {row.slaBreached}V
-                            </span>
-                          )}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-slate-300">—</span>
-                      )}
-                    </td>
+                    {slaEnabled && (
+                      <td className="py-1.5 sm:py-2 pl-0.5 pr-1.5 sm:pl-1 text-right">
+                        {(row.slaRisk > 0 || row.slaBreached > 0) ? (
+                          <span className="inline-flex flex-wrap justify-end gap-0.5">
+                            {row.slaRisk > 0 && (
+                              <span
+                                className="rounded bg-orange-100 px-1 py-0.5 text-[9px] sm:text-[10px] font-bold text-orange-700 dark:bg-orange-950/50 dark:text-orange-300"
+                                title={`${row.slaRisk} en riesgo`}
+                              >
+                                {row.slaRisk}R
+                              </span>
+                            )}
+                            {row.slaBreached > 0 && (
+                              <span
+                                className="rounded bg-rose-100 px-1 py-0.5 text-[9px] sm:text-[10px] font-bold text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"
+                                title={`${row.slaBreached} vencidas`}
+                              >
+                                {row.slaBreached}V
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-300">—</span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

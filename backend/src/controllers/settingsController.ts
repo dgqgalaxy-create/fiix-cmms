@@ -64,6 +64,11 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
       });
     }
     emitRefresh('refresh_settings');
+    // Si cambió sla_enabled, refrescar listados de OT en las pestañas abiertas
+    // (los badges «En riesgo / Vencido» aparecen o desaparecen al instante).
+    if (sla_enabled !== undefined) {
+      emitRefresh('refresh_work_orders');
+    }
     res.json({
       ...settings,
       sla_policy: mergeSlaPolicy(settings.sla_policy),

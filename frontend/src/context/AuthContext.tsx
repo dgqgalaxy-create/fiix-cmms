@@ -14,6 +14,8 @@ interface User {
   email?: string;
   preferences?: any;
   must_change_password?: boolean;
+  /** Flag global: si SLA está desactivado, el frontend oculta sus indicativos. */
+  sla_enabled?: boolean;
   id?: string;
 }
 
@@ -29,6 +31,8 @@ interface AuthContextType {
   isObserver: boolean;
   /** Puede crear/editar/eliminar datos operativos (false para Observador). */
   canWriteOps: boolean;
+  /** Si SLA está activo en la configuración global (oculta indicativos SLA cuando false). */
+  slaEnabled: boolean;
   updateUserPreferences: (prefs: any) => void;
   clearMustChangePassword: () => void;
 }
@@ -82,6 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             name: fullUser.name || prev.name,
             preferences: fullUser.preferences,
             must_change_password: (fullUser as any).must_change_password,
+            sla_enabled: (fullUser as any).sla_enabled,
             id: fullUser.id,
           } : prev);
           if ((fullUser as any).must_change_password) {
@@ -110,6 +115,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               ? {
                   ...prev,
                   preferences: fullUser.preferences,
+                  sla_enabled: (fullUser as any).sla_enabled,
                 }
               : prev
           );
@@ -133,6 +139,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         name: userData.name,
         preferences: userData.preferences,
         must_change_password: userData.must_change_password,
+        sla_enabled: userData.sla_enabled,
         id: userData.id,
       });
       if (userData.must_change_password) {
@@ -170,6 +177,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const isObserver = user?.role === 'OBSERVADOR';
   const canWriteOps = !!user && user.role !== 'OBSERVADOR';
+  const slaEnabled = user?.sla_enabled !== false;
 
   return (
     <AuthContext.Provider
@@ -183,6 +191,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         hasPermission,
         isObserver,
         canWriteOps,
+        slaEnabled,
         updateUserPreferences,
         clearMustChangePassword,
       }}

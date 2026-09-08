@@ -277,7 +277,16 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    res.json(user);
+    // Flag de UI para todos los roles: con SLA desactivado se ocultan los badges
+    // «En riesgo / Vencido» y demás indicativos SLA en el frontend.
+    const settings = await prisma.systemSettings.findFirst({
+      select: { sla_enabled: true },
+    });
+
+    res.json({
+      ...user,
+      sla_enabled: settings?.sla_enabled !== false,
+    });
   } catch (error) {
     console.error('Error fetching me:', error);
     res.status(500).json({ error: 'Error al obtener datos del usuario' });
