@@ -1,7 +1,15 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
-*(Última actualización: 13 de Agosto de 2026)*
+*(Última actualización: Septiembre de 2026)*
+
+### Novedades en v1.59.0 (Informe MTTR/MTBF por línea, tabla de Activos personalizable y SLA conmutable)
+- **Nuevo:** KPIs — informe **MTTR/MTBF por línea (L1–L5)** con periodo seleccionable: tabla por línea (paros, MTTR, MTBF), desglose por equipo de cada línea y detalle de los paros de cada equipo. Export a Excel con hoja por línea y por equipos.
+- **Nuevo:** Activos — tabla **personalizable por usuario** (clic derecho en el encabezado o botón de columnas): mostrar/ocultar y reordenar columnas, guardado por usuario en el navegador.
+- **Nuevo:** Activos — columnas opcionales adicionales: N° serie, Descripción, Modelo, Tipo, Crítico, Obsoleto, Precio, Costo de refacciones, OTs totales/abiertas, Paros, Última OT, Planes MP y Próximo MP (con estadísticas agregadas desde el backend).
+- **Mejora:** Activos — la columna «Acciones» se sustituye por «Refacciones» (solo escritorio); las acciones quedan en el menú de clic derecho.
+- **Mejora:** SLA — al desactivar el SLA en Configuración se ocultan todos sus indicativos (badges «En riesgo / Vencido», cards y columna SLA del Inicio); las notificaciones ya se detenían solas.
+- **Corrección:** Docker — el seed de usuarios demo funciona (base nueva crea `admin@fiix.com`, `gestionador@fiix.com`, `tecnico@fiix.com`).
 
 ### Novedades en v1.56.50 (Import en bitácora)
 - **Nuevo:** Resultado de import CSV/Sheets se guarda en Bitácora de auditoría (`IMPORT_SHEETS` / `IMPORT_CSV`) con detalle expandible.

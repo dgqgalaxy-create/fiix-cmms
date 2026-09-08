@@ -144,7 +144,7 @@ Extensiones recomendadas (VS Code): Prettier, Tailwind CSS IntelliSense, Prisma.
 - **Inventario:** gestión de repuestos con códigos QR, escáner en celular.
 - **Mantenimiento preventivo:** calendario de tareas recurrentes.
 - **Compras:** requisiciones, órdenes de compra, historial.
-- **Reportes & KPIs:** dashboards de disponibilidad, eficiencia, costos.
+- **Reportes & KPIs:** dashboards de disponibilidad, eficiencia, costos; informe MTTR/MTBF por línea (L1–L5) con periodo seleccionable y desglose por equipo.
 - **RCA:** análisis de causa raíz con evidencias (fotos/PDFs).
 - **Notificaciones:** Telegram + Web Push PWA.
 - **Tiempo real:** Socket.IO para actualizaciones en vivo.

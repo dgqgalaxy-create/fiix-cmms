@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.58.0";
+export const APP_VERSION = "1.59.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,12 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: KPIs — informe MTTR/MTBF por línea (L1–L5) con periodo seleccionable: tabla por línea, desglose por equipo de cada línea y detalle de los paros de cada equipo.",
+    "Nuevo: Activos — tabla personalizable por usuario: clic derecho en el encabezado (o botón de columnas) para mostrar/ocultar columnas y reordenarlas; se guarda por usuario.",
+    "Nuevo: Activos — columnas opcionales nuevas: N° serie, Descripción, Modelo, Tipo, Crítico, Obsoleto, Precio, Costo de refacciones, OTs totales/abiertas, Paros, Última OT, Planes MP y Próximo MP.",
+    "Mejora: Activos — la columna «Acciones» se sustituye por «Refacciones» (número de refacciones por equipo, solo escritorio); las acciones siguen en el menú de clic derecho.",
+    "Mejora: SLA — al desactivar el SLA en Configuración se ocultan todos sus indicativos (badges «En riesgo / Vencido» en Órdenes, cards y columna SLA del Inicio); las notificaciones ya se detenían solas.",
+    "Corrección: Docker — el seed de usuarios demo ya funciona (una base nueva crea los usuarios admin/gestionador/tecnico de demo).",
     "Mejora: Órdenes de Trabajo — al entrar abre directamente «Vista General» (para quien tiene permiso de ver todas); los técnicos siguen en «Mis Órdenes».",
     "Mejora: Portal de Solicitudes — al enviar se muestra el resumen completo: folio, zona, solicitante y equipo/activo reportado.",
     "Mejora: Portal de Solicitudes — al enviar una solicitud ahora se muestra el folio de seguimiento (FOL-XXXX).",

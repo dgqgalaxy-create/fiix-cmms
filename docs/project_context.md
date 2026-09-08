@@ -11,9 +11,9 @@ Un Sistema Computarizado de Gestión de Mantenimiento (CMMS / GMAO) self-hosted 
 ## Módulos Desarrollados (Completados)
 1. **Autenticación y Usuarios:** Roles ADMINISTRADOR, GESTIONADOR, TECNICO con matriz de permisos.
 2. **Inicio (`/home`):** Resumen operativo (Pareto, tarjetas de estado, cierres de la semana). *No* es el módulo de KPIs/MTTR ni el calendario de turnos.
-3. **KPIs (`/kpis`):** MTTR/MTBF, costos, dashboard de técnicos, metas.
+3. **KPIs (`/kpis`):** MTTR/MTBF, costos, dashboard de técnicos, metas; informe **MTTR/MTBF por línea (L1–L5)** con periodo seleccionable y desglose por equipo.
 4. **Calendario / Roster:** Turnos, excepciones y festivos (módulo aparte de Inicio).
-5. **Gestión de Activos:** Catálogo, zonas, historial «de un vistazo», QR.
+5. **Gestión de Activos:** Catálogo, zonas, historial «de un vistazo», QR; tabla **personalizable por usuario** (columnas a mostrar y orden, guardado en el navegador).
 6. **Órdenes de Trabajo:** Creación, estados, evidencias, consumo de refacciones al cerrar, presencia/bloqueo suave, Socket.IO.
 7. **Directorio y Solicitantes:** Personal interno vs solicitantes externos.
 8. **Mantenimientos Preventivos:** Frecuencias por Días / Semanas / Meses / Años + cron que genera OTs. *(Medidores/CBM: backlog.)*

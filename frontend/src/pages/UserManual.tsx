@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Search, Wrench, Users, Shield, Package, LayoutDashboard, ArrowLeft, Terminal, AlertTriangle, CheckCircle2, Info, FileText, QrCode, Clock, Filter, Printer, Home, Activity, Bell, Smartphone, ClipboardCheck, Database, Settings } from 'lucide-react';
+import { BookOpen, Search, Wrench, Users, Shield, Package, LayoutDashboard, ArrowLeft, Terminal, AlertTriangle, CheckCircle2, Info, FileText, QrCode, Clock, Filter, Printer, Home, Activity, Bell, Smartphone, ClipboardCheck, Database, Settings, Columns3 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const SECTIONS = [
@@ -344,7 +344,7 @@ export const UserManual = () => {
                       <Settings className="text-emerald-500 shrink-0 mt-1" size={18} />
                       <div>
                         <strong className="text-slate-800 dark:text-slate-200 block">Configuración</strong>
-                        <span className="text-sm text-slate-500">En Configuración → SLA (Acuerdo de Nivel de Servicio) puedes activar el seguimiento y editar con un formulario (por prioridad) las horas de recordatorio, máximo y escalamiento. En el listado verás badges: Dentro de SLA, En riesgo o Vencido.</span>
+                        <span className="text-sm text-slate-500">En Configuración → SLA (Acuerdo de Nivel de Servicio) puedes activar el seguimiento y editar con un formulario (por prioridad) las horas de recordatorio, máximo y escalamiento. En el listado verás badges: Dentro de SLA, En riesgo o Vencido. Si desactivas el SLA, desaparecen todos sus indicativos (badges de Órdenes, cards y columna SLA del Inicio) y se detienen los avisos.</span>
                       </div>
                     </li>
                   </ul>
@@ -466,6 +466,15 @@ export const UserManual = () => {
                     (NNNN por nombre de equipo, S = sección A–E o X, DDD = duplicado en la misma zona con el mismo nombre, T = F fijo / C controlable).
                     No se escribe a mano. Si editas nombre, zona, sección o tipo, el sistema lo regenera; si solo cambias otros campos, se conserva.
                     Los códigos antiguos <code className="text-xs bg-amber-100 dark:bg-amber-950 px-1 rounded">ACT-XXXX</code> se mantienen hasta una edición que regenere.
+                  </p>
+                </div>
+
+                <div className="bg-cyan-50 dark:bg-cyan-900/10 border border-cyan-200 dark:border-cyan-900/30 p-5 rounded-2xl mt-6">
+                  <h3 className="font-bold text-cyan-900 dark:text-cyan-300 mb-2 flex items-center gap-2">
+                    <Columns3 size={18} /> Tabla personalizable (por usuario)
+                  </h3>
+                  <p className="text-cyan-800 dark:text-cyan-400/90 text-sm">
+                    En la pestaña <strong>Tabla</strong> haz <strong>clic derecho en el encabezado</strong> (o usa el botón de columnas) para elegir qué columnas mostrar y su orden: mostrar/ocultar con palomita, mover a izquierda/derecha y restaurar el diseño predeterminado. Hay columnas adicionales como N° serie, Modelo, Precio, Costo de refacciones, OTs totales/abiertas, Paros, Última OT y Próximo MP. La configuración se guarda por usuario en el navegador; las acciones de cada fila siguen disponibles con clic derecho.
                   </p>
                 </div>
               </div>
