@@ -54,6 +54,16 @@ export interface Asset {
   };
   /** Refacciones que usa este activo (con su cantidad). */
   parts?: AssetPart[];
+  created_at?: string;
+  /** Estadísticas agregadas para columnas opcionales de la tabla. */
+  stats?: {
+    totalWos: number;
+    openWos: number;
+    stoppages: number;
+    lastWoAt?: string | null;
+    activePms: number;
+    nextPmDue?: string | null;
+  } | null;
 }
 
 export type AssetListParams = {

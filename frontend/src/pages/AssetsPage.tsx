@@ -24,7 +24,7 @@ import { SearchableSelect } from '../components/ui/SearchableSelect';
 const ASSETS_PER_PAGE = 20;
 
 export const AssetsPage = () => {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const canManage = hasPermission('MANAGE_ASSETS');
   const canManageZones =
     hasPermission('MANAGE_ZONES') || hasPermission('MANAGE_ASSETS');
@@ -465,6 +465,7 @@ export const AssetsPage = () => {
             selectionMode={selectionMode}
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
+            columnsStorageKey={`fiix_assets_columns_v1_${user?.userId ?? user?.id ?? 'anon'}`}
           />
         </FilterScopeFrame>
       )}

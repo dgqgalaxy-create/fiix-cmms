@@ -17,6 +17,71 @@ const assetInclude = {
   parts: { include: { item: true } },
 };
 
+const OPEN_WO_STATUSES = ['PENDIENTE', 'EN_PROCESO', 'EN_ESPERA'] as const;
+
+/** Estadísticas por activo para las columnas opcionales de la tabla de Activos. */
+async function attachAssetStats(assets: { id: string }[]) {
+  const empty = () => ({
+    totalWos: 0,
+    openWos: 0,
+    stoppages: 0,
+    lastWoAt: null as Date | null,
+    activePms: 0,
+    nextPmDue: null as Date | null,
+  });
+  const map = new Map<string, ReturnType<typeof empty>>();
+  for (const a of assets) map.set(a.id, empty());
+  const ids = assets.map((a) => a.id);
+  if (ids.length === 0) return map;
+
+  const [woAgg, openAgg, paroAgg, pmAgg] = await Promise.all([
+    prisma.workOrder.groupBy({
+      by: ['asset_id'],
+      where: { asset_id: { in: ids }, status: { not: 'ANULADO' } },
+      _count: { id: true },
+      _max: { created_at: true, completed_at: true },
+    }),
+    prisma.workOrder.groupBy({
+      by: ['asset_id'],
+      where: { asset_id: { in: ids }, status: { in: [...OPEN_WO_STATUSES] } },
+      _count: { id: true },
+    }),
+    prisma.workOrder.groupBy({
+      by: ['asset_id'],
+      where: { asset_id: { in: ids }, machine_stopped: true, status: { not: 'ANULADO' } },
+      _count: { id: true },
+    }),
+    prisma.maintenancePlan.groupBy({
+      by: ['asset_id'],
+      where: { asset_id: { in: ids }, is_active: true },
+      _count: { id: true },
+      _min: { next_due_date: true },
+    }),
+  ]);
+
+  for (const g of woAgg) {
+    const s = map.get(g.asset_id);
+    if (!s) continue;
+    s.totalWos = g._count.id;
+    s.lastWoAt = g._max.completed_at ?? g._max.created_at;
+  }
+  for (const g of openAgg) {
+    const s = map.get(g.asset_id);
+    if (s) s.openWos = g._count.id;
+  }
+  for (const g of paroAgg) {
+    const s = map.get(g.asset_id);
+    if (s) s.stoppages = g._count.id;
+  }
+  for (const g of pmAgg) {
+    const s = map.get(g.asset_id);
+    if (!s) continue;
+    s.activePms = g._count.id;
+    s.nextPmDue = g._min.next_due_date;
+  }
+  return map;
+}
+
 /** Parsea el campo `parts` (JSON string o array) → lista {item_id, quantity}. */
 function parseParts(raw: unknown): { item_id: string; quantity: number }[] | null {
   if (raw == null || raw === '') return null;
@@ -298,8 +363,9 @@ export const getAssets = async (req: Request, res: Response): Promise<void> => {
           take: limitNum,
         }),
       ]);
+      const stats = await attachAssetStats(assets);
       res.json({
-        data: assets,
+        data: assets.map((a) => ({ ...a, stats: stats.get(a.id) })),
         total,
         page: pageNum,
         limit: limitNum,
@@ -313,7 +379,8 @@ export const getAssets = async (req: Request, res: Response): Promise<void> => {
       include: assetInclude,
       orderBy: { name: 'asc' },
     });
-    res.json(assets);
+    const stats = await attachAssetStats(assets);
+    res.json(assets.map((a) => ({ ...a, stats: stats.get(a.id) })));
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener activos' });
   }

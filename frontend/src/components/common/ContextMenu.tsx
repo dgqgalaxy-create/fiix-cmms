@@ -7,6 +7,10 @@ export interface ContextMenuAction {
   icon?: ReactNode;
   danger?: boolean;
   disabled?: boolean;
+  /** Muestra una palomita (true) o un hueco alineado (false) — para opciones tipo checkbox. */
+  checked?: boolean;
+  /** Dibuja un separador ANTES de este elemento. */
+  separator?: boolean;
   onClick: () => void;
 }
 
@@ -44,7 +48,7 @@ export const ContextMenu = ({ x, y, title, actions, onClose, zIndex = 80 }: Cont
 
   return (
     <div
-      className="fixed min-w-[190px] max-w-[240px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl overflow-hidden"
+      className="fixed min-w-[190px] max-w-[240px] max-h-[70vh] overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl"
       style={{ left, top, zIndex }}
       onClick={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.preventDefault()}
@@ -55,23 +59,37 @@ export const ContextMenu = ({ x, y, title, actions, onClose, zIndex = 80 }: Cont
         </div>
       )}
       {actions.map((a) => (
-        <button
-          key={a.key}
-          type="button"
-          disabled={a.disabled}
-          onClick={() => {
-            onClose();
-            a.onClick();
-          }}
-          className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-            a.danger
-              ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40'
-              : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60'
-          }`}
-        >
-          {a.icon && <span className={`shrink-0 ${a.danger ? 'text-red-400' : 'text-slate-400'}`}>{a.icon}</span>}
-          <span className="truncate">{a.label}</span>
-        </button>
+        <div key={a.key}>
+          {a.separator && <div className="h-px bg-slate-100 dark:bg-slate-700 my-1" />}
+          <button
+            type="button"
+            disabled={a.disabled}
+            onClick={() => {
+              onClose();
+              a.onClick();
+            }}
+            className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+              a.danger
+                ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40'
+                : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60'
+            }`}
+          >
+            {a.checked !== undefined ? (
+              <span className={`w-4 shrink-0 flex items-center justify-center ${a.checked ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-300 dark:text-slate-600'}`}>
+                {a.checked ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <span className="w-2.5 h-2.5 rounded-full border-2 border-current opacity-40" />
+                )}
+              </span>
+            ) : a.icon ? (
+              <span className={`shrink-0 ${a.danger ? 'text-red-400' : 'text-slate-400'}`}>{a.icon}</span>
+            ) : null}
+            <span className="truncate">{a.label}</span>
+          </button>
+        </div>
       ))}
     </div>
   );
