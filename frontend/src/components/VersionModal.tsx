@@ -31,6 +31,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: KPIs — el «Tiempo de respuesta» ahora mide órdenes creadas dentro del periodo (antes una orden vieja iniciada en la semana inflaba el promedio con cientos de horas).",
+    "Mejora: KPIs — la gráfica MTTR y MTBF usa doble eje (MTTR en barras, MTBF en línea) para que la variación del MTTR sea visible; el Tiempo de respuesta es configurable por zonas (botón «Zonas de respuesta», solo Administrador).",
     "Nuevo: KPIs — informe MTTR/MTBF por línea (L1–L5) con periodo seleccionable: tabla por línea, desglose por equipo de cada línea y detalle de los paros de cada equipo.",
     "Nuevo: Activos — tabla personalizable por usuario: clic derecho en el encabezado (o botón de columnas) para mostrar/ocultar columnas y reordenarlas; se guarda por usuario.",
     "Nuevo: Activos — columnas opcionales nuevas: N° serie, Descripción, Modelo, Tipo, Crítico, Obsoleto, Precio, Costo de refacciones, OTs totales/abiertas, Paros, Última OT, Planes MP y Próximo MP.",

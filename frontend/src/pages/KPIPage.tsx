@@ -877,7 +877,7 @@ export const KPIPage = () => {
                 false,
                 (v) => v.toFixed(1),
                 'h',
-                'Promedio desde creación hasta started_at, solo en las zonas configuradas (botón «Zonas de respuesta»).',
+                'Promedio desde creación hasta inicio, de órdenes creadas dentro del periodo y en las zonas configuradas (botón «Zonas de respuesta»).',
               )}
               {renderKpiCard(
                 'Cumpl. MTTR',

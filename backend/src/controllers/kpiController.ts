@@ -294,13 +294,20 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
         .map((wo) => Number(wo.accumulated_time_ms) / MS_PER_HOUR),
     );
 
-    // Tiempo de respuesta: created_at → started_at (horas), solo en las zonas configuradas.
+    // Tiempo de respuesta: created_at → started_at (horas) de órdenes CREADAS en el
+    // periodo (no cuenta una orden vieja que apenas se inició en el periodo, lo que
+    // inflaba el promedio con respuestas de cientos de horas).
     const responseZoneIds = Array.isArray(settings?.response_time_zone_ids)
       ? (settings.response_time_zone_ids as string[])
       : null;
     const restrictResponseZones = responseZoneIds !== null && responseZoneIds.length > 0;
     const startedInPeriod = periodOrders.filter(
-      (wo) => wo.started_at && wo.started_at >= start && wo.started_at <= effectiveEnd,
+      (wo) =>
+        wo.started_at &&
+        wo.started_at >= start &&
+        wo.started_at <= effectiveEnd &&
+        wo.created_at >= start &&
+        wo.created_at <= effectiveEnd,
     );
     const startedInZone = restrictResponseZones
       ? startedInPeriod.filter((wo) => {
