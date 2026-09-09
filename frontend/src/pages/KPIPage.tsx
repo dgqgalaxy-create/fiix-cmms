@@ -11,6 +11,8 @@ import {
   getTechnicianPerformance,
   getMttrMtbfByLine,
   getLineAssetsMttrMtbf,
+  getResponseTimeZones,
+  updateResponseTimeZones,
 } from '../api/kpis';
 import type {
   KPIResponse,
@@ -47,9 +49,9 @@ import {
   Filter,
   ChevronDown,
   ChevronRight,
+  MapPin,
 } from 'lucide-react';
 import {
-  LineChart,
   Line,
   BarChart,
   ComposedChart,
@@ -71,6 +73,8 @@ import {
 } from '../components/common/PeriodRangeFilter';
 import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { getZones } from '../api/zones';
+import type { Zone } from '../api/zones';
 
 type MetricStatus = 'good' | 'warn' | 'bad' | 'neutral';
 
@@ -165,7 +169,7 @@ const progressPct = (metric: KPIMetric, moreIsBetter: boolean) => {
 
 export const KPIPage = () => {
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const [data, setData] = useState<KPIResponse | null>(null);
   const [compareData, setCompareData] = useState<KPIResponse | null>(null);
   const [charts, setCharts] = useState<ChartData[]>([]);
@@ -177,6 +181,10 @@ export const KPIPage = () => {
   const [lineAssets, setLineAssets] = useState<LineAssetsMttrMtbfResponse | null>(null);
   const [isLoadingLineAssets, setIsLoadingLineAssets] = useState(false);
   const [failureOrdersParosOnly, setFailureOrdersParosOnly] = useState(false);
+  const [zonesConfigOpen, setZonesConfigOpen] = useState(false);
+  const [zonesList, setZonesList] = useState<Zone[]>([]);
+  const [respZoneSel, setRespZoneSel] = useState<string[]>([]);
+  const [isSavingZones, setIsSavingZones] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [period, setPeriod] = useState('THIS_MONTH');
@@ -325,6 +333,38 @@ export const KPIPage = () => {
     } finally {
       setIsLoadingLineAssets(false);
     }
+  };
+
+  const openZonesConfig = async () => {
+    setZonesConfigOpen(true);
+    try {
+      const [zonesData, configData] = await Promise.all([
+        getZones(),
+        getResponseTimeZones().catch(() => ({ zoneIds: null })),
+      ]);
+      setZonesList(zonesData);
+      setRespZoneSel(configData.zoneIds ?? zonesData.map((z) => z.id));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const saveZonesConfig = async () => {
+    setIsSavingZones(true);
+    try {
+      await updateResponseTimeZones(respZoneSel);
+      setZonesConfigOpen(false);
+      await fetchData();
+    } catch (error) {
+      console.error(error);
+      alert('Error al guardar las zonas del tiempo de respuesta');
+    } finally {
+      setIsSavingZones(false);
+    }
+  };
+
+  const toggleZoneSel = (id: string) => {
+    setRespZoneSel((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
   const formatPeriodLabel = () => {
@@ -807,7 +847,20 @@ export const KPIPage = () => {
           </section>
 
           <section>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Ejecución y calidad</h2>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Ejecución y calidad</h2>
+              {user?.role === 'ADMINISTRADOR' && (
+                <button
+                  type="button"
+                  onClick={openZonesConfig}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors print:hidden"
+                  title="Configurar las zonas que mide el Tiempo de respuesta"
+                >
+                  <MapPin size={13} className="text-slate-400" />
+                  Zonas de respuesta
+                </button>
+              )}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               {renderKpiCard(
                 'OT finalizadas',
@@ -826,7 +879,7 @@ export const KPIPage = () => {
                 false,
                 (v) => v.toFixed(1),
                 'h',
-                'Promedio desde creación hasta started_at.',
+                'Promedio desde creación hasta started_at, solo en las zonas configuradas (botón «Zonas de respuesta»).',
               )}
               {renderKpiCard(
                 'Cumpl. MTTR',
@@ -863,7 +916,7 @@ export const KPIPage = () => {
                   <strong>Horizontal:</strong> mes
                 </span>
                 <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 dark:border-slate-700 dark:bg-slate-800">
-                  <strong>Vertical:</strong> horas
+                  <strong>Vertical:</strong> horas (MTTR eje izq., MTBF eje der.)
                 </span>
                 <span className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
                   <strong>MTTR:</strong> reparación (↓ mejor)
@@ -875,7 +928,7 @@ export const KPIPage = () => {
               <div className="h-80">
                 {charts.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={charts} margin={{ top: 4, right: 16, left: 8, bottom: 40 }}>
+                    <ComposedChart data={charts} margin={{ top: 4, right: 16, left: 8, bottom: 40 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
                       <Legend verticalAlign="top" height={32} />
                       <XAxis
@@ -887,19 +940,32 @@ export const KPIPage = () => {
                         label={{ value: 'Mes / periodo', position: 'bottom', offset: 18, fill: 'var(--color-fg-muted)', fontSize: 11 }}
                       />
                       <YAxis
+                        yAxisId="left"
                         tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }}
                         width={48}
                         axisLine={false}
                         tickLine={false}
-                        label={{ value: 'Horas', angle: -90, position: 'insideLeft', offset: 0, fill: 'var(--color-fg-muted)', fontSize: 11 }}
+                        label={{ value: 'MTTR (h)', angle: -90, position: 'insideLeft', offset: 0, fill: 'var(--color-fg-muted)', fontSize: 11 }}
+                      />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }}
+                        width={56}
+                        axisLine={false}
+                        tickLine={false}
+                        label={{ value: 'MTBF (h)', angle: 90, position: 'insideRight', offset: 0, fill: 'var(--color-fg-muted)', fontSize: 11 }}
                       />
                       <Tooltip
-                        formatter={(val, name) => [`${Number(val).toFixed(2)} h`, name ?? '']}
+                        formatter={(val, name) => [
+                          name === 'MTTR (horas)' ? `${Number(val).toFixed(2)} h` : `${Number(val).toFixed(0)} h`,
+                          name ?? '',
+                        ]}
                         contentStyle={{ borderRadius: 12, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-fg)', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)' }}
                       />
-                      <Line type="monotone" dataKey="mttr" name="MTTR (horas)" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 3 }} />
-                      <Line type="monotone" dataKey="mtbf" name="MTBF flota (horas)" stroke="#059669" strokeWidth={2.5} dot={{ r: 3 }} />
-                    </LineChart>
+                      <Bar yAxisId="left" dataKey="mttr" name="MTTR (horas)" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={22} />
+                      <Line yAxisId="right" dataKey="mtbf" name="MTBF flota (horas)" stroke="#059669" strokeWidth={2.5} dot={{ r: 3 }} />
+                    </ComposedChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="h-full flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm">Sin serie temporal</div>
@@ -918,9 +984,16 @@ export const KPIPage = () => {
               <div className="h-72">
                 {charts.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={charts}>
+                    <BarChart data={charts} margin={{ top: 4, right: 8, left: 8, bottom: 40 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
-                      <XAxis dataKey="month" tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <XAxis
+                        dataKey="month"
+                        tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }}
+                        tickMargin={6}
+                        axisLine={false}
+                        tickLine={false}
+                        label={{ value: 'Mes / periodo', position: 'bottom', offset: 18, fill: 'var(--color-fg-muted)', fontSize: 11 }}
+                      />
                       <YAxis tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyAxis(v)} />
                       <Tooltip
                         formatter={(val) => [formatCurrency(Number(val)), 'Refacciones']}
@@ -1605,6 +1678,80 @@ export const KPIPage = () => {
               ) : (
                 <div className="py-16 text-center text-slate-400 dark:text-slate-500 text-sm">Sin órdenes para este equipo</div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {zonesConfigOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 print:hidden">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setZonesConfigOpen(false)} />
+          <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col border border-slate-200 dark:border-slate-700">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <div>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100">Zonas del Tiempo de respuesta</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  El indicador «Tiempo respuesta» mide solo las zonas marcadas. Si no marcas ninguna, se miden todas.
+                </p>
+              </div>
+              <button onClick={() => setZonesConfigOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto">
+              <div className="flex gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setRespZoneSel(zonesList.map((z) => z.id))}
+                  className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Marcar todas
+                </button>
+                <span className="text-slate-300">·</span>
+                <button
+                  type="button"
+                  onClick={() => setRespZoneSel([])}
+                  className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Ninguna (medir todas)
+                </button>
+              </div>
+              <div className="space-y-1">
+                {zonesList.map((z) => (
+                  <label
+                    key={z.id}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={respZoneSel.includes(z.id)}
+                      onChange={() => toggleZoneSel(z.id)}
+                      className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span className="text-sm text-slate-700 dark:text-slate-200">{z.name}</span>
+                  </label>
+                ))}
+                {zonesList.length === 0 && (
+                  <p className="py-4 text-center text-sm text-slate-400">Cargando zonas…</p>
+                )}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setZonesConfigOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={saveZonesConfig}
+                disabled={isSavingZones}
+                className="px-5 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl disabled:opacity-60"
+              >
+                {isSavingZones ? 'Guardando…' : 'Guardar'}
+              </button>
             </div>
           </div>
         </div>

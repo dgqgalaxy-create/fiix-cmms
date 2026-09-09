@@ -602,6 +602,8 @@ model SystemSettings {
   checklist_column_count Int  @default(5)
   /// Líneas visibles en "Líneas y Costos" (global; editable solo por Admin).
   line_costs_visible_zones Json?
+  /// Zonas incluidas en el KPI «Tiempo de respuesta» (global; editable solo por Admin). null/vacío = todas.
+  response_time_zone_ids Json?
   updated_at       DateTime @updatedAt
 }
 

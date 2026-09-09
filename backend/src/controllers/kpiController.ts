@@ -238,7 +238,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
       goals[goal.metricKey] = normalizeGoal(goal.metricKey, goal.targetValue, goal.unit);
     });
 
-    const [periodOrders, openOrders, downtimeOrders, zones] = await Promise.all([
+    const [periodOrders, openOrders, downtimeOrders, zones, settings] = await Promise.all([
       prisma.workOrder.findMany({
         where: {
           status: { not: 'ANULADO' },
@@ -248,7 +248,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
             { created_at: { gte: start, lte: effectiveEnd } },
           ],
         },
-        include: { asset: { select: { id: true, name: true } } },
+        include: { asset: { select: { id: true, name: true, zone_id: true } } },
       }),
       prisma.workOrder.findMany({
         where: {
@@ -274,6 +274,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
         },
       }),
       prisma.zone.findMany({ select: { id: true } }),
+      prisma.systemSettings.findFirst({ select: { response_time_zone_ids: true } }),
     ]);
 
     const completedOrders = periodOrders.filter(
@@ -293,12 +294,22 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
         .map((wo) => Number(wo.accumulated_time_ms) / MS_PER_HOUR),
     );
 
-    // Tiempo de respuesta: created_at → started_at (horas)
+    // Tiempo de respuesta: created_at → started_at (horas), solo en las zonas configuradas.
+    const responseZoneIds = Array.isArray(settings?.response_time_zone_ids)
+      ? (settings.response_time_zone_ids as string[])
+      : null;
+    const restrictResponseZones = responseZoneIds !== null && responseZoneIds.length > 0;
     const startedInPeriod = periodOrders.filter(
       (wo) => wo.started_at && wo.started_at >= start && wo.started_at <= effectiveEnd,
     );
+    const startedInZone = restrictResponseZones
+      ? startedInPeriod.filter((wo) => {
+          const zoneId = wo.zone_id ?? wo.asset?.zone_id ?? null;
+          return zoneId !== null && responseZoneIds!.includes(zoneId);
+        })
+      : startedInPeriod;
     const responseHours = avg(
-      startedInPeriod.map((wo) => (wo.started_at!.getTime() - wo.created_at.getTime()) / MS_PER_HOUR),
+      startedInZone.map((wo) => (wo.started_at!.getTime() - wo.created_at.getTime()) / MS_PER_HOUR),
     );
 
     // Cumplimiento MTTR (antes etiquetado como SLA)
@@ -445,7 +456,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
         RESPONSE_TIME: {
           value: Number(responseHours.toFixed(2)),
           goal: goals.RESPONSE_TIME,
-          sampleSize: startedInPeriod.length,
+          sampleSize: startedInZone.length,
         },
         SLA: {
           value: mttrCompliance === null ? 0 : Number(mttrCompliance.toFixed(1)),
@@ -1081,5 +1092,48 @@ export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Pr
   } catch (error) {
     console.error('Error fetching line assets MTTR/MTBF:', error);
     res.status(500).json({ error: 'Error al calcular MTTR/MTBF de los equipos de la línea' });
+  }
+};
+
+/** Zonas incluidas en el KPI «Tiempo de respuesta» (configuración global). null = todas. */
+export const getResponseTimeZones = async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const settings = await prisma.systemSettings.findFirst({
+      select: { response_time_zone_ids: true },
+    });
+    const zoneIds = Array.isArray(settings?.response_time_zone_ids)
+      ? (settings.response_time_zone_ids as string[])
+      : null;
+    res.json({ zoneIds });
+  } catch (error) {
+    console.error('Error fetching response time zones:', error);
+    res.status(500).json({ error: 'Error al obtener las zonas del tiempo de respuesta' });
+  }
+};
+
+/** Guarda las zonas incluidas en el KPI «Tiempo de respuesta» (solo Admin). Vacío = todas. */
+export const updateResponseTimeZones = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const zoneIds = req.body?.zoneIds;
+    if (!Array.isArray(zoneIds)) {
+      res.status(400).json({ error: 'zoneIds debe ser un arreglo de ids' });
+      return;
+    }
+    const clean = zoneIds.filter((z): z is string => typeof z === 'string');
+
+    let settings = await prisma.systemSettings.findFirst();
+    if (!settings) {
+      settings = await prisma.systemSettings.create({ data: { response_time_zone_ids: clean } });
+    } else {
+      settings = await prisma.systemSettings.update({
+        where: { id: settings.id },
+        data: { response_time_zone_ids: clean },
+      });
+    }
+
+    res.json({ success: true, zoneIds: clean });
+  } catch (error) {
+    console.error('Error updating response time zones:', error);
+    res.status(500).json({ error: 'Error al guardar las zonas del tiempo de respuesta' });
   }
 };

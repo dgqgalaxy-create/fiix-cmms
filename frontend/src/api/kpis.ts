@@ -239,3 +239,18 @@ export const getLineAssetsMttrMtbf = async (
   const response = await api.get(`/kpis/by-line/${encodeURIComponent(line)}/assets${buildKpiQuery(params)}`);
   return response.data;
 };
+
+export interface ResponseTimeZonesConfig {
+  /** null = se miden todas las zonas. */
+  zoneIds: string[] | null;
+}
+
+export const getResponseTimeZones = async (): Promise<ResponseTimeZonesConfig> => {
+  const response = await api.get('/kpis/response-time-zones');
+  return response.data;
+};
+
+export const updateResponseTimeZones = async (zoneIds: string[]): Promise<ResponseTimeZonesConfig> => {
+  const response = await api.put('/kpis/response-time-zones', { zoneIds });
+  return response.data;
+};
