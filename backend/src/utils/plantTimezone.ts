@@ -78,8 +78,16 @@ export function plantUtcWeekday(utcMs: number): number {
 /** Instante UTC del inicio del día civil de planta (00:00) `days` después de `utcMs`. */
 export function plantAddDays(utcMs: number, days: number): Date {
   const p = readParts(new Date(utcMs));
+  // Aritmética sobre el calendario civil: Date.UTC normaliza el desborde de
+  // mes/año (31 + 1 → día 1 del mes siguiente) y se leen las partes del
+  // resultado en UTC, no en hora de planta (en planta el instante UTC de la
+  // medianoche puede caer el día civil anterior).
+  const target = new Date(Date.UTC(p.year, p.month - 1, p.day + days));
+  const y = target.getUTCFullYear();
+  const m = target.getUTCMonth() + 1;
+  const d = target.getUTCDate();
   return (
-    plantWallClockToDate(p.year, p.month, p.day + days) ??
+    plantWallClockToDate(y, m, d) ??
     plantWallClockToDate(p.year, p.month, p.day) ??
     new Date(utcMs)
   );
