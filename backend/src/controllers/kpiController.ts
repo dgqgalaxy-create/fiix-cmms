@@ -14,7 +14,7 @@ import {
 import { PRODUCTION_LINES, resolveProductionLine } from '../utils/assetSection';
 
 const MS_PER_HOUR = 3_600_000;
-const DEFAULT_REWORK_WINDOW_DAYS = 7;
+const DEFAULT_REWORK_WINDOW_DAYS = 2;
 const MIN_REWORK_WINDOW_DAYS = 1;
 const MAX_REWORK_WINDOW_DAYS = 90;
 

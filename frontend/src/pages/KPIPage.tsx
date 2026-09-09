@@ -89,8 +89,8 @@ const PERIOD_OPTIONS = [
   { value: 'ALL', label: 'Histórico' },
 ];
 
-const REWORK_DAY_PRESETS = [3, 7, 14, 30];
-const DEFAULT_REWORK_DAYS = 7;
+const REWORK_DAY_PRESETS = [2, 3, 7, 14];
+const DEFAULT_REWORK_DAYS = 2;
 
 const GOAL_LABELS: Record<string, { label: string; unit: string; hint: string }> = {
   COMPLETED_MONTHLY: { label: 'OT finalizadas', unit: 'órdenes', hint: 'Meta de órdenes cerradas en el periodo' },
