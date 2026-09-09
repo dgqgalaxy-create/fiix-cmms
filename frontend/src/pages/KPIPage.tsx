@@ -50,6 +50,8 @@ import {
   ChevronDown,
   ChevronRight,
   MapPin,
+  GripVertical,
+  RotateCcw,
 } from 'lucide-react';
 import {
   Line,
@@ -91,6 +93,10 @@ const PERIOD_OPTIONS = [
 
 const REWORK_DAY_PRESETS = [2, 3, 7, 14];
 const DEFAULT_REWORK_DAYS = 2;
+
+/** Bloques reordenables dentro del marco azul de KPIs (orden predeterminado). */
+type KpiBlockKey = 'salud' | 'ejecucion' | 'graficas' | 'por_linea' | 'top_fallas' | 'tecnicos' | 'retrabajo';
+const KPI_BLOCK_ORDER: KpiBlockKey[] = ['salud', 'ejecucion', 'graficas', 'por_linea', 'top_fallas', 'tecnicos', 'retrabajo'];
 
 const GOAL_LABELS: Record<string, { label: string; unit: string; hint: string }> = {
   COMPLETED_MONTHLY: { label: 'OT finalizadas', unit: 'órdenes', hint: 'Meta de órdenes cerradas en el periodo' },
@@ -185,6 +191,12 @@ export const KPIPage = () => {
   const [zonesList, setZonesList] = useState<Zone[]>([]);
   const [respZoneSel, setRespZoneSel] = useState<string[]>([]);
   const [isSavingZones, setIsSavingZones] = useState(false);
+  // Orden de bloques por usuario (localStorage); null = predeterminado.
+  const kpiBlocksKey = `fiix_kpi_blocks_v1_${user?.userId ?? user?.id ?? 'anon'}`;
+  const [blockOrder, setBlockOrder] = useState<KpiBlockKey[] | null>(null);
+  const [dragEnabled, setDragEnabled] = useState(false);
+  const [dragKey, setDragKey] = useState<KpiBlockKey | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<KpiBlockKey | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [period, setPeriod] = useState('THIS_MONTH');
@@ -366,6 +378,92 @@ export const KPIPage = () => {
   const toggleZoneSel = (id: string) => {
     setRespZoneSel((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
+
+  // Cargar orden de bloques del usuario.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(kpiBlocksKey);
+      if (!raw) return;
+      const parsed: unknown = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return;
+      const known = parsed.filter((k): k is KpiBlockKey =>
+        (KPI_BLOCK_ORDER as readonly string[]).includes(String(k)),
+      );
+      if (known.length === KPI_BLOCK_ORDER.length) setBlockOrder(known);
+    } catch {
+      /* configuración corrupta → se ignora */
+    }
+  }, [kpiBlocksKey]);
+
+  const effectiveBlockOrder = blockOrder ?? KPI_BLOCK_ORDER;
+
+  const persistBlockOrder = (next: KpiBlockKey[] | null) => {
+    setBlockOrder(next);
+    try {
+      if (next === null) localStorage.removeItem(kpiBlocksKey);
+      else localStorage.setItem(kpiBlocksKey, JSON.stringify(next));
+    } catch {
+      /* quota / modo privado */
+    }
+  };
+
+  const handleBlockDragStart = (key: KpiBlockKey) => setDragKey(key);
+  const handleBlockDragOver = (e: React.DragEvent, key: KpiBlockKey) => {
+    e.preventDefault();
+    if (dragOverKey !== key) setDragOverKey(key);
+  };
+  const handleBlockDrop = (key: KpiBlockKey) => {
+    const from = dragKey;
+    setDragKey(null);
+    setDragOverKey(null);
+    setDragEnabled(false);
+    if (!from || from === key) return;
+    const next = [...effectiveBlockOrder];
+    const fromIdx = next.indexOf(from);
+    const toIdx = next.indexOf(key);
+    if (fromIdx < 0 || toIdx < 0) return;
+    next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, from);
+    persistBlockOrder(next);
+  };
+  const handleBlockDragEnd = () => {
+    setDragKey(null);
+    setDragOverKey(null);
+    setDragEnabled(false);
+  };
+
+  const blockProps = (key: KpiBlockKey) => ({
+    draggable: dragEnabled,
+    onDragStart: () => handleBlockDragStart(key),
+    onDragOver: (e: React.DragEvent) => handleBlockDragOver(e, key),
+    onDragLeave: () => setDragOverKey((k) => (k === key ? null : k)),
+    onDrop: () => handleBlockDrop(key),
+    onDragEnd: handleBlockDragEnd,
+    style: { order: effectiveBlockOrder.indexOf(key) },
+  });
+
+  const blockClass = (key: KpiBlockKey) =>
+    `relative group/block transition-opacity ${dragKey === key ? 'opacity-40' : ''} ${
+      dragOverKey === key && dragKey !== key
+        ? 'outline outline-2 outline-dashed outline-offset-4 outline-emerald-400 dark:outline-emerald-500 rounded-lg'
+        : ''
+    }`;
+
+  const dragHandle = (
+    <button
+      type="button"
+      onMouseDown={(e) => {
+        e.stopPropagation();
+        setDragEnabled(true);
+      }}
+      onMouseUp={() => setDragEnabled(false)}
+      className="absolute -left-1 top-4 z-10 hidden sm:flex items-center justify-center w-6 h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 shadow-sm cursor-grab active:cursor-grabbing opacity-0 group-hover/block:opacity-100 transition-opacity print:hidden"
+      title="Arrastra para mover este bloque"
+      aria-label="Mover bloque"
+    >
+      <GripVertical size={15} />
+    </button>
+  );
 
   const formatPeriodLabel = () => {
     if (!data?.period) return PERIOD_OPTIONS.find((p) => p.value === period)?.label || period;
@@ -649,7 +747,7 @@ export const KPIPage = () => {
         icon={CalendarClock}
         tone="blue"
         className="print:border-0 print:bg-transparent print:p-0"
-        hint="El periodo elegido aplica a tarjetas, gráficos, costos, fallas, finalizadas por técnico y retrabajo dentro de este marco."
+        hint="El periodo elegido aplica a tarjetas, gráficos, costos, fallas, finalizadas por técnico y retrabajo dentro de este marco. Arrastra los bloques por la agarradera lateral (⋮⋮) para reordenarlos a tu gusto; el orden se guarda por usuario."
         toolbar={
           <>
             <Filter size={16} className="text-slate-400 shrink-0" />
@@ -676,6 +774,16 @@ export const KPIPage = () => {
                 onEndChange={setCustomEndDate}
                 size="sm"
               />
+            )}
+            {blockOrder !== null && (
+              <button
+                type="button"
+                onClick={() => persistBlockOrder(null)}
+                className="inline-flex items-center gap-1 px-2.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800"
+                title="Volver al orden predeterminado de los bloques"
+              >
+                <RotateCcw size={13} /> Orden predeterminado
+              </button>
             )}
             {user?.role === 'ADMINISTRADOR' && (
               <button
@@ -817,8 +925,9 @@ export const KPIPage = () => {
       )}
 
       {data && data.totalOrders > 0 && (
-        <>
-          <section>
+        <div className="flex flex-col gap-6">
+          <section {...blockProps('salud')} className={blockClass('salud')}>
+            {dragHandle}
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Salud de planta</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {renderKpiCard(
@@ -857,7 +966,8 @@ export const KPIPage = () => {
             </div>
           </section>
 
-          <section>
+          <section {...blockProps('ejecucion')} className={blockClass('ejecucion')}>
+            {dragHandle}
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Ejecución y calidad</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               {renderKpiCard(
@@ -900,7 +1010,8 @@ export const KPIPage = () => {
             </div>
           </section>
 
-          <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <section {...blockProps('graficas')} className={`grid grid-cols-1 xl:grid-cols-2 gap-4 ${blockClass('graficas')}`}>
+            {dragHandle}
             <div className={panelClass}>
               <div className="flex items-center gap-2 mb-3">
                 <TrendingUp className="text-emerald-600 dark:text-emerald-400" size={20} />
@@ -1008,7 +1119,8 @@ export const KPIPage = () => {
           </section>
 
           {/* MTTR/MTBF por línea de producción (L1–L5) */}
-          <section className={panelClass}>
+          <section {...blockProps('por_linea')} className={`${panelClass} ${blockClass('por_linea')}`}>
+            {dragHandle}
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp className="text-violet-600 dark:text-violet-400" size={20} />
               <div>
@@ -1179,7 +1291,8 @@ export const KPIPage = () => {
             </div>
           </section>
 
-          <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <section {...blockProps('top_fallas')} className={`grid grid-cols-1 xl:grid-cols-2 gap-4 ${blockClass('top_fallas')}`}>
+            {dragHandle}
             <div className={panelClass}>
               <div className="flex items-center gap-2 mb-4">
                 <AlertTriangle className="text-amber-500" size={20} />
@@ -1260,7 +1373,8 @@ export const KPIPage = () => {
             </div>
           </section>
 
-          <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <section {...blockProps('tecnicos')} className={`grid grid-cols-1 xl:grid-cols-2 gap-4 ${blockClass('tecnicos')}`}>
+            {dragHandle}
             <div className={panelClass}>
               <div className="flex items-center gap-2 mb-4">
                 <CheckCircle2 className="text-emerald-600 dark:text-emerald-400" size={20} />
@@ -1367,7 +1481,8 @@ export const KPIPage = () => {
             </div>
           </section>
 
-          <section className="grid grid-cols-1 gap-4">
+          <section {...blockProps('retrabajo')} className={`grid grid-cols-1 gap-4 ${blockClass('retrabajo')}`}>
+            {dragHandle}
             <div className={panelClass}>
               <div className="flex flex-col gap-4 mb-4">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -1460,7 +1575,7 @@ export const KPIPage = () => {
               )}
             </div>
           </section>
-        </>
+        </div>
       )}
       </FilterScopeFrame>
 
