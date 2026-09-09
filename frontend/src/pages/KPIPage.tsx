@@ -677,10 +677,21 @@ export const KPIPage = () => {
                 size="sm"
               />
             )}
+            {user?.role === 'ADMINISTRADOR' && (
+              <button
+                type="button"
+                onClick={openZonesConfig}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 ml-auto"
+                title="Configurar las zonas que mide el Tiempo de respuesta"
+              >
+                <MapPin size={15} className="text-slate-400" />
+                Zonas de respuesta
+              </button>
+            )}
             <button
               type="button"
               onClick={() => fetchData()}
-              className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 ml-auto"
+              className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
               title="Actualizar"
             >
               <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
@@ -847,20 +858,7 @@ export const KPIPage = () => {
           </section>
 
           <section>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Ejecución y calidad</h2>
-              {user?.role === 'ADMINISTRADOR' && (
-                <button
-                  type="button"
-                  onClick={openZonesConfig}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors print:hidden"
-                  title="Configurar las zonas que mide el Tiempo de respuesta"
-                >
-                  <MapPin size={13} className="text-slate-400" />
-                  Zonas de respuesta
-                </button>
-              )}
-            </div>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Ejecución y calidad</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               {renderKpiCard(
                 'OT finalizadas',
