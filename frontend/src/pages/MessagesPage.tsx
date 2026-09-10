@@ -144,6 +144,26 @@ export default function MessagesPage() {
     [conversations, activeId]
   );
 
+  /** En chats 1:1, el otro participante (para la cabecera del hilo). */
+  const activeOther = useMemo(() => {
+    if (!active || active.type !== 'DIRECT') return undefined;
+    const myId = user?.id || user?.userId;
+    return active.participants.find((p) => p.user_id !== myId)?.user;
+  }, [active, user?.id, user?.userId]);
+
+  /** Subtítulo de la cabecera: rol y presencia en 1:1; miembros en grupos. */
+  const activeSubtitle = useMemo(() => {
+    if (!active) return '';
+    if (active.type === 'GROUP') {
+      return (active.participants || [])
+        .map((p) => p.user?.name)
+        .filter(Boolean)
+        .join(', ');
+    }
+    const online = activeOther && onlineIds.has(activeOther.id) ? 'En línea' : null;
+    return [activeOther?.role, online].filter(Boolean).join(' · ');
+  }, [active, activeOther, onlineIds]);
+
   const loadConversations = useCallback(async () => {
     try {
       const data = await listConversations();
@@ -755,12 +775,23 @@ export default function MessagesPage() {
                   <h2 className="truncate text-sm font-black text-slate-900 dark:text-white">
                     {active?.title || 'Conversación'}
                   </h2>
-                  <p className="truncate text-[11px] text-slate-400">
-                    {(active?.participants || [])
-                      .map((p) => p.user?.name)
-                      .filter(Boolean)
-                      .join(', ')}
-                  </p>
+                  {activeSubtitle && (
+                    <p className="truncate text-[11px] text-slate-400">
+                      {active?.type === 'DIRECT' ? (
+                        <>
+                          {activeOther?.role && <span>{activeOther.role}</span>}
+                          {activeOther?.role && onlineIds.has(activeOther.id) && (
+                            <span> · </span>
+                          )}
+                          {onlineIds.has(activeOther?.id || '') && (
+                            <span className="font-semibold text-emerald-600">En línea</span>
+                          )}
+                        </>
+                      ) : (
+                        activeSubtitle
+                      )}
+                    </p>
+                  )}
                 </div>
               </header>
 
@@ -875,7 +906,7 @@ export default function MessagesPage() {
                                 : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100'
                           }`}
                         >
-                          {!mine && !deleted && !grouped && (
+                          {!mine && !deleted && !grouped && active?.type === 'GROUP' && (
                             <p className="mb-0.5 text-[10px] font-bold opacity-70">
                               {m.author?.name || 'Usuario'}
                             </p>
