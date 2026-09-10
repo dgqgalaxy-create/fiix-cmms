@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
+  ArrowDown,
   Image as ImageIcon,
   Loader2,
   MessageSquare,
@@ -13,7 +14,7 @@ import {
   X as XIcon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getUsers, type User } from '../api/users';
+import { getUsers, getOnlineUsers, type User } from '../api/users';
 import {
   listConversations,
   createDirectConversation,
@@ -30,11 +31,75 @@ import {
 import { socket, ensureSocketConnected } from '../api/socket';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
-import { formatDateTime } from '../utils/dateUtils';
 import { useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
 import { MessageTicks } from '../components/MessageTicks';
 
 type ComposeMode = null | 'direct' | 'group';
+
+const AVATAR_COLORS = [
+  'bg-blue-500',
+  'bg-green-500',
+  'bg-purple-500',
+  'bg-amber-500',
+  'bg-red-500',
+  'bg-teal-500',
+  'bg-indigo-500',
+  'bg-pink-500',
+];
+
+const initialsOf = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase();
+
+const avatarColorOf = (name: string) => {
+  const sum = [...name].reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return AVATAR_COLORS[sum % AVATAR_COLORS.length];
+};
+
+const fmtTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+const sameCalendarDay = (a: Date, b: Date) =>
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
+
+/** Etiqueta de separador de día: Hoy / Ayer / 12 ago (con año si difiere). */
+const dayLabel = (iso: string): string => {
+  const d = new Date(iso);
+  const now = new Date();
+  if (sameCalendarDay(d, now)) return 'Hoy';
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (sameCalendarDay(d, yesterday)) return 'Ayer';
+  if (d.getFullYear() === now.getFullYear()) {
+    return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+  }
+  return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+/** Hora compacta para la lista: hoy → 10:32, ayer → Ayer, luego dd/mm. */
+const lastMsgTime = (iso: string): string => {
+  const d = new Date(iso);
+  const now = new Date();
+  if (sameCalendarDay(d, now)) return fmtTime(iso);
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (sameCalendarDay(d, yesterday)) return 'Ayer';
+  const opts: Intl.DateTimeFormatOptions =
+    d.getFullYear() === now.getFullYear()
+      ? { day: '2-digit', month: '2-digit' }
+      : { day: '2-digit', month: '2-digit', year: '2-digit' };
+  return d.toLocaleDateString('es-MX', opts);
+};
+
+/** Agrupa mensajes consecutivos del mismo autor con ≤ 10 min de diferencia. */
+const GROUP_GAP_MS = 10 * 60 * 1000;
 
 export default function MessagesPage() {
   const { user } = useAuth();
@@ -62,6 +127,8 @@ export default function MessagesPage() {
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [mobileShowThread, setMobileShowThread] = useState(Boolean(searchParams.get('c')));
   const [zoomSrc, setZoomSrc] = useState<string | null>(null);
+  const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
+  const [showJumpBottom, setShowJumpBottom] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const threadScrollRef = useRef<HTMLDivElement>(null);
@@ -190,6 +257,18 @@ export default function MessagesPage() {
       .catch(() => undefined);
   }, [user?.id]);
 
+  // Presencia para el punto verde de la lista de conversaciones (60 s).
+  useEffect(() => {
+    const load = () => {
+      getOnlineUsers()
+        .then((list) => setOnlineIds(new Set(list.map((u) => u.id))))
+        .catch(() => undefined);
+    };
+    load();
+    const t = window.setInterval(load, 60_000);
+    return () => window.clearInterval(t);
+  }, []);
+
   useEffect(() => {
     const q = searchParams.get('c');
     if (q && q !== activeId) {
@@ -258,7 +337,15 @@ export default function MessagesPage() {
           if (prev.some((m) => m.id === payload.message.id)) return prev;
           return [...prev, payload.message];
         });
-        pendingScrollRef.current = 'bottom';
+        // Si el usuario está arriba leyendo historial, no lo arrastramos al fondo:
+        // mostramos el botón «Nuevos ↓». Si está cerca del fondo, baja solo.
+        const el = threadScrollRef.current;
+        if (el && el.scrollTop + el.clientHeight >= el.scrollHeight - 140) {
+          pendingScrollRef.current = 'bottom';
+          setShowJumpBottom(false);
+        } else {
+          setShowJumpBottom(true);
+        }
         void markConversationRead(payload.conversation_id);
       }
       void loadConversations();
@@ -559,42 +646,90 @@ export default function MessagesPage() {
                 Aún no hay conversaciones. Usa «Chat» o «Grupo».
               </p>
             ) : (
-              conversations.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => openConversation(c.id)}
-                  className={`flex w-full flex-col gap-0.5 border-b border-slate-50 px-3 py-2.5 text-left transition-colors dark:border-slate-800 ${
-                    activeId === c.id
-                      ? 'bg-emerald-50 dark:bg-emerald-950/30'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-bold text-slate-900 dark:text-white">
-                      {c.title}
-                    </span>
-                    {c.type === 'GROUP' && (
-                      <Users size={12} className="shrink-0 text-slate-400" />
-                    )}
-                    {c.unread_count > 0 && (
-                      <span className="ml-auto rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                        {c.unread_count > 99 ? '99+' : c.unread_count}
-                      </span>
-                    )}
-                  </div>
-                  <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                    {c.last_message?.body || 'Sin mensajes aún'}
-                  </p>
-                </button>
-              ))
+              conversations.map((c) => {
+                const myId = user?.id || user?.userId;
+                const other =
+                  c.type === 'DIRECT'
+                    ? c.participants.find((p) => p.user_id !== myId)?.user
+                    : undefined;
+                const last = c.last_message;
+                const preview = last
+                  ? last.is_deleted
+                    ? 'Mensaje eliminado'
+                    : last.body || (last.attachment_url ? '📎 Archivo' : '')
+                  : 'Sin mensajes aún';
+                const online = other ? onlineIds.has(other.id) : false;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => openConversation(c.id)}
+                    className={`flex w-full flex-col gap-0.5 border-b border-slate-50 px-3 py-2.5 text-left transition-colors dark:border-slate-800 ${
+                      activeId === c.id
+                        ? 'bg-emerald-50 dark:bg-emerald-950/30'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <div className="flex w-full items-center gap-2.5">
+                      {c.type === 'GROUP' ? (
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-300">
+                          <Users size={16} />
+                        </div>
+                      ) : (
+                        <div className="relative h-10 w-10 shrink-0">
+                          <div
+                            className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white ${avatarColorOf(
+                              other?.name || c.title,
+                            )}`}
+                          >
+                            {initialsOf(other?.name || c.title)}
+                          </div>
+                          {online && (
+                            <span
+                              className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-900"
+                              title="En línea"
+                            />
+                          )}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate text-sm font-bold text-slate-900 dark:text-white">
+                            {c.title}
+                          </span>
+                          {last && (
+                            <span className="ml-auto shrink-0 text-[10px] text-slate-400">
+                              {lastMsgTime(last.created_at)}
+                            </span>
+                          )}
+                          {c.unread_count > 0 && (
+                            <span className="shrink-0 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                              {c.unread_count > 99 ? '99+' : c.unread_count}
+                            </span>
+                          )}
+                        </div>
+                        <p
+                          className={`truncate text-xs ${
+                            c.unread_count > 0
+                              ? 'font-semibold text-slate-700 dark:text-slate-200'
+                              : 'text-slate-500 dark:text-slate-400'
+                          }`}
+                        >
+                          {last && last.author_id === myId && !last.is_deleted ? 'Tú: ' : ''}
+                          {preview}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })
             )}
           </div>
         </aside>
 
         {/* Hilo */}
         <section
-          className={`flex min-w-0 flex-1 flex-col ${
+          className={`relative flex min-w-0 flex-1 flex-col ${
             mobileShowThread ? 'flex' : 'hidden md:flex'
           }`}
         >
@@ -629,7 +764,22 @@ export default function MessagesPage() {
                 </div>
               </header>
 
-              <div ref={threadScrollRef} className="flex-1 space-y-2 overflow-y-auto px-3 py-3">
+              <div
+                ref={threadScrollRef}
+                onScroll={() => {
+                  const el = threadScrollRef.current;
+                  if (!el) return;
+                  // Llegó al fondo → oculta el botón «Nuevos ↓».
+                  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 80) {
+                    setShowJumpBottom(false);
+                  }
+                  // Cerca del tope → carga automática de mensajes anteriores.
+                  if (el.scrollTop < 120 && hasMoreOlder && !loadingOlder) {
+                    void loadOlderMessages();
+                  }
+                }}
+                className="flex-1 space-y-2 overflow-y-auto px-3 py-3"
+              >
                 {loadingThread ? (
                   <div className="flex justify-center py-8">
                     <Loader2 className="animate-spin text-slate-400" size={22} />
@@ -653,7 +803,7 @@ export default function MessagesPage() {
                       Cargar mensajes anteriores
                     </button>
                   </div>
-                  {messages.map((m) => {
+                  {messages.map((m, idx) => {
                     const mine = m.author_id === user?.id;
                     const deleted = Boolean(m.is_deleted);
                     const canDelete = canAuthorSoftDelete(m, user?.id);
@@ -664,8 +814,23 @@ export default function MessagesPage() {
                       (m.attachment_url?.match(/\.(png|jpe?g|gif|webp)$/i) ||
                         m.attachment_name?.match(/\.(png|jpe?g|gif|webp)$/i));
                     const showUnreadDivider = unreadDividerId === m.id;
+                    const prev = idx > 0 ? messages[idx - 1] : null;
+                    const showDayDivider = !prev || dayLabel(prev.created_at) !== dayLabel(m.created_at);
+                    const grouped = Boolean(
+                      prev &&
+                        !deleted &&
+                        !prev.is_deleted &&
+                        prev.author_id === m.author_id &&
+                        !showDayDivider &&
+                        new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() <
+                          GROUP_GAP_MS,
+                    );
                     return (
-                      <div key={m.id} id={`chat-msg-${m.id}`} className="scroll-mt-2">
+                      <div
+                        key={m.id}
+                        id={`chat-msg-${m.id}`}
+                        className={`scroll-mt-2 ${grouped ? '-mt-1' : ''}`}
+                      >
                         {showUnreadDivider && (
                           <div
                             className="mb-2 flex items-center gap-2 py-1"
@@ -679,7 +844,28 @@ export default function MessagesPage() {
                             <div className="h-px flex-1 bg-amber-400/70" />
                           </div>
                         )}
-                        <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                        {showDayDivider && (
+                          <div className="my-2 flex items-center justify-center">
+                            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                              {dayLabel(m.created_at)}
+                            </span>
+                          </div>
+                        )}
+                        <div className={`flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'}`}>
+                          {!mine && !deleted && (
+                            grouped ? (
+                              <div className="w-6 shrink-0" />
+                            ) : (
+                              <div
+                                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white ${avatarColorOf(
+                                  m.author?.name || '?',
+                                )}`}
+                                title={m.author?.name}
+                              >
+                                {initialsOf(m.author?.name || '?')}
+                              </div>
+                            )
+                          )}
                         <div
                           className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
                             deleted
@@ -689,7 +875,7 @@ export default function MessagesPage() {
                                 : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100'
                           }`}
                         >
-                          {!mine && !deleted && (
+                          {!mine && !deleted && !grouped && (
                             <p className="mb-0.5 text-[10px] font-bold opacity-70">
                               {m.author?.name || 'Usuario'}
                             </p>
@@ -740,7 +926,7 @@ export default function MessagesPage() {
                                   : 'text-slate-400'
                             }`}
                           >
-                            <span>{formatDateTime(m.created_at)}</span>
+                            <span>{fmtTime(m.created_at)}</span>
                             {mine && !deleted && (
                               <MessageTicks
                                 status={m.receipt_status || 'sent'}
@@ -773,6 +959,20 @@ export default function MessagesPage() {
                 )}
                 <div ref={bottomRef} />
               </div>
+
+              {showJumpBottom && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    setShowJumpBottom(false);
+                  }}
+                  className="absolute bottom-20 right-4 z-10 flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-lg hover:bg-emerald-700"
+                  title="Ir a los mensajes nuevos"
+                >
+                  <ArrowDown size={14} /> Nuevos
+                </button>
+              )}
 
               <footer className="border-t border-slate-100 p-2.5 dark:border-slate-800">
                 {file && (

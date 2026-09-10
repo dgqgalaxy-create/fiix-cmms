@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.59.0";
+export const APP_VERSION = "1.60.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,9 +31,15 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Directorio — vista de tarjetas para el personal: avatar con iniciales de color, chip de rol, estado en línea, correo, avance de OTs abiertas con su estado y completadas en 12 meses. Selector Tarjetas/Tabla guardado por usuario.",
+    "Mejora: Mensajes — avatares con iniciales, hora del último mensaje (hoy/ayer/fecha), prefijo «Tú:» y punto verde de presencia en la lista de conversaciones.",
+    "Mejora: Mensajes — separadores de fecha (Hoy/Ayer/12 ago), agrupación de mensajes consecutivos del mismo autor, carga automática de mensajes anteriores al subir, y botón «Nuevos ↓» si llegan mensajes mientras lees el historial.",
+    "Mejora: KPIs — ventana de retrabajo por defecto de 2 días (antes 7) con accesos rápidos 2/3/7/14 y rango personalizado 1–90.",
+    "Corrección: KPIs — etiquetas diarias de las gráficas al llegar a fin de mes (antes se repetía «31 31 31…» en Mes pasado y periodos personalizados).",
     "Mejora: KPIs — el «Tiempo de respuesta» ahora mide órdenes creadas dentro del periodo (antes una orden vieja iniciada en la semana inflaba el promedio con cientos de horas).",
     "Mejora: KPIs — la gráfica MTTR y MTBF usa doble eje (MTTR en barras, MTBF en línea) para que la variación del MTTR sea visible; el Tiempo de respuesta es configurable por zonas (botón «Zonas de respuesta», solo Administrador).",
     "Nuevo: KPIs — informe MTTR/MTBF por línea (L1–L5) con periodo seleccionable: tabla por línea, desglose por equipo de cada línea y detalle de los paros de cada equipo.",
+    "Nuevo: KPIs — los bloques del marco de indicadores se pueden reordenar arrastrándolos (agarradera lateral); el orden se guarda por usuario.",
     "Nuevo: Activos — tabla personalizable por usuario: clic derecho en el encabezado (o botón de columnas) para mostrar/ocultar columnas y reordenarlas; se guarda por usuario.",
     "Nuevo: Activos — columnas opcionales nuevas: N° serie, Descripción, Modelo, Tipo, Crítico, Obsoleto, Precio, Costo de refacciones, OTs totales/abiertas, Paros, Última OT, Planes MP y Próximo MP.",
     "Mejora: Activos — la columna «Acciones» se sustituye por «Refacciones» (número de refacciones por equipo, solo escritorio); las acciones siguen en el menú de clic derecho.",
