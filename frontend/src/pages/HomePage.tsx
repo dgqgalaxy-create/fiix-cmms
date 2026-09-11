@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { PageLoadError, isLikelyServerUnreachable } from '../components/PageLoadState';
 import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
+import { firstDayOfMonthYmd, todayYmd } from '../components/common/PeriodRangeFilter';
 import {
   Bar,
   BarChart,
@@ -87,8 +88,8 @@ export const HomePage = () => {
   const [notesSummary, setNotesSummary] = useState<NotesSummary | null>(null);
   const [inventorySummary, setInventorySummary] = useState<InventorySummary | null>(null);
   const [maintenancePlans, setMaintenancePlans] = useState<MaintenancePlan[]>([]);
-  const [summaryStartDate, setSummaryStartDate] = useState('');
-  const [summaryEndDate, setSummaryEndDate] = useState('');
+  const [summaryStartDate, setSummaryStartDate] = useState(firstDayOfMonthYmd());
+  const [summaryEndDate, setSummaryEndDate] = useState(todayYmd());
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [streakMsgSeed, setStreakMsgSeed] = useState(() => Date.now());
