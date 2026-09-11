@@ -29,6 +29,8 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
   const [productionGroup, setProductionGroup] = useState('NA');
   const [assignedTechniciansIds, setAssignedTechniciansIds] = useState<string[]>([]);
   const [requestImage, setRequestImage] = useState<File | null>(null);
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [dueDate, setDueDate] = useState('');
   
   const [assets, setAssets] = useState<Asset[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
@@ -87,6 +89,10 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
       setError('El nombre del solicitante es obligatorio');
       return;
     }
+    if (scheduledDate && dueDate && dueDate < scheduledDate) {
+      setError('La fecha límite no puede ser anterior a la fecha programada');
+      return;
+    }
     
     try {
       setIsSubmitting(true);
@@ -102,6 +108,8 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
       payload.append('machine_stopped', String(machineStopped));
       payload.append('requester_name', requesterName.trim());
       payload.append('production_group', productionGroup);
+      if (scheduledDate) payload.append('scheduled_date', scheduledDate);
+      if (dueDate) payload.append('due_date', dueDate);
       
       if (assignedTechniciansIds.length > 0) {
         assignedTechniciansIds.forEach(id => payload.append('assigned_technicians_ids', id));
@@ -121,6 +129,8 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
       setProductionGroup('NA');
       setAssignedTechniciansIds([]);
       setRequestImage(null);
+      setScheduledDate('');
+      setDueDate('');
       onClose();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Ocurrió un error al crear la orden');
@@ -264,6 +274,33 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
                   placeholder="Tipo de mantenimiento…"
                   inputClassName="w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                  📅 Fecha programada <span className="text-xs font-normal text-slate-400">(opcional)</span>
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
+                  value={scheduledDate}
+                  onChange={(e) => setScheduledDate(e.target.value)}
+                />
+                <p className="mt-1 text-[11px] text-slate-400">Cuándo se realizará el trabajo.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                  ⏰ Fecha límite <span className="text-xs font-normal text-slate-400">(opcional)</span>
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
+                <p className="mt-1 text-[11px] text-slate-400">Si pasa sin cerrarse, aparecerá como vencida.</p>
               </div>
             </div>
 

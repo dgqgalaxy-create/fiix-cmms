@@ -7,7 +7,7 @@ import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { InfoTip } from '../components/common/InfoTip';
 import { BulkAssignModal } from '../components/BulkAssignModal';
-import { getWorkOrders, getWorkOrdersPage, getWorkOrderById, getUniqueRequesters, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder } from '../api/workOrders';
+import { getWorkOrders, getWorkOrdersPage, getWorkOrderById, getUniqueRequesters, getWorkOrdersSummary, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder } from '../api/workOrders';
 import type { WorkOrder, WorkOrderListParams } from '../api/workOrders';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { formatWorkOrderFolio } from '../utils/folio';
@@ -22,6 +22,17 @@ import {
 } from '../components/common/PeriodRangeFilter';
 import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+
+const TONE_BLUE =
+  'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-200';
+const TONE_AMBER =
+  'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200';
+const TONE_PURPLE =
+  'border-purple-200 bg-purple-50 text-purple-800 dark:border-purple-900/60 dark:bg-purple-950/30 dark:text-purple-200';
+const TONE_RED =
+  'border-red-200 bg-red-50 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200';
+const TONE_GREEN =
+  'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200';
 
 export const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -62,6 +73,8 @@ export const Dashboard = () => {
   const [historyTotalPages, setHistoryTotalPages] = useState(1);
   const [printAllFiltered, setPrintAllFiltered] = useState(false);
   const [exportList, setExportList] = useState<WorkOrder[] | null>(null);
+  const [statusSummary, setStatusSummary] = useState<Record<string, number>>({});
+  const [overdueFilter, setOverdueFilter] = useState(false);
   const HISTORY_PER_PAGE = 20;
 
   const ymd = (d: Date) => {
@@ -121,7 +134,39 @@ export const Dashboard = () => {
     setStatusFilter(null);
     setUnassignedFilter(false);
     setSlaFilter(null);
+    setOverdueFilter(false);
     setSortOrder('NEWEST');
+  };
+
+  /** Navega desde las tarjetas del mini-resumen por estado. */
+  const applyStatusCard = (
+    kind: 'PENDIENTE' | 'EN_PROCESO' | 'EN_ESPERA' | 'VENCIDAS' | 'CERRADAS'
+  ) => {
+    const next = new URLSearchParams(searchParams);
+    clearListFilters();
+    if (kind === 'CERRADAS') {
+      setActiveTab('HISTORIAL');
+      next.set('tab', 'history');
+      next.delete('status');
+      next.delete('overdue');
+    } else {
+      setActiveTab('ACTIVAS');
+      next.set('tab', 'all');
+      next.delete('overdue');
+      if (kind === 'VENCIDAS') {
+        setOverdueFilter(true);
+        next.set('overdue', '1');
+        next.delete('status');
+      } else {
+        setStatusFilter(kind);
+        next.set('status', kind);
+      }
+    }
+    next.delete('q');
+    next.delete('priority');
+    next.delete('unassigned');
+    next.delete('sla');
+    setSearchParams(next, { replace: true });
   };
 
   const buildListParams = (opts?: { page?: number; limit?: number }): WorkOrderListParams => {
@@ -137,6 +182,8 @@ export const Dashboard = () => {
       priority:
         activeTab === 'MIS_ORDENES' || priorityFilter === 'ALL' ? undefined : priorityFilter,
       unassigned: activeTab === 'MIS_ORDENES' ? undefined : unassignedFilter || undefined,
+      overdue:
+        activeTab === 'MIS_ORDENES' ? undefined : overdueFilter || undefined,
       q: activeTab === 'MIS_ORDENES' ? undefined : searchTerm.trim() || undefined,
       requester:
         activeTab === 'MIS_ORDENES' || requesterFilter === 'ALL' ? undefined : requesterFilter,
@@ -161,9 +208,16 @@ export const Dashboard = () => {
     const priority = searchParams.get('priority');
     const unassigned = searchParams.get('unassigned');
     const sla = searchParams.get('sla');
+    const overdue = searchParams.get('overdue');
     const q = searchParams.get('q');
     if (q != null) {
       setSearchTerm(q);
+    }
+
+    if (overdue === '1' || overdue === 'true') {
+      setOverdueFilter(true);
+    } else if (overdue === '0' || overdue === 'false') {
+      setOverdueFilter(false);
     }
 
     if (priority === 'URGENTE' || priority === 'NORMAL' || priority === 'BAJO') {
@@ -442,6 +496,10 @@ export const Dashboard = () => {
         return page.data.find((w) => w.id === prev.id) || prev;
       });
       setLoadError(false);
+      // Mini-resumen por estado (conteos globales, sin depender del paginado).
+      getWorkOrdersSummary()
+        .then(setStatusSummary)
+        .catch(() => undefined);
     } catch (error: any) {
       if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') return;
       console.error('Error fetching work orders', error);
@@ -480,6 +538,7 @@ export const Dashboard = () => {
     customStartDate,
     customEndDate,
     sortOrder,
+    overdueFilter,
   ]);
 
   useSocketRefresh('refresh_work_orders', () => fetchWorkOrders(true));
@@ -598,6 +657,53 @@ export const Dashboard = () => {
           )}
         </div>
       </div>
+
+      {hasPermission('VIEW_ALL_WORK_ORDERS') && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6 print:hidden">
+          {(
+            [
+              { key: 'PENDIENTE', label: 'Pendientes', tone: TONE_BLUE },
+              { key: 'EN_PROCESO', label: 'En Proceso', tone: TONE_AMBER },
+              { key: 'EN_ESPERA', label: 'En Espera', tone: TONE_PURPLE },
+              { key: 'VENCIDAS', label: 'Vencidas', tone: TONE_RED },
+              { key: 'CERRADAS', label: 'Cerradas', tone: TONE_GREEN },
+            ] as const
+          ).map((card) => {
+            const count =
+              card.key === 'CERRADAS'
+                ? (statusSummary.FINALIZADO || 0) + (statusSummary.ANULADO || 0)
+                : statusSummary[card.key] || 0;
+            const isActive =
+              card.key === 'VENCIDAS'
+                ? overdueFilter
+                : card.key === 'CERRADAS'
+                  ? activeTab === 'HISTORIAL'
+                  : activeTab === 'ACTIVAS' && statusFilter === card.key;
+            return (
+              <button
+                key={card.key}
+                type="button"
+                onClick={() => applyStatusCard(card.key)}
+                title={
+                  card.key === 'VENCIDAS'
+                    ? 'Órdenes abiertas cuyo límite ya venció'
+                    : undefined
+                }
+                className={`flex flex-col items-start gap-1 rounded-2xl border p-3.5 text-left transition-all ${card.tone} ${
+                  isActive
+                    ? 'ring-2 ring-offset-1 ring-slate-400/60 dark:ring-slate-500/60'
+                    : 'hover:shadow-md'
+                }`}
+              >
+                <span className="text-2xl font-black leading-none">{count}</span>
+                <span className="text-xs font-bold uppercase tracking-wide opacity-80">
+                  {card.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {isLoading && workOrders.length === 0 ? (
         <PageLoadingState label="Cargando órdenes de trabajo..." />

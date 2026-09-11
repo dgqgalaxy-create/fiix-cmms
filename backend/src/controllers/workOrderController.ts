@@ -270,6 +270,7 @@ function buildWorkOrderWhere(req: AuthRequest): Record<string, unknown> {
     assignedTo,
     openOnly,
     includeUnscheduled,
+    overdue,
   } = req.query;
 
   const and: Record<string, unknown>[] = [];
@@ -293,6 +294,10 @@ function buildWorkOrderWhere(req: AuthRequest): Record<string, unknown> {
   if (priority) and.push({ priority: String(priority) });
   if (unassigned === '1' || unassigned === 'true') {
     and.push({ assigned_technicians: { none: {} } });
+  }
+  if (overdue === '1' || overdue === 'true') {
+    // Órdenes abiertas cuyo límite ya venció (para el mini-resumen «Vencidas»).
+    and.push({ status: openStatuses, due_date: { lt: new Date() } });
   }
 
   if (requester) {
@@ -490,10 +495,19 @@ export const getWorkOrdersSummary = async (req: AuthRequest, res: Response): Pro
       EN_ESPERA: 0,
       FINALIZADO: 0,
       ANULADO: 0,
+      VENCIDAS: 0,
     };
 
     groupResult.forEach(item => {
       summary[item.status] = item._count.id;
+    });
+
+    summary.VENCIDAS = await prisma.workOrder.count({
+      where: {
+        ...whereClause,
+        status: { notIn: ['FINALIZADO', 'ANULADO'] },
+        due_date: { lt: new Date() },
+      },
     });
 
     res.json(summary);

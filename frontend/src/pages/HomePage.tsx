@@ -4,8 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import {
   Activity,
   AlertCircle,
+  AlertTriangle,
   Ban,
   CalendarClock,
+  CalendarDays,
   CheckCircle2,
   Clock,
   Flame,
@@ -45,6 +47,7 @@ import { getLineStoppageStatus, getWorkOrders, getWorkOrdersSummary } from '../a
 import type { LineStoppageStatus, ProductionLine, WorkOrder } from '../api/workOrders';
 import { getNotesSummary, type NotesSummary } from '../api/notes';
 import { getInventorySummary, type InventorySummary } from '../api/inventory';
+import { getMaintenancePlans, type MaintenancePlan } from '../api/maintenance';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { useAuth } from '../context/AuthContext';
@@ -83,6 +86,7 @@ export const HomePage = () => {
   const [lineStoppage, setLineStoppage] = useState<LineStoppageStatus | null>(null);
   const [notesSummary, setNotesSummary] = useState<NotesSummary | null>(null);
   const [inventorySummary, setInventorySummary] = useState<InventorySummary | null>(null);
+  const [maintenancePlans, setMaintenancePlans] = useState<MaintenancePlan[]>([]);
   const [summaryStartDate, setSummaryStartDate] = useState('');
   const [summaryEndDate, setSummaryEndDate] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -119,7 +123,7 @@ export const HomePage = () => {
       const start =
         summaryStartDate ||
         new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-      const [openOrdersData, periodOrders, summaryData, stoppageData, notesData, invData] =
+      const [openOrdersData, periodOrders, summaryData, stoppageData, notesData, invData, plansData] =
         await Promise.all([
           getWorkOrders({ openOnly: true }, ac.signal),
           getWorkOrders({ startDate: start, endDate: end }, ac.signal),
@@ -127,6 +131,7 @@ export const HomePage = () => {
           getLineStoppageStatus(ac.signal),
           getNotesSummary(ac.signal).catch(() => null),
           getInventorySummary(ac.signal).catch(() => null),
+          getMaintenancePlans().catch(() => [] as MaintenancePlan[]),
         ]);
       if (ac.signal.aborted) return;
       const byId = new Map<string, WorkOrder>();
@@ -136,6 +141,7 @@ export const HomePage = () => {
       setLineStoppage(stoppageData);
       if (notesData) setNotesSummary(notesData);
       if (invData) setInventorySummary(invData);
+      setMaintenancePlans(plansData);
       setLoadError(false);
     } catch (error: any) {
       if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') return;
@@ -284,6 +290,29 @@ export const HomePage = () => {
     });
 
   const weekDayLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+  /** Top 5 planes activos por próxima fecha, con marca de vencidos. */
+  const upcomingPlans = maintenancePlans
+    .filter((p) => p.is_active)
+    .sort(
+      (a, b) => new Date(a.next_due_date).getTime() - new Date(b.next_due_date).getTime()
+    )
+    .slice(0, 5);
+
+  const daysUntil = (iso: string) => {
+    const d = new Date(iso);
+    d.setHours(0, 0, 0, 0);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return Math.round((d.getTime() - now.getTime()) / 86_400_000);
+  };
+
+  const formatPlanDue = (iso: string) =>
+    new Date(iso).toLocaleDateString('es-MX', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
   const weeklyBarData = weekDayLabels.map((label, index) => {
     const dayStart = new Date(weekStart);
     dayStart.setDate(weekStart.getDate() + index);
@@ -994,6 +1023,105 @@ export const HomePage = () => {
                 +{finishedThisWeek.length - 12} más esta semana
               </p>
             )}
+          </div>
+        )}
+      </div>
+
+      {/* Próximos mantenimientos preventivos */}
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <CalendarDays size={20} className="text-blue-600" />
+              Próximos mantenimientos
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Planes preventivos activos más cercanos.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/maintenance-plans')}
+            className="text-sm font-semibold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-xl border border-blue-200 transition-colors"
+          >
+            Ver planes
+          </button>
+        </div>
+
+        {upcomingPlans.length === 0 ? (
+          <p className="text-sm text-slate-400 text-center py-6">
+            No hay planes de mantenimiento activos.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {upcomingPlans.map((plan) => {
+              const overdue = daysUntil(plan.next_due_date) < 0;
+              const dueIn = daysUntil(plan.next_due_date);
+              return (
+                <button
+                  key={plan.id}
+                  type="button"
+                  onClick={() => navigate('/maintenance-plans')}
+                  className={`w-full flex items-center gap-3 text-left px-3 py-2.5 rounded-xl border transition-colors ${
+                    overdue
+                      ? 'bg-red-50/70 border-red-200 hover:bg-red-100/70 dark:bg-red-950/30 dark:border-red-900/60 dark:hover:bg-red-950/40'
+                      : 'bg-slate-50/60 border-transparent hover:bg-slate-100/80 dark:bg-slate-800/40 dark:hover:bg-slate-800/70'
+                  }`}
+                >
+                  <div
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                      overdue
+                        ? 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-300'
+                        : 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300'
+                    }`}
+                  >
+                    {overdue ? <AlertTriangle size={18} /> : <Wrench size={18} />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
+                      {plan.title}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      {plan.asset?.name || 'Sin equipo'} · cada{' '}
+                      {plan.frequency_value}{' '}
+                      {plan.frequency_type === 'DIAS'
+                        ? 'día(s)'
+                        : plan.frequency_type === 'SEMANAS'
+                          ? 'semana(s)'
+                          : plan.frequency_type === 'MESES'
+                            ? 'mes(es)'
+                            : 'año(s)'}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p
+                      className={`text-sm font-bold ${
+                        overdue
+                          ? 'text-red-600 dark:text-red-400'
+                          : 'text-slate-700 dark:text-slate-200'
+                      }`}
+                    >
+                      {formatPlanDue(plan.next_due_date)}
+                    </p>
+                    <span
+                      className={`text-[11px] font-semibold ${
+                        overdue
+                          ? 'text-red-600 dark:text-red-400'
+                          : dueIn === 0
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : 'text-slate-400'
+                      }`}
+                    >
+                      {overdue
+                        ? `Vencido hace ${Math.abs(dueIn)} día(s)`
+                        : dueIn === 0
+                          ? 'Vence hoy'
+                          : `En ${dueIn} día(s)`}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

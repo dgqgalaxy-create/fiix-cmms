@@ -104,6 +104,7 @@ export type WorkOrderListParams = {
   assignedTo?: string;
   openOnly?: boolean;
   includeUnscheduled?: boolean;
+  overdue?: boolean;
   sort?: 'newest' | 'oldest' | 'priority';
 };
 
@@ -135,6 +136,7 @@ export const getWorkOrders = async (
           unassigned: params.unassigned ? '1' : undefined,
           openOnly: params.openOnly ? '1' : undefined,
           includeUnscheduled: params.includeUnscheduled ? '1' : undefined,
+          overdue: params.overdue ? '1' : undefined,
         }
       : undefined,
     signal,
@@ -155,6 +157,7 @@ export const getWorkOrdersPage = async (
       unassigned: params.unassigned ? '1' : undefined,
       openOnly: params.openOnly ? '1' : undefined,
       includeUnscheduled: params.includeUnscheduled ? '1' : undefined,
+      overdue: params.overdue ? '1' : undefined,
     },
     signal,
   });
