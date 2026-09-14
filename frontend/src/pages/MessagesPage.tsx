@@ -27,8 +27,10 @@ import {
   canAuthorSoftDelete,
   markConversationRead,
   chatAttachmentUrl,
+  reactToChatMessage,
   type ChatConversation,
   type ChatMessage,
+  type ChatReactionPayload,
 } from '../api/chat';
 import { socket, ensureSocketConnected } from '../api/socket';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
@@ -195,6 +197,7 @@ export default function MessagesPage() {
   const [showJumpBottom, setShowJumpBottom] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [reactionPickerId, setReactionPickerId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const dragDepthRef = useRef(0);
@@ -454,13 +457,25 @@ export default function MessagesPage() {
       });
     };
 
+    const onReaction = (payload: ChatReactionPayload) => {
+      if (!payload?.message_id || !Array.isArray(payload.reactions)) return;
+      setMessages((prev) => {
+        if (!prev.some((m) => m.id === payload.message_id)) return prev;
+        return prev.map((m) =>
+          m.id === payload.message_id ? { ...m, reactions: payload.reactions } : m
+        );
+      });
+    };
+
     socket.on('chat_message', onMsg);
     socket.on('chat_message_deleted', upsertDeleted);
     socket.on('chat_receipt', onReceipt);
+    socket.on('chat_reaction', onReaction);
     return () => {
       socket.off('chat_message', onMsg);
       socket.off('chat_message_deleted', upsertDeleted);
       socket.off('chat_receipt', onReceipt);
+      socket.off('chat_reaction', onReaction);
     };
   }, [activeId, loadConversations, user?.id, user?.userId]);
 
@@ -596,6 +611,36 @@ export default function MessagesPage() {
       const caret = start + emoji.length;
       el?.setSelectionRange(caret, caret);
     });
+  };
+
+  /** Reacciona a un mensaje (toggle): misma reacción la quita; otra la reemplaza. */
+  const toggleReaction = async (m: ChatMessage, emoji: string) => {
+    if (!activeId || m.is_deleted) return;
+    const myId = user?.id || user?.userId;
+    const mine = (m.reactions || []).find((r) => r.user.id === myId);
+    // Optimista
+    setMessages((prev) =>
+      prev.map((x) => {
+        if (x.id !== m.id) return x;
+        const base = (x.reactions || []).filter((r) => r.user.id !== myId);
+        if (mine?.emoji === emoji) {
+          return { ...x, reactions: base };
+        }
+        return {
+          ...x,
+          reactions: [...base, { emoji, user: { id: myId || '', name: user?.name || 'Tú' } }],
+        };
+      })
+    );
+    try {
+      const payload = await reactToChatMessage(activeId, m.id, emoji);
+      setMessages((prev) =>
+        prev.map((x) => (x.id === m.id ? { ...x, reactions: payload.reactions } : x))
+      );
+    } catch {
+      // Revertir recargando el hilo (el socket también pudo haber aplicado el cambio)
+      if (activeId) void loadThread(activeId);
+    }
   };
 
   const handleCreateDirect = async () => {
@@ -986,6 +1031,22 @@ export default function MessagesPage() {
                         new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() <
                           GROUP_GAP_MS,
                     );
+                    const myId = user?.id || user?.userId;
+                    const byEmoji = new Map<
+                      string,
+                      { count: number; mine: boolean; users: string[] }
+                    >();
+                    (m.reactions || []).forEach((r) => {
+                      const g = byEmoji.get(r.emoji) || { count: 0, mine: false, users: [] };
+                      g.count += 1;
+                      if (r.user.id === myId) g.mine = true;
+                      if (r.user.name) g.users.push(r.user.name);
+                      byEmoji.set(r.emoji, g);
+                    });
+                    const reactionGroups = Array.from(byEmoji.entries()).map(
+                      ([emoji, g]) => ({ emoji, ...g })
+                    );
+                    const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
                     return (
                       <div
                         key={m.id}
@@ -1012,7 +1073,7 @@ export default function MessagesPage() {
                             </span>
                           </div>
                         )}
-                        <div className={`flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`group relative flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'}`}>
                           {!mine && !deleted && (
                             grouped ? (
                               <div className="w-6 shrink-0" />
@@ -1129,7 +1190,99 @@ export default function MessagesPage() {
                             )}
                           </div>
                         </div>
+                        {!deleted && (
+                          <div
+                            className={`absolute -top-9 z-20 hidden items-center gap-0.5 rounded-full border border-slate-200 bg-white p-1 shadow-lg group-hover:flex dark:border-slate-700 dark:bg-slate-900 ${
+                              mine ? 'right-0' : 'left-0'
+                            }`}
+                          >
+                            {QUICK_REACTIONS.map((e) => (
+                              <button
+                                key={e}
+                                type="button"
+                                onClick={() => void toggleReaction(m, e)}
+                                className="rounded-full p-1 text-base leading-none transition-transform hover:scale-125"
+                                title={`Reaccionar con ${e}`}
+                              >
+                                {e}
+                              </button>
+                            ))}
+                            <div className="mx-0.5 h-5 w-px bg-slate-200 dark:bg-slate-700" />
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onClick={() =>
+                                  setReactionPickerId(reactionPickerId === m.id ? null : m.id)
+                                }
+                                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                title="Más emojis"
+                              >
+                                <Plus size={14} />
+                              </button>
+                              {reactionPickerId === m.id && reactionGroups.length === 0 && (
+                                <EmojiPicker
+                                  align={mine ? 'right' : 'left'}
+                                  onPick={(emoji) => {
+                                    setReactionPickerId(null);
+                                    void toggleReaction(m, emoji);
+                                  }}
+                                  onClose={() => setReactionPickerId(null)}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        )}
                         </div>
+                        {!deleted && reactionGroups.length > 0 && (
+                          <div
+                            className={`mt-1 flex flex-wrap items-center gap-1 ${mine ? 'justify-end' : 'justify-start'}`}
+                          >
+                            {reactionGroups.map((g) => (
+                              <button
+                                key={g.emoji}
+                                type="button"
+                                onClick={() => void toggleReaction(m, g.emoji)}
+                                title={
+                                  g.users.length
+                                    ? `${g.users.join(', ')} · ${g.emoji}`
+                                    : g.emoji
+                                }
+                                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors ${
+                                  g.mine
+                                    ? 'border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-200'
+                                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
+                                }`}
+                              >
+                                <span className="text-sm leading-none">{g.emoji}</span>
+                                <span className="font-bold tabular-nums">{g.count}</span>
+                              </button>
+                            ))}
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onClick={() =>
+                                  setReactionPickerId(reactionPickerId === m.id ? null : m.id)
+                                }
+                                className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-900"
+                                title="Reaccionar"
+                              >
+                                <Plus size={12} />
+                              </button>
+                              {reactionPickerId === m.id && (
+                                <EmojiPicker
+                                  align={mine ? 'right' : 'left'}
+                                  onPick={(emoji) => {
+                                    setReactionPickerId(null);
+                                    void toggleReaction(m, emoji);
+                                  }}
+                                  onClose={() => setReactionPickerId(null)}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}

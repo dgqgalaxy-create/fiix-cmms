@@ -8,6 +8,24 @@ export interface ChatUser {
   is_active?: boolean;
 }
 
+export interface ChatReaction {
+  emoji: string;
+  user: { id: string; name: string };
+}
+
+export interface ChatReactionPayload {
+  conversation_id: string;
+  message_id: string;
+  author_id: string;
+  message_body: string;
+  reactions: ChatReaction[];
+  change: {
+    user: { id: string; name: string };
+    emoji: string;
+    removed: boolean;
+  };
+}
+
 export interface ChatMessage {
   id: string;
   conversation_id: string;
@@ -21,6 +39,7 @@ export interface ChatMessage {
   is_deleted?: boolean;
   /** Solo relevante en mensajes propios: enviado / entregado / leído */
   receipt_status?: 'sending' | 'sent' | 'delivered' | 'read';
+  reactions?: ChatReaction[];
 }
 
 export interface ChatConversation {
@@ -125,6 +144,22 @@ export const canAuthorSoftDelete = (message: ChatMessage, myUserId?: string | nu
 
 export const markConversationRead = async (conversationId: string): Promise<void> => {
   await api.post(`/chat/conversations/${conversationId}/read`);
+};
+
+/**
+ * Reacciona a un mensaje (toggle): envía el emoji; si ya era tu reacción,
+ * el backend la quita. Devuelve la lista completa de reacciones del mensaje.
+ */
+export const reactToChatMessage = async (
+  conversationId: string,
+  messageId: string,
+  emoji: string
+): Promise<ChatReactionPayload> => {
+  const res = await api.post(
+    `/chat/conversations/${conversationId}/messages/${messageId}/reactions`,
+    { emoji }
+  );
+  return res.data;
 };
 
 export const chatAttachmentUrl = (url?: string | null) => {

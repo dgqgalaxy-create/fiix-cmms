@@ -66,6 +66,13 @@ async function assertParticipant(conversationId: string, userId: string) {
 }
 
 /** Respuesta pública: si está oculto, no se envía texto ni adjunto. */
+function serializeReactions(reactions: any[] | undefined) {
+  return (reactions || []).map((r) => ({
+    emoji: r.emoji,
+    user: { id: r.user?.id || r.user_id || '', name: r.user?.name || '' },
+  }));
+}
+
 function presentMessage(m: any, receipt_status?: ReceiptStatus) {
   if (!m) return m;
   const is_deleted = Boolean(m.deleted_at);
@@ -83,6 +90,7 @@ function presentMessage(m: any, receipt_status?: ReceiptStatus) {
       deleted_at: m.deleted_at,
       is_deleted: true,
       receipt_status: status,
+      reactions: [],
     };
   }
   return {
@@ -97,6 +105,7 @@ function presentMessage(m: any, receipt_status?: ReceiptStatus) {
     deleted_at: null,
     is_deleted: false,
     receipt_status: status,
+    reactions: serializeReactions(m.reactions),
   };
 }
 
@@ -389,6 +398,10 @@ export const listMessages = async (req: AuthRequest, res: Response) => {
       include: {
         author: { select: authorSelect },
         receipts: { select: { user_id: true, delivered_at: true, read_at: true } },
+        reactions: {
+          include: { user: { select: { id: true, name: true } } },
+          orderBy: { created_at: 'asc' },
+        },
       },
       orderBy: { created_at: 'desc' },
       take,
@@ -573,6 +586,98 @@ export const softDeleteMessage = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('softDeleteMessage', error);
     res.status(500).json({ error: 'Error al eliminar el mensaje' });
+  }
+};
+
+/**
+ * Reacción a un mensaje: una por usuario. POST con { emoji }:
+ * - sin emoji, o el mismo emoji que ya tenía → quita la reacción (toggle).
+ * - otro emoji → reemplaza la propia reacción.
+ * Emite 'chat_reaction' a todos los participantes con la lista completa.
+ */
+export const reactToMessage = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const conversationId = req.params.id as string;
+    const messageId = req.params.messageId as string;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const part = await assertParticipant(conversationId, userId);
+    if (!part) return res.status(403).json({ error: 'No perteneces a esta conversación' });
+
+    const message = await prisma.chatMessage.findFirst({
+      where: { id: messageId, conversation_id: conversationId },
+    });
+    if (!message) return res.status(404).json({ error: 'Mensaje no encontrado' });
+    if (message.deleted_at) {
+      return res.status(400).json({ error: 'No se puede reaccionar a un mensaje eliminado' });
+    }
+
+    const emojiRaw = typeof req.body?.emoji === 'string' ? req.body.emoji.trim() : '';
+    const emoji = emojiRaw.slice(0, 16);
+
+    const existing = await prisma.chatMessageReaction.findUnique({
+      where: { message_id_user_id: { message_id: messageId, user_id: userId } },
+    });
+
+    let changed = false;
+    let removed = false;
+    let changeEmoji = emoji;
+
+    if (!emoji || (existing && existing.emoji === emoji)) {
+      if (existing) {
+        await prisma.chatMessageReaction.delete({ where: { id: existing.id } });
+        changeEmoji = existing.emoji;
+        removed = true;
+        changed = true;
+      }
+    } else {
+      await prisma.chatMessageReaction.upsert({
+        where: { message_id_user_id: { message_id: messageId, user_id: userId } },
+        create: { message_id: messageId, user_id: userId, emoji },
+        update: { emoji },
+      });
+      changed = true;
+    }
+
+    const reactions = await prisma.chatMessageReaction.findMany({
+      where: { message_id: messageId },
+      include: { user: { select: { id: true, name: true } } },
+      orderBy: { created_at: 'asc' },
+    });
+
+    const me = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true },
+    });
+
+    const payload = {
+      conversation_id: conversationId,
+      message_id: messageId,
+      author_id: message.author_id,
+      message_body: message.body.slice(0, 80),
+      reactions: serializeReactions(reactions),
+      change: {
+        user: { id: userId, name: me?.name || '' },
+        emoji: changeEmoji,
+        removed,
+      },
+    };
+
+    if (changed) {
+      const participants = await prisma.chatParticipant.findMany({
+        where: { conversation_id: conversationId },
+        select: { user_id: true },
+      });
+      for (const p of participants) {
+        emitToUser(p.user_id, 'chat_reaction', payload);
+      }
+    }
+
+    res.json(payload);
+  } catch (error) {
+    console.error('reactToMessage', error);
+    res.status(500).json({ error: 'Error al reaccionar al mensaje' });
   }
 };
 

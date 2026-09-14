@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { MessageSquare, X } from 'lucide-react';
 import { socket } from '../api/socket';
 import { useAuth } from '../context/AuthContext';
-import type { ChatMessage } from '../api/chat';
+import type { ChatMessage, ChatReactionPayload } from '../api/chat';
 import { showIncomingChatSystemNotification, vibrateChatAlert, playChatNotifySound } from '../utils/chatNotify';
 
 type ToastItem = {
@@ -127,9 +127,39 @@ export function ChatMessageToast() {
       }
     };
 
+    const onReaction = (payload: ChatReactionPayload) => {
+      const myId = myIdRef.current;
+      if (!myId || !payload?.change?.user) return;
+      // Solo avisar si alguien más reaccionó a MI mensaje (y añadiendo, no quitando)
+      if (payload.change.user.id === myId || payload.change.removed) return;
+      if (payload.author_id !== myId) return;
+      if (document.visibilityState !== 'visible') return;
+      const path = locationRef.current.pathname;
+      const search = locationRef.current.search;
+      if (path.startsWith('/messages') && search.includes(`c=${payload.conversation_id}`)) return;
+
+      const key = `reaction-${payload.message_id}-${payload.change.user.id}-${payload.change.emoji}`;
+      if (!claimToastSlot(key)) return;
+
+      setToasts((prev) => [
+        ...prev.slice(-2),
+        {
+          key,
+          conversationId: payload.conversation_id,
+          title: `${payload.change.user.name} reaccionó ${payload.change.emoji}`,
+          body: payload.message_body ? `«${payload.message_body.slice(0, 80)}»` : 'a tu mensaje',
+          leaving: false,
+        },
+      ]);
+      const hideTimer = setTimeout(() => dismiss(key), SHOW_MS);
+      timersRef.current.set(key, hideTimer);
+    };
+
     socket.on('chat_message', onMsg);
+    socket.on('chat_reaction', onReaction);
     return () => {
       socket.off('chat_message', onMsg);
+      socket.off('chat_reaction', onReaction);
       timersRef.current.forEach((t) => clearTimeout(t));
       timersRef.current.clear();
     };

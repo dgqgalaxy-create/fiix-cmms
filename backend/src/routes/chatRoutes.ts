@@ -11,6 +11,7 @@ import {
   sendMessage,
   softDeleteMessage,
   markConversationRead,
+  reactToMessage,
 } from '../controllers/chatController';
 
 const router = Router();
@@ -29,6 +30,7 @@ router.post(
   sendMessage
 );
 router.delete('/conversations/:id/messages/:messageId', softDeleteMessage);
+router.post('/conversations/:id/messages/:messageId/reactions', reactToMessage);
 router.post('/conversations/:id/read', markConversationRead);
 
 export default router;

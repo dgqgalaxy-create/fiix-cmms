@@ -69,10 +69,12 @@ const CATEGORY_EMOJIS = CATEGORIES.map((c) => ({ id: c.id, icon: c.icon, list: c
 interface EmojiPickerProps {
   onPick: (emoji: string) => void;
   onClose: () => void;
+  /** Anclaje horizontal del panel respecto al contenedor relativo. */
+  align?: 'left' | 'right';
 }
 
 /** Selector de emojis estilo WhatsApp: categorías + recientes (localStorage). */
-export function EmojiPicker({ onPick, onClose }: EmojiPickerProps) {
+export function EmojiPicker({ onPick, onClose, align = 'right' }: EmojiPickerProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [recent, setRecent] = useState<string[]>(readRecent);
   const [activeCat, setActiveCat] = useState<string>(() =>
@@ -128,7 +130,9 @@ export function EmojiPicker({ onPick, onClose }: EmojiPickerProps) {
       ref={rootRef}
       role="dialog"
       aria-label="Selector de emojis"
-      className="absolute bottom-full right-0 z-40 mb-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
+      className={`absolute bottom-full z-40 mb-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900 ${
+        align === 'left' ? 'left-0' : 'right-0'
+      }`}
     >
       <div className="flex gap-0.5 overflow-x-auto border-b border-slate-100 p-1.5 dark:border-slate-800">
         {tabs.map((t) => (
