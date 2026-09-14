@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { DragEvent, ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -59,6 +60,58 @@ const initialsOf = (name: string) =>
 const avatarColorOf = (name: string) => {
   const sum = [...name].reduce((acc, c) => acc + c.charCodeAt(0), 0);
   return AVATAR_COLORS[sum % AVATAR_COLORS.length];
+};
+
+/** Tipos de archivo aceptados al adjuntar en el chat (igual que el backend). */
+const CHAT_ACCEPTED_MIME = [
+  'image/',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain',
+];
+
+const isAcceptedChatFile = (f: File) =>
+  CHAT_ACCEPTED_MIME.some((t) => (t.endsWith('/') ? f.type.startsWith(t) : f.type === t));
+
+/** Encuentra URLs (http/https/www) y las convierte en enlaces clicables. */
+const URL_RE = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+\.[^\s<>"']+[^\s<>"']*)/gi;
+
+const linkifyBody = (text: string, linkClassName: string): ReactNode[] => {
+  const nodes: ReactNode[] = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+  URL_RE.lastIndex = 0;
+  while ((m = URL_RE.exec(text)) !== null) {
+    const raw = m[0];
+    let url = raw;
+    let trailing = '';
+    // Quitar puntuación final que no forma parte del enlace (p. ej. «mira:» o «(fin).»)
+    while (/[.,;:!?)\]}>'"»]/.test(url.charAt(url.length - 1))) {
+      trailing = url.charAt(url.length - 1) + trailing;
+      url = url.slice(0, -1);
+    }
+    if (m.index > last) nodes.push(text.slice(last, m.index));
+    const href = /^www\./i.test(url) ? `https://${url}` : url;
+    nodes.push(
+      <a
+        key={`${m.index}-${url}`}
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={href}
+        className={`break-all underline ${linkClassName}`}
+      >
+        {url}
+      </a>
+    );
+    if (trailing) nodes.push(trailing);
+    last = m.index + raw.length;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return nodes;
 };
 
 const fmtTime = (iso: string) =>
@@ -129,7 +182,9 @@ export default function MessagesPage() {
   const [zoomSrc, setZoomSrc] = useState<string | null>(null);
   const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
   const [showJumpBottom, setShowJumpBottom] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const dragDepthRef = useRef(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const threadScrollRef = useRef<HTMLDivElement>(null);
   const conversationsRef = useRef(conversations);
@@ -482,6 +537,40 @@ export default function MessagesPage() {
     }
   };
 
+  // Arrastrar y soltar archivos en el hilo: lo adjunta al compositor para enviarlo.
+  const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    if (!e.dataTransfer?.types?.includes('Files')) return;
+    e.preventDefault();
+    dragDepthRef.current += 1;
+    setDragActive(true);
+  };
+
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    if (!e.dataTransfer?.types?.includes('Files')) return;
+    e.preventDefault(); // necesario para habilitar el drop
+  };
+
+  const handleDragLeave = () => {
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) setDragActive(false);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    dragDepthRef.current = 0;
+    setDragActive(false);
+    if (!activeId) return;
+    const dropped = e.dataTransfer?.files?.[0];
+    if (!dropped) return;
+    if (!isAcceptedChatFile(dropped)) {
+      setError('Tipo de archivo no permitido: usa imágenes, PDF, Word, Excel o TXT');
+      return;
+    }
+    setError(null);
+    setFile(dropped);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
   const handleCreateDirect = async () => {
     if (!pickUserId) return;
     setCreating(true);
@@ -752,7 +841,20 @@ export default function MessagesPage() {
           className={`relative flex min-w-0 flex-1 flex-col ${
             mobileShowThread ? 'flex' : 'hidden md:flex'
           }`}
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
         >
+          {dragActive && activeId && (
+            <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center rounded-2xl border-2 border-dashed border-emerald-500 bg-emerald-50/85 dark:border-emerald-500/70 dark:bg-emerald-950/70">
+              <div className="flex flex-col items-center gap-2 px-4 text-center text-emerald-700 dark:text-emerald-300">
+                <Paperclip size={30} />
+                <p className="text-sm font-bold">Suelta el archivo para adjuntarlo</p>
+                <p className="text-xs opacity-80">Imágenes, PDF, Word, Excel o TXT</p>
+              </div>
+            </div>
+          )}
           {!activeId ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 text-slate-400">
               <MessageSquare size={36} className="opacity-40" />
@@ -916,7 +1018,14 @@ export default function MessagesPage() {
                           ) : (
                             <>
                               {m.body && !m.body.startsWith('(archivo)') && (
-                                <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                                <p className="whitespace-pre-wrap break-words">
+                                  {linkifyBody(
+                                    m.body,
+                                    mine
+                                      ? 'text-white decoration-white/80'
+                                      : 'text-emerald-700 hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200'
+                                  )}
+                                </p>
                               )}
                               {att && img && (
                                 <button
