@@ -10,6 +10,7 @@ import {
   Paperclip,
   Plus,
   Send,
+  Smile,
   Trash2,
   Users,
   X as XIcon,
@@ -34,6 +35,7 @@ import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
 import { MessageTicks } from '../components/MessageTicks';
+import { EmojiPicker } from '../components/EmojiPicker';
 
 type ComposeMode = null | 'direct' | 'group';
 
@@ -114,6 +116,15 @@ const linkifyBody = (text: string, linkClassName: string): ReactNode[] => {
   return nodes;
 };
 
+/** Mensaje compuesto solo por pocos emojis → se muestra grande, como en WhatsApp. */
+const EMOJI_ONLY_RE = /^(?:\p{Extended_Pictographic}|\s|\u200d|\ufe0f|\u20e3)+$/u;
+
+const isEmojiOnlyText = (text: string): boolean => {
+  const s = text.trim();
+  if (!s || s.length > 8) return false;
+  return EMOJI_ONLY_RE.test(s);
+};
+
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
 
@@ -183,7 +194,9 @@ export default function MessagesPage() {
   const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
   const [showJumpBottom, setShowJumpBottom] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const dragDepthRef = useRef(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const threadScrollRef = useRef<HTMLDivElement>(null);
@@ -571,6 +584,20 @@ export default function MessagesPage() {
     if (fileRef.current) fileRef.current.value = '';
   };
 
+  /** Inserta el emoji en la posición actual del cursor del compositor. */
+  const insertEmoji = (emoji: string) => {
+    const el = composerRef.current;
+    const start = el?.selectionStart ?? body.length;
+    const end = el?.selectionEnd ?? body.length;
+    const next = body.slice(0, start) + emoji + body.slice(end);
+    setBody(next);
+    requestAnimationFrame(() => {
+      el?.focus();
+      const caret = start + emoji.length;
+      el?.setSelectionRange(caret, caret);
+    });
+  };
+
   const handleCreateDirect = async () => {
     if (!pickUserId) return;
     setCreating(true);
@@ -940,6 +967,7 @@ export default function MessagesPage() {
                     const mine = m.author_id === user?.id;
                     const deleted = Boolean(m.is_deleted);
                     const canDelete = canAuthorSoftDelete(m, user?.id);
+                    const emojiOnly = !deleted && isEmojiOnlyText(m.body || '');
                     void nowTick; // re-eval ventana 10 min
                     const att = deleted ? null : chatAttachmentUrl(m.attachment_url);
                     const img =
@@ -1000,12 +1028,16 @@ export default function MessagesPage() {
                             )
                           )}
                         <div
-                          className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
-                            deleted
-                              ? 'bg-slate-50 text-slate-400 italic dark:bg-slate-800/50 dark:text-slate-500'
-                              : mine
-                                ? 'bg-emerald-600 text-white'
-                                : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100'
+                          className={`max-w-[85%] text-sm ${
+                            emojiOnly
+                              ? 'px-1 py-0.5'
+                              : `rounded-2xl px-3 py-2 ${
+                                  deleted
+                                    ? 'bg-slate-50 text-slate-400 italic dark:bg-slate-800/50 dark:text-slate-500'
+                                    : mine
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100'
+                                }`
                           }`}
                         >
                           {!mine && !deleted && !grouped && active?.type === 'GROUP' && (
@@ -1018,14 +1050,20 @@ export default function MessagesPage() {
                           ) : (
                             <>
                               {m.body && !m.body.startsWith('(archivo)') && (
-                                <p className="whitespace-pre-wrap break-words">
-                                  {linkifyBody(
-                                    m.body,
-                                    mine
-                                      ? 'text-white decoration-white/80'
-                                      : 'text-emerald-700 hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200'
-                                  )}
-                                </p>
+                                emojiOnly ? (
+                                  <p className="whitespace-pre-wrap break-words text-3xl leading-tight tracking-wide">
+                                    {m.body}
+                                  </p>
+                                ) : (
+                                  <p className="whitespace-pre-wrap break-words">
+                                    {linkifyBody(
+                                      m.body,
+                                      mine
+                                        ? 'text-white decoration-white/80'
+                                        : 'text-emerald-700 hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200'
+                                    )}
+                                  </p>
+                                )
                               )}
                               {att && img && (
                                 <button
@@ -1130,7 +1168,7 @@ export default function MessagesPage() {
                     </button>
                   </div>
                 )}
-                <div className="flex items-end gap-1.5">
+                <div className="relative flex items-end gap-1.5">
                   <input
                     ref={fileRef}
                     type="file"
@@ -1146,7 +1184,24 @@ export default function MessagesPage() {
                   >
                     <ImageIcon size={18} />
                   </button>
+                  <button
+                    type="button"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={() => setShowEmoji((s) => !s)}
+                    className={`rounded-xl border p-2 transition-colors ${
+                      showEmoji
+                        ? 'border-amber-300 bg-amber-50 text-amber-600 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400'
+                        : 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'
+                    }`}
+                    title="Emojis"
+                  >
+                    <Smile size={18} />
+                  </button>
+                  {showEmoji && (
+                    <EmojiPicker onPick={insertEmoji} onClose={() => setShowEmoji(false)} />
+                  )}
                   <textarea
+                    ref={composerRef}
                     value={body}
                     onChange={(e) => setBody(e.target.value)}
                     rows={1}
