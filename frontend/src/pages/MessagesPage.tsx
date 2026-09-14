@@ -4,6 +4,8 @@ import { useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowDown,
+  Copy,
+  Forward,
   Image as ImageIcon,
   Loader2,
   MessageSquare,
@@ -11,6 +13,7 @@ import {
   Plus,
   Send,
   Smile,
+  SmilePlus,
   Trash2,
   Users,
   X as XIcon,
@@ -51,6 +54,9 @@ const AVATAR_COLORS = [
   'bg-indigo-500',
   'bg-pink-500',
 ];
+
+/** Reacciones rápidas del menú contextual del mensaje. */
+const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
 const initialsOf = (name: string) =>
   name
@@ -198,9 +204,16 @@ export default function MessagesPage() {
   const [dragActive, setDragActive] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [reactionPickerId, setReactionPickerId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    message: ChatMessage;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [forwardMessage, setForwardMessage] = useState<ChatMessage | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const dragDepthRef = useRef(0);
+  const longPressRef = useRef<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const threadScrollRef = useRef<HTMLDivElement>(null);
   const conversationsRef = useRef(conversations);
@@ -643,6 +656,76 @@ export default function MessagesPage() {
     }
   };
 
+  /** Abre el menú contextual del mensaje (clic derecho o pulsación larga). */
+  const openContextMenu = (m: ChatMessage, clientX: number, clientY: number) => {
+    const MENU_W = 248;
+    const MENU_H = 330;
+    const x = Math.max(8, Math.min(clientX, window.innerWidth - MENU_W - 8));
+    const y = Math.max(8, Math.min(clientY, window.innerHeight - MENU_H - 8));
+    setContextMenu({ message: m, x, y });
+  };
+
+  const clearLongPress = () => {
+    if (longPressRef.current != null) {
+      window.clearTimeout(longPressRef.current);
+      longPressRef.current = null;
+    }
+  };
+
+  const handleCopyMessage = async (m: ChatMessage) => {
+    setContextMenu(null);
+    try {
+      await navigator.clipboard.writeText(m.body);
+    } catch {
+      /* portapapeles no disponible */
+    }
+  };
+
+  /** Reenvía el contenido del mensaje (texto y/o adjunto) a otra conversación. */
+  const handleForward = async (targetId: string) => {
+    const m = forwardMessage;
+    setForwardMessage(null);
+    if (!m || m.is_deleted) return;
+    const body = m.body && !m.body.startsWith('(archivo)') ? m.body : '';
+    let attachment: File | null = null;
+    const attUrl = chatAttachmentUrl(m.attachment_url);
+    if (attUrl) {
+      try {
+        const res = await fetch(attUrl);
+        if (res.ok) {
+          const blob = await res.blob();
+          attachment = new File([blob], m.attachment_name || 'adjunto', {
+            type: blob.type || 'application/octet-stream',
+          });
+        }
+      } catch {
+        attachment = null;
+      }
+    }
+    if (!body && !attachment) return;
+    try {
+      await sendChatMessage(targetId, { body, attachment });
+      openConversation(targetId);
+      await loadConversations();
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'No se pudo reenviar el mensaje');
+    }
+  };
+
+  // Cerrar menú contextual y modales con Escape
+  useEffect(() => {
+    if (!contextMenu && !forwardMessage && !reactionPickerId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setContextMenu(null);
+        setForwardMessage(null);
+        setReactionPickerId(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [contextMenu, forwardMessage, reactionPickerId]);
+
   const handleCreateDirect = async () => {
     if (!pickUserId) return;
     setCreating(true);
@@ -974,6 +1057,7 @@ export default function MessagesPage() {
                 onScroll={() => {
                   const el = threadScrollRef.current;
                   if (!el) return;
+                  if (contextMenu) setContextMenu(null);
                   // Llegó al fondo → oculta el botón «Nuevos ↓».
                   if (el.scrollTop + el.clientHeight >= el.scrollHeight - 80) {
                     setShowJumpBottom(false);
@@ -1046,12 +1130,26 @@ export default function MessagesPage() {
                     const reactionGroups = Array.from(byEmoji.entries()).map(
                       ([emoji, g]) => ({ emoji, ...g })
                     );
-                    const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
                     return (
                       <div
                         key={m.id}
                         id={`chat-msg-${m.id}`}
                         className={`scroll-mt-2 ${grouped ? '-mt-1' : ''}`}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          if (!deleted) openContextMenu(m, e.clientX, e.clientY);
+                        }}
+                        onTouchStart={(e) => {
+                          if (deleted) return;
+                          const t = e.touches[0];
+                          if (!t) return;
+                          longPressRef.current = window.setTimeout(() => {
+                            longPressRef.current = null;
+                            openContextMenu(m, t.clientX, t.clientY);
+                          }, 450);
+                        }}
+                        onTouchEnd={clearLongPress}
+                        onTouchMove={clearLongPress}
                       >
                         {showUnreadDivider && (
                           <div
@@ -1073,7 +1171,7 @@ export default function MessagesPage() {
                             </span>
                           </div>
                         )}
-                        <div className={`group relative flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'}`}>
                           {!mine && !deleted && (
                             grouped ? (
                               <div className="w-6 shrink-0" />
@@ -1190,49 +1288,6 @@ export default function MessagesPage() {
                             )}
                           </div>
                         </div>
-                        {!deleted && (
-                          <div
-                            className={`absolute -top-9 z-20 hidden items-center gap-0.5 rounded-full border border-slate-200 bg-white p-1 shadow-lg group-hover:flex dark:border-slate-700 dark:bg-slate-900 ${
-                              mine ? 'right-0' : 'left-0'
-                            }`}
-                          >
-                            {QUICK_REACTIONS.map((e) => (
-                              <button
-                                key={e}
-                                type="button"
-                                onClick={() => void toggleReaction(m, e)}
-                                className="rounded-full p-1 text-base leading-none transition-transform hover:scale-125"
-                                title={`Reaccionar con ${e}`}
-                              >
-                                {e}
-                              </button>
-                            ))}
-                            <div className="mx-0.5 h-5 w-px bg-slate-200 dark:bg-slate-700" />
-                            <div className="relative">
-                              <button
-                                type="button"
-                                onPointerDown={(e) => e.stopPropagation()}
-                                onClick={() =>
-                                  setReactionPickerId(reactionPickerId === m.id ? null : m.id)
-                                }
-                                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-                                title="Más emojis"
-                              >
-                                <Plus size={14} />
-                              </button>
-                              {reactionPickerId === m.id && reactionGroups.length === 0 && (
-                                <EmojiPicker
-                                  align={mine ? 'right' : 'left'}
-                                  onPick={(emoji) => {
-                                    setReactionPickerId(null);
-                                    void toggleReaction(m, emoji);
-                                  }}
-                                  onClose={() => setReactionPickerId(null)}
-                                />
-                              )}
-                            </div>
-                          </div>
-                        )}
                         </div>
                         {!deleted && reactionGroups.length > 0 && (
                           <div
@@ -1258,29 +1313,14 @@ export default function MessagesPage() {
                                 <span className="font-bold tabular-nums">{g.count}</span>
                               </button>
                             ))}
-                            <div className="relative">
-                              <button
-                                type="button"
-                                onPointerDown={(e) => e.stopPropagation()}
-                                onClick={() =>
-                                  setReactionPickerId(reactionPickerId === m.id ? null : m.id)
-                                }
-                                className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-900"
-                                title="Reaccionar"
-                              >
-                                <Plus size={12} />
-                              </button>
-                              {reactionPickerId === m.id && (
-                                <EmojiPicker
-                                  align={mine ? 'right' : 'left'}
-                                  onPick={(emoji) => {
-                                    setReactionPickerId(null);
-                                    void toggleReaction(m, emoji);
-                                  }}
-                                  onClose={() => setReactionPickerId(null)}
-                                />
-                              )}
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setReactionPickerId(m.id)}
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-900"
+                              title="Reaccionar"
+                            >
+                              <Plus size={12} />
+                            </button>
                           </div>
                         )}
                       </div>
@@ -1381,6 +1421,174 @@ export default function MessagesPage() {
           )}
         </section>
       </div>
+
+      {contextMenu && (
+        <>
+          <div
+            className="fixed inset-0 z-[70]"
+            onClick={() => setContextMenu(null)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setContextMenu(null);
+            }}
+          />
+          <div
+            className="fixed z-[71] w-60 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+            role="menu"
+          >
+            <div className="mb-1 flex items-center justify-between gap-1 border-b border-slate-100 px-1 pb-1.5 dark:border-slate-800">
+              {QUICK_REACTIONS.map((e) => (
+                <button
+                  key={e}
+                  type="button"
+                  onClick={() => {
+                    setContextMenu(null);
+                    void toggleReaction(contextMenu.message, e);
+                  }}
+                  className="rounded-full p-1 text-base leading-none transition-transform hover:scale-125"
+                  title={`Reaccionar con ${e}`}
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setContextMenu(null);
+                setReactionPickerId(contextMenu.message.id);
+              }}
+              className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              <SmilePlus size={16} className="text-emerald-600" /> Reaccionar…
+            </button>
+            {contextMenu.message.body && !contextMenu.message.body.startsWith('(archivo)') && (
+              <button
+                type="button"
+                onClick={() => void handleCopyMessage(contextMenu.message)}
+                className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                <Copy size={16} className="text-slate-400" /> Copiar texto
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setContextMenu(null);
+                setForwardMessage(contextMenu.message);
+              }}
+              className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              <Forward size={16} className="text-blue-500" /> Reenviar…
+            </button>
+            {canAuthorSoftDelete(contextMenu.message, user?.id) && (
+              <button
+                type="button"
+                onClick={() => {
+                  const m = contextMenu.message;
+                  setContextMenu(null);
+                  void handleSoftDelete(m);
+                }}
+                className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
+              >
+                <Trash2 size={16} /> Eliminar mensaje
+              </button>
+            )}
+          </div>
+        </>
+      )}
+
+      {reactionPickerId && (
+        <div
+          className="fixed inset-0 z-[75] flex items-center justify-center bg-slate-900/40 p-4"
+          onClick={() => setReactionPickerId(null)}
+        >
+          <div className="relative" onClick={(e) => e.stopPropagation()}>
+            <EmojiPicker
+              position="static"
+              onPick={(emoji) => {
+                const mid = reactionPickerId;
+                setReactionPickerId(null);
+                const target = messages.find((x) => x.id === mid);
+                if (target) void toggleReaction(target, emoji);
+              }}
+              onClose={() => setReactionPickerId(null)}
+            />
+          </div>
+        </div>
+      )}
+
+      {forwardMessage && (
+        <div
+          className="fixed inset-0 z-[75] flex items-center justify-center bg-slate-900/50 p-4"
+          onClick={() => setForwardMessage(null)}
+        >
+          <div
+            className="flex max-h-[80vh] w-full max-w-md flex-col rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                Reenviar mensaje
+              </h3>
+              <button
+                type="button"
+                onClick={() => setForwardMessage(null)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <XIcon size={16} />
+              </button>
+            </div>
+            <div className="px-4 py-3">
+              <div className="line-clamp-3 rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                {forwardMessage.body && !forwardMessage.body.startsWith('(archivo)')
+                  ? forwardMessage.body
+                  : forwardMessage.attachment_name
+                    ? `📎 ${forwardMessage.attachment_name}`
+                    : 'Mensaje'}
+              </div>
+              <p className="mb-1.5 mt-3 text-xs font-bold uppercase tracking-wide text-slate-400">
+                Reenviar a…
+              </p>
+              <div className="max-h-64 space-y-1 overflow-y-auto">
+                {conversations.map((c) => {
+                  const myIdF = user?.id || user?.userId;
+                  const other =
+                    c.type === 'DIRECT'
+                      ? c.participants.find((p) => p.user_id !== myIdF)?.user
+                      : undefined;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => void handleForward(c.id)}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                      {c.type === 'GROUP' ? (
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-300">
+                          <Users size={14} />
+                        </span>
+                      ) : (
+                        <span
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${avatarColorOf(
+                            other?.name || c.title,
+                          )}`}
+                        >
+                          {initialsOf(other?.name || c.title)}
+                        </span>
+                      )}
+                      <span className="truncate font-medium text-slate-800 dark:text-slate-100">
+                        {c.title}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {zoomSrc && (
         <div
