@@ -86,10 +86,11 @@ if [ "${GZ_SIZE}" -lt 64 ]; then
   exit 1
 fi
 # Recrear public evita conflictos con tablas ya existentes (p. ej. tras wipe).
+# -q silencia los NOTICE de "drop cascades to table ..." (no son errores).
 {
   printf '%s\n' 'DROP SCHEMA IF EXISTS public CASCADE;' 'CREATE SCHEMA public;' 'GRANT ALL ON SCHEMA public TO public;' 'GRANT ALL ON SCHEMA public TO CURRENT_USER;'
   gunzip -c "${SQL_PATH}"
-} | psql "${DATABASE_URL}" -v ON_ERROR_STOP=1
+} | psql -q "${DATABASE_URL}" -v ON_ERROR_STOP=1
 echo "  [OK] Base de datos restaurada."
 
 if [ "$RESTORE_UPLOADS" -eq 1 ]; then

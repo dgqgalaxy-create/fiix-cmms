@@ -387,6 +387,18 @@ export type RestoreVerification = { users: number; workOrders: number; items: nu
  * restauración fallida NUNCA deja la base a medias (antes, el DROP quedaba aplicado y la
  * base incompleta si el dump fallaba después de recrear el esquema).
  */
+/** Extrae solo el error real del stderr de psql (ignora NOTICEs de DROP CASCADE, etc.). */
+function summarizePsqlError(stderr: string): string {
+  const lines = stderr
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return 'sin detalles';
+  const errors = lines.filter((l) => /^ERROR:/.test(l));
+  if (errors.length > 0) return errors.join(' | ');
+  return lines.slice(-8).join(' | ');
+}
+
 async function restoreDatabase(
   psqlPath: string,
   databaseUrl: string,
@@ -428,7 +440,7 @@ async function restoreDatabase(
   const commitTail = Buffer.from('\nCOMMIT;\n', 'utf8');
   const sqlPayload = Buffer.concat([preamble, sqlRaw, commitTail]);
 
-  const child = spawn(psqlPath, [pgUrl, '-v', 'ON_ERROR_STOP=1'], {
+  const child = spawn(psqlPath, ['-q', pgUrl, '-v', 'ON_ERROR_STOP=1'], {
     shell: false,
     stdio: ['pipe', 'ignore', 'pipe'],
     windowsHide: true,
@@ -452,7 +464,7 @@ async function restoreDatabase(
     }
     if (spawnError) throw spawnError;
     if (code !== 0) {
-      throw new Error(stderr.trim() || `psql terminó con código ${code}`);
+      throw new Error(summarizePsqlError(stderr) || `psql terminó con código ${code}`);
     }
     throw pipeErr;
   }
@@ -464,7 +476,7 @@ async function restoreDatabase(
   if (spawnError) throw spawnError;
   if (code !== 0) {
     // La transacción abierta (BEGIN) se aborta al cerrar la conexión → rollback total.
-    throw new Error(stderr.trim() || `psql terminó con código ${code}`);
+    throw new Error(summarizePsqlError(stderr) || `psql terminó con código ${code}`);
   }
 
   // Recuperación COMPROBADA: verificar que la base restaurada responde con sus tablas.
