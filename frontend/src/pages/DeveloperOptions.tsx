@@ -113,6 +113,8 @@ export const DeveloperOptions = () => {
   const [restoreConfirmText, setRestoreConfirmText] = useState('');
   const [restoreModalError, setRestoreModalError] = useState<string | null>(null);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
+  const [downloadPct, setDownloadPct] = useState<number | null>(null);
   const [isUploadRestoreOpen, setIsUploadRestoreOpen] = useState(false);
   const [uploadBackupFile, setUploadBackupFile] = useState<File | null>(null);
   const [uploadUploadsFile, setUploadUploadsFile] = useState<File | null>(null);
@@ -765,11 +767,20 @@ export const DeveloperOptions = () => {
   /** Descarga un archivo de respaldo del servidor (requiere contraseña maestra). */
   const handleDownloadBackup = async (file: string) => {
     setError(null);
+    setDownloadingFile(file);
+    setDownloadPct(0);
     try {
       const res = await axios.get(`/dev/backups/download/${encodeURIComponent(file)}`, {
         headers: { 'x-dev-password': password },
         responseType: 'blob',
-        timeout: 600000,
+        timeout: 30 * 60 * 1000,
+        onDownloadProgress: (e: { loaded?: number; total?: number }) => {
+          if (e.total && e.total > 0) {
+            setDownloadPct(Math.min(100, Math.round((e.loaded || 0) / e.total * 100)));
+          } else if (e.loaded) {
+            setDownloadPct(null);
+          }
+        },
       });
       const blob = res.data as Blob;
       const url = window.URL.createObjectURL(blob);
@@ -785,6 +796,9 @@ export const DeveloperOptions = () => {
         ? err.response?.data?.message || err.message
         : err instanceof Error ? err.message : 'Error desconocido';
       setError(`No se pudo descargar el respaldo: ${detail}`);
+    } finally {
+      setDownloadingFile(null);
+      setDownloadPct(null);
     }
   };
 
@@ -2765,6 +2779,9 @@ export const DeveloperOptions = () => {
             <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
               Descarga la base de datos (<code>.sql.gz</code>) y, si existe, las fotos/archivos (<code>.tar.gz</code>) para llevarlos a otro servidor.
             </p>
+            <p className="mb-3 rounded-lg bg-amber-50 p-2.5 text-xs leading-5 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+              ⚠️ Si hay muchas fotos/evidencias, el <code>.tar.gz</code> puede pesar cientos de MB y tardar varios minutos en descargarse. Verás el porcentaje en el botón; no cierres la pestaña hasta que termine.
+            </p>
             {serverBackups.length === 0 ? (
               <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 No hay respaldos. Crea uno primero con «Crear respaldo».
@@ -2795,18 +2812,37 @@ export const DeveloperOptions = () => {
                       <button
                         type="button"
                         onClick={() => void handleDownloadBackup(b.file)}
-                        disabled={b.usable === false}
+                        disabled={b.usable === false || downloadingFile !== null}
                         className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-sky-700 disabled:opacity-40"
                       >
-                        <Download size={13} /> Base de datos
+                        {downloadingFile === b.file ? (
+                          <>
+                            <RefreshCw size={13} className="animate-spin" />
+                            {downloadPct != null ? `Descargando ${downloadPct}%` : 'Descargando…'}
+                          </>
+                        ) : (
+                          <>
+                            <Download size={13} /> Base de datos
+                          </>
+                        )}
                       </button>
                       {b.uploadsFile && (
                         <button
                           type="button"
                           onClick={() => void handleDownloadBackup(b.uploadsFile as string)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-2.5 py-1.5 text-xs font-bold text-sky-700 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300"
+                          disabled={downloadingFile !== null}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-2.5 py-1.5 text-xs font-bold text-sky-700 hover:bg-sky-100 disabled:opacity-40 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300"
                         >
-                          <Download size={13} /> Fotos/archivos
+                          {downloadingFile === b.uploadsFile ? (
+                            <>
+                              <RefreshCw size={13} className="animate-spin" />
+                              {downloadPct != null ? `Descargando ${downloadPct}%` : 'Descargando…'}
+                            </>
+                          ) : (
+                            <>
+                              <Download size={13} /> Fotos/archivos
+                            </>
+                          )}
                         </button>
                       )}
                     </div>

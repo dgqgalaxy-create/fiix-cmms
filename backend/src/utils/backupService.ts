@@ -190,6 +190,15 @@ function unlinkQuiet(filePath: string) {
   }
 }
 
+/** Mensaje claro cuando pg_dump falla, con pista si el cliente es más viejo que el servidor. */
+function pgDumpFailureDetail(stderr: string, code: number | null): string {
+  const detail = stderr.trim() || `pg_dump terminó con código ${code}`;
+  if (/version mismatch/i.test(detail)) {
+    return `${detail} — pg_dump es de una versión menor que el servidor PostgreSQL: instala un cliente pg_dump de la misma versión o más nueva (p. ej. postgresql-client-16 para PostgreSQL 16).`;
+  }
+  return detail;
+}
+
 /**
  * Ejecuta pg_dump completo del esquema `public` (todas las tablas Prisma, p. ej. Zone,
  * ZoneSection, Asset con has_sections / zone_section_id) y comprime con gzip vía streams
@@ -227,7 +236,7 @@ async function dumpDatabase(pgDumpPath: string, databaseUrl: string, outFile: st
       }
       if (spawnError) throw spawnError;
       if (code !== 0) {
-        throw new Error(stderr.trim() || `pg_dump terminó con código ${code}`);
+        throw new Error(pgDumpFailureDetail(stderr, code));
       }
       throw pipeErr;
     }
@@ -238,7 +247,7 @@ async function dumpDatabase(pgDumpPath: string, databaseUrl: string, outFile: st
     }
     if (spawnError) throw spawnError;
     if (code !== 0) {
-      throw new Error(stderr.trim() || `pg_dump terminó con código ${code}`);
+      throw new Error(pgDumpFailureDetail(stderr, code));
     }
 
     const gzSize = fs.existsSync(outFile) ? fs.statSync(outFile).size : 0;
@@ -689,6 +698,8 @@ export const getBackupProgress = (): BackupProgress => ({ ...backupProgress });
 export const runBackup = async (): Promise<BackupResult> => {
   const files: string[] = [];
   const errors: string[] = [];
+  let dbFailed = false;
+  let dbErrorDetail = '';
   const started = Date.now();
   setBackupProgress('prepare', 1, 5, 'Preparando carpeta de respaldos…');
   console.log(`[Backup] Inicio → carpeta ${BACKUP_DIR} (home proceso: ${os.homedir()})`);
@@ -720,7 +731,9 @@ export const runBackup = async (): Promise<BackupResult> => {
         console.log(`[Backup] BD OK (${fs.statSync(dbFile).size} bytes)`);
         setBackupProgress('database', 2, 45, 'Base de datos respaldada…');
       } catch (error: any) {
-        errors.push(`Base de datos: ${error.message || error} (¿pg_dump instalado y DATABASE_URL correcto?)`);
+        dbFailed = true;
+        dbErrorDetail = error?.message || String(error);
+        errors.push(`Base de datos: ${dbErrorDetail}`);
       }
     }
   }
@@ -770,12 +783,19 @@ export const runBackup = async (): Promise<BackupResult> => {
   setBackupProgress('cleanup', 4, 92, 'Limpiando respaldos antiguos…');
   cleanupOldBackups();
 
-  const success = files.length > 0;
+  // Un respaldo sin dump de BD no sirve para restaurar/migrar: reportar fallo claro.
+  const hasDbDump = files.some((f) => /^fiix_\d{8}_\d{4}\.sql\.gz$/.test(path.basename(f)));
+  const success = hasDbDump;
   const fileNames = files.map((f) => path.basename(f)).join(', ');
   const elapsedSec = Math.round((Date.now() - started) / 1000);
-  const message = success
-    ? `Respaldo creado en ${BACKUP_DIR}: ${fileNames} (${elapsedSec}s)${errors.length ? ` (avisos: ${errors.join(' | ')})` : ''}`
-    : `No se pudo crear ningún respaldo en ${BACKUP_DIR}. ${errors.join(' | ') || 'Revisa permisos y herramientas instaladas (pg_dump, tar).'}`;
+  let message: string;
+  if (success) {
+    message = `Respaldo creado en ${BACKUP_DIR}: ${fileNames} (${elapsedSec}s)${errors.length ? ` (avisos: ${errors.join(' | ')})` : ''}`;
+  } else if (dbFailed) {
+    message = `El respaldo de la base de datos falló: ${dbErrorDetail}. Sin dump de BD no hay un respaldo utilizable para restaurar o migrar.${files.length ? ` (solo se generaron: ${fileNames})` : ''}`;
+  } else {
+    message = `No se pudo crear ningún respaldo en ${BACKUP_DIR}. ${errors.join(' | ') || 'Revisa permisos y herramientas instaladas (pg_dump, tar).'}`;
+  }
 
   console.log(`[Backup] Fin (${elapsedSec}s): ${message}`);
   setBackupProgress(success ? 'done' : 'error', 4, 100, message, false);
