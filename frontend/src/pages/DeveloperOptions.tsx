@@ -121,6 +121,7 @@ export const DeveloperOptions = () => {
   const [uploadRestoreConfirm, setUploadRestoreConfirm] = useState('');
   const [uploadRestoreError, setUploadRestoreError] = useState<string | null>(null);
   const [isUploadRestoring, setIsUploadRestoring] = useState(false);
+  const [uploadRestorePct, setUploadRestorePct] = useState<number | null>(null);
   const [itemImagesZip, setItemImagesZip] = useState<File | null>(null);
   const [vendorImagesZip, setVendorImagesZip] = useState<File | null>(null);
   const [workOrderImagesZip, setWorkOrderImagesZip] = useState<File | null>(null);
@@ -813,6 +814,7 @@ export const DeveloperOptions = () => {
       return;
     }
     setIsUploadRestoring(true);
+    setUploadRestorePct(0);
     setError(null);
     setUploadRestoreError(null);
     try {
@@ -822,7 +824,12 @@ export const DeveloperOptions = () => {
       form.append('confirm', 'RESTAURAR');
       const res = await axios.post('/dev/restore-upload', form, {
         headers: { 'x-dev-password': password, 'Content-Type': 'multipart/form-data' },
-        timeout: 600000,
+        timeout: 60 * 60 * 1000, // subidas grandes (tar de fotos) pueden tardar
+        onUploadProgress: (e: { loaded?: number; total?: number }) => {
+          if (e.total && e.total > 0) {
+            setUploadRestorePct(Math.min(99, Math.round(((e.loaded || 0) / e.total) * 100)));
+          }
+        },
       });
       if (res.data?.success) {
         setIsUploadRestoreOpen(false);
@@ -848,6 +855,7 @@ export const DeveloperOptions = () => {
       setError(failMsg);
     } finally {
       setIsUploadRestoring(false);
+      setUploadRestorePct(null);
     }
   };
 
@@ -2955,9 +2963,16 @@ export const DeveloperOptions = () => {
                 }
                 className="flex-1 rounded-lg bg-emerald-600 py-3 font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
               >
-                {isUploadRestoring ? 'Restaurando…' : 'Restaurar archivo subido'}
+                {isUploadRestoring
+                  ? uploadRestorePct != null
+                    ? `Subiendo ${uploadRestorePct}%…`
+                    : 'Restaurando…'
+                  : 'Restaurar archivo subido'}
               </button>
             </div>
+            <p className="mt-3 text-[11px] leading-4 text-slate-400">
+              Si el <code>.tar.gz</code> de fotos pesa cientos de MB o GB, la subida y la extracción pueden tardar varios minutos. No cierres la pestaña hasta ver el resultado.
+            </p>
           </div>
         </div>
       )}

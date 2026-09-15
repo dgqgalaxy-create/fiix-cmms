@@ -46,6 +46,9 @@ router.use(authenticate);
 /** Límite del zip de fotos (~171 MB típico; deja margen). CSV son pequeños. */
 export const IMPORT_MAX_FILE_BYTES = 500 * 1024 * 1024;
 
+/** Límite para restauración desde archivo: los tar de fotos reales pueden pasar de 1 GB. */
+export const RESTORE_MAX_FILE_BYTES = 10 * 1024 * 1024 * 1024;
+
 const importTmpDir = path.join(os.tmpdir(), 'fiix-csv-import');
 
 const importStorage = multer.diskStorage({
@@ -95,6 +98,44 @@ function uploadImportFields(req: Request, res: Response, next: express.NextFunct
       return;
     }
 
+    const list = (Array.isArray(req.files) ? req.files : []) as Express.Multer.File[];
+    const byField: { [fieldname: string]: Express.Multer.File[] } = {};
+    for (const file of list) {
+      if (!byField[file.fieldname]) byField[file.fieldname] = [];
+      byField[file.fieldname].push(file);
+    }
+    req.files = byField;
+    next();
+  });
+}
+
+// Subida de respaldos para restaurar (fiix_*.sql.gz + uploads_*.tar.gz):
+// límite propio de 10 GB porque los tar de fotos de producción superan 500 MB.
+const restoreUpload = multer({
+  storage: importStorage,
+  limits: { fileSize: RESTORE_MAX_FILE_BYTES, files: 2 },
+});
+
+function uploadRestoreFields(req: Request, res: Response, next: express.NextFunction): void {
+  restoreUpload.any()(req, res, (err: unknown) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        res.status(413).json({
+          success: false,
+          message: `El archivo es demasiado grande (máximo ${Math.round(RESTORE_MAX_FILE_BYTES / (1024 * 1024 * 1024))} GB por archivo para restaurar). Si tu tar de fotos pesa más, restaura la base de datos por aquí y copia el tar a mano en la carpeta de respaldos del servidor.`,
+        });
+        return;
+      }
+      res.status(400).json({ success: false, message: `Error al subir archivos: ${err.message}` });
+      return;
+    }
+    if (err) {
+      res.status(400).json({
+        success: false,
+        message: err instanceof Error ? err.message : 'Error al subir archivos.',
+      });
+      return;
+    }
     const list = (Array.isArray(req.files) ? req.files : []) as Express.Multer.File[];
     const byField: { [fieldname: string]: Express.Multer.File[] } = {};
     for (const file of list) {
@@ -423,7 +464,7 @@ router.get('/backups/download/:file', verifyDevPassword, (req: Request, res: Res
 router.post(
   '/restore-upload',
   verifyDevPassword,
-  uploadImportFields,
+  uploadRestoreFields,
   async (req: Request, res: Response): Promise<void> => {
     const filesMap = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
     const sqlFile = filesMap?.backupFile?.[0];
