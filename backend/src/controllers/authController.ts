@@ -63,6 +63,34 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+/**
+ * Pista pública de credenciales iniciales: solo se muestra mientras el admin
+ * sembrado no haya hecho su primer inicio de sesión (must_change_password).
+ * Desaparece del login tras el primer acceso/cambio de contraseña.
+ */
+export const getLoginHint = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const admin = await prisma.user.findUnique({
+      where: { email: 'admin@fiix.com' },
+      select: { is_active: true, must_change_password: true },
+    });
+    const show = Boolean(admin && admin.is_active && admin.must_change_password);
+    res.json(
+      show
+        ? {
+            show: true,
+            username: 'admin@fiix.com',
+            password: 'password123',
+            note: 'Credenciales iniciales. Al iniciar sesión por primera vez deberás cambiarlas; este aviso desaparecerá del inicio de sesión.',
+          }
+        : { show: false }
+    );
+  } catch (error) {
+    console.error('getLoginHint', error);
+    res.status(500).json({ error: 'Error al obtener la pista de inicio de sesión' });
+  }
+};
+
 /** Cambia la contraseña del usuario autenticado y limpia must_change_password. */
 export const changePassword = async (req: Request, res: Response): Promise<void> => {
   try {

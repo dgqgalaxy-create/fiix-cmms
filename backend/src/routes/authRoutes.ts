@@ -1,9 +1,12 @@
 import { Router } from 'express';
-import { login, changePassword } from '../controllers/authController';
+import { login, changePassword, getLoginHint } from '../controllers/authController';
 import { authenticate } from '../middlewares/authMiddleware';
 import { createRateLimiter } from '../middlewares/rateLimit';
 
 const router = Router();
+
+/** Pista de credenciales iniciales (pública; solo visible en instalaciones nuevas). */
+router.get('/login-hint', getLoginHint);
 
 /** Login: 10 intentos / 15 min por IP+email (anti fuerza bruta). */
 const loginLimiter = createRateLimiter({

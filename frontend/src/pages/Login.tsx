@@ -13,6 +13,11 @@ export const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [postWipeMessage, setPostWipeMessage] = useState<string | null>(null);
+  const [loginHint, setLoginHint] = useState<{
+    username: string;
+    password: string;
+    note: string;
+  } | null>(null);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -22,6 +27,19 @@ export const Login = () => {
       setPostWipeMessage(msg);
       sessionStorage.removeItem(POST_WIPE_MESSAGE_KEY);
     }
+  }, []);
+
+  // Credenciales iniciales: solo se muestran mientras el admin por defecto
+  // no haya hecho su primer inicio de sesión (instalación nueva / BD vacía).
+  useEffect(() => {
+    api
+      .get('/auth/login-hint')
+      .then((res) => {
+        if (res.data?.show && res.data?.username && res.data?.password) {
+          setLoginHint(res.data);
+        }
+      })
+      .catch(() => undefined);
   }, []);
 
   const dismissPostWipeMessage = () => setPostWipeMessage(null);
@@ -149,6 +167,33 @@ export const Login = () => {
             )}
           </button>
         </form>
+
+        {loginHint && (
+          <div className="mt-5 rounded-2xl border border-dashed border-emerald-300 bg-emerald-50/70 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
+            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+              <Info size={14} /> Instalación nueva
+            </p>
+            <p className="mt-1.5 text-sm font-medium text-slate-700 dark:text-slate-200">
+              Usuario: <span className="font-mono font-bold">{loginHint.username}</span>
+            </p>
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              Contraseña: <span className="font-mono font-bold">{loginHint.password}</span>
+            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+              {loginHint.note}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail(loginHint.username);
+                setPassword(loginHint.password);
+              }}
+              className="mt-2 rounded-xl border border-emerald-300 bg-white px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+            >
+              Autocompletar
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
