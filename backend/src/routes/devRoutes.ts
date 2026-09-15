@@ -5,7 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import bcrypt from 'bcrypt';
-import { runBackup, listBackups, runRestore, BACKUP_DIR, getBackupProgress } from '../utils/backupService';
+import { runBackup, listBackups, runRestore, BACKUP_DIR, getBackupProgress, SAFE_BACKUP_FILE } from '../utils/backupService';
 import {
   previewOrphanUploads,
   cleanupOrphanUploads,
@@ -396,6 +396,97 @@ router.post('/restore', verifyDevPassword, async (req: Request, res: Response): 
     res.status(500).json({ success: false, message: 'Error al restaurar el respaldo.', error: error.message });
   }
 });
+
+// Descarga un archivo de respaldo (fiix_*.sql.gz o uploads_*.tar.gz) desde BACKUP_DIR.
+router.get('/backups/download/:file', verifyDevPassword, (req: Request, res: Response): void => {
+  const base = path.basename(String(req.params.file || ''));
+  if (!SAFE_BACKUP_FILE.test(base)) {
+    res.status(400).json({ message: 'Nombre de archivo inválido.' });
+    return;
+  }
+  const filePath = path.join(BACKUP_DIR, base);
+  if (!fs.existsSync(filePath)) {
+    res.status(404).json({ message: 'No se encontró el archivo en la carpeta de respaldos.' });
+    return;
+  }
+  res.setHeader('Content-Type', 'application/gzip');
+  res.setHeader('Content-Disposition', `attachment; filename="${base}"`);
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error('Error enviando respaldo para descarga:', err);
+    }
+  });
+});
+
+// Restaura desde un archivo subido (fiix_*.sql.gz + opcional uploads_*.tar.gz).
+// Destructivo: requiere confirmación explícita. Para migrar entre entornos.
+router.post(
+  '/restore-upload',
+  verifyDevPassword,
+  uploadImportFields,
+  async (req: Request, res: Response): Promise<void> => {
+    const filesMap = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const sqlFile = filesMap?.backupFile?.[0];
+    const uploadsFile = filesMap?.uploadsFile?.[0];
+    const cleanupTemps = () => {
+      unlinkUploadedSafe(sqlFile);
+      unlinkUploadedSafe(uploadsFile);
+    };
+    try {
+      const confirm = String((req.body as any)?.confirm || '');
+      if (confirm !== 'RESTAURAR') {
+        res.status(400).json({
+          success: false,
+          message: 'Confirmación requerida. Envía confirm: "RESTAURAR" (esto borra los datos actuales).',
+        });
+        return;
+      }
+      if (!sqlFile) {
+        res.status(400).json({
+          success: false,
+          message: 'Selecciona el archivo de respaldo fiix_….sql.gz para restaurar.',
+        });
+        return;
+      }
+
+      let base = path.basename(sqlFile.originalname || '');
+      base = base.replace(/[^a-zA-Z0-9._-]/g, '_');
+      if (!/^fiix_\d{8}_\d{4}\.sql\.gz$/.test(base)) {
+        res.status(400).json({
+          success: false,
+          message: 'El respaldo debe llamarse fiix_AAAAMMDD_HHMM.sql.gz (como lo genera la app).',
+        });
+        return;
+      }
+
+      const stamp = base.replace(/^fiix_/, '').replace(/\.sql\.gz$/, '');
+      fs.mkdirSync(BACKUP_DIR, { recursive: true });
+      fs.copyFileSync(sqlFile.path, path.join(BACKUP_DIR, base));
+      let uploadsStaged = false;
+      if (uploadsFile) {
+        const uploadsBase = `uploads_${stamp}.tar.gz`;
+        fs.copyFileSync(uploadsFile.path, path.join(BACKUP_DIR, uploadsBase));
+        uploadsStaged = true;
+      }
+
+      const result = await runRestore(base, uploadsStaged);
+      if (!result.success) {
+        res.status(500).json(result);
+        return;
+      }
+      res.json(result);
+    } catch (error: any) {
+      console.error('Error restoring uploaded backup:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al restaurar el respaldo subido.',
+        error: error.message,
+      });
+    } finally {
+      cleanupTemps();
+    }
+  }
+);
 
 router.post('/delete', verifyDevPassword, async (req: Request, res: Response) => {
   try {

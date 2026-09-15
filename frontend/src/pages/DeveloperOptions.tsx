@@ -112,6 +112,13 @@ export const DeveloperOptions = () => {
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const [restoreConfirmText, setRestoreConfirmText] = useState('');
   const [restoreModalError, setRestoreModalError] = useState<string | null>(null);
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [isUploadRestoreOpen, setIsUploadRestoreOpen] = useState(false);
+  const [uploadBackupFile, setUploadBackupFile] = useState<File | null>(null);
+  const [uploadUploadsFile, setUploadUploadsFile] = useState<File | null>(null);
+  const [uploadRestoreConfirm, setUploadRestoreConfirm] = useState('');
+  const [uploadRestoreError, setUploadRestoreError] = useState<string | null>(null);
+  const [isUploadRestoring, setIsUploadRestoring] = useState(false);
   const [itemImagesZip, setItemImagesZip] = useState<File | null>(null);
   const [vendorImagesZip, setVendorImagesZip] = useState<File | null>(null);
   const [workOrderImagesZip, setWorkOrderImagesZip] = useState<File | null>(null);
@@ -753,6 +760,81 @@ export const DeveloperOptions = () => {
     clearDevOptionsSession();
     logout();
     navigate('/login', { replace: true });
+  };
+
+  /** Descarga un archivo de respaldo del servidor (requiere contraseña maestra). */
+  const handleDownloadBackup = async (file: string) => {
+    setError(null);
+    try {
+      const res = await axios.get(`/dev/backups/download/${encodeURIComponent(file)}`, {
+        headers: { 'x-dev-password': password },
+        responseType: 'blob',
+        timeout: 600000,
+      });
+      const blob = res.data as Blob;
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      const detail = isAxiosError(err)
+        ? err.response?.data?.message || err.message
+        : err instanceof Error ? err.message : 'Error desconocido';
+      setError(`No se pudo descargar el respaldo: ${detail}`);
+    }
+  };
+
+  /** Restaura desde un archivo de respaldo subido (migración entre entornos). */
+  const handleUploadRestore = async () => {
+    if (!uploadBackupFile) {
+      setUploadRestoreError('Selecciona el archivo fiix_….sql.gz del respaldo.');
+      return;
+    }
+    if (uploadRestoreConfirm !== 'RESTAURAR') {
+      setUploadRestoreError('Escribe RESTAURAR para confirmar (esto borra los datos actuales).');
+      return;
+    }
+    setIsUploadRestoring(true);
+    setError(null);
+    setUploadRestoreError(null);
+    try {
+      const form = new FormData();
+      form.append('backupFile', uploadBackupFile);
+      if (uploadUploadsFile) form.append('uploadsFile', uploadUploadsFile);
+      form.append('confirm', 'RESTAURAR');
+      const res = await axios.post('/dev/restore-upload', form, {
+        headers: { 'x-dev-password': password, 'Content-Type': 'multipart/form-data' },
+        timeout: 600000,
+      });
+      if (res.data?.success) {
+        setIsUploadRestoreOpen(false);
+        setUploadRestoreConfirm('');
+        setUploadBackupFile(null);
+        setUploadUploadsFile(null);
+        forceLogoutAfterDbChange(
+          res.data.message
+            ? `${RESTORE_LOGOUT_MESSAGE}\n\n${res.data.message}`
+            : RESTORE_LOGOUT_MESSAGE
+        );
+        return;
+      }
+      const failMsg = res.data?.message || 'No se pudo restaurar el respaldo subido.';
+      setUploadRestoreError(failMsg);
+      setError(failMsg);
+    } catch (err: unknown) {
+      const detail = isAxiosError(err)
+        ? err.response?.data?.message || err.message
+        : err instanceof Error ? err.message : 'Error desconocido';
+      const failMsg = `Fallo al restaurar: ${detail}`;
+      setUploadRestoreError(failMsg);
+      setError(failMsg);
+    } finally {
+      setIsUploadRestoring(false);
+    }
   };
 
   const handleRestoreBackup = async () => {
@@ -1811,7 +1893,32 @@ export const DeveloperOptions = () => {
                   >
                     <HardDrive size={16} /> Restaurar respaldo
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDownloadModalOpen(true);
+                      void loadServerBackups();
+                    }}
+                    disabled={isLoading || isRestoring || isBackingUp}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-800 transition hover:bg-sky-100 disabled:opacity-50 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300"
+                  >
+                    <Download size={16} /> Descargar respaldos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsUploadRestoreOpen(true);
+                      setUploadRestoreError(null);
+                    }}
+                    disabled={isLoading || isRestoring || isBackingUp || isUploadRestoring}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                  >
+                    <Upload size={16} /> Restaurar desde archivo
+                  </button>
                 </div>
+                <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                  💡 Para migrar a otro servidor: aquí «Crear respaldo» y «Descargar respaldos» (BD y fotos). En el otro servidor entra a esta misma pantalla y usa «Restaurar desde archivo» con los archivos descargados.
+                </p>
                 {(isBackingUp || backupProgress) && backupProgress && (
                   <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3 dark:border-amber-900/50 dark:bg-amber-950/30">
                     <div className="mb-1.5 flex items-center justify-between gap-2 text-xs font-bold text-amber-900 dark:text-amber-200">
@@ -2633,6 +2740,186 @@ export const DeveloperOptions = () => {
                 className="flex-1 rounded-lg bg-amber-600 py-3 font-bold text-white transition-colors hover:bg-amber-700 disabled:opacity-50"
               >
                 {isRestoring ? 'Restaurando...' : 'Confirmar restauración'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Download backups modal */}
+      {isDownloadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                Descargar respaldos
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsDownloadModalOpen(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
+              Descarga la base de datos (<code>.sql.gz</code>) y, si existe, las fotos/archivos (<code>.tar.gz</code>) para llevarlos a otro servidor.
+            </p>
+            {serverBackups.length === 0 ? (
+              <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                No hay respaldos. Crea uno primero con «Crear respaldo».
+              </p>
+            ) : (
+              <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
+                {serverBackups.map((b) => (
+                  <div
+                    key={b.file}
+                    className="rounded-xl border border-slate-200 p-3 dark:border-slate-700"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="min-w-0 truncate text-sm font-bold text-slate-800 dark:text-slate-100">
+                        {b.file}
+                      </p>
+                      <span className="text-[11px] font-medium text-slate-400">
+                        {b.size < 1024
+                          ? `${b.size} B`
+                          : b.size < 1024 * 1024
+                            ? `${(b.size / 1024).toFixed(0)} KB`
+                            : `${(b.size / (1024 * 1024)).toFixed(1)} MB`}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      {formatDateTime(b.mtime)}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleDownloadBackup(b.file)}
+                        disabled={b.usable === false}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-sky-700 disabled:opacity-40"
+                      >
+                        <Download size={13} /> Base de datos
+                      </button>
+                      {b.uploadsFile && (
+                        <button
+                          type="button"
+                          onClick={() => void handleDownloadBackup(b.uploadsFile as string)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-2.5 py-1.5 text-xs font-bold text-sky-700 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300"
+                        >
+                          <Download size={13} /> Fotos/archivos
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsDownloadModalOpen(false)}
+                className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restore from uploaded file modal */}
+      {isUploadRestoreOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                Restaurar desde archivo
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsUploadRestoreOpen(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+              >
+                ✕
+              </button>
+            </div>
+            {uploadRestoreError && (
+              <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
+                <AlertTriangle className="mt-0.5 shrink-0" size={18} />
+                <span className="whitespace-pre-wrap">{uploadRestoreError}</span>
+              </div>
+            )}
+            <label className="mb-4 block">
+              <span className="mb-1.5 block text-sm font-bold text-slate-700 dark:text-slate-300">
+                Respaldo de base de datos <code>.sql.gz</code> *
+              </span>
+              <input
+                type="file"
+                accept=".sql.gz,application/gzip"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  setUploadBackupFile(f);
+                  setUploadRestoreError(null);
+                }}
+                className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-emerald-700 dark:text-slate-300"
+              />
+              {uploadBackupFile && (
+                <p className="mt-1 text-xs text-slate-500">
+                  ✓ {uploadBackupFile.name} ({(uploadBackupFile.size / (1024 * 1024)).toFixed(1)} MB)
+                </p>
+              )}
+            </label>
+            <label className="mb-4 block">
+              <span className="mb-1.5 block text-sm font-bold text-slate-700 dark:text-slate-300">
+                Fotos/archivos <code>uploads_….tar.gz</code> (opcional)
+              </span>
+              <input
+                type="file"
+                accept=".tar.gz,application/gzip,.gz"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  setUploadUploadsFile(f);
+                  setUploadRestoreError(null);
+                }}
+                className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-sky-600 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-sky-700 dark:text-slate-300"
+              />
+              {uploadUploadsFile && (
+                <p className="mt-1 text-xs text-slate-500">
+                  ✓ {uploadUploadsFile.name} ({(uploadUploadsFile.size / (1024 * 1024)).toFixed(1)} MB)
+                </p>
+              )}
+            </label>
+            <p className="mb-2 text-sm text-slate-600 dark:text-slate-400">
+              Escribe <strong>RESTAURAR</strong> para confirmar (borra los datos actuales):
+            </p>
+            <input
+              type="text"
+              value={uploadRestoreConfirm}
+              onChange={(e) => setUploadRestoreConfirm(e.target.value)}
+              className="mb-6 w-full rounded-lg border border-slate-300 bg-white p-3 text-center font-bold tracking-widest text-slate-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+              placeholder="Escribe RESTAURAR"
+            />
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsUploadRestoreOpen(false);
+                  setUploadRestoreConfirm('');
+                  setUploadRestoreError(null);
+                }}
+                className="flex-1 rounded-lg bg-slate-100 py-3 font-bold text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleUploadRestore()}
+                disabled={
+                  uploadRestoreConfirm !== 'RESTAURAR' || !uploadBackupFile || isUploadRestoring
+                }
+                className="flex-1 rounded-lg bg-emerald-600 py-3 font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {isUploadRestoring ? 'Restaurando…' : 'Restaurar archivo subido'}
               </button>
             </div>
           </div>

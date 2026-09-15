@@ -24,7 +24,7 @@ const PG_CLIENT_HINT = IS_WIN
   : 'Instala el cliente de PostgreSQL (paquete postgresql-client) para disponer de pg_dump y psql.';
 
 const PG_DUMP_HINT = PG_CLIENT_HINT;
-const SAFE_BACKUP_FILE = /^(fiix|uploads|data|env)_\d{8}_\d{4}\.(sql\.gz|tar\.gz|env)$/;
+export const SAFE_BACKUP_FILE = /^(fiix|uploads|data|env)_\d{8}_\d{4}\.(sql\.gz|tar\.gz|env)$/;
 /** Gzip vacío ~20 bytes; un dump real de esquema+datos supera holgadamente este mínimo. */
 const MIN_SQL_GZ_BYTES = 64;
 const MIN_SQL_RAW_BYTES = 200;
