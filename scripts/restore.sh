@@ -87,9 +87,10 @@ if [ "${GZ_SIZE}" -lt 64 ]; then
 fi
 # Recrear public evita conflictos con tablas ya existentes (p. ej. tras wipe).
 # -q silencia los NOTICE de "drop cascades to table ..." (no son errores).
+# Se filtra SET transaction_timeout (GUC nuevo en PG 17) para restaurar en PG 16 o menor.
 {
   printf '%s\n' 'DROP SCHEMA IF EXISTS public CASCADE;' 'CREATE SCHEMA public;' 'GRANT ALL ON SCHEMA public TO public;' 'GRANT ALL ON SCHEMA public TO CURRENT_USER;'
-  gunzip -c "${SQL_PATH}"
+  gunzip -c "${SQL_PATH}" | sed '/^SET transaction_timeout = 0;$/d'
 } | psql -q "${DATABASE_URL}" -v ON_ERROR_STOP=1
 echo "  [OK] Base de datos restaurada."
 

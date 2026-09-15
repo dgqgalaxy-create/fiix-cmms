@@ -423,6 +423,15 @@ async function restoreDatabase(
     );
   }
 
+  // Compatibilidad entre mayores: pg_dump 17 emite `SET transaction_timeout = 0;`
+  // (GUC nuevo en PG 17). Al restaurar en PostgreSQL 16 o menor, esa línea haría
+  // fallar el restore con «unrecognized configuration parameter». La filtramos.
+  const sqlText = sqlRaw
+    .toString('utf8')
+    .split('\n')
+    .filter((line) => !/^SET transaction_timeout = /i.test(line))
+    .join('\n');
+
   const pgUrl = sanitizeDatabaseUrlForPgClients(databaseUrl);
   // Recrear public evita «relation already exists» al restaurar un dump completo sobre tablas ya creadas.
   // Todo dentro de BEGIN…COMMIT: cualquier fallo revierte el DROP y deja la BD como estaba.
@@ -438,7 +447,7 @@ async function restoreDatabase(
     'utf8'
   );
   const commitTail = Buffer.from('\nCOMMIT;\n', 'utf8');
-  const sqlPayload = Buffer.concat([preamble, sqlRaw, commitTail]);
+  const sqlPayload = Buffer.concat([preamble, Buffer.from(sqlText, 'utf8'), commitTail]);
 
   const child = spawn(psqlPath, ['-q', pgUrl, '-v', 'ON_ERROR_STOP=1'], {
     shell: false,

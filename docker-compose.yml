@@ -1,13 +1,17 @@
 services:
   db:
-    image: postgres:16-alpine
+    # Mismo major que el servidor de producción (PG 17): evita incompatibilidades
+    # de dump/restore entre entornos (p. ej. SET transaction_timeout de pg_dump 17).
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${DB_PASSWORD:-fiix_dev_pass}
       POSTGRES_DB: fiix_cmms
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # Volumen nuevo para PG 17; el antiguo «fiix-cmms_pgdata» (PG 16) se conserva
+      # intacto como respaldo por si se necesita volver atrás.
+      - pgdata17:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d fiix_cmms"]
       interval: 5s
@@ -40,7 +44,7 @@ services:
       - backups:/backups
 
 volumes:
-  pgdata:
+  pgdata17:
   uploads:
   data:
   backups:
