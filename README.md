@@ -22,7 +22,8 @@ cat > .env <<'EOF'
 DB_PASSWORD=tu_clave_fuerte
 JWT_SECRET=tu_secreto_jwt
 PORT=3000
-# Opcionales — importar fotos desde Google Drive
+# Opcionales — importar fotos desde Google Drive (también editables desde la app:
+# Opciones de Desarrollador → Integraciones → Google Drive; el .env queda como respaldo)
 GOOGLE_DRIVE_API_KEY="tu_api_key_opcional"
 GOOGLE_DRIVE_ITEMS_FOLDER="https://drive.google.com/drive/folders/ID_inventario"
 GOOGLE_DRIVE_VENDORS_FOLDER="https://drive.google.com/drive/folders/ID_proveedores"
@@ -90,7 +91,7 @@ En Docker, todas se definen en el archivo **`.env` de la raíz del proyecto** (d
 | `JWT_SECRET` | `.env` raíz | `.env` | Secreto de sesiones (genera uno fuerte) |
 | `PORT` | `.env` raíz | — | Puerto del host (por defecto 3000) |
 | `SKIP_DB_PUSH` | `.env` raíz | — | `1` = no sincronizar esquema al arrancar (restaurar backups) |
-| `GOOGLE_DRIVE_*` | `.env` raíz | `.env` | Opcional: importar fotos desde Google Drive (ver abajo) |
+| `GOOGLE_DRIVE_*` | `.env` raíz (o desde la app) | `.env` (o desde la app) | Opcional: importar fotos desde Google Drive (editable en Opciones de Desarrollador → Integraciones; el `.env` queda como respaldo) |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | `.env` raíz | `.env` | Opcional: alertas por Telegram |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | `.env` raíz | `.env` | Opcional: notificaciones Web Push (instalación nativa las auto-genera) |
 
@@ -104,7 +105,9 @@ Usa carpetas públicas de Google Drive para importar fotos automáticamente en C
    - Inventario: repuestos/items
    - Proveedores: logos
    - Órdenes: fotos antes/después
-3. Pasa las URLs/IDs en el `.env` de la raíz (Docker) o en `backend/.env` (Ubuntu nativo).
+3. Configura las claves de dos formas posibles:
+   - **Desde la app (recomendado):** Opciones de Desarrollador → Integraciones → **Google Drive**. Se guardan en la base de datos, se muestran enmascaradas (con botón Mostrar/Ocultar) y aplican al instante sin reiniciar.
+   - **O por variables:** en el `.env` de la raíz (Docker) o en `backend/.env` (Ubuntu nativo). Si el campo guardado en la app está vacío, se usa este valor como respaldo.
 
 > Nota: la documentación detallada de Google Drive está en el histórico del proyecto (la configuración actual usa las variables `GOOGLE_DRIVE_*` listadas arriba).
 
