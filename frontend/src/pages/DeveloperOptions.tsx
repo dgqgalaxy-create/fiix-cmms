@@ -846,6 +846,7 @@ export const DeveloperOptions = () => {
     setUploadRestorePct(0);
     setError(null);
     setUploadRestoreError(null);
+    localStorage.setItem('fiix_restoring', '1');
     try {
       const form = new FormData();
       form.append('backupFile', uploadBackupFile);
@@ -883,6 +884,7 @@ export const DeveloperOptions = () => {
       setUploadRestoreError(failMsg);
       setError(failMsg);
     } finally {
+      localStorage.removeItem('fiix_restoring');
       setIsUploadRestoring(false);
       setUploadRestorePct(null);
     }
@@ -907,6 +909,7 @@ export const DeveloperOptions = () => {
     setIsRestoring(true);
     setError(null);
     setRestoreModalError(null);
+    localStorage.setItem('fiix_restoring', '1');
     try {
       const res = await axios.post(
         '/dev/restore',
@@ -935,6 +938,7 @@ export const DeveloperOptions = () => {
       setRestoreModalError(failMsg);
       setError(failMsg);
     } finally {
+      localStorage.removeItem('fiix_restoring');
       setIsRestoring(false);
     }
   };

@@ -22,12 +22,20 @@ function extractBearerOrQueryToken(req: Request): string | null {
 
 /**
  * Valida JWT + existencia + is_active. Usa rol actual de la BD (no solo el del token).
+ * Si la BD está temporalmente no disponible (p. ej. durante una restauración del
+ * respaldo), se confía en los claims del token verificado para no desloguear a todos.
  */
 export async function resolveAuthUser(
   token: string
 ): Promise<{ userId: string; role: string } | { error: string; status: number }> {
+  let decoded: { userId: string; role: string };
   try {
-    const decoded = verifyToken(token) as { userId: string; role: string };
+    decoded = verifyToken(token) as { userId: string; role: string };
+  } catch {
+    return { error: 'Token expirado o inválido', status: 401 };
+  }
+
+  try {
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: { id: true, role: true, is_active: true },
@@ -39,8 +47,11 @@ export async function resolveAuthUser(
       return { error: 'Usuario desactivado', status: 401 };
     }
     return { userId: user.id, role: user.role };
-  } catch {
-    return { error: 'Token expirado o inválido', status: 401 };
+  } catch (dbError) {
+    // Error de conexión/esquema (no «usuario inexistente»): mantener la sesión
+    // con lo que dice el token; en cuanto la BD vuelva se valida normalmente.
+    console.error('[Auth] BD no disponible al autenticar; se usan claims del token:', dbError);
+    return { userId: decoded.userId, role: decoded.role };
   }
 }
 

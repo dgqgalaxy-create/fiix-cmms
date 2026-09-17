@@ -135,6 +135,12 @@ api.interceptors.response.use(
       if (reqUrl.includes('/auth/login') || reqUrl.includes('/dev/')) {
         return Promise.reject(error);
       }
+      // Durante una restauración la BD se vacía/recrea y las peticiones concurrentes
+      // pueden recibir 401 temporal: no desloguear; el flujo de restauración cierra
+      // la sesión por su cuenta al terminar (con su aviso en el login).
+      if (localStorage.getItem('fiix_restoring') === '1') {
+        return Promise.reject(error);
+      }
       localStorage.removeItem('token');
       localStorage.removeItem('lastActivity');
       window.location.href = '/login';

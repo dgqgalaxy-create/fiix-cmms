@@ -458,7 +458,15 @@ router.post('/restore', verifyDevPassword, async (req: Request, res: Response): 
       });
       return;
     }
-    const result = await runRestore(file, Boolean(restoreUploads));
+    // La BD se vacía/recrea durante unos segundos: modo mantenimiento evita
+    // errores en los demás usuarios y les muestra el banner «Restaurando…».
+    enterMaintenance('Restaurando respaldo. Modo solo lectura.');
+    let result;
+    try {
+      result = await runRestore(file, Boolean(restoreUploads));
+    } finally {
+      exitMaintenance();
+    }
     if (!result.success) {
       res.status(500).json(result);
       return;
@@ -600,7 +608,14 @@ router.post(
         uploadsStaged = true;
       }
 
-      const result = await runRestore(base, uploadsStaged);
+      // Mismo tratamiento que /restore: mantenimiento durante el vaciado/recreado de la BD.
+      enterMaintenance('Restaurando respaldo. Modo solo lectura.');
+      let result;
+      try {
+        result = await runRestore(base, uploadsStaged);
+      } finally {
+        exitMaintenance();
+      }
       if (!result.success) {
         res.status(500).json(result);
         return;
