@@ -23,9 +23,9 @@ sudo usermod -aG docker $USER   # re-inicia sesión después
 | Archivo | Propósito |
 |---|---|
 | `Dockerfile` | Compila backend + frontend y deja una imagen ligera con `pg_dump`/`psql`/`tar` (respaldos). |
-| `docker-compose.yml` | Levanta `db` (PostgreSQL 16) + `app` (GTZ CMMS). |
+| `docker-compose.yml` | Levanta `db` (PostgreSQL 17) + `app` (GTZ CMMS). |
 | `.dockerignore` | Evita subir `node_modules`, `dist`, secretos y datos al contexto de build. |
-| `docker/entrypoint.sh` | Aplica el esquema (`prisma db push`) y arranca el servidor. |
+| `docker/entrypoint.sh` | Aplica el esquema (`prisma db push`), siembra usuarios demo y arranca el servidor (en BD vacía crea el esquema primero). |
 
 ---
 
@@ -34,10 +34,16 @@ sudo usermod -aG docker $USER   # re-inicia sesión después
 ```bash
 cd fiix-cmms
 
-# Construye y arranca (define tus secretos)
-DB_PASSWORD=una_clave_fuerte \
-JWT_SECRET=otro_secreto_largo \
-docker compose up -d --build
+# 1) Crea el .env raíz con tus claves (docker compose lo lee solo). Plantilla completa en el README.
+cat > .env <<'EOF'
+DB_PASSWORD=una_clave_fuerte
+JWT_SECRET=otro_secreto_largo
+PORT=3000
+# Opcionales: GOOGLE_DRIVE_*, TELEGRAM_*, VAPID_* (ver README)
+EOF
+
+# 2) Construye y arranca (sudo si tu usuario no está en el grupo docker)
+sudo docker compose up -d --build
 ```
 
 Variables útiles (todas opcionales, con defaults de prueba):
@@ -48,6 +54,9 @@ Variables útiles (todas opcionales, con defaults de prueba):
 | `JWT_SECRET` | `cambia_este_secreto_jwt` | Secreto para firmar tokens. **Cámbialo.** |
 | `PORT` | `3000` | Puerto publicado en el host. |
 | `SKIP_DB_PUSH` | `0` | Pon `1` para no aplicar el esquema al arrancar (cuando restauras un backup). |
+| `GOOGLE_DRIVE_API_KEY`, `GOOGLE_DRIVE_ITEMS_FOLDER`, `GOOGLE_DRIVE_VENDORS_FOLDER`, `GOOGLE_DRIVE_WO_FOLDER` | vacío | Fotos desde Google Drive. También editables desde la app: **Opciones de Desarrollador → Integraciones → Google Drive** (guardadas en BD, enmascaradas; el `.env` queda como respaldo). |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | vacío | Alertas de Telegram (también editables desde la app). |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | vacío | Notificaciones Web Push PWA. |
 
 Verificar:
 
@@ -91,7 +100,7 @@ docker compose cp data app:/app/
 docker compose restart app
 ```
 
-> Alternativa: puedes restaurar desde la propia app (Opciones de Desarrollador → «Restaurar respaldo») si el `.sql.gz` está dentro del volumen `backups`.
+> Forma más simple (recomendada): con la app ya levantada, entra con el admin demo y usa **Opciones de Desarrollador → «Restaurar desde archivo»** para subir el `fiix_*.sql.gz` (y el `uploads_*.tar.gz` si quieres las fotos) sin tocar la terminal; o **«Restaurar respaldo»** si los archivos ya están dentro del volumen `backups`.
 
 ---
 
