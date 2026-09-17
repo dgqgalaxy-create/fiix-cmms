@@ -2,7 +2,7 @@
 
 Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, activos, inventario, preventivos, checklist, KPIs, compras, RCA, roster y notificaciones (Telegram + Web Push PWA).
 
-**Stack:** PostgreSQL · Prisma · Node.js 22+ / Express · React/Vite · Tailwind v4 · Socket.IO · PM2 (servidor)
+**Stack:** PostgreSQL · Prisma · Node.js 22+ / Express · React/Vite · Tailwind v4 · Socket.IO · PM2 o Docker (servidor)
 
 ---
 
@@ -12,10 +12,12 @@ Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, ac
 
 ```bash
 # Requisitos: Docker + Docker Compose (en Ubuntu: sudo apt install docker.io docker-compose-v2)
+# Repo privado: configura una llave SSH de solo lectura en GitHub antes del clone
+# (o clona por HTTPS con un token: https://TOKEN@github.com/dgqgalaxy-create/fiix-cmms.git)
 git clone git@github.com:dgqgalaxy-create/fiix-cmms.git ~/fiix-cmms
 cd ~/fiix-cmms
 
-# 1) Crea el archivo .env en la raíz del proyecto con tus claves (docker compose lo lee solo)
+# 1) Crea el archivo .env en la raíz del proyecto con tus claves (cambia los valores de ejemplo)
 cat > .env <<'EOF'
 DB_PASSWORD=tu_clave_fuerte
 JWT_SECRET=tu_secreto_jwt
@@ -42,6 +44,7 @@ sudo docker compose up -d --build
 
 # Acceder: http://IP:3000
 # Usuarios de demo: admin@fiix.com / gestionador@fiix.com / tecnico@fiix.com (contraseña: password123)
+# Para arrancar con los datos de otro servidor: Opciones de Desarrollador → Restaurar desde archivo
 ```
 
 > Si prefieres pasar las claves en línea sin crear `.env`, usa `sudo -E` para conservarlas:
@@ -101,9 +104,9 @@ Usa carpetas públicas de Google Drive para importar fotos automáticamente en C
    - Inventario: repuestos/items
    - Proveedores: logos
    - Órdenes: fotos antes/después
-3. Pasa las URLs/IDs al arrancar Docker o en `backend/.env`.
+3. Pasa las URLs/IDs en el `.env` de la raíz (Docker) o en `backend/.env` (Ubuntu nativo).
 
-Ver documentación completa: [`docs/google-drive-setup.md`](docs/google-drive-setup.md)
+> Nota: la documentación detallada de Google Drive está en el histórico del proyecto (la configuración actual usa las variables `GOOGLE_DRIVE_*` listadas arriba).
 
 ### Importar datos (CSV + fotos)
 
@@ -121,6 +124,7 @@ Ver documentación completa: [`docs/google-drive-setup.md`](docs/google-drive-se
 ```bash
 # Actualiza código y reconstruye la imagen
 cd ~/fiix-cmms
+git restore .          # descarta cambios locales en el servidor (evita conflictos con pull)
 git pull
 sudo docker compose up -d --build   # (sin sudo si tu usuario está en el grupo docker)
 ```
@@ -136,7 +140,10 @@ cd ~/fiix-cmms
 
 ### Respaldos
 
-Automáticos diarios a `~/fiix-backups` (o `BACKUP_DIR`). Restaurar:
+Se generan automáticamente **todos los días a las 2:15 AM** (retención de 14 días).
+
+- **Docker:** quedan en el volumen `fiix-cmms_backups` (carpeta `/backups` del contenedor). Restaura desde la app: **Opciones de Desarrollador → Restaurar respaldo**; o usa **Descargar respaldos / Restaurar desde archivo** para migrar entre servidores.
+- **Ubuntu nativo:** quedan en `~/fiix-backups` (o `BACKUP_DIR`). Restaurar:
 
 ```bash
 chmod +x scripts/restore.sh
@@ -181,11 +188,11 @@ Extensiones recomendadas (VS Code): Prettier, Tailwind CSS IntelliSense, Prisma.
 ## Documentación completa
 
 - **Guía Docker avanzada** (volúmenes, HTTPS, restaurar backups): [`docs/guia-docker.md`](docs/guia-docker.md)
-- **Setup SSH y deploy:** [`docs/git-setup.md`](docs/git-setup.md)
-- **Troubleshooting:** [`docs/troubleshooting.md`](docs/troubleshooting.md)
-- **Google Drive:** [`docs/google-drive-setup.md`](docs/google-drive-setup.md)
 - **Manual de usuario:** [`docs/manual_usuario.md`](docs/manual_usuario.md)
 - **Respaldos y recuperación:** [`docs/backup-strategy.md`](docs/backup-strategy.md)
+- **Plan de pruebas:** [`docs/plan_pruebas.md`](docs/plan_pruebas.md)
+- **Contexto del proyecto:** [`docs/project_context.md`](docs/project_context.md)
+- **Scripts legados:** [`docs/legacy-scripts.md`](docs/legacy-scripts.md)
 - **Histórico y roadmap:** [`docs/roadmap.md`](docs/roadmap.md)
 
 ---
