@@ -3,6 +3,7 @@ import path from 'path';
 import os from 'os';
 import https from 'https';
 import http from 'http';
+import prisma from '../config/prisma';
 
 export interface DriveFileMeta {
   id: string;
@@ -47,21 +48,60 @@ export function extractDriveFolderId(raw?: string | null): string | null {
   return null;
 }
 
+/**
+ * Valores guardados desde Opciones de Desarrollador (BD). Si están vacíos,
+ * se usan las variables GOOGLE_DRIVE_* del entorno (.env) como respaldo.
+ */
+let driveDbSettings: {
+  apiKey: string | null;
+  itemsFolder: string | null;
+  vendorsFolder: string | null;
+  woFolder: string | null;
+} = { apiKey: null, itemsFolder: null, vendorsFolder: null, woFolder: null };
+
+export function setDriveDbSettings(s: Partial<typeof driveDbSettings>): void {
+  driveDbSettings = { ...driveDbSettings, ...s };
+}
+
+/** Carga las claves de Google Drive guardadas en BD (se llama al arrancar y al guardarlas). */
+export async function loadDriveDbSettings(): Promise<void> {
+  try {
+    const s = await prisma.systemSettings.findFirst({
+      select: {
+        google_drive_api_key: true,
+        google_drive_items_folder: true,
+        google_drive_vendors_folder: true,
+        google_drive_wo_folder: true,
+      },
+    });
+    if (s) {
+      setDriveDbSettings({
+        apiKey: s.google_drive_api_key ?? null,
+        itemsFolder: s.google_drive_items_folder ?? null,
+        vendorsFolder: s.google_drive_vendors_folder ?? null,
+        woFolder: s.google_drive_wo_folder ?? null,
+      });
+    }
+  } catch (error) {
+    console.error('[GoogleDrive] No se pudieron cargar las claves desde BD:', error);
+  }
+}
+
 export function getDriveApiKey(): string | null {
-  const k = process.env.GOOGLE_DRIVE_API_KEY?.trim();
+  const k = (driveDbSettings.apiKey ?? process.env.GOOGLE_DRIVE_API_KEY)?.trim();
   return k || null;
 }
 
 export function getDriveItemsFolderId(): string | null {
-  return extractDriveFolderId(process.env.GOOGLE_DRIVE_ITEMS_FOLDER);
+  return extractDriveFolderId(driveDbSettings.itemsFolder ?? process.env.GOOGLE_DRIVE_ITEMS_FOLDER);
 }
 
 export function getDriveWoFolderId(): string | null {
-  return extractDriveFolderId(process.env.GOOGLE_DRIVE_WO_FOLDER);
+  return extractDriveFolderId(driveDbSettings.woFolder ?? process.env.GOOGLE_DRIVE_WO_FOLDER);
 }
 
 export function getDriveVendorsFolderId(): string | null {
-  return extractDriveFolderId(process.env.GOOGLE_DRIVE_VENDORS_FOLDER);
+  return extractDriveFolderId(driveDbSettings.vendorsFolder ?? process.env.GOOGLE_DRIVE_VENDORS_FOLDER);
 }
 
 function driveHttpsJson(url: string, timeoutMs = LIST_TIMEOUT_MS): Promise<any> {

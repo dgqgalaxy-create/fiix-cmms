@@ -98,6 +98,7 @@ import versionRoutes from './routes/versionRoutes';
 import notesRoutes from './routes/notesRoutes';
 import chatRoutes from './routes/chatRoutes';
 import { initCronJobs } from './utils/cronJobs';
+import { loadDriveDbSettings } from './utils/googleDriveImport';
 import { pingDatabase } from './utils/dbHealthCheck';
 
 app.get('/api/health', async (_req: Request, res: Response) => {
@@ -232,6 +233,9 @@ if (fs.existsSync(frontendDistPath)) {
 
 // Initialize Cron Jobs
 initCronJobs();
+
+// Claves de Google Drive editables desde Opciones de Desarrollador (BD).
+void loadDriveDbSettings();
 
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

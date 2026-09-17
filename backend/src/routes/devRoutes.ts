@@ -28,6 +28,7 @@ import {
   getDriveItemsFolderId,
   getDriveWoFolderId,
   getDriveVendorsFolderId,
+  setDriveDbSettings,
 } from '../utils/googleDriveImport';
 import { getImportProgress, setImportProgress, resetImportProgress } from '../utils/importProgress';
 import { enterMaintenance, exitMaintenance } from '../utils/maintenance';
@@ -292,7 +293,11 @@ router.get('/settings', verifyDevPassword, async (req: Request, res: Response): 
     }
     res.json({
       telegram_bot_token: settings.telegram_bot_token || '',
-      telegram_chat_id: settings.telegram_chat_id || ''
+      telegram_chat_id: settings.telegram_chat_id || '',
+      google_drive_api_key: settings.google_drive_api_key || '',
+      google_drive_items_folder: settings.google_drive_items_folder || '',
+      google_drive_vendors_folder: settings.google_drive_vendors_folder || '',
+      google_drive_wo_folder: settings.google_drive_wo_folder || ''
     });
   } catch (error) {
     console.error('Error fetching dev settings:', error);
@@ -302,26 +307,52 @@ router.get('/settings', verifyDevPassword, async (req: Request, res: Response): 
 
 router.post('/settings', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
   try {
-    const { telegram_bot_token, telegram_chat_id } = req.body;
+    const {
+      telegram_bot_token,
+      telegram_chat_id,
+      google_drive_api_key,
+      google_drive_items_folder,
+      google_drive_vendors_folder,
+      google_drive_wo_folder,
+    } = req.body;
     let settings = await prisma.systemSettings.findFirst();
-    
+
+    const data = {
+      telegram_bot_token: typeof telegram_bot_token === 'string' ? telegram_bot_token.trim() : undefined,
+      telegram_chat_id: typeof telegram_chat_id === 'string' ? telegram_chat_id.trim() : undefined,
+      google_drive_api_key: typeof google_drive_api_key === 'string' ? google_drive_api_key.trim() : undefined,
+      google_drive_items_folder: typeof google_drive_items_folder === 'string' ? google_drive_items_folder.trim() : undefined,
+      google_drive_vendors_folder: typeof google_drive_vendors_folder === 'string' ? google_drive_vendors_folder.trim() : undefined,
+      google_drive_wo_folder: typeof google_drive_wo_folder === 'string' ? google_drive_wo_folder.trim() : undefined,
+    };
+
     if (!settings) {
-      await prisma.systemSettings.create({
+      settings = await prisma.systemSettings.create({
         data: {
           telegram_enabled: true,
-          telegram_bot_token,
-          telegram_chat_id,
+          telegram_bot_token: data.telegram_bot_token,
+          telegram_chat_id: data.telegram_chat_id,
+          google_drive_api_key: data.google_drive_api_key,
+          google_drive_items_folder: data.google_drive_items_folder,
+          google_drive_vendors_folder: data.google_drive_vendors_folder,
+          google_drive_wo_folder: data.google_drive_wo_folder,
         },
       });
     } else {
-      await prisma.systemSettings.update({
+      settings = await prisma.systemSettings.update({
         where: { id: settings.id },
-        data: {
-          telegram_bot_token,
-          telegram_chat_id,
-        },
+        data,
       });
     }
+
+    // Refrescar el caché en memoria que usan las importaciones (sin reiniciar).
+    setDriveDbSettings({
+      apiKey: settings.google_drive_api_key ?? null,
+      itemsFolder: settings.google_drive_items_folder ?? null,
+      vendorsFolder: settings.google_drive_vendors_folder ?? null,
+      woFolder: settings.google_drive_wo_folder ?? null,
+    });
+
     res.json({ success: true });
   } catch (error) {
     console.error('Error updating dev settings:', error);

@@ -20,6 +20,8 @@ import {
   ChevronDown,
   Cloud,
   Download,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import axios, { BACKEND_URL } from '../api/axios';
@@ -81,6 +83,12 @@ export const DeveloperOptions = () => {
   const [telegramToken, setTelegramToken] = useState('');
   const [telegramChatId, setTelegramChatId] = useState('');
   const [isSavingTelegram, setIsSavingTelegram] = useState(false);
+  const [driveApiKey, setDriveApiKey] = useState('');
+  const [driveItemsFolder, setDriveItemsFolder] = useState('');
+  const [driveVendorsFolder, setDriveVendorsFolder] = useState('');
+  const [driveWoFolder, setDriveWoFolder] = useState('');
+  const [showDriveSecrets, setShowDriveSecrets] = useState(false);
+  const [isSavingDrive, setIsSavingDrive] = useState(false);
   const [currentPasswordInput, setCurrentPasswordInput] = useState('');
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
@@ -573,6 +581,10 @@ export const DeveloperOptions = () => {
         if (setRes.data) {
           setTelegramToken(setRes.data.telegram_bot_token || '');
           setTelegramChatId(setRes.data.telegram_chat_id || '');
+          setDriveApiKey(setRes.data.google_drive_api_key || '');
+          setDriveItemsFolder(setRes.data.google_drive_items_folder || '');
+          setDriveVendorsFolder(setRes.data.google_drive_vendors_folder || '');
+          setDriveWoFolder(setRes.data.google_drive_wo_folder || '');
         }
       } catch(e) {
         console.error('Error fetching settings', e);
@@ -604,6 +616,28 @@ export const DeveloperOptions = () => {
       setError('Error al guardar la configuración de Telegram.');
     } finally {
       setIsSavingTelegram(false);
+    }
+  };
+
+  const handleSaveDrive = async () => {
+    setIsSavingDrive(true);
+    setError(null);
+    try {
+      await axios.post('/dev/settings', {
+        google_drive_api_key: driveApiKey,
+        google_drive_items_folder: driveItemsFolder,
+        google_drive_vendors_folder: driveVendorsFolder,
+        google_drive_wo_folder: driveWoFolder,
+      }, {
+        headers: { 'x-dev-password': password }
+      });
+      setSuccessMsg('Configuración de Google Drive guardada con éxito.');
+      setTimeout(() => setSuccessMsg(null), 3000);
+      await fetchDriveStatus();
+    } catch {
+      setError('Error al guardar la configuración de Google Drive.');
+    } finally {
+      setIsSavingDrive(false);
     }
   };
 
@@ -2002,6 +2036,80 @@ export const DeveloperOptions = () => {
             <button onClick={handleSaveTelegram} disabled={isSavingTelegram} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-5 py-3 text-sm font-black text-white transition hover:bg-sky-700 disabled:opacity-50 sm:w-fit">
               <KeyRound size={17} /> {isSavingTelegram ? 'Guardando...' : 'Guardar configuración'}
             </button>
+
+            <div className="mt-8 border-t border-slate-100 pt-6 dark:border-slate-800">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+                    <Cloud size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white">Google Drive (fotos en importación)</h3>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      Claves para importar fotos desde carpetas públicas de Drive. Se guardan en la base de datos (no hace falta editar el <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">.env</code>). Si dejas un campo vacío se usará el valor del entorno del servidor (si existe).
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDriveSecrets((v) => !v)}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  title={showDriveSecrets ? 'Ocultar valores' : 'Mostrar valores'}
+                >
+                  {showDriveSecrets ? <EyeOff size={14} /> : <Eye size={14} />}
+                  {showDriveSecrets ? 'Ocultar' : 'Mostrar'}
+                </button>
+              </div>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-bold text-slate-700 dark:text-slate-300">GOOGLE_DRIVE_API_KEY</label>
+                  <input
+                    type={showDriveSecrets ? 'text' : 'password'}
+                    value={driveApiKey}
+                    onChange={(e) => setDriveApiKey(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 font-mono text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    placeholder="••••••••••••••••"
+                    autoComplete="off"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-bold text-slate-700 dark:text-slate-300">GOOGLE_DRIVE_ITEMS_FOLDER</label>
+                  <input
+                    type={showDriveSecrets ? 'text' : 'password'}
+                    value={driveItemsFolder}
+                    onChange={(e) => setDriveItemsFolder(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 font-mono text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    placeholder="•••••••••••••••• (URL o ID de la carpeta de inventario)"
+                    autoComplete="off"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-bold text-slate-700 dark:text-slate-300">GOOGLE_DRIVE_VENDORS_FOLDER</label>
+                  <input
+                    type={showDriveSecrets ? 'text' : 'password'}
+                    value={driveVendorsFolder}
+                    onChange={(e) => setDriveVendorsFolder(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 font-mono text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    placeholder="•••••••••••••••• (URL o ID de la carpeta de proveedores)"
+                    autoComplete="off"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-bold text-slate-700 dark:text-slate-300">GOOGLE_DRIVE_WO_FOLDER</label>
+                  <input
+                    type={showDriveSecrets ? 'text' : 'password'}
+                    value={driveWoFolder}
+                    onChange={(e) => setDriveWoFolder(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 font-mono text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    placeholder="•••••••••••••••• (URL o ID de la carpeta de órdenes)"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+              <button onClick={() => void handleSaveDrive()} disabled={isSavingDrive} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-50 sm:w-fit">
+                <Cloud size={17} /> {isSavingDrive ? 'Guardando...' : 'Guardar Google Drive'}
+              </button>
+            </div>
           </article>
 
           <article className="rounded-3xl border border-slate-200 bg-slate-50 p-6 dark:border-slate-800 dark:bg-slate-900/60">

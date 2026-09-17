@@ -594,6 +594,11 @@ model SystemSettings {
   telegram_enabled   Boolean  @default(true)
   telegram_bot_token String?
   telegram_chat_id   String?
+  /// Google Drive (importación de fotos) — editables desde Opciones de Desarrollador.
+  google_drive_api_key        String?
+  google_drive_items_folder   String?
+  google_drive_vendors_folder String?
+  google_drive_wo_folder      String?
   email_enabled      Boolean  @default(false)
   sla_enabled        Boolean  @default(true)
   sla_policy         Json?
