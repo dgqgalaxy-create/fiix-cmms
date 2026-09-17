@@ -86,7 +86,28 @@ En Docker, todas se definen en el archivo **`.env` de la raíz del proyecto** (d
 | `SKIP_DB_PUSH` | `.env` raíz | — | `1` = no sincronizar esquema al arrancar (restaurar backups) |
 | `GOOGLE_DRIVE_*` | **desde la app** | **desde la app** | Configurar en Opciones de Desarrollador → Integraciones → Google Drive (enmascaradas, guardadas en BD); el `.env` solo es respaldo opcional |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | **desde la app** | **desde la app** | Configurar en Opciones de Desarrollador → Integraciones → Telegram; el `.env` solo es respaldo (p. ej. para el healthcheck externo en Ubuntu) |
-| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | `.env` raíz | `.env` | Opcional: notificaciones Web Push (instalación nativa las auto-genera) |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | `.env` raíz | `.env` | Opcional: notificaciones Web Push (ver abajo cómo generarlas; la instalación nativa las auto-genera) |
+
+### Web Push (VAPID)
+
+Son las credenciales de las **notificaciones del dispositivo** (PWA): avisos de nuevas OT o SLA aunque la app esté cerrada. Sin ellas, el botón de activar notificaciones (campana / Configuración → Apariencia) no funciona, pero el resto de la app sí.
+
+**Cómo generarlas:**
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+El comando imprime una llave pública y una privada. Configúralas en el `.env` (raíz en Docker, `backend/.env` en nativo):
+
+```
+VAPID_PUBLIC_KEY=<la llave pública generada>
+VAPID_PRIVATE_KEY=<la llave privada generada — manténla en secreto>
+VAPID_SUBJECT=mailto:mantenimiento@tuempresa.com
+```
+
+- La instalación nativa (`install.sh`) las genera sola si faltan.
+- **Migración importante:** si tus técnicos ya tenían notificaciones activadas en otro servidor, **copia las mismas claves** de ese `.env` (no generes unas nuevas), o cada usuario tendrá que volver a activar las notificaciones en su celular.
 
 ### Google Drive (fotos en importación)
 
