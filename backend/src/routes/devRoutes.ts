@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
 import { runBackup, listBackups, runRestore, BACKUP_DIR, getBackupProgress, SAFE_BACKUP_FILE } from '../utils/backupService';
 import {
   previewOrphanUploads,
@@ -439,6 +440,7 @@ router.post('/restore', verifyDevPassword, async (req: Request, res: Response): 
 });
 
 // Descarga un archivo de respaldo (fiix_*.sql.gz o uploads_*.tar.gz) desde BACKUP_DIR.
+// Vía contraseña maestra en header (para clientes HTTP que puedan enviar x-dev-password).
 router.get('/backups/download/:file', verifyDevPassword, (req: Request, res: Response): void => {
   const base = path.basename(String(req.params.file || ''));
   if (!SAFE_BACKUP_FILE.test(base)) {
@@ -455,6 +457,63 @@ router.get('/backups/download/:file', verifyDevPassword, (req: Request, res: Res
   res.sendFile(filePath, (err) => {
     if (err) {
       console.error('Error enviando respaldo para descarga:', err);
+    }
+  });
+});
+
+// Tokens de descarga de un solo uso (para descargas nativas del navegador,
+// que no pueden enviar el header x-dev-password). Vida corta y ligados a un archivo.
+const downloadTokens = new Map<string, { file: string; expires: number }>();
+const DOWNLOAD_TOKEN_TTL_MS = 5 * 60 * 1000;
+
+/** Emite un token de descarga de un solo uso para un archivo de respaldo. */
+router.post('/backups/download-token', verifyDevPassword, (req: Request, res: Response): void => {
+  const base = path.basename(String(req.body?.file || ''));
+  if (!SAFE_BACKUP_FILE.test(base)) {
+    res.status(400).json({ message: 'Nombre de archivo inválido.' });
+    return;
+  }
+  const filePath = path.join(BACKUP_DIR, base);
+  if (!fs.existsSync(filePath)) {
+    res.status(404).json({ message: 'No se encontró el archivo en la carpeta de respaldos.' });
+    return;
+  }
+  const token = randomUUID();
+  downloadTokens.set(token, { file: base, expires: Date.now() + DOWNLOAD_TOKEN_TTL_MS });
+  // Limpieza oportunista de tokens vencidos.
+  for (const [k, v] of downloadTokens) {
+    if (Date.now() > v.expires) downloadTokens.delete(k);
+  }
+  res.json({ token, expiresInSec: Math.round(DOWNLOAD_TOKEN_TTL_MS / 1000) });
+});
+
+/**
+ * Descarga nativa (stream) con token de un solo uso + sesión JWT por query.
+ * El navegador gestiona el progreso y escribe a disco (archivos de GB sin abortar).
+ */
+router.get('/backups/download-native/:file', async (req: Request, res: Response): Promise<void> => {
+  const base = path.basename(String(req.params.file || ''));
+  const token = String(req.query.token || '');
+  if (!SAFE_BACKUP_FILE.test(base)) {
+    res.status(400).json({ message: 'Nombre de archivo inválido.' });
+    return;
+  }
+  const entry = downloadTokens.get(token);
+  if (!entry || entry.file !== base || Date.now() > entry.expires) {
+    res.status(403).json({ message: 'Token de descarga inválido o vencido. Vuelve a solicitarlo.' });
+    return;
+  }
+  downloadTokens.delete(token); // un solo uso
+  const filePath = path.join(BACKUP_DIR, base);
+  if (!fs.existsSync(filePath)) {
+    res.status(404).json({ message: 'No se encontró el archivo en la carpeta de respaldos.' });
+    return;
+  }
+  res.setHeader('Content-Type', 'application/gzip');
+  res.setHeader('Content-Disposition', `attachment; filename="${base}"`);
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error('Error enviando respaldo (descarga nativa):', err);
     }
   });
 });

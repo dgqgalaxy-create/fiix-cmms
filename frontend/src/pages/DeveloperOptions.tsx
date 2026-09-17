@@ -22,7 +22,7 @@ import {
   Download,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import axios from '../api/axios';
+import axios, { BACKEND_URL } from '../api/axios';
 import { isAxiosError } from 'axios';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -114,7 +114,6 @@ export const DeveloperOptions = () => {
   const [restoreModalError, setRestoreModalError] = useState<string | null>(null);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
-  const [downloadPct, setDownloadPct] = useState<number | null>(null);
   const [isUploadRestoreOpen, setIsUploadRestoreOpen] = useState(false);
   const [uploadBackupFile, setUploadBackupFile] = useState<File | null>(null);
   const [uploadUploadsFile, setUploadUploadsFile] = useState<File | null>(null);
@@ -765,41 +764,37 @@ export const DeveloperOptions = () => {
     navigate('/login', { replace: true });
   };
 
-  /** Descarga un archivo de respaldo del servidor (requiere contraseña maestra). */
+  /**
+   * Descarga un archivo de respaldo con token de un solo uso y descarga nativa
+   * del navegador (stream a disco con su propio progreso). Evita el «Request
+   * aborted» de descargar GB por XHR a memoria.
+   */
   const handleDownloadBackup = async (file: string) => {
     setError(null);
     setDownloadingFile(file);
-    setDownloadPct(0);
     try {
-      const res = await axios.get(`/dev/backups/download/${encodeURIComponent(file)}`, {
-        headers: { 'x-dev-password': password },
-        responseType: 'blob',
-        timeout: 30 * 60 * 1000,
-        onDownloadProgress: (e: { loaded?: number; total?: number }) => {
-          if (e.total && e.total > 0) {
-            setDownloadPct(Math.min(100, Math.round((e.loaded || 0) / e.total * 100)));
-          } else if (e.loaded) {
-            setDownloadPct(null);
-          }
-        },
-      });
-      const blob = res.data as Blob;
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+      const res = await axios.post(
+        '/dev/backups/download-token',
+        { file },
+        { headers: { 'x-dev-password': password }, timeout: 30_000 }
+      );
+      const token = res.data?.token as string | undefined;
+      if (!token) {
+        throw new Error('No se recibió el token de descarga.');
+      }
+      const jwt = localStorage.getItem('token') || '';
+      const url = `${BACKEND_URL}/api/dev/backups/download-native/${encodeURIComponent(file)}?token=${encodeURIComponent(token)}&access_token=${encodeURIComponent(jwt)}`;
+      window.location.assign(url);
     } catch (err: unknown) {
       const detail = isAxiosError(err)
         ? err.response?.data?.message || err.message
         : err instanceof Error ? err.message : 'Error desconocido';
       setError(`No se pudo descargar el respaldo: ${detail}`);
     } finally {
-      setDownloadingFile(null);
-      setDownloadPct(null);
+      // La descarga nativa no navega fuera de la app; limpiamos el estado al poco.
+      window.setTimeout(() => {
+        setDownloadingFile(null);
+      }, 2000);
     }
   };
 
@@ -2788,7 +2783,7 @@ export const DeveloperOptions = () => {
               Descarga la base de datos (<code>.sql.gz</code>) y, si existe, las fotos/archivos (<code>.tar.gz</code>) para llevarlos a otro servidor.
             </p>
             <p className="mb-3 rounded-lg bg-amber-50 p-2.5 text-xs leading-5 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-              ⚠️ Si hay muchas fotos/evidencias, el <code>.tar.gz</code> puede pesar cientos de MB y tardar varios minutos en descargarse. Verás el porcentaje en el botón; no cierres la pestaña hasta que termine.
+              ⚠️ Si hay muchas fotos/evidencias, el <code>.tar.gz</code> puede pesar cientos de MB o GB. La descarga la gestiona el navegador (verás su barra de progreso); no cierres la pestaña hasta que termine.
             </p>
             {serverBackups.length === 0 ? (
               <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500 dark:bg-slate-800 dark:text-slate-400">
@@ -2826,7 +2821,7 @@ export const DeveloperOptions = () => {
                         {downloadingFile === b.file ? (
                           <>
                             <RefreshCw size={13} className="animate-spin" />
-                            {downloadPct != null ? `Descargando ${downloadPct}%` : 'Descargando…'}
+                            Preparando descarga…
                           </>
                         ) : (
                           <>
@@ -2844,7 +2839,7 @@ export const DeveloperOptions = () => {
                           {downloadingFile === b.uploadsFile ? (
                             <>
                               <RefreshCw size={13} className="animate-spin" />
-                              {downloadPct != null ? `Descargando ${downloadPct}%` : 'Descargando…'}
+                              Preparando descarga…
                             </>
                           ) : (
                             <>
