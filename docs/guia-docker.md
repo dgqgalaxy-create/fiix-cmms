@@ -54,9 +54,8 @@ Variables útiles (todas opcionales, con defaults de prueba):
 | `JWT_SECRET` | `cambia_este_secreto_jwt` | Secreto para firmar tokens. **Cámbialo.** |
 | `PORT` | `3000` | Puerto publicado en el host. |
 | `SKIP_DB_PUSH` | `0` | Pon `1` para no aplicar el esquema al arrancar (cuando restauras un backup). |
-| `GOOGLE_DRIVE_API_KEY`, `GOOGLE_DRIVE_ITEMS_FOLDER`, `GOOGLE_DRIVE_VENDORS_FOLDER`, `GOOGLE_DRIVE_WO_FOLDER` | vacío | Fotos desde Google Drive. También editables desde la app: **Opciones de Desarrollador → Integraciones → Google Drive** (guardadas en BD, enmascaradas; el `.env` queda como respaldo). |
-| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | vacío | Alertas de Telegram (también editables desde la app). |
-| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | vacío | Notificaciones Web Push PWA. |
+| Claves de Google Drive y Telegram | — | **No van en el `.env`**: se configuran desde la app en **Opciones de Desarrollador → Integraciones** (guardadas en BD, enmascaradas; el `.env` solo es respaldo opcional si el campo queda vacío). |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | vacío | Notificaciones Web Push PWA (solo por `.env`). |
 
 Verificar:
 

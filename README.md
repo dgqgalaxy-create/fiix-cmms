@@ -22,16 +22,13 @@ cat > .env <<'EOF'
 DB_PASSWORD=tu_clave_fuerte
 JWT_SECRET=tu_secreto_jwt
 PORT=3000
-# Opcionales — alertas Telegram (también editables desde la app)
-TELEGRAM_BOT_TOKEN="123456:ABC..."
-TELEGRAM_CHAT_ID="-100123456789"
 # Opcionales — Web Push PWA (genera un par con: npx web-push generate-vapid-keys)
 VAPID_PUBLIC_KEY="BC..."
 VAPID_PRIVATE_KEY="xyz..."
 VAPID_SUBJECT="mailto:mantenimiento@tuempresa.com"
 EOF
-# Nota: Google Drive se configura desde la app (Opciones de Desarrollador →
-# Integraciones → Google Drive); el .env solo es respaldo si el campo está vacío.
+# Nota: Google Drive y Telegram se configuran desde la app (Opciones de
+# Desarrollador → Integraciones); el .env solo es respaldo si el campo está vacío.
 
 # 2) Levanta los contenedores (sudo si tu usuario no está en el grupo docker)
 sudo docker compose up -d --build
@@ -88,7 +85,7 @@ En Docker, todas se definen en el archivo **`.env` de la raíz del proyecto** (d
 | `PORT` | `.env` raíz | — | Puerto del host (por defecto 3000) |
 | `SKIP_DB_PUSH` | `.env` raíz | — | `1` = no sincronizar esquema al arrancar (restaurar backups) |
 | `GOOGLE_DRIVE_*` | **desde la app** | **desde la app** | Configurar en Opciones de Desarrollador → Integraciones → Google Drive (enmascaradas, guardadas en BD); el `.env` solo es respaldo opcional |
-| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | `.env` raíz | `.env` | Opcional: alertas por Telegram |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | **desde la app** | **desde la app** | Configurar en Opciones de Desarrollador → Integraciones → Telegram; el `.env` solo es respaldo (p. ej. para el healthcheck externo en Ubuntu) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | `.env` raíz | `.env` | Opcional: notificaciones Web Push (instalación nativa las auto-genera) |
 
 ### Google Drive (fotos en importación)
