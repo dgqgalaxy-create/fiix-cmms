@@ -612,8 +612,11 @@ export const DeveloperOptions = () => {
       });
       setSuccessMsg('Configuración de Telegram guardada con éxito.');
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch {
-      setError('Error al guardar la configuración de Telegram.');
+    } catch (err: unknown) {
+      const detail = isAxiosError(err)
+        ? err.response?.data?.message || err.message
+        : err instanceof Error ? err.message : 'Error desconocido';
+      setError(`Error al guardar la configuración de Telegram: ${detail}`);
     } finally {
       setIsSavingTelegram(false);
     }
@@ -634,8 +637,11 @@ export const DeveloperOptions = () => {
       setSuccessMsg('Configuración de Google Drive guardada con éxito.');
       setTimeout(() => setSuccessMsg(null), 3000);
       await fetchDriveStatus();
-    } catch {
-      setError('Error al guardar la configuración de Google Drive.');
+    } catch (err: unknown) {
+      const detail = isAxiosError(err)
+        ? err.response?.data?.message || err.message
+        : err instanceof Error ? err.message : 'Error desconocido';
+      setError(`Error al guardar la configuración de Google Drive: ${detail}`);
     } finally {
       setIsSavingDrive(false);
     }
