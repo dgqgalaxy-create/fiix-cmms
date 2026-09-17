@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.60.0";
+export const APP_VERSION = "1.61.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "03 de Septiembre, 2026";
+  const updateDate = "15 de Septiembre, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,20 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Mensajes — reacciones a mensajes tipo WhatsApp: chips con contador bajo cada burbuja, toggle de tu reacción, selector completo de emojis y aviso si alguien reacciona a tu mensaje.",
+    "Nuevo: Mensajes — menú contextual en cada mensaje (clic derecho o pulsación larga en móvil): reaccionar, copiar texto, reenviar a otra conversación (texto y adjuntos) y eliminar (tus mensajes, hasta 10 min).",
+    "Nuevo: Mensajes — selector de emojis en el compositor (categorías + recientes guardados) y los mensajes solo-emoji se muestran grandes sin burbuja, como WhatsApp.",
+    "Nuevo: Mensajes — los enlaces (http/https/www) se detectan y abren al hacer clic; arrastra y suelta un archivo en el chat para adjuntarlo al instante.",
+    "Mejora: Mensajes — en chats 1:1 la cabecera ya no repite el nombre del usuario (muestra rol y «En línea») y las burbujas ya no repiten el autor (solo en grupos).",
+    "Nuevo: Órdenes de Trabajo — mini-resumen por estado arriba del listado (Pendientes, En Proceso, En Espera, Vencidas, Cerradas): toca una tarjeta para filtrar la lista; nuevo filtro «Vencidas».",
+    "Nuevo: Nueva Orden — campos opcionales Fecha programada y Fecha límite para agendar mantenimientos únicos (no repetitivos).",
+    "Nuevo: Inicio — widget «Próximos mantenimientos» con los 5 planes preventivos activos más cercanos (vencidos resaltados en rojo) y acceso a Planes.",
+    "Mejora: Inicio — «Resumen por periodo» inicia en el mes actual (ya no histórico); nuevo orden de secciones: racha sin paro → próximos mantenimientos → sala de control → resumen por periodo.",
+    "Mejora: Login — las credenciales iniciales solo se muestran en instalaciones nuevas y desaparecen del login tras el primer inicio de sesión.",
+    "Nuevo: Respaldos — descarga los respaldos desde la app (BD y fotos) y restaura subiendo esos archivos en otro servidor: migración entre entornos sin terminal, protegida por la contraseña maestra.",
+    "Mejora: Respaldos — la restauración desde archivo acepta tars de fotos de hasta 10 GB (antes 500 MB) con progreso de subida; la descarga de archivos grandes usa un token de un solo uso y la gestiona el navegador (adiós «Request aborted»).",
+    "Corrección: Respaldos — si el dump de BD falla (p. ej. pg_dump más viejo que el servidor), el respaldo se reporta como fallido con la causa; al restaurar ya no salen los avisos «drop cascades to table…» y solo se muestra el error real.",
+    "Infraestructura: Docker usa PostgreSQL 17 y cliente pg_dump/psql 17 (compatible con el servidor de producción); la restauración tolera dumps de PG 17 y el arranque funciona en bases vacías.",
     "Nuevo: Directorio — vista de tarjetas para el personal: avatar con iniciales de color, chip de rol, estado en línea, correo, avance de OTs abiertas con su estado y completadas en 12 meses. Selector Tarjetas/Tabla guardado por usuario.",
     "Mejora: Mensajes — avatares con iniciales, hora del último mensaje (hoy/ayer/fecha), prefijo «Tú:» y punto verde de presencia en la lista de conversaciones.",
     "Mejora: Mensajes — separadores de fecha (Hoy/Ayer/12 ago), agrupación de mensajes consecutivos del mismo autor, carga automática de mensajes anteriores al subir, y botón «Nuevos ↓» si llegan mensajes mientras lees el historial.",
