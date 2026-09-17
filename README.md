@@ -11,22 +11,43 @@ Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, ac
 ### Docker (recomendado)
 
 ```bash
-# Requisitos: Docker + Docker Compose
+# Requisitos: Docker + Docker Compose (en Ubuntu: sudo apt install docker.io docker-compose-v2)
 git clone git@github.com:dgqgalaxy-create/fiix-cmms.git ~/fiix-cmms
 cd ~/fiix-cmms
 
-# Instancia con seed de usuarios y Google Drive opcional para fotos
-DB_PASSWORD=tu_clave_fuerte \
-JWT_SECRET=tu_secreto_jwt \
-GOOGLE_DRIVE_API_KEY="tu_api_key_opcional" \
-GOOGLE_DRIVE_ITEMS_FOLDER="https://drive.google.com/drive/folders/ID_inventario" \
-GOOGLE_DRIVE_VENDORS_FOLDER="https://drive.google.com/drive/folders/ID_proveedores" \
-GOOGLE_DRIVE_WO_FOLDER="https://drive.google.com/drive/folders/ID_ordenes" \
-docker compose up -d --build
+# 1) Crea el archivo .env en la raíz del proyecto con tus claves (docker compose lo lee solo)
+cat > .env <<'EOF'
+DB_PASSWORD=tu_clave_fuerte
+JWT_SECRET=tu_secreto_jwt
+PORT=3000
+# Opcionales — importar fotos desde Google Drive
+GOOGLE_DRIVE_API_KEY="tu_api_key_opcional"
+GOOGLE_DRIVE_ITEMS_FOLDER="https://drive.google.com/drive/folders/ID_inventario"
+GOOGLE_DRIVE_VENDORS_FOLDER="https://drive.google.com/drive/folders/ID_proveedores"
+GOOGLE_DRIVE_WO_FOLDER="https://drive.google.com/drive/folders/ID_ordenes"
+# Opcionales — alertas Telegram
+TELEGRAM_BOT_TOKEN="123456:ABC..."
+TELEGRAM_CHAT_ID="-100123456789"
+# Opcionales — Web Push PWA (genera un par con: npx web-push generate-vapid-keys)
+VAPID_PUBLIC_KEY="BC..."
+VAPID_PRIVATE_KEY="xyz..."
+VAPID_SUBJECT="mailto:mantenimiento@tuempresa.com"
+EOF
+
+# 2) Levanta los contenedores (sudo si tu usuario no está en el grupo docker)
+sudo docker compose up -d --build
+
+# (Alternativa a sudo: agrega tu usuario al grupo docker y vuelve a entrar)
+# sudo usermod -aG docker $USER
 
 # Acceder: http://IP:3000
 # Usuarios de demo: admin@fiix.com / gestionador@fiix.com / tecnico@fiix.com (contraseña: password123)
 ```
+
+> Si prefieres pasar las claves en línea sin crear `.env`, usa `sudo -E` para conservarlas:
+> ```bash
+> DB_PASSWORD=... JWT_SECRET=... sudo -E docker compose up -d --build
+> ```
 
 ### Ubuntu nativo (sin Docker)
 
@@ -57,14 +78,18 @@ chmod +x install.sh update.sh
 
 ### Variables de entorno esenciales
 
+En Docker, todas se definen en el archivo **`.env` de la raíz del proyecto** (docker compose lo lee y las pasa al contenedor). En Ubuntu nativo, van en `backend/.env`.
+
 | Variable | Docker | Ubuntu | Notas |
 |---|---|---|---|
-| `DATABASE_URL` | docker-compose | `.env` | PostgreSQL (se configura en install.sh) |
-| `JWT_SECRET` | docker-compose | `.env` | Secreto de sesiones (genera uno fuerte) |
-| `DB_PASSWORD` | docker-compose | `.env` | Contraseña PostgreSQL |
-| `GOOGLE_DRIVE_*` | docker-compose | `.env` | Opcional: importar fotos desde Google Drive (ver abajo) |
-| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | `.env` | `.env` | Opcional: alertas por Telegram |
-| `VAPID_*` | `.env` | `.env` | Opcional: notificaciones Web Push (auto-genera install.sh) |
+| `DB_PASSWORD` | `.env` raíz | — | Contraseña del PostgreSQL interno del compose |
+| `DATABASE_URL` | automática (usa `db:5432`) | `.env` | En Docker no la cambies salvo que uses una BD externa |
+| `JWT_SECRET` | `.env` raíz | `.env` | Secreto de sesiones (genera uno fuerte) |
+| `PORT` | `.env` raíz | — | Puerto del host (por defecto 3000) |
+| `SKIP_DB_PUSH` | `.env` raíz | — | `1` = no sincronizar esquema al arrancar (restaurar backups) |
+| `GOOGLE_DRIVE_*` | `.env` raíz | `.env` | Opcional: importar fotos desde Google Drive (ver abajo) |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | `.env` raíz | `.env` | Opcional: alertas por Telegram |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | `.env` raíz | `.env` | Opcional: notificaciones Web Push (instalación nativa las auto-genera) |
 
 ### Google Drive (fotos en importación)
 
@@ -94,11 +119,13 @@ Ver documentación completa: [`docs/google-drive-setup.md`](docs/google-drive-se
 ### Docker
 
 ```bash
-# Pull + rebuild
+# Actualiza código y reconstruye la imagen
 cd ~/fiix-cmms
-docker compose pull
-docker compose up -d --build
+git pull
+sudo docker compose up -d --build   # (sin sudo si tu usuario está en el grupo docker)
 ```
+
+> La imagen se construye localmente con el `Dockerfile` del repo (no se descarga de un registro).
 
 ### Ubuntu nativo
 

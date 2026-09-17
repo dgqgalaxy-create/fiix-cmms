@@ -36,6 +36,12 @@ services:
       GOOGLE_DRIVE_ITEMS_FOLDER: ${GOOGLE_DRIVE_ITEMS_FOLDER:-}
       GOOGLE_DRIVE_VENDORS_FOLDER: ${GOOGLE_DRIVE_VENDORS_FOLDER:-}
       GOOGLE_DRIVE_WO_FOLDER: ${GOOGLE_DRIVE_WO_FOLDER:-}
+      # Telegram (alertas) y Web Push (notificaciones PWA)
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:mantenimiento@localhost}
     ports:
       - "${PORT:-3000}:3000"
     volumes:
