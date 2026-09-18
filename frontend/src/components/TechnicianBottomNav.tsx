@@ -27,7 +27,7 @@ const BadgeIcon = ({ count, children }: { count: number; children: ReactNode }) 
 /**
  * Barra inferior móvil de la interfaz compacta
  * (Técnico / Gestionador / Administrador con la preferencia activa).
- * Orden: Mis OT · Mensajes · Escanear · Inventario · Inicio
+ * Orden: OT's · Mensajes · Escanear · Inventario · Inicio
  */
 export const TechnicianBottomNav = () => {
   const navigate = useNavigate();
@@ -104,11 +104,11 @@ export const TechnicianBottomNav = () => {
         aria-label="Navegación rápida de técnico"
       >
         <div className="flex h-16 items-stretch">
-          <NavLink to="/dashboard?tab=mine" className={tabClass(onMine)}>
+          <NavLink to="/dashboard?tab=all" className={tabClass(onMine)}>
             <BadgeIcon count={mineBadge}>
               <ListChecks size={20} />
             </BadgeIcon>
-            Mis OT
+            OT's
           </NavLink>
 
           <NavLink to="/messages" className={tabClass(onMessages)}>

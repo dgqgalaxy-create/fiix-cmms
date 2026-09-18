@@ -22,9 +22,6 @@ import {
   VolumeX,
   Wrench,
   XCircle,
-  StickyNote,
-  Package,
-  ShoppingCart,
 } from 'lucide-react';
 import { PageLoadError, isLikelyServerUnreachable } from '../components/PageLoadState';
 import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
@@ -46,8 +43,6 @@ import {
 } from 'recharts';
 import { getLineStoppageStatus, getWorkOrders, getWorkOrdersSummary } from '../api/workOrders';
 import type { LineStoppageStatus, ProductionLine, WorkOrder } from '../api/workOrders';
-import { getNotesSummary, type NotesSummary } from '../api/notes';
-import { getInventorySummary, type InventorySummary } from '../api/inventory';
 import { getMaintenancePlans, type MaintenancePlan } from '../api/maintenance';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
@@ -81,12 +76,10 @@ function pickMessage(list: string[], seed = Date.now()): string {
 
 export const HomePage = () => {
   const navigate = useNavigate();
-  const { user, hasPermission, slaEnabled } = useAuth();
+  const { user, slaEnabled } = useAuth();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [summary, setSummary] = useState<Record<string, number>>({});
   const [lineStoppage, setLineStoppage] = useState<LineStoppageStatus | null>(null);
-  const [notesSummary, setNotesSummary] = useState<NotesSummary | null>(null);
-  const [inventorySummary, setInventorySummary] = useState<InventorySummary | null>(null);
   const [maintenancePlans, setMaintenancePlans] = useState<MaintenancePlan[]>([]);
   const [summaryStartDate, setSummaryStartDate] = useState(firstDayOfMonthYmd());
   const [summaryEndDate, setSummaryEndDate] = useState(todayYmd());
@@ -124,14 +117,12 @@ export const HomePage = () => {
       const start =
         summaryStartDate ||
         new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-      const [openOrdersData, periodOrders, summaryData, stoppageData, notesData, invData, plansData] =
+      const [openOrdersData, periodOrders, summaryData, stoppageData, plansData] =
         await Promise.all([
           getWorkOrders({ openOnly: true }, ac.signal),
           getWorkOrders({ startDate: start, endDate: end }, ac.signal),
           getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined, ac.signal),
           getLineStoppageStatus(ac.signal),
-          getNotesSummary(ac.signal).catch(() => null),
-          getInventorySummary(ac.signal).catch(() => null),
           getMaintenancePlans().catch(() => [] as MaintenancePlan[]),
         ]);
       if (ac.signal.aborted) return;
@@ -140,8 +131,6 @@ export const HomePage = () => {
       setWorkOrders([...byId.values()]);
       setSummary(summaryData);
       setLineStoppage(stoppageData);
-      if (notesData) setNotesSummary(notesData);
-      if (invData) setInventorySummary(invData);
       setMaintenancePlans(plansData);
       setLoadError(false);
     } catch (error: any) {
@@ -697,73 +686,6 @@ export const HomePage = () => {
           </div>
         )}
       </div>
-
-
-      {(inventorySummary?.low_stock_count ?? 0) > 0 && (
-        <button
-          type="button"
-          onClick={() => navigate('/inventory?filter=low_stock')}
-          className="mb-4 w-full text-left rounded-2xl border border-orange-200/90 bg-gradient-to-br from-white via-orange-50/60 to-orange-100/30 p-3 sm:p-4 shadow-sm transition hover:border-orange-300 dark:border-orange-900/50 dark:from-slate-900 dark:via-orange-950/25 dark:to-orange-950/15"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0 flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300">
-                <Package size={20} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-wider text-orange-800 dark:text-orange-300">
-                  Stock bajo
-                </p>
-                <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
-                  {inventorySummary!.low_stock_count} artículo
-                  {inventorySummary!.low_stock_count === 1 ? '' : 's'} al mínimo o inferior
-                </p>
-                <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                  {hasPermission('MANAGE_PURCHASES')
-                    ? 'Toca para verlos en Inventario y generar borradores de OC'
-                    : 'Toca para verlos en Inventario'}
-                </p>
-              </div>
-            </div>
-            {hasPermission('MANAGE_PURCHASES') && (
-              <span className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-orange-500 px-2.5 py-1.5 text-[11px] font-bold text-white">
-                <ShoppingCart size={14} /> OC
-              </span>
-            )}
-          </div>
-        </button>
-      )}
-
-      <button
-        type="button"
-        onClick={() => navigate('/notes')}
-        className="mb-6 w-full text-left rounded-2xl border border-amber-200/90 bg-gradient-to-br from-white via-amber-50/50 to-orange-50/40 p-3 sm:p-4 shadow-sm transition hover:border-amber-300 dark:border-amber-900/50 dark:from-slate-900 dark:via-amber-950/20 dark:to-orange-950/15"
-      >
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0 flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
-              <StickyNote size={20} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
-                Notas y pendientes
-              </p>
-              <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
-                {notesSummary
-                  ? `${notesSummary.open_total} abierto${notesSummary.open_total === 1 ? '' : 's'} · ${notesSummary.open_notes} nota${notesSummary.open_notes === 1 ? '' : 's'} · ${notesSummary.open_tasks_assigned} asignado${notesSummary.open_tasks_assigned === 1 ? '' : 's'} a ti${
-                      notesSummary.unread_announcements
-                        ? ` · ${notesSummary.unread_announcements} aviso${notesSummary.unread_announcements === 1 ? '' : 's'}`
-                        : ''
-                    }`
-                  : 'Abre tus notas, pendientes y avisos globales'}
-              </p>
-            </div>
-          </div>
-          <span className="shrink-0 rounded-full bg-amber-500 px-2.5 py-1 text-xs font-black tabular-nums text-white">
-            {notesSummary?.open_total ?? '—'}
-          </span>
-        </div>
-      </button>
 
       {isControlRoomRole && (
         <section className="mb-6 rounded-2xl border border-rose-200/80 bg-rose-50/40 p-3 sm:p-4 dark:border-rose-900/50 dark:bg-rose-950/20">
