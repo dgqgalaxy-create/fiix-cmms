@@ -31,6 +31,23 @@ services:
       BACKUP_DIR: /backups
       # Pon 1 para NO aplicar el esquema al arrancar (p. ej. vas a restaurar un backup).
       SKIP_DB_PUSH: ${SKIP_DB_PUSH:-0}
+      # Emergencia: permite a «prisma db push» aplicar cambios destructivos al arrancar.
+      # Por defecto 0 → si el esquema pendiente borra datos, el arranque FALLA en lugar
+      # de perderlos en silencio (ver docker/entrypoint.sh). No lo pongas en 1 de forma
+      # permanente: úsalo solo si entiendes el riesgo y vuelve a 0 después.
+      ALLOW_DB_PUSH_DATA_LOSS: ${ALLOW_DB_PUSH_DATA_LOSS:-0}
+      # --- Dominio público / proxy inverso (Cloudflare Tunnel, nginx, Tailscale Funnel) ---
+      # Orígenes EXTRA permitidos para CORS y Socket.IO, separados por comas.
+      # No hay ningún dominio hardcodeado aquí: se define en el .env de la raíz, así que
+      # cada instalación puede usar el suyo (y sobrevive a «git restore .» + «git pull»).
+      #   Ej.: CORS_ORIGINS="https://cmms.ejemplo.com"
+      #   Ej.: CORS_ORIGINS="https://cmms.ejemplo.com,https://otro.ejemplo.com"
+      # Si se deja vacío se mantienen los orígenes por defecto: localhost/127.0.0.1,
+      # LAN privada (10.x, 172.16-31.x, 192.168.x), CGNAT Tailscale (100.x) y *.ts.net.
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      # Alias de CORS_ORIGINS (mismo efecto si CORS_ORIGINS está vacío). Si defines los
+      # dos, gana CORS_ORIGINS. Se pasa para que el alias documentado funcione en Docker.
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
       # Google Drive (importación de fotos en CSV/Sheets)
       GOOGLE_DRIVE_API_KEY: ${GOOGLE_DRIVE_API_KEY:-}
       GOOGLE_DRIVE_ITEMS_FOLDER: ${GOOGLE_DRIVE_ITEMS_FOLDER:-}
@@ -43,6 +60,9 @@ services:
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:mantenimiento@localhost}
     ports:
+      # Se publica solo en la LAN/Tailscale y para que Cloudflare Tunnel (systemd en el
+      # host) pueda alcanzar http://localhost:3000. NO hace falta abrir el puerto en el
+      # router ni exponerlo a Internet: cloudflared abre la conexión saliente por HTTPS.
       - "${PORT:-3000}:3000"
     volumes:
       - uploads:/app/backend/uploads

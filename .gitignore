@@ -3,9 +3,22 @@ node_modules/
 dist/
 build/
 
-# Entorno
+# Entorno — el .env real NUNCA se versiona (por eso sobrevive a «git restore .»).
+# Además de la raíz, el patrón cubre backend/.env (Ubuntu nativo).
+# OJO: .env.example SÍ se versiona a propósito (es la plantilla, sin secretos).
 .env
 .env.local
+.env.*.local
+
+# Respaldos del .env que genera la app (env_YYYYMMDD_HHMM.env, ver backupService.ts).
+# Normalmente quedan fuera del repo (BACKUP_DIR=/backups o ~/fiix-backups), pero si
+# alguien copia uno dentro por error no debe acabar en GitHub.
+env_*.env
+
+# Volcados de producción (BD/uploads) volcados en el repo por error.
+# Van a BACKUP_DIR, nunca al árbol de trabajo.
+fiix_*.sql.gz
+uploads_*.tar.gz
 
 # Imágenes y Archivos Subidos
 backend/uploads/
