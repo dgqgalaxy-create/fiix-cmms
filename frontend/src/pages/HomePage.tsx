@@ -551,7 +551,6 @@ export const HomePage = () => {
           </div>
           {streakMessage && (
             <p
-              key={streakMsgSeed}
               className={`mt-2 text-xs font-medium leading-snug ${
                 atOrBeatingRecord
                   ? 'text-amber-800 dark:text-amber-200'

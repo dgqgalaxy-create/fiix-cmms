@@ -6,6 +6,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { MaintenanceProvider } from './context/MaintenanceContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Login } from './pages/Login';
 
 const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
@@ -96,7 +97,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <HomePage />
+                  <ErrorBoundary>
+                    <HomePage />
+                  </ErrorBoundary>
                 </Layout>
               </ProtectedRoute>
             }
