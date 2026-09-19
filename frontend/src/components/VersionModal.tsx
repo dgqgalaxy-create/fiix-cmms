@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.61.0";
+export const APP_VERSION = "1.62.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "15 de Septiembre, 2026";
+  const updateDate = "18 de Septiembre, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,13 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Opciones de Desarrollador — claves de Google Drive (API key y carpetas de fotos) editables desde la app, enmascaradas con asteriscos y guardadas en la base de datos (el .env queda como respaldo).",
+    "Mejora: los errores al guardar Telegram o Google Drive muestran la causa real del servidor.",
+    "Corrección: al restaurar un respaldo ya no se cierra la sesión a mitad del proceso sin aviso: las sesiones toleran el restablecimiento de la BD, se activa modo mantenimiento y al terminar se muestra el aviso en el login.",
+    "Cambio: Inicio — se quitan las tarjetas «Stock bajo» y «Notas y pendientes».",
+    "Cambio: barra inferior móvil — la pestaña ahora dice «OT's» y abre Vista General con todas las pendientes.",
+    "Corrección: Inicio — el mensaje de la racha sin paro ya no se recrea cada 45 segundos (evita el error «removeChild» con traducción automática o extensiones del navegador); Inicio queda protegido con pantalla de error recuperable.",
+    "Nuevo: Docker — CORS_ORIGINS / ALLOWED_ORIGINS configurables desde el .env (Cloudflare Tunnel) y plantilla .env.example en el repo.",
     "Nuevo: Mensajes — reacciones a mensajes tipo WhatsApp: chips con contador bajo cada burbuja, toggle de tu reacción, selector completo de emojis y aviso si alguien reacciona a tu mensaje.",
     "Nuevo: Mensajes — menú contextual en cada mensaje (clic derecho o pulsación larga en móvil): reaccionar, copiar texto, reenviar a otra conversación (texto y adjuntos) y eliminar (tus mensajes, hasta 10 min).",
     "Nuevo: Mensajes — selector de emojis en el compositor (categorías + recientes guardados) y los mensajes solo-emoji se muestran grandes sin burbuja, como WhatsApp.",
