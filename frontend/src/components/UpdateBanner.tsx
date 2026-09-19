@@ -202,7 +202,7 @@ export function UpdateBanner() {
             </p>
             <p className="text-xs text-amber-800/90 dark:text-amber-200/90 mt-0.5">
               {isAdmin
-                ? `En GitHub hay v${ghStatus!.github} y este servidor reporta v${ghStatus!.deployed || APP_VERSION}. Si Actions no desplegó, ejecuta ./update.sh.`
+                ? `En GitHub hay v${ghStatus!.github} y este servidor reporta v${ghStatus!.deployed || APP_VERSION}. Actualiza a mano: nativo \`./update.sh\` · Docker \`git pull && sudo docker compose up -d --build\`.`
                 : `Hay una versión más nueva (v${ghStatus!.github}). El administrador la aplicará en el servidor pronto.`}
             </p>
           </div>
