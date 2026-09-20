@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Plus, RefreshCw, Search, Download, XCircle, Users, Filter } from 'lucide-react';
 import { WorkOrdersTable } from '../components/WorkOrdersTable';
@@ -7,7 +7,7 @@ import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { InfoTip } from '../components/common/InfoTip';
 import { BulkAssignModal } from '../components/BulkAssignModal';
-import { getWorkOrders, getWorkOrdersPage, getWorkOrderById, getUniqueRequesters, getWorkOrdersSummary, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder } from '../api/workOrders';
+import { getWorkOrders, getWorkOrdersPage, getWorkOrderById, getUniqueRequesters, getWorkOrdersSummary, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder, getMineOpenCount } from '../api/workOrders';
 import type { WorkOrder, WorkOrderListParams } from '../api/workOrders';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { formatWorkOrderFolio } from '../utils/folio';
@@ -56,6 +56,8 @@ export const Dashboard = () => {
   const [activeTab, setActiveTab] = useState<'ACTIVAS' | 'MIS_ORDENES' | 'HISTORIAL'>(
     hasPermission('VIEW_ALL_WORK_ORDERS') ? 'ACTIVAS' : 'MIS_ORDENES'
   );
+  /** Contador de la pestaña «Mis Órdenes» (abiertas asignadas a mí). 0 = sin numerito. */
+  const [mineCount, setMineCount] = useState(0);
 
   const [dateFilter, setDateFilter] = useState<string>('ALL');
   const [customStartDate, setCustomStartDate] = useState(firstDayOfMonthYmd);
@@ -543,6 +545,27 @@ export const Dashboard = () => {
 
   useSocketRefresh('refresh_work_orders', () => fetchWorkOrders(true));
 
+  // Numerito de «Mis Órdenes»: órdenes abiertas asignadas a mí (mismo criterio que la pestaña).
+  const refreshMineCount = useCallback(async () => {
+    if (!user?.id) {
+      setMineCount(0);
+      return;
+    }
+    try {
+      setMineCount(await getMineOpenCount());
+    } catch {
+      /* silencioso: el numerito no debe romper la página */
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    void refreshMineCount();
+  }, [refreshMineCount, activeTab]);
+
+  useSocketRefresh(['refresh_work_orders', 'work_order_updated'], () => {
+    void refreshMineCount();
+  });
+
   const handleCreateWorkOrder = async (data: any) => {
     await createWorkOrder(data);
     await fetchWorkOrders();
@@ -749,6 +772,19 @@ export const Dashboard = () => {
                 className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-1 ${activeTab === 'MIS_ORDENES' ? 'bg-amber-100 text-amber-800 shadow-sm border border-amber-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
               >
                 Mis Órdenes
+                {mineCount > 0 && (
+                  <span
+                    className={`ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-black leading-none ${
+                      activeTab === 'MIS_ORDENES'
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200'
+                    }`}
+                    title={`${mineCount} orden${mineCount === 1 ? '' : 'es'} abierta${mineCount === 1 ? '' : 's'} asignada${mineCount === 1 ? '' : 's'} a ti`}
+                    aria-label={`${mineCount} órdenes abiertas asignadas a ti`}
+                  >
+                    {mineCount > 99 ? '99+' : mineCount}
+                  </span>
+                )}
                 <InfoTip text="Solo tus órdenes abiertas asignadas. Sin filtros: lista directa." label="Ayuda: Mis Órdenes" />
               </button>
               <button 

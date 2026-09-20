@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.62.0";
+export const APP_VERSION = "1.62.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "18 de Septiembre, 2026";
+  const updateDate = "20 de Septiembre, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Órdenes de Trabajo — la pestaña «Mis Órdenes» muestra un numerito con tus órdenes abiertas asignadas; se oculta cuando no tienes ninguna (Vista General y Cerradas no lo muestran).",
     "Nuevo: Opciones de Desarrollador — claves de Google Drive (API key y carpetas de fotos) editables desde la app, enmascaradas con asteriscos y guardadas en la base de datos (el .env queda como respaldo).",
     "Mejora: los errores al guardar Telegram o Google Drive muestran la causa real del servidor.",
     "Corrección: al restaurar un respaldo ya no se cierra la sesión a mitad del proceso sin aviso: las sesiones toleran el restablecimiento de la BD, se activa modo mantenimiento y al terminar se muestra el aviso en el login.",
