@@ -1119,6 +1119,7 @@ export const DeveloperOptions = () => {
       if (isAxiosError(err)) {
         const status = err.response?.status;
         const serverMsg = err.response?.data?.message;
+        const serverDetail = (err.response?.data as { error?: string } | undefined)?.error;
         if (status === 413) {
           detail =
             'El servidor rechazó el zip (413 Payload Too Large). En Ubuntu: sudo cp ~/fiix-cmms/deploy/nginx-fiix.conf /etc/nginx/sites-available/fiix && sudo nginx -t && sudo systemctl reload nginx (client_max_body_size 1100M). O entra por http://HOST:3000 sin nginx.';
@@ -1135,7 +1136,8 @@ export const DeveloperOptions = () => {
           detail =
             'El servidor rechazó un campo de archivo (Unexpected field). En Ubuntu: cd ~/fiix-cmms && git pull && ./update.sh ; luego abre /api/health y confirma "version":"1.30.7" o superior.';
         } else {
-          detail = serverMsg || err.message;
+          // Mostrar también el detalle técnico que devuelve el servidor (si lo hay).
+          detail = [serverMsg, serverDetail].filter(Boolean).join(' — ') || err.message;
         }
       } else if (err instanceof Error) {
         detail = err.message;
@@ -1368,14 +1370,17 @@ export const DeveloperOptions = () => {
       let detail = 'Error desconocido';
       if (isAxiosError(err)) {
         const status = err.response?.status;
-        const data = err.response?.data as { message?: string; serviceAccountEmail?: string } | undefined;
+        const data = err.response?.data as
+          | { message?: string; error?: string; serviceAccountEmail?: string }
+          | undefined;
         const serverMsg = data?.message;
+        const serverDetail = data?.error;
         if (status === 403) {
           detail =
             serverMsg ||
             'Sin acceso al Sheet. Pon ambos documentos en «Cualquier persona con el enlace → Lector».';
         } else {
-          detail = serverMsg || err.message;
+          detail = [serverMsg, serverDetail].filter(Boolean).join(' — ') || err.message;
         }
       } else if (err instanceof Error) {
         detail = err.message;

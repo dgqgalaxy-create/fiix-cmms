@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.64.0";
+export const APP_VERSION = "1.64.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: la importación de Google Sheets y CSV ya no se cancela por filas inválidas (los exportes reales las traen): esas filas se OMITEN y se reportan en el resumen/bitácora (p. ej. movimientos que referencian repuestos inexistentes). La transacción sigue revirtiendo ante errores reales.",
     "Nuevo: Compras permite entregas parciales, muestra lo recibido y pendiente, y evita duplicar existencias al reintentar una entrega.",
     "Corrección: las importaciones de datos se revierten completas ante un error; al reimportar repuestos se conserva el stock operativo. Las fotos se procesan por separado.",
     "Seguridad: candado de importación compartido entre procesos y recuperación del aviso de mantenimiento al reconectar; bloqueo de desarrollador independiente de preferencias.",

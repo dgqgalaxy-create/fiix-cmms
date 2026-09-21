@@ -206,6 +206,13 @@ export type ProcessCsvImportOptions = {
   driveVendorsFolder?: string | null;
   /** Si true, NO crea ni actualiza activos desde los ítems de categoría Activo/Activos. */
   skipAssets?: boolean;
+  /**
+   * Modo estricto para PRUEBAS: si una fila no se puede importar, aborta el lote
+   * (rollback). En producción va desactivado: las filas inválidas de los CSV/Sheets
+   * heredados se OMITEN y se reportan (importRowWarnings/inventoryDetails), porque los
+   * exportes reales contienen filas incompletas y no deben tumbar la importación.
+   */
+  strictRows?: boolean;
 };
 
 function readImportFileUtf8(file: ImportFileLike): string {
@@ -601,7 +608,9 @@ if (userFile) {
       if (nameKey) userByNormName.set(nameKey, { id: created.id, name: created.name, email: created.email });
       results.users++;
     } catch (e) {
-      throw new CsvImportError(`Usuarios: ${e instanceof Error ? e.message : e}. Lote revertido.`);
+      if (options.strictRows) {
+        throw new CsvImportError(`Usuarios: ${e instanceof Error ? e.message : e}. Lote revertido.`);
+      }
       pushImportRowWarning('Usuarios', csvLine, e);
     }
   }
@@ -610,7 +619,10 @@ if (userFile) {
 if (invFile) {
   // Importe seguro de movimientos: SIN truncar el historial. Solo crea filas que
   // no existan (dedupe por Inventory ID / tupla) y reporta filas ignoradas.
-  const inv = await importInventoryTransactionsFile(invFile, { client: prisma, strict: true });
+  const inv = await importInventoryTransactionsFile(invFile, {
+    client: prisma,
+    strict: Boolean(options.strictRows),
+  });
   results.inventory = inv.created;
   results.users += inv.autoCreatedUsers;
   if (inv.skippedExisting > 0 || inv.ignored.length > 0) {

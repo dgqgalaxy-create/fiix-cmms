@@ -39,7 +39,7 @@ async function main() {
  await assert.rejects(processCsvImportFiles([
   csv('Categories.csv','ID,Category\nROLLBACK,Rollback\n'),
   csv('Inventory.csv','Inventory ID,Item ID,DateTime,Amount,User ID,Reason\nINV-FAIL,NO-EXISTE,1/1/2026 8:00:00,-1,regression@test.local,Error\n')
- ],{includeLocalPhotoFolders:false,skipAssets:true}));
+ ],{includeLocalPhotoFolders:false,skipAssets:true,strictRows:true}));
  assert.equal(await prisma.itemCategory.count({where:{internal_id:'ROLLBACK'}}),0);
  const stockItem=await prisma.item.create({data:{internal_code:'KEEP',name:'Keep',uom:'PZA',stock:7,minimum_inventory:10}});
  await processCsvImportFiles([csv('Items.csv','Item ID,Name,Stock,UOM\nKEEP,Keep updated,999,PZA\n')],{includeLocalPhotoFolders:false,skipAssets:true});
