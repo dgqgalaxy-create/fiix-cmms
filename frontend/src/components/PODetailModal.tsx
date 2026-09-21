@@ -85,6 +85,8 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
   const canEditInventory = hasPermission('MANAGE_INVENTORY');
   const canManagePurchases = hasPermission('MANAGE_PURCHASES');
   const isDraft = order.status === 'BORRADOR';
+  const receiptKey = useRef('');
+  const isPartial = order.status === 'ENVIADA' && order.items.some(i => (i.received_quantity ?? 0) > 0);
   const isClosed = order.status === 'RECIBIDA' || order.status === 'CANCELADA';
   const priceFrozen = !isDraft;
 
@@ -108,9 +110,10 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
   }, [isOpen, order]);
 
   const startReceiving = () => {
+    receiptKey.current = crypto.randomUUID();
     const initial: Record<string, string> = {};
     for (const oi of order.items) {
-      initial[oi.id] = String(oi.quantity);
+      initial[oi.id] = String(Math.max(0, oi.quantity - (oi.received_quantity ?? 0)));
     }
     setReceivedQty(initial);
     setReceivingMode(true);
@@ -286,21 +289,21 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
   };
 
   const handleConfirmReceive = async () => {
-    const payload: { id: string; received_quantity: number }[] = [];
+    const payload: { id: string; received_quantity: number; expected_received: number }[] = [];
     for (const oi of order.items) {
       const raw = receivedQty[oi.id];
       const qty = Number(raw);
-      if (!Number.isFinite(qty) || qty < 0) {
+      if (!Number.isFinite(qty) || qty < 0 || qty > oi.quantity - (oi.received_quantity ?? 0)) {
         setError(`Cantidad recibida inválida en ${oi.item?.internal_code || oi.item?.name || 'ítem'}`);
         return;
       }
-      payload.push({ id: oi.id, received_quantity: qty });
+      payload.push({ id: oi.id, received_quantity: qty, expected_received: oi.received_quantity ?? 0 });
     }
 
     setIsSubmitting(true);
     setError('');
     try {
-      await updatePurchaseOrderStatus(order.id, 'RECIBIDA', payload);
+      await updatePurchaseOrderStatus(order.id, 'RECIBIDA', payload, receiptKey.current);
       setReceivingMode(false);
       onUpdate();
     } catch (err: any) {
@@ -327,7 +330,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
       const n = Number(receivedQty[oi.id]);
       return Number.isFinite(n) && n >= 0 ? n : null;
     }
-    if (order.status === 'RECIBIDA' && oi.received_quantity != null) {
+    if ((order.status === 'RECIBIDA' || isPartial) && oi.received_quantity != null) {
       return oi.received_quantity;
     }
     return null;
@@ -349,7 +352,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
     if (preset === '16') setIvaPercent(16);
   };
 
-  const showReceivedCol = receivingMode || order.status === 'RECIBIDA';
+  const showReceivedCol = receivingMode || isPartial || order.status === 'RECIBIDA';
   const showReceivedTotals = showReceivedCol;
   const catalogMismatch = isDraft
     ? order.items.some((oi) => {
@@ -470,7 +473,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                 <tr key={oi.id}>
                   <td className="px-3 py-2 font-medium text-slate-500">{oi.item?.internal_code}</td>
                   <td className="px-3 py-2 font-bold text-slate-800">{oi.item?.name}</td>
-                  <td className="px-3 py-2 text-center">{oi.quantity} {oi.item?.uom}</td>
+                  <td className="px-3 py-2 text-center">{oi.quantity} {oi.item?.uom}<span className="block text-xs text-slate-500">Recibido: {oi.received_quantity ?? 0} · Pendiente: {Math.max(0, oi.quantity - (oi.received_quantity ?? 0))}</span></td>
                   {order.status === 'RECIBIDA' && (
                     <td className="px-3 py-2 text-center">{oi.received_quantity ?? '—'} {oi.item?.uom}</td>
                   )}
@@ -567,12 +570,12 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
 
           {receivingMode && (
             <div className="mb-6 p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 rounded-2xl text-sm">
-              Indica la cantidad <strong>realmente recibida</strong> por línea (puede ser menos, igual o más que lo pedido).
-              Solo lo recibido se suma al inventario. La orden se cerrará como RECIBIDA.
+              Indica la cantidad <strong>recibida en esta entrega</strong>, hasta el saldo pendiente. Solo esta entrega se suma al inventario. La orden seguirá abierta hasta completar todas las líneas.
             </div>
           )}
 
           {renderStatusStepper()}
+          {isPartial && <p className="mb-4 text-sm text-amber-700 dark:text-amber-300">Recepción parcial: registra las siguientes entregas hasta completar el pedido.</p>}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
@@ -852,7 +855,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                           {oi.item?.name}
                         </button>
                       </td>
-                      <td className="px-4 py-3 text-right">{oi.quantity} {oi.item?.uom}</td>
+                      <td className="px-4 py-3 text-right">{oi.quantity} {oi.item?.uom}<span className="block text-xs text-slate-500">Recibido: {oi.received_quantity ?? 0} · Pendiente: {Math.max(0, oi.quantity - (oi.received_quantity ?? 0))}</span></td>
                       {showReceivedCol && (
                         <td className="px-4 py-3 text-right">
                           {receivingMode ? (
@@ -860,6 +863,7 @@ export const PODetailModal = ({ order, isOpen, onClose, onUpdate }: PODetailModa
                               <input
                                 type="number"
                                 min={0}
+                                max={Math.max(0, oi.quantity - (oi.received_quantity ?? 0))}
                                 step="any"
                                 value={receivedQty[oi.id] ?? ''}
                                 onChange={(e) =>

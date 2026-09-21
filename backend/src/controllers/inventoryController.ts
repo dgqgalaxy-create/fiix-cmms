@@ -1,3 +1,5 @@
+import http from 'http';
+import https from 'https';
 import { Request, Response } from 'express';
 import type { Prisma } from '@prisma/client';
 import prisma from '../config/prisma';
@@ -9,7 +11,7 @@ import { writeAuditLog } from '../utils/auditLog';
 import { parseQty } from '../utils/qtyMode';
 import { tryConsumeStock, addStock } from '../utils/stockMutation';
 import {
-  assertSafeRemoteUrl,
+  assertSafeRemoteUrl, pinnedLookup,
   isImageContentType,
   IMAGE_PROXY_LIMITS,
 } from '../utils/imageProxySafety';
@@ -260,7 +262,7 @@ export const getItems = async (req: Request, res: Response): Promise<void> => {
     if (critical === '1' || critical === 'true') {
       and.push({
         is_active: true,
-        // stock <= minimum — Prisma no compara columnas fácil; filtramos en SQL raw o post.
+        stock: { lte: prisma.item.fields.minimum_inventory },
       });
     }
     if (q) {
@@ -287,25 +289,6 @@ export const getItems = async (req: Request, res: Response): Promise<void> => {
     if (wantsPage) {
       const pageNum = Math.max(1, parseInt(String(page || '1'), 10) || 1);
       const limitNum = Math.min(200, Math.max(1, parseInt(String(limit || '20'), 10) || 20));
-      // Críticos: cargar página amplia y filtrar (mínimo vs stock) — acotado.
-      if (critical === '1' || critical === 'true') {
-        const all = await prisma.item.findMany({
-          where: { ...where, is_active: true },
-          include,
-          orderBy: { name: 'asc' },
-        });
-        const filtered = all.filter((i) => i.stock <= (i.minimum_inventory ?? 0));
-        const total = filtered.length;
-        const data = filtered.slice((pageNum - 1) * limitNum, pageNum * limitNum);
-        res.json({
-          data,
-          total,
-          page: pageNum,
-          limit: limitNum,
-          totalPages: Math.max(1, Math.ceil(total / limitNum)),
-        });
-        return;
-      }
       const [total, items] = await Promise.all([
         prisma.item.count({ where }),
         prisma.item.findMany({
@@ -1120,6 +1103,9 @@ export const proxyImage = async (req: Request, res: Response): Promise<void> => 
       }
       response = await axios({
         url: check.url.toString(),
+        proxy: false,
+        httpAgent: new http.Agent({ lookup: pinnedLookup(check.addresses) }),
+        httpsAgent: new https.Agent({ lookup: pinnedLookup(check.addresses) }),
         method: 'GET',
         responseType: 'stream',
         maxRedirects: 0,

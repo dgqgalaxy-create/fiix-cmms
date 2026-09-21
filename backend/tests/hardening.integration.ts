@@ -40,16 +40,16 @@ async function main() {
   // ---- 1) Candado de importación ----
   {
     assert.equal(isImportJobActive(), false);
-    assert.equal(tryStartImportJob('prueba 1'), true);
+    assert.equal(await tryStartImportJob('prueba 1'), true);
     assert.equal(isImportJobActive(), true);
     assert.equal(isMaintenanceActive(), true);
-    assert.equal(tryStartImportJob('prueba 2'), false, 'la segunda importación se rechaza');
-    endImportJob();
+    assert.equal(await tryStartImportJob('prueba 2'), false, 'la segunda importación se rechaza');
+    await endImportJob();
     assert.equal(isImportJobActive(), false);
     assert.equal(isMaintenanceActive(), false);
-    assert.equal(tryStartImportJob('prueba 3'), true, 'tras terminar se puede volver a importar');
-    endImportJob();
-    endImportJob(); // idempotente
+    assert.equal(await tryStartImportJob('prueba 3'), true, 'tras terminar se puede volver a importar');
+    await endImportJob();
+    await endImportJob(); // idempotente
     assert.equal(isMaintenanceActive(), false);
     console.log('  ✓ Candado de importación: exclusión mutua y liberación idempotente');
   }

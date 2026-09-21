@@ -248,13 +248,14 @@ export const updateMyPreferences = async (req: Request, res: Response): Promise<
       return;
     }
 
+    const user = await prisma.$transaction(async (prisma) => {
+    await prisma.$queryRaw`SELECT id FROM "User" WHERE id = ${userId}::uuid FOR UPDATE`;
     const current = await prisma.user.findUnique({
       where: { id: userId },
       select: { preferences: true },
     });
     if (!current) {
-      res.status(404).json({ error: 'Usuario no encontrado' });
-      return;
+      throw new Error('Usuario no encontrado');
     }
     const currentPrefs =
       current.preferences && typeof current.preferences === 'object' && !Array.isArray(current.preferences)
@@ -272,11 +273,12 @@ export const updateMyPreferences = async (req: Request, res: Response): Promise<
       delete merged.dev_menu_lock;
     }
 
-    const user = await prisma.user.update({
+    return prisma.user.update({
       where: { id: userId },
       data: { preferences: merged as Prisma.InputJsonValue },
     });
 
+    });
     res.json({ id: user.id, preferences: user.preferences });
   } catch (error) {
     console.error('Error updating preferences:', error);

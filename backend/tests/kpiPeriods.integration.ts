@@ -20,7 +20,8 @@ import {
   plantStartOfMonth,
 } from '../src/utils/plantTimezone';
 
-const PRODUCTIVE_FACTOR = 8467.27 / 8760;
+// Disponibilidad calendario: denominador de 24 h, sin factor productivo estimado.
+const PRODUCTIVE_FACTOR = 1;
 const clip = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
 function makeRes() {

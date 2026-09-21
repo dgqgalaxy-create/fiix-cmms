@@ -304,6 +304,12 @@ const userFile = files.find(f => f.originalname.includes('Users'));
 const invFile = files.find(f => f.originalname.includes('Inventory'));
 const woFile = files.find(f => f.originalname.includes('Solicitudes Mantenimiento'));
 
+// Validar sintaxis de TODO el lote antes de empezar a escribir.
+for (const file of files) {
+  try { parse(readImportFileUtf8(file), { columns: true, skip_empty_lines: true }); }
+  catch (e) { throw new CsvImportError(`${file.originalname}: CSV inválido. ${e instanceof Error ? e.message : e}`); }
+}
+
 const results: CsvImportResults = {
   categories: 0,
   locations: 0,
@@ -315,14 +321,15 @@ const results: CsvImportResults = {
 };
 
 /** Registra una fila que falló (para que el lote no quede incompleto en silencio). */
-const pushImportRowWarning = (kind: string, line: number, error: unknown): void => {
-  if ((results.importRowWarnings?.length ?? 0) >= 100) return;
-  const motivo = error instanceof Error ? error.message : String(error);
-  (results.importRowWarnings ??= []).push(`${kind} (fila ${line}): ${motivo}`);
+const pushImportRowWarning = (kind: string, line: number, error: unknown): never => {
+  throw new CsvImportError(`${kind}, fila ${line}: ${error instanceof Error ? error.message : error}. El lote de datos se revirtió.`);
 };
 
 const woPhotoMappings: WorkOrderPhotoMapping[] = [];
 
+await prisma.$transaction(async (prisma) => {
+  // Protege también invocaciones del motor fuera de las rutas HTTP.
+  await prisma.$executeRaw`SELECT pg_advisory_xact_lock(16310, 2)`;
 if (catFile) {
   const data = parse(readImportFileUtf8(catFile), { columns: true, skip_empty_lines: true });
   for (let _i = 0; _i < data.length; _i++) {
@@ -434,7 +441,7 @@ if (itemFile) {
       });
     }
   } catch (uomError) {
-    console.error('Error auto-creando UOMs:', uomError);
+    throw uomError;
   }
 
   for (let _i = 0; _i < data.length; _i++) {
@@ -468,7 +475,6 @@ if (itemFile) {
           vendor_id: venMap[(row['Vendor'] || '').trim()] || null,
           location_id: locMap[(row['Location'] || '').trim()] || unassignedLocId,
           purchase_cost: cost,
-          stock: stock,
           minimum_inventory: minStock,
           is_active: !isDiscontinued,
           uom: uom
@@ -500,7 +506,7 @@ if (itemFile) {
     results.assets = { created: 0, updated: 0, skipped: 0, zonesEnsured: [] };
   } else {
     try {
-      const assetSync = await syncAssetsFromActivosInventory();
+      const assetSync = await syncAssetsFromActivosInventory(prisma);
       results.assets = {
         created: assetSync.created,
         updated: assetSync.updated,
@@ -508,8 +514,7 @@ if (itemFile) {
         zonesEnsured: assetSync.zonesEnsured,
       };
     } catch (assetErr) {
-      console.error('Asset inventory sync error:', assetErr);
-      results.assets = { created: 0, updated: 0, skipped: 0, zonesEnsured: [] };
+      throw assetErr;
     }
   }
 }
@@ -596,7 +601,7 @@ if (userFile) {
       if (nameKey) userByNormName.set(nameKey, { id: created.id, name: created.name, email: created.email });
       results.users++;
     } catch (e) {
-      console.error('User import error', e);
+      throw new CsvImportError(`Usuarios: ${e instanceof Error ? e.message : e}. Lote revertido.`);
       pushImportRowWarning('Usuarios', csvLine, e);
     }
   }
@@ -605,7 +610,7 @@ if (userFile) {
 if (invFile) {
   // Importe seguro de movimientos: SIN truncar el historial. Solo crea filas que
   // no existan (dedupe por Inventory ID / tupla) y reporta filas ignoradas.
-  const inv = await importInventoryTransactionsFile(invFile);
+  const inv = await importInventoryTransactionsFile(invFile, { client: prisma, strict: true });
   results.inventory = inv.created;
   results.users += inv.autoCreatedUsers;
   if (inv.skippedExisting > 0 || inv.ignored.length > 0) {
@@ -656,6 +661,7 @@ if (woFile) {
                    zoneId: zone.id,
                    section: null,
                    assetKind: AssetKind.FIJO,
+                   tx: prisma,
                  }),
                  name: assetName,
                  brand: 'N/A',
@@ -726,7 +732,7 @@ if (woFile) {
                create: { name: requester_name }
              });
            } catch(e) {
-             // Ignorar si hay problemas de concurrencia o duplicados raros
+             throw e;
            }
         }
 
@@ -782,14 +788,7 @@ if (woFile) {
         }
         results.orders++;
       } catch(e) {
-        console.error('Work order row error', e);
-        // No silenciar del todo: se reporta la fila con su motivo (tope 100).
-        if ((results.workOrderWarnings?.length ?? 0) < 100) {
-          const motivo = e instanceof Error ? e.message : String(e);
-          (results.workOrderWarnings ??= []).push(
-            `Fila ${csvRowNum}${row && row['FOLIO'] ? ` (folio ${row['FOLIO']})` : ''}: ${motivo}`
-          );
-        }
+        throw new CsvImportError(`Órdenes, fila ${csvRowNum}: ${e instanceof Error ? e.message : e}. Lote revertido.`);
       }
     }
 
@@ -797,6 +796,9 @@ if (woFile) {
     await prisma.$executeRawUnsafe(`SELECT setval(pg_get_serial_sequence('"WorkOrder"', 'folio'), coalesce(max(folio), 0) + 1, false) FROM "WorkOrder";`);
   }
 }
+
+}, { maxWait: 10000, timeout: 600000 });
+// Las fotos son un paso independiente y recuperable; no bloquean la transacción de datos.
 
 // Fotos de repuestos: zip > Google Drive (carpeta pública) > data/Items_Images/
 try {

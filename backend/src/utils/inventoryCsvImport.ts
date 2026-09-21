@@ -2,7 +2,8 @@ import fs from 'fs';
 import { parse } from 'csv-parse/sync';
 import { Role } from '@prisma/client';
 import bcrypt from 'bcrypt';
-import prisma from '../config/prisma';
+import defaultPrisma from '../config/prisma';
+import type { Prisma } from '@prisma/client';
 import { parseCsvDate } from './parseCsvDate';
 import type { ImportFileLike } from './runCsvImport';
 
@@ -32,7 +33,7 @@ function readImportFileUtf8(file: ImportFileLike): string {
 const parseNumber = (val: unknown): number => {
   if (val === null || val === undefined) return 0;
   const cleaned = String(val).replace(/,/g, '').trim();
-  const n = parseFloat(cleaned);
+  const n = Number(cleaned);
   return Number.isNaN(n) ? 0 : n;
 };
 
@@ -54,8 +55,9 @@ const parseNumber = (val: unknown): number => {
  */
 export async function importInventoryTransactionsFile(
   file: ImportFileLike,
-  opts?: { dryRun?: boolean }
+  opts?: { dryRun?: boolean; client?: Prisma.TransactionClient; strict?: boolean }
 ): Promise<InventoryImportDetails> {
+  const prisma = opts?.client ?? defaultPrisma;
   const details: InventoryImportDetails = {
     created: 0,
     skippedExisting: 0,
@@ -105,6 +107,7 @@ export async function importInventoryTransactionsFile(
         details.autoCreatedUsers++;
       } catch (e) {
         // Carrera con otra creación simultánea; se reporta la fila como ignorada.
+        if (opts?.strict) throw e;
         console.error('Inventory user auto-create error', email, e);
       }
     }
@@ -169,6 +172,10 @@ export async function importInventoryTransactionsFile(
     const date = parseCsvDate(row['DateTime']);
     const amount = parseNumber(row['Amount']);
     const reason = row['Reason'] || 'Sin motivo';
+    if (!date || !Number.isFinite(amount) || amount === 0) {
+      details.ignored.push({ row: csvLine, reason: 'Fecha o cantidad inválida' });
+      return;
+    }
 
     // Dedupe: con external_id ("Inventory ID" de Fiix) la clave ES exclusiva — dos
     // movimientos legítimos idénticos pero con IDs distintos NUNCA se descartan. La tupla
@@ -200,6 +207,10 @@ export async function importInventoryTransactionsFile(
     });
   });
 
+  if (opts?.strict && details.ignored.length) {
+    const bad = details.ignored[0];
+    throw new Error(`Movimientos, fila ${bad.row}: ${bad.reason}`);
+  }
   if (opts?.dryRun) {
     details.created = creates.length;
   } else if (creates.length > 0) {

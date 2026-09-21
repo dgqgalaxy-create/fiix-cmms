@@ -9,6 +9,8 @@ export interface KPIMetric {
   details?: Array<{ id: string; name: string; count: number }>;
   sampleSize?: number;
   isNull?: boolean;
+  missingCount?: number;
+  methodology?: string;
 }
 
 export interface KPIResponse {
@@ -72,6 +74,8 @@ export interface ChartData {
   mttr: number;
   mtbf: number;
   mtbfSample?: number;
+  mtbfAssumptionHoursPerDay?: number;
+  mtbfEstimated?: boolean;
 }
 
 export const getChartData = async (periodOrQuery?: string | KpiPeriodQuery): Promise<ChartData[]> => {

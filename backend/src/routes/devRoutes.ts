@@ -758,7 +758,7 @@ router.post(
     ...(filesMap?.workOrderImagesZip || []),
   ];
 
-  if (!tryStartImportJob('Importación de datos en curso. Modo solo lectura.')) {
+  if (!await tryStartImportJob('Importación de datos en curso. Modo solo lectura.')) {
     res.status(409).json({
       message: 'Ya hay una importación en curso. Espera a que termine e inténtalo de nuevo.',
     });
@@ -808,7 +808,7 @@ router.post(
     console.error('CSV Import error:', error);
     res.status(500).json({ message: 'Error procesando archivos CSV.', error: error.message });
   } finally {
-    endImportJob();
+    await endImportJob();
     for (const f of uploadedTemps) {
       unlinkUploadedSafe(f);
     }
@@ -928,14 +928,13 @@ router.get('/data-quality', verifyDevPassword, async (_req: Request, res: Respon
 /** Importa las 7 pestañas mapeadas desde Google Sheets (mismo motor que CSV). */
 router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
   const tempPaths: string[] = [];
-  resetImportProgress();
-  setImportProgress('sheets', 5, 'Leyendo pestañas de Google Sheets…');
-  if (!tryStartImportJob('Importación de datos en curso. Modo solo lectura.')) {
-    setImportProgress('error', 0, 'Ya hay una importación en curso', { active: false });
+  if (!await tryStartImportJob('Importación de datos en curso. Modo solo lectura.')) {
     res.status(409).json({ message: 'Ya hay una importación en curso. Espera a que termine e inténtalo de nuevo.' });
     return;
   }
   try {
+    resetImportProgress();
+    setImportProgress('sheets', 5, 'Leyendo pestañas de Google Sheets…');
     fs.mkdirSync(importTmpDir, { recursive: true });
     const tabs = await fetchAllImportTabs();
     const nonEmpty = tabs.filter((t) => t.records.length > 0);
@@ -1030,7 +1029,7 @@ router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Respo
       error: error.message,
     });
   } finally {
-    endImportJob();
+    await endImportJob();
     for (const p of tempPaths) {
       try {
         fs.unlinkSync(p);

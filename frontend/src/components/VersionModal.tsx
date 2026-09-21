@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.63.0";
+export const APP_VERSION = "1.64.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "20 de Septiembre, 2026";
+  const updateDate = "21 de Septiembre, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,12 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Compras permite entregas parciales, muestra lo recibido y pendiente, y evita duplicar existencias al reintentar una entrega.",
+    "Corrección: las importaciones de datos se revierten completas ante un error; al reimportar repuestos se conserva el stock operativo. Las fotos se procesan por separado.",
+    "Seguridad: candado de importación compartido entre procesos y recuperación del aviso de mantenimiento al reconectar; bloqueo de desarrollador independiente de preferencias.",
+    "Seguridad: imágenes externas con validación IPv6 y conexión a la dirección ya verificada, sin segunda resolución DNS.",
+    "KPIs: tiempos cero excluidos del cumplimiento MTTR; disponibilidad identificada como calendario y MTBF como estimación con sus supuestos.",
+    "Rendimiento: el filtro de stock crítico pagina directamente en la base de datos.",
     "Seguridad: el proxy de imágenes del inventario ya no permite destinos internos (bloquea loopback, LAN, CGNAT y metadata de nube), con timeout, límite de 8 MB y solo contenido image/*.",
     "Seguridad: las preferencias del usuario se fusionan en el servidor (ya no reemplazan el objeto completo) y no pueden borrar el bloqueo de intentos del menú de desarrollador.",
     "Mejora: la importación reporta las filas con error de categorías, ubicaciones, proveedores, repuestos y usuarios (antes se silenciaban); el lote ya no queda incompleto sin explicación.",

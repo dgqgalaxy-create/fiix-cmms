@@ -1,5 +1,6 @@
 import { AssetKind, AssetStatus, Prisma } from '@prisma/client';
-import prisma from '../config/prisma';
+import defaultPrisma from '../config/prisma';
+const prisma = defaultPrisma;
 import { generateAssetInternalCode } from './assetCodeGenerator';
 import {
   isActivosCategoryName,
@@ -80,7 +81,7 @@ export async function ensureZoneForAssetImport(
  * Section left null (Sin sección / letra X) — inventory CSV has no section column.
  * Photos are assigned later from the Items_Images zip → uploads/assets/.
  */
-export async function syncAssetsFromActivosInventory(): Promise<AssetInventoryImportResult> {
+export async function syncAssetsFromActivosInventory(prisma: DbClient = defaultPrisma): Promise<AssetInventoryImportResult> {
   const result: AssetInventoryImportResult = {
     created: 0,
     updated: 0,
@@ -109,7 +110,7 @@ export async function syncAssetsFromActivosInventory(): Promise<AssetInventoryIm
     const key = zoneName.toUpperCase();
     let z = zoneCache.get(key);
     if (!z) {
-      z = await ensureZoneForAssetImport(zoneName);
+      z = await ensureZoneForAssetImport(zoneName, prisma);
       zoneCache.set(key, z);
       if (!ensured.has(z.name)) {
         ensured.add(z.name);
@@ -152,6 +153,7 @@ export async function syncAssetsFromActivosInventory(): Promise<AssetInventoryIm
         result.updated++;
       } else {
         const internal_code = await generateAssetInternalCode({
+          tx: prisma,
           name: assetName,
           zoneId: zone.id,
           section: null,
@@ -177,6 +179,7 @@ export async function syncAssetsFromActivosInventory(): Promise<AssetInventoryIm
         result.created++;
       }
     } catch (e) {
+      if (prisma !== defaultPrisma) throw e;
       console.error('Asset inventory import row error', item.internal_code, e);
       result.skipped++;
     }

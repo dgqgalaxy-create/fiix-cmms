@@ -104,7 +104,7 @@ const GOAL_LABELS: Record<string, { label: string; unit: string; hint: string }>
   RESPONSE_TIME: { label: 'Tiempo de respuesta', unit: 'horas', hint: 'Desde creación hasta inicio de trabajo' },
   SLA: { label: 'Cumplimiento MTTR', unit: '%', hint: '% de correctivas bajo la meta de MTTR' },
   BACKLOG: { label: 'Backlog', unit: 'órdenes', hint: 'Órdenes abiertas (pendiente, proceso, espera)' },
-  ASSET_AVAILABILITY: { label: 'Disponibilidad', unit: '%', hint: 'Tiempo productivo menos paros con máquina detenida' },
+  ASSET_AVAILABILITY: { label: 'Disponibilidad calendario', unit: '%', hint: 'Tiempo calendario (24 h/día) menos paros, sin duplicar intervalos' },
   REINCIDENCIA: { label: 'Retrabajo', unit: '%', hint: 'Correctivas con falla previa dentro de la ventana definida' },
 };
 
@@ -647,7 +647,7 @@ export const KPIPage = () => {
           <span className={`rounded-full border px-2 py-0.5 font-bold ${styles.chip}`}>{styles.label}</span>
         </div>
         {typeof metric.sampleSize === 'number' && (
-          <p className="mt-2 text-[11px] text-slate-400">{metric.sampleSize} muestra{metric.sampleSize === 1 ? '' : 's'}</p>
+          <p className="mt-2 text-[11px] text-slate-400">{metric.sampleSize} muestra{metric.sampleSize === 1 ? '' : 's'}{metric.missingCount ? ` · ${metric.missingCount} sin tiempo válido (excluidas)` : ''}</p>
         )}
       </button>
     );
@@ -1031,7 +1031,7 @@ export const KPIPage = () => {
                   <strong>MTTR:</strong> reparación (↓ mejor)
                 </span>
                 <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
-                  <strong>MTBF:</strong> entre fallas (↑ mejor)
+                  <strong>MTBF estimado:</strong> entre fallas (↑ mejor). Usa equipos operativos actuales y {charts[0]?.mtbfAssumptionHoursPerDay ?? 24} h/día; no es una medición histórica de horas reales.
                 </span>
               </div>
               <div className="h-80">
@@ -1139,7 +1139,7 @@ export const KPIPage = () => {
                 <strong>MTTR:</strong> promedio de reparación de paros finalizados (↓ mejor)
               </span>
               <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
-                <strong>MTBF:</strong> horas operativas ÷ fallas (↑ mejor)
+                <strong>MTBF estimado:</strong> horas supuestas ÷ fallas (↑ mejor); población de equipos actual.
               </span>
             </div>
 

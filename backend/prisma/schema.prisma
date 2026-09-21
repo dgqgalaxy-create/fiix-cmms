@@ -96,6 +96,7 @@ model User {
   created_at           DateTime    @default(now())
   updated_at           DateTime    @updatedAt
 
+  developer_access_lock DeveloperAccessLock?
   created_orders  WorkOrder[] @relation("CreatedOrders")
   assigned_orders WorkOrder[] @relation("AssignedOrders")
   inventory_transactions InventoryTransaction[]
@@ -521,6 +522,7 @@ model PurchaseOrder {
   /// Porcentaje de IVA sobre el subtotal (precios de línea sin IVA). Ej. 16 = 16%.
   iva_percent     Float    @default(0)
 
+  receipts        PurchaseReceipt[]
   items           PurchaseOrderItem[]
   documents       PurchaseOrderDocument[]
 }
@@ -957,4 +959,22 @@ model ChatMessageReaction {
   @@unique([message_id, user_id])
   @@index([message_id])
   @@index([user_id])
+}
+
+// Estado de seguridad no editable desde preferencias.
+model DeveloperAccessLock {
+  user_id String @id @db.Uuid
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  failed_attempts Int @default(0)
+  locked_until DateTime?
+}
+
+model PurchaseReceipt {
+  request_id String @id
+  purchase_order_id String @db.Uuid
+  purchase_order PurchaseOrder @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade)
+  user_id String @db.Uuid
+  quantities Json
+  created_at DateTime @default(now())
+  @@index([purchase_order_id, created_at])
 }

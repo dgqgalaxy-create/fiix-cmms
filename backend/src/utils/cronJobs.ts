@@ -1,3 +1,4 @@
+import { getSharedMaintenanceState } from './maintenance';
 import cron from 'node-cron';
 import prisma from '../config/prisma';
 import { evaluateOpenWorkOrders, silentBackfillSlaEvents } from '../services/SlaService';
@@ -11,12 +12,14 @@ import { runNotesReminders } from './notesReminders';
 // This cron job will run every day at 00:01
 export const initCronJobs = () => {
   cron.schedule('1 0 * * *', async () => {
+    if ((await getSharedMaintenanceState()).active) return;
     console.log('Running daily preventative maintenance check...');
     await checkAndGenerateMaintenanceOrders();
   }, { timezone: CHECKLIST_TZ });
 
   // Autocierre: checklists no enviados del día anterior → Incumplimiento (00:05 MX)
   cron.schedule('5 0 * * *', async () => {
+    if ((await getSharedMaintenanceState()).active) return;
     console.log('Running checklist non-compliance close...');
     try {
       const result = await runChecklistNonComplianceClose();
@@ -30,6 +33,7 @@ export const initCronJobs = () => {
 
   // Respaldo automático diario (BD + uploads) a las 2:15 AM; conserva los últimos 14 días.
   cron.schedule('15 2 * * *', async () => {
+    if ((await getSharedMaintenanceState()).active) return;
     console.log('Running scheduled backup...');
     try {
       const result = await runBackup();
@@ -41,6 +45,7 @@ export const initCronJobs = () => {
 
   // Autocomprobación de Postgres cada 5 min (Node vivo, BD caída → Telegram con debounce)
   cron.schedule('*/5 * * * *', async () => {
+    if ((await getSharedMaintenanceState()).active) return;
     try {
       await runDbSelfCheck();
     } catch (error) {
@@ -50,6 +55,7 @@ export const initCronJobs = () => {
 
   // Recordatorio Telegram: checklist del día no enviado (horas en CHECKLIST_REMINDER_HOURS, default 10,14,16 MX)
   cron.schedule('0 * * * *', async () => {
+    if ((await getSharedMaintenanceState()).active) return;
     try {
       await runChecklistReminderCheck();
     } catch (error) {
@@ -59,6 +65,7 @@ export const initCronJobs = () => {
 
   // Recordatorios de notas personales y pendientes operativos (in-app + push)
   cron.schedule('*/5 * * * *', async () => {
+    if ((await getSharedMaintenanceState()).active) return;
     try {
       const result = await runNotesReminders();
       if (result.notes > 0 || result.tasks > 0) {
@@ -71,6 +78,7 @@ export const initCronJobs = () => {
 
   // SLA reminders / escalations every 15 minutes (con digest si hay muchos)
   cron.schedule('*/15 * * * *', async () => {
+    if ((await getSharedMaintenanceState()).active) return;
     console.log('Running SLA evaluation...');
     try {
       const result = await evaluateOpenWorkOrders({ mode: 'notify' });
@@ -114,6 +122,7 @@ export const initCronJobs = () => {
 };
 
 export const checkAndGenerateMaintenanceOrders = async () => {
+    if ((await getSharedMaintenanceState()).active) return;
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);

@@ -23,8 +23,6 @@ const parseReworkWindowDays = (raw: unknown): number => {
   if (!Number.isFinite(parsed)) return DEFAULT_REWORK_WINDOW_DAYS;
   return Math.min(MAX_REWORK_WINDOW_DAYS, Math.max(MIN_REWORK_WINDOW_DAYS, Math.round(parsed)));
 };
-const PRODUCTIVE_HOURS_PER_YEAR = 8467.27;
-const HOURS_PER_YEAR = 365 * 24;
 
 /**
  * Horas de operación al día que asume el MTBF (antes fijas en 24). El supuesto es
@@ -321,9 +319,10 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
 
     // Cumplimiento MTTR (antes etiquetado como SLA)
     const mttrGoalHours = goals.MTTR.targetValue;
-    const mttrCompliance = correctiveCompleted.length
-      ? (correctiveCompleted.filter((wo) => Number(wo.accumulated_time_ms) / MS_PER_HOUR <= mttrGoalHours).length /
-          correctiveCompleted.length) *
+    const validRepairTimes = correctiveCompleted.filter(wo => Number(wo.accumulated_time_ms) > 0);
+    const mttrCompliance = validRepairTimes.length
+      ? (validRepairTimes.filter((wo) => Number(wo.accumulated_time_ms) / MS_PER_HOUR <= mttrGoalHours).length /
+          validRepairTimes.length) *
         100
       : null;
 
@@ -335,7 +334,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
     // y solo se suma la cobertura efectiva (una línea parada = un tramo, haya 1 o N OT).
     const lineCount = Math.max(zones.length, 1);
     const periodMs = Math.max(effectiveEnd.getTime() - start.getTime(), 1);
-    const totalTheoreticalMs = lineCount * periodMs * (PRODUCTIVE_HOURS_PER_YEAR / HOURS_PER_YEAR);
+    const totalTheoreticalMs = lineCount * periodMs;
 
     let totalDowntimeMs = 0;
     {
@@ -468,7 +467,8 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
         SLA: {
           value: mttrCompliance === null ? 0 : Number(mttrCompliance.toFixed(1)),
           goal: goals.SLA,
-          sampleSize: correctiveCompleted.length,
+          sampleSize: validRepairTimes.length,
+          missingCount: correctiveCompleted.length - validRepairTimes.length,
           isNull: mttrCompliance === null,
         },
         BACKLOG: {
@@ -479,7 +479,9 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
         ASSET_AVAILABILITY: {
           value: Number(assetAvailability.toFixed(1)),
           goal: goals.ASSET_AVAILABILITY,
-          sampleSize: downtimeOrders.length,
+          sampleSize: zones.length,
+          isNull: zones.length === 0,
+          methodology: 'Disponibilidad sobre tiempo calendario (24 h/día), con paros solapados unidos por zona. No equivale a disponibilidad sobre turnos programados.',
         },
         REINCIDENCIA: {
           value: Number(reincidencia.toFixed(1)),
@@ -665,7 +667,7 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
       // es ahora explícito (getOperatingHoursPerDay) en vez de un 24 fijo implícito.
       const failures = correctiveCompleted.length;
       const hoursPerDay = getOperatingHoursPerDay();
-      const operationalHours = interval.days * hoursPerDay * Math.max(operativeAssets, 1);
+      const operationalHours = Math.max(0, interval.end.getTime() - interval.start.getTime()) / 86400000 * hoursPerDay * operativeAssets;
       const mtbfHours = failures > 0 ? operationalHours / failures : null;
 
       return {
@@ -675,6 +677,7 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
         mtbf: mtbfHours === null ? 0 : Number(mtbfHours.toFixed(2)),
         mtbfSample: failures,
         mtbfAssumptionHoursPerDay: hoursPerDay,
+        mtbfEstimated: true,
       };
     });
 

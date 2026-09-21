@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+import { parseQty } from '../utils/qtyMode';
 import { Response } from 'express';
 import fs from 'fs';
 import path from 'path';
@@ -590,6 +592,74 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
       return;
     }
 
+    if (status === 'RECIBIDA') {
+      const key = req.body.client_request_id;
+      if (key !== undefined && (typeof key !== 'string' || !/^[a-zA-Z0-9_-]{8,80}$/.test(key))) {
+        res.status(400).json({ error: 'Identificador de recepción inválido' }); return;
+      }
+      const requestId = `${id}:${key || randomUUID()}`;
+      const updated = await prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT id FROM "PurchaseOrder" WHERE id = ${id}::uuid FOR UPDATE`;
+        const current = await tx.purchaseOrder.findUnique({ where: { id }, include: { items: { include: { item: true } } } });
+        if (!current) throw Object.assign(new Error('Orden no encontrada'), { code: 'NOT_FOUND' });
+        if (await tx.purchaseReceipt.findUnique({ where: { request_id: requestId } })) {
+          return tx.purchaseOrder.findUnique({ where: { id }, include: poDetailInclude });
+        }
+        if (!['APROBADA', 'ENVIADA'].includes(current.status)) {
+          throw Object.assign(new Error('Solo se reciben órdenes aprobadas o enviadas y con saldo pendiente'), { code: 'STATUS_CONFLICT' });
+        }
+        if (received_items !== undefined && !Array.isArray(received_items)) {
+          throw Object.assign(new Error('Lista de cantidades inválida'), { status: 400 });
+        }
+        const input = new Map<string, any>();
+        for (const row of received_items ?? []) {
+          if (!row || typeof row.id !== 'string' || input.has(row.id) || !current.items.some(i => i.id === row.id)) {
+            throw Object.assign(new Error('Línea duplicada o ajena a la compra'), { status: 400 });
+          }
+          input.set(row.id, row);
+        }
+        const quantities: Record<string, number> = {};
+        let complete = true;
+        let any = false;
+        for (const line of [...current.items].sort((a,b) => a.item_id.localeCompare(b.item_id))) {
+          const before = line.received_quantity ?? 0;
+          const remaining = Math.max(0, line.quantity - before);
+          const row = input.get(line.id);
+          if (row?.expected_received !== undefined && Number(row.expected_received) !== before) {
+            throw Object.assign(new Error('Otra persona registró una entrega. Recarga antes de recibir.'), { code: 'STATUS_CONFLICT' });
+          }
+          const parsed = parseQty(row ? row.received_quantity : received_items === undefined ? remaining : 0, line.item.qty_mode, { allowZero: true });
+          if (!parsed.ok || parsed.value > remaining + 1e-9) {
+            throw Object.assign(new Error(`Cantidad inválida o mayor al pendiente de ${line.item.name}`), { status: 400 });
+          }
+          const amount = parsed.value;
+          const total = Math.min(line.quantity, before + amount);
+          if (total < line.quantity - 1e-9) complete = false;
+          if (!amount) continue;
+          any = true; quantities[line.id] = amount;
+          await tx.purchaseOrderItem.update({ where: { id: line.id }, data: { received_quantity: total } });
+          await tx.item.update({ where: { id: line.item_id }, data: { stock: { increment: amount }, purchase_cost: line.unit_cost } });
+          await tx.inventoryTransaction.create({ data: {
+            item_id: line.item_id, user_id, amount, unit_cost: line.unit_cost,
+            reason: `Recepción OC PO-${current.folio}: entrega ${amount}; acumulado ${total}/${line.quantity}`,
+          } });
+        }
+        if (!any) throw Object.assign(new Error('Indica al menos una cantidad a recibir'), { status: 400 });
+        await tx.purchaseReceipt.create({ data: { request_id: requestId, purchase_order_id: id, user_id, quantities } });
+        const result = await tx.purchaseOrder.update({ where: { id }, data: {
+          status: complete ? 'RECIBIDA' : 'ENVIADA', received_at: complete ? new Date() : null,
+        }, include: poDetailInclude });
+        await tx.auditLog.create({ data: {
+          user_id, action: complete ? 'PO_RECEIVED' : 'PO_PARTIAL_RECEIPT', entity: 'purchase_order', entity_id: id,
+          summary: `PO-${current.folio}: recepción ${complete ? 'completa' : 'parcial'}`,
+          meta: { request_id: requestId, from_status: current.status, to_status: result.status, quantities },
+        } });
+        return result;
+      }, { maxWait: 10000, timeout: 30000 });
+      emitRefresh('refresh_purchase_orders'); emitRefresh('refresh_inventory');
+      res.json(updated); return;
+    }
+
     const existingOrder = await prisma.purchaseOrder.findUnique({
       where: { id: id },
       include: { items: true }
@@ -606,123 +676,6 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
     }
 
     const updateData: any = { status };
-    // Momento real de recepción (puede ser antes de la fecha pactada / expected_date).
-    const receivedAt = status === 'RECIBIDA' ? new Date() : null;
-    if (receivedAt) {
-      updateData.received_at = receivedAt;
-    }
-
-    // Wrap in transaction if we are receiving it, to update inventory stock
-    if (status === 'RECIBIDA') {
-      // Map optional per-line received quantities (fallback = ordered quantity).
-      const receivedMap = new Map<string, number>();
-      if (Array.isArray(received_items)) {
-        for (const row of received_items) {
-          const lineId = typeof row?.id === 'string' ? row.id : null;
-          const qty = Number(row?.received_quantity);
-          if (!lineId) {
-            res.status(400).json({ error: 'Cada ítem recibido debe incluir id de línea' });
-            return;
-          }
-          if (!Number.isFinite(qty) || qty < 0) {
-            res.status(400).json({ error: 'received_quantity debe ser un número ≥ 0' });
-            return;
-          }
-          const belongs = existingOrder.items.some((i) => i.id === lineId);
-          if (!belongs) {
-            res.status(400).json({ error: 'Hay líneas que no pertenecen a esta orden de compra' });
-            return;
-          }
-          receivedMap.set(lineId, qty);
-        }
-      }
-
-      const updatedOrder = await prisma.$transaction(async (tx) => {
-        // Bloquear la OC: dos recepciones simultáneas se serializan y la segunda
-        // comprueba el estado ya actualizado → no recibe dos veces ni duplica stock.
-        await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM "PurchaseOrder" WHERE id = ${id}::uuid FOR UPDATE`;
-        const lockedOrder = await tx.purchaseOrder.findUnique({
-          where: { id },
-          select: { status: true },
-        });
-        if (!lockedOrder) {
-          throw Object.assign(new Error('Orden de compra no encontrada'), { code: 'NOT_FOUND' });
-        }
-        if (lockedOrder.status === 'RECIBIDA' || lockedOrder.status === 'CANCELADA') {
-          throw Object.assign(
-            new Error('La orden ya fue recibida o cancelada. Recarga e inténtalo de nuevo.'),
-            { code: 'ALREADY_CLOSED' }
-          );
-        }
-
-        await tx.purchaseOrder.update({
-          where: { id: id },
-          data: updateData
-        });
-
-        for (const orderItem of existingOrder.items) {
-          const receivedQty = receivedMap.has(orderItem.id)
-            ? (receivedMap.get(orderItem.id) as number)
-            : orderItem.quantity;
-
-          await tx.purchaseOrderItem.update({
-            where: { id: orderItem.id },
-            data: { received_quantity: receivedQty },
-          });
-
-          if (receivedQty > 0) {
-            await tx.item.update({
-              where: { id: orderItem.item_id },
-              data: {
-                stock: { increment: receivedQty },
-                purchase_cost: orderItem.unit_cost,
-              },
-            });
-
-            // Fecha del movimiento = instante de recepción (no la fecha pactada de la OC).
-            await tx.inventoryTransaction.create({
-              data: {
-                item_id: orderItem.item_id,
-                user_id: user_id,
-                amount: receivedQty,
-                unit_cost: orderItem.unit_cost,
-                reason: `Recepción de Orden de Compra PO-${existingOrder.folio} (pedido: ${orderItem.quantity}, recibido: ${receivedQty})`,
-                created_at: receivedAt!,
-              },
-            });
-          }
-        }
-
-        return tx.purchaseOrder.findUnique({
-          where: { id },
-          include: poDetailInclude,
-        });
-      });
-
-      emitRefresh('refresh_purchase_orders');
-      emitRefresh('refresh_inventory');
-
-      const actorNameR = (
-        await prisma.user.findUnique({ where: { id: user_id }, select: { name: true } })
-      )?.name;
-      await writeAuditLog({
-        userId: user_id,
-        userName: actorNameR,
-        action: 'PO_RECEIVED',
-        entity: 'purchase_order',
-        entityId: id,
-        summary: `OC PO-${existingOrder.folio} recibida (${existingOrder.items.length} líneas)`,
-        meta: {
-          from_status: existingOrder.status,
-          to_status: 'RECIBIDA',
-          received_quantities: Object.fromEntries(receivedMap),
-        },
-      });
-
-      res.json(updatedOrder);
-      return;
-    }
-
     // Transiciones de estado SIN recepción también se serializan con FOR UPDATE y se
     // re-valida el estado fresco: evita la carrera donde A recibe (stock +, movimiento)
     // y B, que leyó ENVIADA antes, cancela después sin ver el estado nuevo (quedaría una
@@ -751,6 +704,8 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
             { code: 'STATUS_CONFLICT' }
           );
         }
+        const transitions: Record<string, string[]> = { BORRADOR: ['APROBADA','CANCELADA'], APROBADA: ['ENVIADA','CANCELADA'], ENVIADA: ['CANCELADA'] };
+        if (!(transitions[lockedOrder.status] || []).includes(status)) throw Object.assign(new Error('Transición de compra no permitida'), { code: 'STATUS_CONFLICT' });
         return tx.purchaseOrder.update({
           where: { id: id },
           data: updateData,
@@ -777,6 +732,7 @@ export const updatePurchaseOrderStatus = async (req: AuthRequest, res: Response)
 
     res.json(updatedOrder);
   } catch (error: any) {
+    if (error?.status === 400) { res.status(400).json({ error: error.message }); return; }
     if (
       error?.code === 'ALREADY_CLOSED' ||
       error?.code === 'STATUS_CONFLICT' ||

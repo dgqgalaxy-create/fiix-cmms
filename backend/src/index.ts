@@ -11,8 +11,8 @@ dotenv.config();
 import { initSocket } from './utils/socket';
 import { assertJwtConfigured } from './utils/auth';
 import { corsOriginDelegate } from './utils/corsOrigins';
-import { requireUploadAccess } from './middlewares/authMiddleware';
-import { isMaintenanceActive } from './utils/maintenance';
+import { authenticate, requireUploadAccess } from './middlewares/authMiddleware';
+import { getSharedMaintenanceState } from './utils/maintenance';
 
 assertJwtConfigured();
 
@@ -59,10 +59,12 @@ app.use(
 // Modo mantenimiento (p. ej. importación en curso): bloquear mutaciones para todos.
 // Lecturas (GET/HEAD) siguen disponibles; el import en sí ya pasó este middleware
 // antes de activar el modo, así que no se bloquea a sí mismo.
-app.use((req: Request, res: Response, next: NextFunction) => {
+app.get('/api/maintenance-state', authenticate, async (_req, res) => { res.json(await getSharedMaintenanceState()); });
+app.use(async (req: Request, res: Response, next: NextFunction) => {
   if (
-    isMaintenanceActive() &&
-    ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method.toUpperCase())
+    !req.path.startsWith('/api/auth/') &&
+    ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method.toUpperCase()) &&
+    (await getSharedMaintenanceState()).active
   ) {
     res.status(503).json({
       error:

@@ -1,131 +1,48 @@
 import prisma from '../config/prisma';
-import { Prisma } from '@prisma/client';
-
-/** Máximo de intentos fallidos antes de bloquear 1 hora (persistido en User.preferences). */
+import type { Prisma } from '@prisma/client';
 export const DEV_PASSWORD_MAX_ATTEMPTS = 3;
 export const DEV_PASSWORD_LOCK_MS = 60 * 60 * 1000;
+export const DEV_PASSWORD_CODES = { REQUIRED: 'DEV_PASSWORD_REQUIRED', INVALID: 'DEV_PASSWORD_INVALID', LOCKED: 'DEV_PASSWORD_LOCKED' } as const;
+export type DevGateStatus = { locked: false; failedAttempts: number } | { locked: true; failedAttempts: number; lockedUntil: string };
 
-export const DEV_PASSWORD_CODES = {
-  REQUIRED: 'DEV_PASSWORD_REQUIRED',
-  INVALID: 'DEV_PASSWORD_INVALID',
-  LOCKED: 'DEV_PASSWORD_LOCKED',
-} as const;
-
-type DevMenuLockState = {
-  failedAttempts: number;
-  lockedUntil: string | null;
-};
-
-type Prefs = Record<string, unknown> & { dev_menu_lock?: DevMenuLockState };
-
-function asPrefs(raw: unknown): Prefs {
-  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-    return { ...(raw as Prefs) };
-  }
-  return {};
-}
-
-function readLock(prefs: Prefs): DevMenuLockState {
-  const lock = prefs.dev_menu_lock;
-  if (!lock || typeof lock !== 'object') {
-    return { failedAttempts: 0, lockedUntil: null };
-  }
-  return {
-    failedAttempts: typeof lock.failedAttempts === 'number' ? lock.failedAttempts : 0,
-    lockedUntil: typeof lock.lockedUntil === 'string' ? lock.lockedUntil : null,
-  };
-}
-
-async function saveLock(userId: string, lock: DevMenuLockState | null): Promise<void> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { preferences: true },
-  });
-  if (!user) return;
-
-  const prefs = asPrefs(user.preferences);
-  if (lock === null) {
-    delete prefs.dev_menu_lock;
-  } else {
-    prefs.dev_menu_lock = lock;
-  }
-
-  await prisma.user.update({
-    where: { id: userId },
-    data: { preferences: prefs as Prisma.InputJsonValue },
-  });
-}
-
-export type DevGateStatus =
-  | { locked: false; failedAttempts: number }
-  | { locked: true; failedAttempts: number; lockedUntil: string };
-
-/**
- * Estado actual del candado de contraseña maestra (User.preferences.dev_menu_lock).
- * Si el bloqueo ya expiró, limpia el contador en BD.
- */
-export async function getDevPasswordGateStatus(userId: string): Promise<DevGateStatus> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { preferences: true },
-  });
-  if (!user) {
-    return { locked: false, failedAttempts: 0 };
-  }
-
-  const prefs = asPrefs(user.preferences);
-  const lock = readLock(prefs);
-  const now = Date.now();
-
-  if (lock.lockedUntil) {
-    const until = Date.parse(lock.lockedUntil);
-    if (!Number.isNaN(until) && until > now) {
-      return {
-        locked: true,
-        failedAttempts: lock.failedAttempts,
-        lockedUntil: lock.lockedUntil,
-      };
+async function withLock<T>(userId: string, action: (tx: Prisma.TransactionClient, state: { failed_attempts: number; locked_until: Date | null }) => Promise<T>): Promise<T> {
+  return prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId}::uuid FOR UPDATE`;
+    let state = await tx.developerAccessLock.findUnique({ where: { user_id: userId } });
+    if (!state) {
+      const user = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { preferences: true } });
+      const legacy = (user.preferences as Record<string, any> | null)?.dev_menu_lock;
+      const until = legacy?.lockedUntil ? new Date(legacy.lockedUntil) : null;
+      state = await tx.developerAccessLock.create({ data: {
+        user_id: userId,
+        failed_attempts: Math.max(0, Math.min(3, Number(legacy?.failedAttempts) || 0)),
+        locked_until: until && Number.isFinite(until.getTime()) ? until : null,
+      } });
     }
-    // Bloqueo expirado → reinicia intentos
-    await saveLock(userId, null);
-    return { locked: false, failedAttempts: 0 };
-  }
-
-  return { locked: false, failedAttempts: lock.failedAttempts };
+    if (state.locked_until && state.locked_until.getTime() <= Date.now()) {
+      state = await tx.developerAccessLock.update({ where: { user_id: userId }, data: { failed_attempts: 0, locked_until: null } });
+    }
+    return action(tx, state);
+  });
 }
-
+export async function getDevPasswordGateStatus(userId: string): Promise<DevGateStatus> {
+  return withLock(userId, async (_, state) => state.locked_until
+    ? { locked: true, failedAttempts: state.failed_attempts, lockedUntil: state.locked_until.toISOString() }
+    : { locked: false, failedAttempts: state.failed_attempts });
+}
 export async function clearDevPasswordFailures(userId: string): Promise<void> {
-  await saveLock(userId, null);
+  await withLock(userId, async (tx, state) => {
+    // No quitar un bloqueo que se activó mientras otra petición validaba una clave.
+    if (state.locked_until) return;
+    await tx.developerAccessLock.update({ where: { user_id: userId }, data: { failed_attempts: 0, locked_until: null } });
+  });
 }
-
-/**
- * Registra un intento fallido. Al llegar a MAX, bloquea 1 hora.
- */
-export async function recordDevPasswordFailure(userId: string): Promise<{
-  remainingAttempts: number;
-  locked: boolean;
-  lockedUntil: string | null;
-}> {
-  const status = await getDevPasswordGateStatus(userId);
-  if (status.locked) {
-    return {
-      remainingAttempts: 0,
-      locked: true,
-      lockedUntil: status.lockedUntil,
-    };
-  }
-
-  const failedAttempts = status.failedAttempts + 1;
-  if (failedAttempts >= DEV_PASSWORD_MAX_ATTEMPTS) {
-    const lockedUntil = new Date(Date.now() + DEV_PASSWORD_LOCK_MS).toISOString();
-    await saveLock(userId, { failedAttempts, lockedUntil });
-    return { remainingAttempts: 0, locked: true, lockedUntil };
-  }
-
-  await saveLock(userId, { failedAttempts, lockedUntil: null });
-  return {
-    remainingAttempts: DEV_PASSWORD_MAX_ATTEMPTS - failedAttempts,
-    locked: false,
-    lockedUntil: null,
-  };
+export async function recordDevPasswordFailure(userId: string): Promise<{ remainingAttempts: number; locked: boolean; lockedUntil: string | null }> {
+  return withLock(userId, async (tx, state) => {
+    if (state.locked_until) return { remainingAttempts: 0, locked: true, lockedUntil: state.locked_until.toISOString() };
+    const count = state.failed_attempts + 1;
+    const until = count >= DEV_PASSWORD_MAX_ATTEMPTS ? new Date(Date.now() + DEV_PASSWORD_LOCK_MS) : null;
+    await tx.developerAccessLock.update({ where: { user_id: userId }, data: { failed_attempts: count, locked_until: until } });
+    return { remainingAttempts: Math.max(0, DEV_PASSWORD_MAX_ATTEMPTS - count), locked: !!until, lockedUntil: until?.toISOString() ?? null };
+  });
 }

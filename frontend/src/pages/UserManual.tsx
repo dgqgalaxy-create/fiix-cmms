@@ -366,6 +366,10 @@ export const UserManual = () => {
 
             {activeSection === 'inventory' && (
               <div className="space-y-8 md:animate-in md:fade-in md:slide-in-from-bottom-4 md:duration-500">
+              <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100">
+                <strong>Entregas parciales:</strong> al recibir una compra, captura solo lo que llegó hoy. Verás el recibido acumulado y lo pendiente. La orden sigue enviada hasta completar todas las cantidades; reintentar la misma entrega no duplica el stock. Si otra persona ya registró una entrega, actualiza el detalle.
+              </p>
+
                 <div className="flex items-center gap-4 mb-6 border-b border-slate-200 dark:border-slate-700 pb-6">
                   <div className="p-3 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl">
                     <Package size={28} />

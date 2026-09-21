@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import api from '../api/axios';
 import { socket } from '../api/socket';
 
 interface MaintenanceContextValue {
@@ -28,8 +29,14 @@ export function MaintenanceProvider({ children }: { children: ReactNode }) {
         message: payload?.message || '',
       });
     };
+    const refresh = () => { if (localStorage.getItem('token')) api.get('/maintenance-state').then(r => onMaintenance(r.data)).catch(() => {}); };
+    refresh();
+    const timer = window.setInterval(refresh, 5000);
+    socket.on('connect', refresh);
     socket.on('maintenance', onMaintenance);
     return () => {
+      window.clearInterval(timer);
+      socket.off('connect', refresh);
       socket.off('maintenance', onMaintenance);
     };
   }, []);

@@ -290,3 +290,23 @@ Las alertas de nuevas solicitudes usan un **Bot Token** y un **Chat ID** de grup
 
 ---
 *Para soporte técnico adicional, revisa la sección de ayuda dentro del sistema.*
+
+
+## Novedades de uso v1.64.0 — 21 de septiembre de 2026
+
+### Entregas parciales de compras
+1. Abre una orden aprobada o enviada y pulsa recibir.
+2. Introduce únicamente lo que llegó en esta entrega. Cada renglón muestra el acumulado recibido y lo pendiente; deja cero si no llegó ese repuesto.
+3. Confirma. El inventario suma solo esta entrega. La orden permanece enviada mientras haya pendientes y pasa a recibida cuando todos los renglones estén completos.
+4. Si falla la conexión, reintenta en la misma pantalla: el identificador de entrega impide duplicar existencias. Si otra persona recibió mientras tanto, actualiza el detalle antes de continuar.
+No se permiten cantidades superiores a lo pendiente. Cancelar una orden parcialmente entregada no retira del inventario las piezas ya recibidas.
+
+### Importación segura
+El orden de selección no cambia el procesamiento: categorías, ubicaciones, proveedores, repuestos, activos derivados, usuarios, movimientos y órdenes. Un error de escritura o un movimiento inválido revierte todo el lote de datos. Corrige el archivo indicado y vuelve a importar. Los identificadores existentes se reutilizan y los movimientos ya registrados se omiten. Los repuestos existentes conservan sus existencias operativas; el stock del archivo se usa al crear un repuesto nuevo. Otros campos del catálogo sí se actualizan.
+Las fotos se procesan después de confirmar los datos: un fallo de fotos se informa por separado y no deshace los registros ya guardados. Puedes reintentar la importación de imágenes.
+Solo se admite una importación a la vez, incluso con varios procesos del servidor. Al entrar o reconectar, la aplicación recupera el aviso de modo solo lectura.
+
+### Interpretación de indicadores
+El cumplimiento MTTR usa solo correctivos finalizados con duración positiva; muestra cuántos se excluyeron por no tener tiempo válido. Cero no equivale a una reparación instantánea exitosa.
+La disponibilidad calendario utiliza 24 horas por día y agrupa los paros superpuestos por zona para no contarlos dos veces. No equivale a disponibilidad durante turnos programados.
+El MTBF se presenta como estimación: depende de los activos operativos actuales y las horas diarias configuradas en el servidor (24 por defecto). Sin calendario histórico por activo no representa una medición exacta de sus horas operadas.

@@ -138,14 +138,15 @@ export const createDraftsFromLowStock = async (): Promise<LowStockDraftResult> =
   return data;
 };
 
-export type ReceivedItemPayload = { id: string; received_quantity: number };
+export type ReceivedItemPayload = { id: string; received_quantity: number; expected_received?: number };
 
 export const updatePurchaseOrderStatus = async (
   id: string,
   status: string,
   received_items?: ReceivedItemPayload[],
+  client_request_id?: string,
 ): Promise<PurchaseOrder> => {
-  const body: { status: string; received_items?: ReceivedItemPayload[] } = { status };
+  const body = { status, received_items, client_request_id };
   if (received_items) body.received_items = received_items;
   const { data } = await api.patch(`/purchase-orders/${id}/status`, body);
   return data;
