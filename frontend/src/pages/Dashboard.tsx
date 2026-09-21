@@ -735,7 +735,11 @@ export const Dashboard = () => {
       ) : (
         <div ref={tableContainerRef}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 border-b border-slate-200 pb-4 print:hidden">
-            <div className="flex bg-slate-100/80 p-1.5 rounded-xl shadow-inner overflow-x-auto min-w-[320px] max-w-full hide-scrollbar">
+            <div
+              className={`grid w-full gap-1 rounded-xl bg-slate-100/80 p-1.5 shadow-inner md:flex md:w-auto md:min-w-[320px] ${
+                hasPermission('VIEW_ALL_WORK_ORDERS') ? 'grid-cols-3' : 'grid-cols-2'
+              }`}
+            >
               {hasPermission('VIEW_ALL_WORK_ORDERS') && (
                 <button 
                   onClick={() => {
@@ -750,10 +754,10 @@ export const Dashboard = () => {
                     next.delete('sla');
                     setSearchParams(next, { replace: true });
                   }}
-                  className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-1 ${activeTab === 'ACTIVAS' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                  className={`w-full md:w-auto md:flex-1 px-2 py-2 text-xs sm:text-sm md:px-4 md:py-2.5 font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-1 text-center ${activeTab === 'ACTIVAS' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
                 >
                   Vista General
-                  <InfoTip text="Órdenes abiertas de toda la planta: Pendiente, En proceso y En espera." label="Ayuda: Vista General" />
+                  <span className="hidden md:inline-flex"><InfoTip text="Órdenes abiertas de toda la planta: Pendiente, En proceso y En espera." label="Ayuda: Vista General" /></span>
                 </button>
               )}
               <button 
@@ -769,12 +773,12 @@ export const Dashboard = () => {
                   next.delete('sla');
                   setSearchParams(next, { replace: true });
                 }}
-                className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-1 ${activeTab === 'MIS_ORDENES' ? 'bg-amber-100 text-amber-800 shadow-sm border border-amber-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                className={`w-full md:w-auto md:flex-1 px-2 py-2 text-xs sm:text-sm md:px-4 md:py-2.5 font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-1 text-center ${activeTab === 'MIS_ORDENES' ? 'bg-amber-100 text-amber-800 shadow-sm border border-amber-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
               >
                 Mis Órdenes
                 {mineCount > 0 && (
                   <span
-                    className={`ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-black leading-none ${
+                    className={`ml-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full px-1 py-0.5 text-[10px] font-black leading-none md:min-w-[1.25rem] md:px-1.5 md:text-[11px] ${
                       activeTab === 'MIS_ORDENES'
                         ? 'bg-amber-500 text-white'
                         : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200'
@@ -785,7 +789,7 @@ export const Dashboard = () => {
                     {mineCount > 99 ? '99+' : mineCount}
                   </span>
                 )}
-                <InfoTip text="Solo tus órdenes abiertas asignadas. Sin filtros: lista directa." label="Ayuda: Mis Órdenes" />
+                <span className="hidden md:inline-flex"><InfoTip text="Solo tus órdenes abiertas asignadas. Sin filtros: lista directa." label="Ayuda: Mis Órdenes" /></span>
               </button>
               <button 
                 onClick={() => {
@@ -800,10 +804,10 @@ export const Dashboard = () => {
                   next.delete('sla');
                   setSearchParams(next, { replace: true });
                 }}
-                className={`flex-1 min-w-max px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-1 ${activeTab === 'HISTORIAL' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                className={`w-full md:w-auto md:flex-1 px-2 py-2 text-xs sm:text-sm md:px-4 md:py-2.5 font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-1 text-center ${activeTab === 'HISTORIAL' ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
               >
                 Cerradas
-                <InfoTip text="Órdenes Finalizadas o Anuladas (archivo de cierre)." label="Ayuda: Cerradas" />
+                <span className="hidden md:inline-flex"><InfoTip text="Órdenes Finalizadas o Anuladas (archivo de cierre)." label="Ayuda: Cerradas" /></span>
               </button>
             </div>
             
