@@ -3,6 +3,9 @@ import {
   getMyNotifications,
   markAsRead,
   markAllAsRead,
+  deleteNotification,
+  deleteReadNotifications,
+  deleteAllNotifications,
   getVapidKey,
   getPushStatus,
   subscribePush,
@@ -24,5 +27,9 @@ router.get('/push/status', getPushStatus);
 router.post('/push/subscribe', subscribePush);
 router.delete('/push/unsubscribe', unsubscribePush);
 router.patch('/:id/read', markAsRead);
+// Borrado: '/read' y '/' van antes de '/:id' para que no se interpreten como id.
+router.delete('/read', deleteReadNotifications);
+router.delete('/', deleteAllNotifications);
+router.delete('/:id', deleteNotification);
 
 export default router;

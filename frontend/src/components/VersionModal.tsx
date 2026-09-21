@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.62.2";
+export const APP_VERSION = "1.62.3";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Notificaciones — ya puedes borrar una notificación (papelera en cada aviso), «Limpiar leídas» o borrar todas con confirmación; el historial deja de acumularse.",
     "Mejora: Órdenes de Trabajo — las pestañas Vista General / Mis Órdenes / Cerradas ya caben completas en la pantalla del celular, sin desplazamiento horizontal (los íconos de ayuda se ocultan en móvil).",
     "Nuevo: Órdenes de Trabajo — la pestaña «Mis Órdenes» muestra un numerito con tus órdenes abiertas asignadas; se oculta cuando no tienes ninguna (Vista General y Cerradas no lo muestran).",
     "Nuevo: Opciones de Desarrollador — claves de Google Drive (API key y carpetas de fotos) editables desde la app, enmascaradas con asteriscos y guardadas en la base de datos (el .env queda como respaldo).",

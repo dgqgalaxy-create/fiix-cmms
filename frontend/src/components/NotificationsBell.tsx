@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { socket } from '../api/socket';
 import { BACKEND_URL } from '../api/axios';
@@ -79,6 +79,48 @@ export const NotificationsBell = () => {
     }
   };
 
+  const handleDeleteOne = async (id: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${BACKEND_URL}/api/notifications/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      fetchNotifications();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteRead = async () => {
+    if (!notifications.some((n) => n.is_read)) return;
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${BACKEND_URL}/api/notifications/read`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      fetchNotifications();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (notifications.length === 0) return;
+    if (!window.confirm(`¿Borrar las ${notifications.length} notificación(es)? Esta acción no se puede deshacer.`)) return;
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${BACKEND_URL}/api/notifications`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      fetchNotifications();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const resolveNotificationPath = (notif: { link?: string; title?: string }) => {
     if (notif.link && notif.link.startsWith('/checklists/')) {
       return notif.link;
@@ -122,14 +164,37 @@ export const NotificationsBell = () => {
         <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
           <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950">
             <h3 className="font-semibold text-slate-800 dark:text-slate-100">Notificaciones</h3>
-            {unreadCount > 0 && (
-              <button 
-                onClick={handleMarkAllAsRead}
-                className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-medium"
-              >
-                Marcar todas leídas
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button 
+                  onClick={handleMarkAllAsRead}
+                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-medium"
+                >
+                  Marcar todas leídas
+                </button>
+              )}
+              {notifications.some((n) => n.is_read) && (
+                <button
+                  type="button"
+                  onClick={handleDeleteRead}
+                  title="Borrar solo las notificaciones leídas"
+                  className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium"
+                >
+                  Limpiar leídas
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleDeleteAll}
+                  title="Borrar todas las notificaciones"
+                  aria-label="Borrar todas las notificaciones"
+                  className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-rose-600 dark:hover:bg-slate-800 dark:hover:text-rose-400"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
           </div>
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
@@ -138,20 +203,36 @@ export const NotificationsBell = () => {
               </div>
             ) : (
               notifications.map((notif) => (
-                <button
+                <div
                   key={notif.id}
-                  type="button"
-                  className={`w-full text-left p-3 border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${!notif.is_read ? 'bg-blue-50/50 dark:bg-emerald-950/30' : ''}`}
-                  onClick={() => handleNotificationClick(notif)}
+                  className={`relative border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${!notif.is_read ? 'bg-blue-50/50 dark:bg-emerald-950/30' : ''}`}
                 >
-                  <p className={`text-sm ${!notif.is_read ? 'font-semibold text-slate-900 dark:text-slate-100' : 'text-slate-700 dark:text-slate-200'}`}>
-                    {notif.title}
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{notif.message}</p>
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    {formatDateTime(notif.created_at)}
-                  </p>
-                </button>
+                  <button
+                    type="button"
+                    className="w-full pr-9 text-left p-3"
+                    onClick={() => handleNotificationClick(notif)}
+                  >
+                    <p className={`text-sm ${!notif.is_read ? 'font-semibold text-slate-900 dark:text-slate-100' : 'text-slate-700 dark:text-slate-200'}`}>
+                      {notif.title}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{notif.message}</p>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      {formatDateTime(notif.created_at)}
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleDeleteOne(notif.id);
+                    }}
+                    title="Borrar esta notificación"
+                    aria-label="Borrar esta notificación"
+                    className="absolute right-1.5 top-1.5 rounded p-1 text-slate-400 hover:bg-slate-200/70 hover:text-rose-600 dark:hover:bg-slate-700 dark:hover:text-rose-400"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               ))
             )}
           </div>

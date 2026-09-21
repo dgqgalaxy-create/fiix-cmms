@@ -71,6 +71,57 @@ export const markAllAsRead = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
+export const deleteNotification = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const userId = req.user?.userId;
+
+    const notification = await prisma.appNotification.findUnique({ where: { id } });
+    if (!notification || notification.user_id !== userId) {
+      res.status(404).json({ error: 'Notificación no encontrada' });
+      return;
+    }
+
+    await prisma.appNotification.delete({ where: { id } });
+    res.json({ message: 'Notificación eliminada' });
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+export const deleteReadNotifications = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'No autorizado' });
+      return;
+    }
+    const result = await prisma.appNotification.deleteMany({
+      where: { user_id: userId, is_read: true },
+    });
+    res.json({ message: 'Notificaciones leídas eliminadas', count: result.count });
+  } catch (error) {
+    console.error('Error deleting read notifications:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+export const deleteAllNotifications = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'No autorizado' });
+      return;
+    }
+    const result = await prisma.appNotification.deleteMany({ where: { user_id: userId } });
+    res.json({ message: 'Notificaciones eliminadas', count: result.count });
+  } catch (error) {
+    console.error('Error deleting all notifications:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 export const getVapidKey = async (_req: Request, res: Response): Promise<void> => {
   try {
     const publicKey = getVapidPublicKey();
