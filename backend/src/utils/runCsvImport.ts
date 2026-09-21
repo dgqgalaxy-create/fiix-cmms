@@ -89,6 +89,8 @@ export type CsvImportResults = {
   };
   /** Órdenes que no se pudieron importar (fila CSV + motivo), tope de 100. */
   workOrderWarnings?: string[];
+  /** Filas con error en catálogos/movimientos de otras secciones (tope 100). */
+  importRowWarnings?: string[];
 };
 
 export type PhotoSource = 'zip' | 'google_drive' | 'data_folder';
@@ -122,6 +124,9 @@ export function formatImportResultsMessage(
   }
   if (results.workOrderWarnings && results.workOrderWarnings.length > 0) {
     msg += ` ${results.workOrderWarnings.length} órdene(s) sin importar por error de fila.`;
+  }
+  if (results.importRowWarnings && results.importRowWarnings.length > 0) {
+    msg += ` ${results.importRowWarnings.length} fila(s) con error en catálogos/movimientos (ver bitácora).`;
   }
   if (results.assets) {
     msg += ` Activos (desde inventario ACTIVOS): ${results.assets.created} creados, ${results.assets.updated} actualizados`;
@@ -309,11 +314,20 @@ const results: CsvImportResults = {
   orders: 0,
 };
 
+/** Registra una fila que falló (para que el lote no quede incompleto en silencio). */
+const pushImportRowWarning = (kind: string, line: number, error: unknown): void => {
+  if ((results.importRowWarnings?.length ?? 0) >= 100) return;
+  const motivo = error instanceof Error ? error.message : String(error);
+  (results.importRowWarnings ??= []).push(`${kind} (fila ${line}): ${motivo}`);
+};
+
 const woPhotoMappings: WorkOrderPhotoMapping[] = [];
 
 if (catFile) {
   const data = parse(readImportFileUtf8(catFile), { columns: true, skip_empty_lines: true });
-  for (const row of data as any[]) {
+  for (let _i = 0; _i < data.length; _i++) {
+    const row = data[_i] as any;
+    const csvLine = _i + 2; // la fila 1 es el encabezado
     try {
       const id = (row['ID'] || '').trim();
       const name = (row['Category'] || '').trim();
@@ -324,13 +338,17 @@ if (catFile) {
         create: { internal_id: id, name: name, icon_url: row['Icon'] }
       });
       results.categories++;
-    } catch (e) {}
+    } catch (e) {
+      pushImportRowWarning('Categorías', csvLine, e);
+    }
   }
 }
 
 if (locFile) {
   const data = parse(readImportFileUtf8(locFile), { columns: true, skip_empty_lines: true });
-  for (const row of data as any[]) {
+  for (let _i = 0; _i < data.length; _i++) {
+    const row = data[_i] as any;
+    const csvLine = _i + 2; // la fila 1 es el encabezado
     try {
       const id = (row['ID'] || '').trim();
       const name = (row['Location'] || '').trim();
@@ -341,13 +359,17 @@ if (locFile) {
         create: { internal_id: id, name: name, icon_url: row['Icon'] }
       });
       results.locations++;
-    } catch (e) {}
+    } catch (e) {
+      pushImportRowWarning('Ubicaciones', csvLine, e);
+    }
   }
 }
 
 if (venFile) {
   const data = parse(readImportFileUtf8(venFile), { columns: true, skip_empty_lines: true });
-  for (const row of data as any[]) {
+  for (let _i = 0; _i < data.length; _i++) {
+    const row = data[_i] as any;
+    const csvLine = _i + 2; // la fila 1 es el encabezado
     try {
       const id = (row['ID'] || '').trim();
       const name = (row['Name'] || '').trim();
@@ -364,7 +386,9 @@ if (venFile) {
         }
       });
       results.vendors++;
-    } catch (e) {}
+    } catch (e) {
+      pushImportRowWarning('Proveedores', csvLine, e);
+    }
   }
 }
 
@@ -413,7 +437,9 @@ if (itemFile) {
     console.error('Error auto-creando UOMs:', uomError);
   }
 
-  for (const row of data as any[]) {
+  for (let _i = 0; _i < data.length; _i++) {
+    const row = data[_i] as any;
+    const csvLine = _i + 2; // la fila 1 es el encabezado
     try {
       let uom = row['UOM'] ? row['UOM'].toUpperCase() : 'PIEZAS';
       
@@ -463,7 +489,9 @@ if (itemFile) {
         }
       });
       results.items++;
-    } catch (e) {}
+    } catch (e) {
+      pushImportRowWarning('Repuestos', csvLine, e);
+    }
   }
 
   // Ítems categoría ACTIVOS → módulo Activos (upsert por nombre / código).
@@ -509,7 +537,9 @@ if (userFile) {
     if (key && !userByNormName.has(key)) userByNormName.set(key, u);
   }
 
-  for (const row of data as any[]) {
+  for (let _i = 0; _i < data.length; _i++) {
+    const row = data[_i] as any;
+    const csvLine = _i + 2; // la fila 1 es el encabezado
     try {
       const email = row['Email'] ? String(row['Email']).trim() : '';
       if (!email) continue;
@@ -567,6 +597,7 @@ if (userFile) {
       results.users++;
     } catch (e) {
       console.error('User import error', e);
+      pushImportRowWarning('Usuarios', csvLine, e);
     }
   }
 }

@@ -1275,6 +1275,9 @@ export const DeveloperOptions = () => {
       }
       msg += '.';
     }
+    if (results.importRowWarnings && results.importRowWarnings.length > 0) {
+      msg += ` ${results.importRowWarnings.length} fila(s) con error en catálogos/movimientos (ver bitácora).`;
+    }
     if (results.workOrderImages) {
       const src =
         results.workOrderImages.source === 'google_drive'

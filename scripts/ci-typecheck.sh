@@ -1,7 +1,7 @@
 #!/bin/bash
 # Typecheck pre-deploy (CI / Actions).
 # - Backend: tsc --noEmit (bloqueante) tras npm ci cacheado.
-# - Frontend: no se reinstala aquí (el gate real es vite build en update.sh).
+# - Frontend: tsc -b (bloqueante; se instala con npm ci como el backend).
 # Uso: bash ./scripts/ci-typecheck.sh
 set -euo pipefail
 
@@ -18,5 +18,10 @@ npx prisma generate
 npx tsc --noEmit
 echo "  [OK] backend tsc"
 
-echo ">>> Typecheck frontend: omitido (gate real = vite build en update.sh)"
-echo ">>> Typecheck gate OK (backend limpio)"
+echo ">>> Typecheck frontend (bloqueante)..."
+cd "${APP_DIR}/frontend"
+fiix_npm_ci "${APP_DIR}/frontend" "--include=dev"
+npx tsc -b
+echo "  [OK] frontend tsc -b"
+
+echo ">>> Typecheck gate OK (backend + frontend limpios)"

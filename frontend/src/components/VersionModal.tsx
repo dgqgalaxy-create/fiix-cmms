@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.62.3";
+export const APP_VERSION = "1.63.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Seguridad: el proxy de imágenes del inventario ya no permite destinos internos (bloquea loopback, LAN, CGNAT y metadata de nube), con timeout, límite de 8 MB y solo contenido image/*.",
+    "Seguridad: las preferencias del usuario se fusionan en el servidor (ya no reemplazan el objeto completo) y no pueden borrar el bloqueo de intentos del menú de desarrollador.",
+    "Mejora: la importación reporta las filas con error de categorías, ubicaciones, proveedores, repuestos y usuarios (antes se silenciaban); el lote ya no queda incompleto sin explicación.",
+    "Mejora: no pueden correr dos importaciones a la vez (la segunda recibe «importación en curso»); restaurar un respaldo también espera a que terminen.",
+    "Publicación: el typecheck del frontend (tsc -b) ahora es bloqueante en CI y en el despliegue (Docker y update.sh).",
     "Nuevo: Notificaciones — ya puedes borrar una notificación (papelera en cada aviso), «Limpiar leídas» o borrar todas con confirmación; el historial deja de acumularse.",
     "Mejora: Órdenes de Trabajo — las pestañas Vista General / Mis Órdenes / Cerradas ya caben completas en la pantalla del celular, sin desplazamiento horizontal (los íconos de ayuda se ocultan en móvil).",
     "Nuevo: Órdenes de Trabajo — la pestaña «Mis Órdenes» muestra un numerito con tus órdenes abiertas asignadas; se oculta cuando no tienes ninguna (Vista General y Cerradas no lo muestran).",

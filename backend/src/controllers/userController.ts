@@ -238,11 +238,43 @@ export const updateMyPreferences = async (req: Request, res: Response): Promise<
       return;
     }
 
-    const { preferences } = req.body;
+    const incoming = (req.body as { preferences?: unknown })?.preferences;
+    if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) {
+      res.status(400).json({ error: 'Preferencias inválidas' });
+      return;
+    }
+    if (JSON.stringify(incoming).length > 20_000) {
+      res.status(400).json({ error: 'Las preferencias son demasiado grandes' });
+      return;
+    }
+
+    const current = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferences: true },
+    });
+    if (!current) {
+      res.status(404).json({ error: 'Usuario no encontrado' });
+      return;
+    }
+    const currentPrefs =
+      current.preferences && typeof current.preferences === 'object' && !Array.isArray(current.preferences)
+        ? { ...(current.preferences as Record<string, unknown>) }
+        : {};
+
+    // FUSIÓN en servidor (no reemplazo): una preferencia nueva no borra las demás.
+    const merged: Record<string, unknown> = { ...currentPrefs, ...(incoming as Record<string, unknown>) };
+
+    // El candado anti-fuerza-bruta del menú de desarrollador NO es una preferencia
+    // editable por el cliente: se conserva siempre el valor que tiene el servidor.
+    if (currentPrefs.dev_menu_lock !== undefined) {
+      merged.dev_menu_lock = currentPrefs.dev_menu_lock;
+    } else {
+      delete merged.dev_menu_lock;
+    }
 
     const user = await prisma.user.update({
       where: { id: userId },
-      data: { preferences }
+      data: { preferences: merged as Prisma.InputJsonValue },
     });
 
     res.json({ id: user.id, preferences: user.preferences });

@@ -8,6 +8,11 @@ import { emitRefresh } from '../utils/socket';
 import { writeAuditLog } from '../utils/auditLog';
 import { parseQty } from '../utils/qtyMode';
 import { tryConsumeStock, addStock } from '../utils/stockMutation';
+import {
+  assertSafeRemoteUrl,
+  isImageContentType,
+  IMAGE_PROXY_LIMITS,
+} from '../utils/imageProxySafety';
 import { diffRequestedChanges } from '../utils/auditChanges';
 
 // ==========================================
@@ -1096,28 +1101,105 @@ export const searchImages = async (req: Request, res: Response): Promise<void> =
 };
 
 export const proxyImage = async (req: Request, res: Response): Promise<void> => {
-  const { url } = req.query;
+  const rawUrl = req.query.url;
   try {
-    if (!url || typeof url !== 'string') {
+    if (!rawUrl || typeof rawUrl !== 'string') {
       res.status(400).json({ error: 'Falta el parámetro "url"' });
       return;
     }
 
-    const response = await axios({
-      url,
-      method: 'GET',
-      responseType: 'stream',
-      headers: {
-        // Send generic user agent to prevent 403 blocks from CDNs
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    // Anti-SSRF: protocolo, host y TODAS las IPs resueltas deben ser públicas; las
+    // redirecciones se validan una por una (máx. IMAGE_PROXY_LIMITS.maxRedirects).
+    let target = rawUrl;
+    let response: any = null;
+    for (let hop = 0; hop <= IMAGE_PROXY_LIMITS.maxRedirects; hop++) {
+      const check = await assertSafeRemoteUrl(target);
+      if (!check.ok) {
+        res.status(400).json({ error: check.error });
+        return;
+      }
+      response = await axios({
+        url: check.url.toString(),
+        method: 'GET',
+        responseType: 'stream',
+        maxRedirects: 0,
+        timeout: IMAGE_PROXY_LIMITS.timeoutMs,
+        maxContentLength: IMAGE_PROXY_LIMITS.maxBytes,
+        maxBodyLength: IMAGE_PROXY_LIMITS.maxBytes,
+        validateStatus: (code: number) => code >= 200 && code < 400,
+        headers: {
+          // Send generic user agent to prevent 403 blocks from CDNs
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        },
+      });
+      const status = Number(response?.status || 0);
+      const location = response?.headers?.location;
+      if (status >= 300 && status < 400 && location) {
+        target = new URL(String(location), check.url).toString();
+        response.data?.destroy?.();
+        response = null;
+        continue;
+      }
+      break;
+    }
+
+    if (!response) {
+      res.status(502).json({ error: 'Demasiadas redirecciones al descargar la imagen' });
+      return;
+    }
+    if (!isImageContentType(response.headers['content-type'])) {
+      response.data?.destroy?.();
+      res.status(415).json({ error: 'La URL no devolvió una imagen' });
+      return;
+    }
+
+    // Límite duro de bytes aunque el servidor no declare Content-Length.
+    let sentBytes = 0;
+    let aborted = false;
+    response.data.on('data', (chunk: Buffer) => {
+      sentBytes += chunk.length;
+      if (sentBytes > IMAGE_PROXY_LIMITS.maxBytes && !aborted) {
+        aborted = true;
+        try {
+          response.data.destroy();
+        } catch {
+          /* ignore */
+        }
+        try {
+          res.destroy();
+        } catch {
+          /* ignore */
+        }
+      }
+    });
+    response.data.on('error', () => {
+      try {
+        res.destroy();
+      } catch {
+        /* ignore */
       }
     });
 
-    res.set('Content-Type', response.headers['content-type'] as string);
+    res.set('Content-Type', String(response.headers['content-type']));
     res.set('Cache-Control', 'public, max-age=31557600'); // Cache for 1 year
     response.data.pipe(res);
-  } catch (error) {
-    console.error('Error proxying image:', url);
-    res.status(500).json({ error: 'No se pudo descargar la imagen original' });
+  } catch (error: any) {
+    const timedOut =
+      error?.code === 'ECONNABORTED' || /timeout/i.test(String(error?.message || ''));
+    console.error('Error proxying image:', rawUrl, error?.code || error?.message || '');
+    if (res.headersSent) {
+      try {
+        res.destroy();
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    if (timedOut) {
+      res.status(504).json({ error: 'La descarga de la imagen tardó demasiado' });
+      return;
+    }
+    res.status(502).json({ error: 'No se pudo descargar la imagen original' });
   }
 };

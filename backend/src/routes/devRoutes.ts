@@ -31,7 +31,13 @@ import {
   setDriveDbSettings,
 } from '../utils/googleDriveImport';
 import { getImportProgress, setImportProgress, resetImportProgress } from '../utils/importProgress';
-import { enterMaintenance, exitMaintenance } from '../utils/maintenance';
+import {
+  enterMaintenance,
+  exitMaintenance,
+  tryStartImportJob,
+  endImportJob,
+  isImportJobActive,
+} from '../utils/maintenance';
 import {
   DEV_PASSWORD_CODES,
   DEV_PASSWORD_MAX_ATTEMPTS,
@@ -460,6 +466,10 @@ router.post('/restore', verifyDevPassword, async (req: Request, res: Response): 
     }
     // La BD se vacía/recrea durante unos segundos: modo mantenimiento evita
     // errores en los demás usuarios y les muestra el banner «Restaurando…».
+    if (isImportJobActive()) {
+      res.status(409).json({ message: 'Hay una importación en curso. Espera a que termine antes de restaurar.' });
+      return;
+    }
     enterMaintenance('Restaurando respaldo. Modo solo lectura.');
     let result;
     try {
@@ -609,7 +619,11 @@ router.post(
       }
 
       // Mismo tratamiento que /restore: mantenimiento durante el vaciado/recreado de la BD.
-      enterMaintenance('Restaurando respaldo. Modo solo lectura.');
+      if (isImportJobActive()) {
+      res.status(409).json({ message: 'Hay una importación en curso. Espera a que termine antes de restaurar.' });
+      return;
+    }
+    enterMaintenance('Restaurando respaldo. Modo solo lectura.');
       let result;
       try {
         result = await runRestore(base, uploadsStaged);
@@ -744,7 +758,13 @@ router.post(
     ...(filesMap?.workOrderImagesZip || []),
   ];
 
-  enterMaintenance('Importación de datos en curso. Modo solo lectura.');
+  if (!tryStartImportJob('Importación de datos en curso. Modo solo lectura.')) {
+    res.status(409).json({
+      message: 'Ya hay una importación en curso. Espera a que termine e inténtalo de nuevo.',
+    });
+    for (const f of uploadedTemps) unlinkUploadedSafe(f);
+    return;
+  }
 
   try {
     const useGoogleDrive =
@@ -788,7 +808,7 @@ router.post(
     console.error('CSV Import error:', error);
     res.status(500).json({ message: 'Error procesando archivos CSV.', error: error.message });
   } finally {
-    exitMaintenance();
+    endImportJob();
     for (const f of uploadedTemps) {
       unlinkUploadedSafe(f);
     }
@@ -910,7 +930,11 @@ router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Respo
   const tempPaths: string[] = [];
   resetImportProgress();
   setImportProgress('sheets', 5, 'Leyendo pestañas de Google Sheets…');
-  enterMaintenance('Importación de datos en curso. Modo solo lectura.');
+  if (!tryStartImportJob('Importación de datos en curso. Modo solo lectura.')) {
+    setImportProgress('error', 0, 'Ya hay una importación en curso', { active: false });
+    res.status(409).json({ message: 'Ya hay una importación en curso. Espera a que termine e inténtalo de nuevo.' });
+    return;
+  }
   try {
     fs.mkdirSync(importTmpDir, { recursive: true });
     const tabs = await fetchAllImportTabs();
@@ -1006,7 +1030,7 @@ router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Respo
       error: error.message,
     });
   } finally {
-    exitMaintenance();
+    endImportJob();
     for (const p of tempPaths) {
       try {
         fs.unlinkSync(p);

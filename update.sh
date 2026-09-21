@@ -216,8 +216,8 @@ echo ">>> [3/5] Frontend (npm + build)..."
 cd "${APP_DIR}/frontend"
 unset NODE_ENV || true
 fiix_npm_ci "${APP_DIR}/frontend"
-info "Compilando frontend (frontend/dist)..."
-npm run build:app
+info "Compilando frontend (tsc -b + vite; tipos bloqueantes)..."
+npm run build
 if [ ! -f "${APP_DIR}/frontend/dist/index.html" ]; then
   die "No existe frontend/dist/index.html tras el build."
 fi
