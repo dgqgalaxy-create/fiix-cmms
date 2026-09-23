@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Users } from 'lucide-react';
 import { getOnlineUsers } from '../../api/users';
 import type { User } from '../../api/users';
@@ -7,6 +8,58 @@ import { pathToModuleLabel } from '../../utils/moduleLabels';
 export const OnlineUsersBadge = () => {
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const panelId = useId();
+  const [panelPosition, setPanelPosition] = useState({ left: 0, top: 0, width: 0, height: 0 });
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+
+    const updatePosition = () => {
+      const button = buttonRef.current;
+      if (!button) return;
+      const rect = button.getBoundingClientRect();
+      const margin = 8;
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = document.documentElement.clientWidth;
+      const above = Math.max(0, rect.top - margin * 2);
+      const below = Math.max(0, viewportHeight - rect.bottom - margin * 2);
+      const openAbove = above >= below;
+      const height = Math.min(320, openAbove ? above : below);
+      const width = Math.min(rect.width, viewportWidth - margin * 2);
+      setPanelPosition({
+        left: Math.max(margin, Math.min(rect.left, viewportWidth - width - margin)),
+        top: openAbove ? rect.top - margin - height : rect.bottom + margin,
+        width,
+        height,
+      });
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!buttonRef.current?.contains(target) && !panelRef.current?.contains(target)) {
+        setIsOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+        buttonRef.current?.focus();
+      }
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isOpen]);
 
   const fetchOnlineUsers = useCallback(async () => {
     try {
@@ -35,6 +88,9 @@ export const OnlineUsersBadge = () => {
   return (
     <div className="relative mb-2">
       <button
+        ref={buttonRef}
+        aria-expanded={isOpen}
+        aria-controls={isOpen ? panelId : undefined}
         type="button"
         onClick={() => {
           setIsOpen(!isOpen);
@@ -55,14 +111,23 @@ export const OnlineUsersBadge = () => {
         </div>
       </button>
 
-      {isOpen && (
-        <div className="absolute bottom-full left-0 w-full mb-2 bg-slate-800 border border-slate-700 rounded-xl shadow-xl overflow-hidden z-50">
-          <div className="p-2 border-b border-slate-700 bg-slate-900/50">
+      {isOpen && createPortal(
+        <div
+          ref={panelRef}
+          id={panelId}
+          role="region"
+          aria-label="Usuarios activos ahora"
+          style={panelPosition}
+          className="fixed flex flex-col bg-slate-800 border border-slate-700 rounded-xl shadow-xl overflow-hidden z-[60]"
+        >
+          <div className="shrink-0 p-2 border-b border-slate-700 bg-slate-900/50">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider text-center">
               Activos ahora
             </p>
           </div>
-          <div className="max-h-48 overflow-y-auto custom-scrollbar p-1">
+          <div tabIndex={0}
+            aria-label="Lista de usuarios en línea"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scrollbar p-1">
             {onlineUsers.length === 0 ? (
               <div className="p-3 text-center text-xs text-slate-500">Nadie en línea</div>
             ) : (
@@ -83,7 +148,8 @@ export const OnlineUsersBadge = () => {
               ))
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
