@@ -978,3 +978,29 @@ model PurchaseReceipt {
   created_at DateTime @default(now())
   @@index([purchase_order_id, created_at])
 }
+
+/// Programa inicial inmutable. JSON conserva las OT aunque después se eliminen.
+model WeeklyWorkOrderPlan {
+  week_start  String   @id
+  captured_at DateTime @default(now())
+  created_by  String?
+  late_start  Boolean  @default(false)
+  baseline    Json
+  carryover   Json
+  cuts        WeeklyWorkOrderCut[]
+}
+
+/// Cortes inmutables; auto_key evita duplicados del cron en varios procesos.
+model WeeklyWorkOrderCut {
+  id          String   @id @default(uuid()) @db.Uuid
+  week_start  String
+  day         String
+  captured_at DateTime @default(now())
+  created_by  String?
+  source      String
+  auto_key    String?  @unique
+  orders      Json
+  plan        WeeklyWorkOrderPlan @relation(fields: [week_start], references: [week_start], onDelete: Restrict)
+
+  @@index([week_start, captured_at])
+}

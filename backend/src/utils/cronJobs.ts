@@ -1,3 +1,5 @@
+import { freezeWeeklyPlan, saveWeeklyCut } from '../services/weeklyWorkOrderService';
+import { plantYmd, weeklyRange } from '../services/weeklyWorkOrderMetrics';
 import { getSharedMaintenanceState } from './maintenance';
 import cron from 'node-cron';
 import prisma from '../config/prisma';
@@ -11,6 +13,22 @@ import { runNotesReminders } from './notesReminders';
 
 // This cron job will run every day at 00:01
 export const initCronJobs = () => {
+  // Programa al inicio de semana; recupera el arranque tardío sin inventar historia.
+  const ensureWeekly = async () => {
+    try {
+      if ((await getSharedMaintenanceState()).active) return;
+      await freezeWeeklyPlan(weeklyRange(plantYmd(new Date())).key, null);
+    } catch (error) { console.error('No se pudo fijar el programa semanal:', error); }
+  };
+  void ensureWeekly();
+  cron.schedule('* * * * *', ensureWeekly, { timezone: CHECKLIST_TZ });
+  cron.schedule('59 59 23 * * *', async () => {
+    try {
+      if ((await getSharedMaintenanceState()).active) return;
+      await saveWeeklyCut(weeklyRange(plantYmd(new Date())).key, null, 'AUTO');
+    } catch (error) { console.error('No se pudo guardar el corte diario de OT:', error); }
+  }, { timezone: CHECKLIST_TZ });
+
   cron.schedule('1 0 * * *', async () => {
     if ((await getSharedMaintenanceState()).active) return;
     console.log('Running daily preventative maintenance check...');

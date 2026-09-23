@@ -1,3 +1,4 @@
+import { WeeklyWorkOrderProgress } from '../components/WeeklyWorkOrderProgress';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Select from 'react-select';
 import { getZones, type Zone } from '../api/zones';
@@ -55,7 +56,7 @@ export const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   
-  const [activeTab, setActiveTab] = useState<'ACTIVAS' | 'MIS_ORDENES' | 'HISTORIAL'>(
+  const [activeTab, setActiveTab] = useState<'ACTIVAS' | 'MIS_ORDENES' | 'HISTORIAL' | 'SEMANAL'>(
     hasPermission('VIEW_ALL_WORK_ORDERS') ? 'ACTIVAS' : 'MIS_ORDENES'
   );
   /** Contador de la pestaña «Mis Órdenes» (abiertas asignadas a mí). 0 = sin numerito. */
@@ -242,6 +243,10 @@ export const Dashboard = () => {
       setSlaFilter(null);
     }
 
+    if (tab === 'weekly' && hasPermission('VIEW_ALL_WORK_ORDERS')) {
+      setActiveTab('SEMANAL');
+      return;
+    }
     if (tab === 'mine' || tab === 'MIS_ORDENES') {
       setActiveTab('MIS_ORDENES');
       setStatusFilter(null);
@@ -484,6 +489,7 @@ export const Dashboard = () => {
   };
 
   const fetchWorkOrders = async (backgroundFetch: boolean = false) => {
+    if (activeTab === 'SEMANAL') { setIsLoading(false); return; }
     listAbortRef.current?.abort();
     const ac = new AbortController();
     listAbortRef.current = ac;
@@ -674,13 +680,13 @@ export const Dashboard = () => {
         </div>
         
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <button 
+          {activeTab !== 'SEMANAL' && <button
             onClick={() => fetchWorkOrders()}
             className="p-2.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors shadow-sm"
             title="Actualizar"
           >
             <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
-          </button>
+          </button>}
           
           {canCreate && (
             <button 
@@ -694,7 +700,7 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      {hasPermission('VIEW_ALL_WORK_ORDERS') && (
+      {activeTab !== 'SEMANAL' && hasPermission('VIEW_ALL_WORK_ORDERS') && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6 print:hidden">
           {(
             [
@@ -741,16 +747,16 @@ export const Dashboard = () => {
         </div>
       )}
 
-      {isLoading && workOrders.length === 0 ? (
+      {activeTab !== 'SEMANAL' && isLoading && workOrders.length === 0 ? (
         <PageLoadingState label="Cargando órdenes de trabajo..." />
-      ) : loadError && workOrders.length === 0 ? (
+      ) : activeTab !== 'SEMANAL' && loadError && workOrders.length === 0 ? (
         <PageLoadError onRetry={() => void fetchWorkOrders()} />
       ) : (
         <div ref={tableContainerRef}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 border-b border-slate-200 pb-4 print:hidden">
             <div
               className={`grid w-full gap-1 rounded-xl bg-slate-100/80 p-1.5 shadow-inner md:flex md:w-auto md:min-w-[320px] ${
-                hasPermission('VIEW_ALL_WORK_ORDERS') ? 'grid-cols-3' : 'grid-cols-2'
+                hasPermission('VIEW_ALL_WORK_ORDERS') ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2'
               }`}
             >
               {hasPermission('VIEW_ALL_WORK_ORDERS') && (
@@ -822,9 +828,20 @@ export const Dashboard = () => {
                 Cerradas
                 <span className="hidden md:inline-flex"><InfoTip text="Órdenes Finalizadas o Anuladas (archivo de cierre)." label="Ayuda: Cerradas" /></span>
               </button>
+              {hasPermission('VIEW_ALL_WORK_ORDERS') && (
+                <button
+                  onClick={() => {
+                    setActiveTab('SEMANAL');
+                    const next = new URLSearchParams();
+                    next.set('tab', 'weekly');
+                    setSearchParams(next, { replace: true });
+                  }}
+                  className={`w-full md:w-auto px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg ${activeTab === 'SEMANAL' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}
+                >Avance semanal</button>
+              )}
             </div>
             
-            <div className="relative w-full md:w-auto flex flex-col md:flex-row gap-2">
+            <div className={`relative w-full md:w-auto flex flex-col md:flex-row gap-2 ${activeTab === 'SEMANAL' ? 'hidden' : ''}`}>
               {activeTab !== 'MIS_ORDENES' && (
               <div className="relative flex-1 min-w-[240px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -880,7 +897,9 @@ export const Dashboard = () => {
             </div>
           </div>
 
-          {activeTab === 'MIS_ORDENES' ? (
+          {activeTab === 'SEMANAL' ? (
+            <WeeklyWorkOrderProgress onOpenOrder={async (id) => openWorkOrderDetail(await getWorkOrderById(id))} />
+          ) : activeTab === 'MIS_ORDENES' ? (
             <div className="min-w-0">
               <WorkOrdersTable 
                 workOrders={displayList} 

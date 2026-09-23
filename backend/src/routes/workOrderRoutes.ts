@@ -1,3 +1,4 @@
+import { weeklyReport, weeklyFreeze, weeklyCut } from '../controllers/weeklyWorkOrderController';
 import { Router } from 'express';
 import {
   getWorkOrders,
@@ -28,6 +29,9 @@ router.get('/mine-open-count', authenticate, getMineOpenCount);
 
 router.get('/summary', authenticate, getWorkOrdersSummary);
 router.get('/line-stoppage', authenticate, getLineStoppageStatus);
+router.get('/weekly', authenticate, requirePermission('VIEW_ALL_WORK_ORDERS'), weeklyReport);
+router.post('/weekly/plan', authenticate, requireWritable, requirePermission('VIEW_ALL_WORK_ORDERS'), requirePermission('MANAGE_CALENDAR'), weeklyFreeze);
+router.post('/weekly/cuts', authenticate, requireWritable, requirePermission('VIEW_ALL_WORK_ORDERS'), requirePermission('EDIT_WORK_ORDERS'), weeklyCut);
 router.get('/:id/comments', authenticate, listWorkOrderComments);
 router.post(
   '/:id/comments',
