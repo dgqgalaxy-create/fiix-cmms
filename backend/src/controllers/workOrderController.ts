@@ -261,6 +261,7 @@ function buildWorkOrderWhere(req: AuthRequest): Record<string, unknown> {
     unassigned,
     q,
     requester,
+    zoneIds,
     startDate,
     endDate,
     scheduledFrom,
@@ -288,6 +289,12 @@ function buildWorkOrderWhere(req: AuthRequest): Record<string, unknown> {
   if (tab === 'mine' || assignedTo) {
     const uid = String(assignedTo || req.user?.userId || '');
     if (uid) and.push({ assigned_technicians: { some: { id: uid } } });
+  }
+
+  // OR entre las zonas elegidas; AND con el resto de filtros, antes de paginar.
+  if (typeof zoneIds === 'string') {
+    const selectedZoneIds = [...new Set(zoneIds.split(',').map((id) => id.trim()).filter(Boolean))];
+    if (selectedZoneIds.length > 0) and.push({ zone_id: { in: selectedZoneIds } });
   }
 
   if (status) and.push({ status: String(status) });

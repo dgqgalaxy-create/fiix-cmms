@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import Select from 'react-select';
+import { getZones, type Zone } from '../api/zones';
 import { useAuth } from '../context/AuthContext';
 import { Plus, RefreshCw, Search, Download, XCircle, Users, Filter } from 'lucide-react';
 import { WorkOrdersTable } from '../components/WorkOrdersTable';
@@ -65,6 +67,9 @@ export const Dashboard = () => {
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [assetFilter, setAssetFilter] = useState<string>('ALL');
   const [requesterFilter, setRequesterFilter] = useState<string>('ALL');
+  const [zoneIds, setZoneIds] = useState<string[]>([]);
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [zonesError, setZonesError] = useState(false);
   const [requesterOptions, setRequesterOptions] = useState<string[]>([]);
   const [unassignedFilter, setUnassignedFilter] = useState(false);
   const [slaFilter, setSlaFilter] = useState<string | null>(null);
@@ -132,6 +137,7 @@ export const Dashboard = () => {
     setPriorityFilter('ALL');
     setAssetFilter('ALL');
     setRequesterFilter('ALL');
+    setZoneIds([]);
     setSearchTerm('');
     setStatusFilter(null);
     setUnassignedFilter(false);
@@ -189,6 +195,7 @@ export const Dashboard = () => {
       q: activeTab === 'MIS_ORDENES' ? undefined : searchTerm.trim() || undefined,
       requester:
         activeTab === 'MIS_ORDENES' || requesterFilter === 'ALL' ? undefined : requesterFilter,
+      zoneIds: activeTab === 'MIS_ORDENES' ? undefined : zoneIds.join(',') || undefined,
       ...range,
       sort:
         activeTab === 'MIS_ORDENES'
@@ -514,6 +521,10 @@ export const Dashboard = () => {
   };
 
   useEffect(() => {
+    void getZones().then(setZones).catch(() => setZonesError(true));
+  }, []);
+
+  useEffect(() => {
     void getUniqueRequesters()
       .then((names) => setRequesterOptions(names.filter(Boolean).sort((a, b) => a.localeCompare(b))))
       .catch(() => setRequesterOptions([]));
@@ -535,6 +546,7 @@ export const Dashboard = () => {
     priorityFilter,
     unassignedFilter,
     requesterFilter,
+    zoneIds,
     searchTerm,
     dateFilter,
     customStartDate,
@@ -625,6 +637,7 @@ export const Dashboard = () => {
     priorityFilter,
     assetFilter,
     requesterFilter,
+    zoneIds,
     unassignedFilter,
     slaFilter,
     sortOrder,
@@ -945,7 +958,7 @@ export const Dashboard = () => {
             icon={Filter}
             tone="blue"
             className="mb-0 print:mb-0 print:rounded-none print:border-0 print:bg-transparent print:p-0"
-            hint="Fecha, prioridad, equipo, orden y estado se aplican a la tabla y al total dentro de este marco."
+            hint="Fecha, zonas, prioridad, equipo, orden y estado se aplican al listado dentro de este marco. Las zonas también filtran el total, la paginación y las exportaciones."
             toolbar={
               <>
             <SearchableSelect
@@ -992,6 +1005,34 @@ export const Dashboard = () => {
               placeholder="Buscar…"
               inputClassName="px-3 py-2 pr-8 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
             />
+
+            <div className="min-w-[230px] max-w-full text-sm">
+              <Select
+                isMulti
+                isClearable
+                closeMenuOnSelect={false}
+                aria-label="Filtrar por zonas"
+                placeholder={zonesError ? 'No se pudieron cargar las zonas' : 'Todas las zonas'}
+                noOptionsMessage={() => 'Sin zonas disponibles'}
+                options={zones.map((zone) => ({ value: zone.id, label: zone.name }))}
+                value={zones.filter((zone) => zoneIds.includes(zone.id)).map((zone) => ({ value: zone.id, label: zone.name }))}
+                onChange={(selected) => setZoneIds(selected.map((zone) => zone.value))}
+                menuPortalTarget={document.body}
+                menuPosition="fixed"
+                unstyled
+                classNames={{
+                  control: () => 'min-h-10 px-3 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-200 shadow-sm',
+                  valueContainer: () => 'gap-1',
+                  multiValue: () => 'bg-emerald-100 dark:bg-emerald-950 rounded px-1 text-emerald-800 dark:text-emerald-200',
+                  multiValueRemove: () => 'ml-1 hover:text-red-600',
+                  menu: () => 'mt-1 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg',
+                  option: ({ isFocused }) => `px-3 py-2 cursor-pointer ${isFocused ? 'bg-emerald-50 dark:bg-slate-800' : ''}`,
+                  clearIndicator: () => 'px-1 cursor-pointer',
+                  dropdownIndicator: () => 'pl-1',
+                }}
+                styles={{ menuPortal: (base) => ({ ...base, zIndex: 60 }) }}
+              />
+            </div>
 
             <SearchableSelect
               value={assetFilter}
@@ -1062,7 +1103,7 @@ export const Dashboard = () => {
               inputClassName="px-3 py-2 pr-8 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
             />
 
-            {(dateFilter !== 'ALL' || priorityFilter !== 'ALL' || assetFilter !== 'ALL' || requesterFilter !== 'ALL' || searchTerm !== '' || statusFilter !== null || unassignedFilter || slaFilter) && (
+            {(zoneIds.length > 0 || dateFilter !== 'ALL' || priorityFilter !== 'ALL' || assetFilter !== 'ALL' || requesterFilter !== 'ALL' || searchTerm !== '' || statusFilter !== null || unassignedFilter || slaFilter) && (
               <button 
                 onClick={() => {
                   clearListFilters();

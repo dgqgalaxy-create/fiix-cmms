@@ -87,6 +87,7 @@ export interface WorkOrder {
 }
 
 export type WorkOrderListParams = {
+  zoneIds?: string;
   page?: number;
   limit?: number;
   tab?: 'active' | 'mine' | 'history';
