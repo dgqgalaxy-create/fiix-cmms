@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -44,6 +44,7 @@ import {
 import { getLineStoppageStatus, getWorkOrders, getWorkOrdersSummary } from '../api/workOrders';
 import type { LineStoppageStatus, ProductionLine, WorkOrder } from '../api/workOrders';
 import { getMaintenancePlans, type MaintenancePlan } from '../api/maintenance';
+import { getRoster } from '../api/roster';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { useAuth } from '../context/AuthContext';
@@ -86,7 +87,40 @@ export const HomePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [streakMsgSeed, setStreakMsgSeed] = useState(() => Date.now());
+  /** Personal que trabaja HOY según el horario (id → nombre). null = sin horario disponible. */
+  const [todayWorking, setTodayWorking] = useState<Map<string, string> | null>(null);
   const dashboardAbortRef = useRef<AbortController | null>(null);
+
+  /** Fecha de hoy en hora de planta (America/Mexico_City) para el horario. */
+  const plantToday = () =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+
+  const WORKING_SHIFT_CODES = new Set(['D', 'N', 'M', 'D_TE', 'N_TE', 'TE', 'TXT', 'CURSO']);
+
+  const loadTodayWorking = useCallback(async () => {
+    try {
+      const today = plantToday();
+      const res = await getRoster(today, today);
+      if (res.shifts.length === 0) {
+        // Sin registros para hoy: mantener el comportamiento anterior (todos con OT).
+        setTodayWorking(null);
+        return;
+      }
+      const working = new Map<string, string>();
+      for (const s of res.shifts) {
+        if (WORKING_SHIFT_CODES.has(s.shift_code)) working.set(s.user_id, s.user.name);
+      }
+      setTodayWorking(working);
+    } catch {
+      setTodayWorking(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadTodayWorking();
+  }, [loadTodayWorking]);
+
+  useSocketRefresh('refresh_roster', () => void loadTodayWorking());
 
   const isControlRoomRole =
     user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR';
@@ -332,12 +366,22 @@ export const HomePage = () => {
 
   const shiftByTech = useMemo(() => {
     const map = new Map<string, ShiftTechRow>();
+    // Si hay horario para hoy, la tabla parte de las personas en turno
+    // (aunque no tengan OT, aparecen con 0).
+    if (todayWorking) {
+      for (const [id, name] of todayWorking) {
+        map.set(id, {
+          id, name, pendientes: 0, enProceso: 0, enEspera: 0, slaRisk: 0, slaBreached: 0, total: 0,
+        });
+      }
+    }
     for (const wo of workOrders) {
       if (!isOpenWo(wo)) continue;
       const techs = wo.assigned_technicians || [];
       if (techs.length === 0) continue;
       for (const tech of techs) {
         const key = tech.id || tech.name;
+        if (todayWorking && !todayWorking.has(key)) continue; // solo personal de hoy
         let row = map.get(key);
         if (!row) {
           row = {
@@ -361,7 +405,7 @@ export const HomePage = () => {
       }
     }
     return Array.from(map.values()).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'es'));
-  }, [workOrders]);
+  }, [workOrders, todayWorking]);
 
   const goToShiftRow = () => {
     if (user?.role === 'TECNICO') {
@@ -865,7 +909,7 @@ export const HomePage = () => {
               Turno actual
             </div>
             <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 shrink-0">
-              {shiftByTech.length} téc. con OT
+              {shiftByTech.length} en turno
             </span>
           </div>
           <div className="overflow-x-auto max-h-72 sm:max-h-none rounded-lg border border-slate-100 dark:border-slate-800 sm:border-0">
