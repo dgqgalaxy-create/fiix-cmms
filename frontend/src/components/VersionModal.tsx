@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.64.1";
+export const APP_VERSION = "1.65.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "21 de Septiembre, 2026";
+  const updateDate = "23 de Septiembre, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,9 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Órdenes de Trabajo — pestaña «Avance semanal» (lunes a domingo): programa inicial fijo, cortes diarios automáticos a las 23:59 (hora de planta) y manuales, indicadores por estado (programa, finalizadas, pendientes, en proceso, pausadas, vencidas sin doble conteo, anuladas/eliminadas, incorporadas, reprogramadas, trabajo nuevo y arrastre anterior), cumplimiento %, tabla y gráfica de cierres acumulados, y detalle de las OT detrás de cada cifra.",
+    "Nuevo: Avance semanal — selector de semana y filtro de varias zonas a la vez; los cortes históricos son inmutables (consulta cómo estaba la semana en cualquier corte anterior).",
+    "Nuevo: Órdenes de Trabajo — filtro múltiple de zonas en el marco del listado: aplica a la tabla, totales, paginación y exportaciones.",
     "Corrección: la importación de Google Sheets y CSV ya no se cancela por filas inválidas (los exportes reales las traen): esas filas se OMITEN y se reportan en el resumen/bitácora (p. ej. movimientos que referencian repuestos inexistentes). La transacción sigue revirtiendo ante errores reales.",
     "Nuevo: Compras permite entregas parciales, muestra lo recibido y pendiente, y evita duplicar existencias al reintentar una entrega.",
     "Corrección: las importaciones de datos se revierten completas ante un error; al reimportar repuestos se conserva el stock operativo. Las fotos se procesan por separado.",
