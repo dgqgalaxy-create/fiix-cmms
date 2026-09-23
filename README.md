@@ -252,6 +252,15 @@ sudo docker compose up -d --build   # (sin sudo si tu usuario está en el grupo 
 
 > La imagen se construye localmente con el `Dockerfile` del repo (no se descarga de un registro).
 
+**Si tras actualizar la app se reinicia en bucle o el login falla:** revisa `sudo docker compose logs app --tail 60`. Si ves «el esquema pendiente requiere cambios destructivos» seguido de una tabla, el arranque se detuvo a propósito para no perder datos. Solución segura: haz un respaldo y elimina esa tabla sobrante a mano:
+
+```bash
+sudo docker compose exec db psql -U postgres -d fiix_cmms -c 'DROP TABLE IF EXISTS "NombreDeLaTabla" CASCADE;'
+sudo docker compose restart app
+```
+
+(Solo si estás seguro de que la tabla es obsoleta; ante la duda, contacta al equipo.)
+
 **Qué sobrevive a este procedimiento y qué no:**
 
 | Elemento | ¿Se conserva? | Por qué |
