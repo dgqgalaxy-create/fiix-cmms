@@ -314,7 +314,7 @@ export const AssetsPage = () => {
             </button>
           )}
 
-          {viewMode === 'table' && canManage && (
+          {canManage && (
             <button 
               onClick={() => { setEditingAsset(null); setIsModalOpen(true); }}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow-sm shadow-emerald-500/20 transition-colors"
