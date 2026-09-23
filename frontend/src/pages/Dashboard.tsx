@@ -180,14 +180,24 @@ export const Dashboard = () => {
 
   const buildListParams = (opts?: { page?: number; limit?: number }): WorkOrderListParams => {
     const range = activeTab === 'MIS_ORDENES' ? {} : dateFilterToRange();
+    // «Todos (incluyendo finalizados y anulados)»: sin tab activo ni estado →
+    // el backend devuelve órdenes de cualquier estado.
+    const allStatuses = activeTab === 'ACTIVAS' && statusFilter === 'ALL_STATUSES';
     return {
       tab:
         activeTab === 'HISTORIAL'
           ? 'history'
           : activeTab === 'MIS_ORDENES'
             ? 'mine'
-            : 'active',
-      status: activeTab === 'MIS_ORDENES' ? undefined : statusFilter || undefined,
+            : allStatuses
+              ? undefined
+              : 'active',
+      status:
+        activeTab === 'MIS_ORDENES'
+          ? undefined
+          : statusFilter === 'ALL_STATUSES'
+            ? undefined
+            : statusFilter || undefined,
       priority:
         activeTab === 'MIS_ORDENES' || priorityFilter === 'ALL' ? undefined : priorityFilter,
       unassigned: activeTab === 'MIS_ORDENES' ? undefined : unassignedFilter || undefined,
@@ -263,9 +273,14 @@ export const Dashboard = () => {
       if (
         status === 'PENDIENTE' ||
         status === 'EN_PROCESO' ||
-        status === 'EN_ESPERA'
+        status === 'EN_ESPERA' ||
+        status === 'ALL_STATUSES'
       ) {
         setStatusFilter(status);
+      } else if (status === 'FINALIZADO' || status === 'ANULADO') {
+        // Pedir un estado cerrado desde Vista General: mostrar en Cerradas.
+        setStatusFilter(status);
+        setActiveTab('HISTORIAL');
       } else {
         setStatusFilter(null);
       }
@@ -1112,9 +1127,12 @@ export const Dashboard = () => {
                     ]
                   : [
                       { value: 'ALL', label: 'Todos (pendiente, proceso, espera)' },
+                      { value: 'ALL_STATUSES', label: 'Todos (incluyendo finalizados y anulados)' },
                       { value: 'PENDIENTE', label: 'Pendiente' },
                       { value: 'EN_PROCESO', label: 'En proceso' },
                       { value: 'EN_ESPERA', label: 'En espera' },
+                      { value: 'FINALIZADO', label: 'Finalizado' },
+                      { value: 'ANULADO', label: 'Anulado' },
                     ]
               }
               placeholder="Buscar…"
