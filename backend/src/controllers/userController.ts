@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import type { Prisma } from '@prisma/client';
 import prisma from '../config/prisma';
 import { Role } from '@prisma/client';
-import { emitRefresh, getConnectedUserIds } from '../utils/socket';
+import { emitRefresh, emitToUser, getConnectedUserIds } from '../utils/socket';
 import { writeAuditLog } from '../utils/auditLog';
 import { diffRequestedChanges } from '../utils/auditChanges';
 
@@ -134,6 +134,18 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     }
 
     emitRefresh('refresh_users');
+
+    // Aplicar el cambio de inmediato a la sesión del usuario afectado.
+    if (role !== undefined && role !== beforeUser.role) {
+      emitToUser(id, 'user_session_refresh', {
+        id: user.id, name: user.name, email: user.email, role: user.role,
+      });
+    }
+    if (is_active === false) {
+      // Desactivado: forzar cierre de sesión en su navegador.
+      emitToUser(id, 'force_logout', { reason: 'deactivated' });
+    }
+
     res.json({ id: user.id, name: user.name, email: user.email, role: user.role });
   } catch(error: any) {
     console.error('Error updating user:', error);

@@ -4,6 +4,7 @@ import type { MaintenancePlan } from '../../api/maintenance';
 import { createMaintenancePlan, updateMaintenancePlan, deleteMaintenancePlan } from '../../api/maintenance';
 import type { Asset } from '../../api/assets';
 import type { Item } from '../../api/inventory';
+import { getZones, type Zone } from '../../api/zones';
 import { SearchableSelect } from '../ui/SearchableSelect';
 
 interface Props {
@@ -29,6 +30,8 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [zoneId, setZoneId] = useState('');
 
   // States for adding a new item
   const [newItemId, setNewItemId] = useState('');
@@ -43,6 +46,7 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
         // Clone items so we can edit
         required_items: plan.required_items ? [...plan.required_items] : []
       });
+      setZoneId((plan as any).asset?.zone_id || '');
     } else {
       setFormData({
         title: '',
@@ -54,8 +58,16 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
         is_active: true,
         required_items: []
       });
+      setZoneId('');
     }
   }, [plan, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    getZones()
+      .then(setZones)
+      .catch(() => setZones([]));
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -170,6 +182,22 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
               </div>
 
               <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Zona</label>
+                <SearchableSelect
+                  value={zoneId}
+                  onChange={(next) => {
+                    setZoneId(next);
+                    setFormData({ ...formData, asset_id: '' });
+                  }}
+                  options={zones.map((z) => ({ value: z.id, label: z.name }))}
+                  allowEmpty
+                  emptyLabel="-- Todas las zonas --"
+                  placeholder="-- Todas las zonas --"
+                  inputClassName="w-full px-4 py-2 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+              </div>
+
+              <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Equipo / Activo *</label>
                 <SearchableSelect
                   required
@@ -177,6 +205,7 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
                   onChange={(asset_id) => setFormData({ ...formData, asset_id })}
                   options={assets
                     .filter((a) => a.status !== 'FUERA_DE_SERVICIO')
+                    .filter((a) => !zoneId || a.zone_id === zoneId)
                     .map((a) => ({
                       value: a.id,
                       label: `${a.internal_code} - ${a.name}`,

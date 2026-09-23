@@ -5,6 +5,7 @@ import { getMyPermissions } from '../api/permissions';
 import { getMe } from '../api/users';
 import { setSocketAuth, socket } from '../api/socket';
 import { syncOfflineQueue } from '../utils/offlineSync';
+import { POST_WIPE_MESSAGE_KEY } from '../utils/postWipeMessage';
 import { MustChangePasswordModal } from '../components/MustChangePasswordModal';
 
 interface User {
@@ -126,6 +127,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       socket.off('refresh_settings', onUserRefresh);
     };
+  }, [token]);
+
+  // Cambios de rol/permisos aplicados por un administrador: se reflejan al
+  // momento sin cerrar sesión (rol nuevo + permisos recargados).
+  useEffect(() => {
+    if (!token) return;
+    const onSessionRefresh = (payload: {
+      id?: string; name?: string; email?: string; role?: string;
+    }) => {
+      if (!payload?.id) return;
+      const uid = payload.id;
+      const newRole = payload.role;
+      const newName = payload.name;
+      const newEmail = payload.email;
+      setUser((prev) => {
+        if (!prev || (prev.id !== uid && prev.userId !== uid)) return prev;
+        return {
+          ...prev,
+          id: uid,
+          userId: uid,
+          role: newRole ?? prev.role,
+          name: newName ?? prev.name,
+          email: newEmail ?? prev.email,
+        };
+      });
+      void loadPermissions();
+    };
+    const onForceLogout = () => {
+      try {
+        sessionStorage.setItem(
+          POST_WIPE_MESSAGE_KEY,
+          'Tu cuenta fue desactivada por un administrador.\nInicia sesión con otra cuenta si necesitas acceso.'
+        );
+      } catch {
+        /* ignore */
+      }
+      logout();
+    };
+    socket.on('user_session_refresh', onSessionRefresh);
+    socket.on('force_logout', onForceLogout);
+    return () => {
+      socket.off('user_session_refresh', onSessionRefresh);
+      socket.off('force_logout', onForceLogout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const login = (newToken: string, userData?: any) => {
