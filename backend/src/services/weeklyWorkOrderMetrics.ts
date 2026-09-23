@@ -6,6 +6,7 @@ export type WeeklyOrder = {
   created_at: string; completed_at: string | null;
   scheduled_date: string | null; due_date: string | null;
   hold_reason: string | null; technicians: string; deleted?: boolean;
+  maintenance_type?: string;
 };
 export const plantYmd = (date: Date) => {
   const p = plantDateParts(date);
@@ -57,7 +58,12 @@ export function summarizeWeek(baseline: WeeklyOrder[], carryover: WeeklyOrder[],
   const inherited = carryover.filter(selected).map(o => byId.get(o.id) || { ...o, deleted: true });
   const backlog = visible.filter(isOpen);
   const allCompleted = visible.filter(closed);
-  const details = { program, completed, pending, inProgress, paused, cancelled, deleted, overdue, additions, rescheduled, incoming, carryover: inherited, backlog, backlogOverdue: backlog.filter(o => !!o.due_date && new Date(o.due_date).getTime() < cutoff), allCompleted };
+  // Actividad real de la semana (independiente del programa/calendario):
+  const opened = visible.filter(o => !o.deleted && new Date(o.created_at) >= start && new Date(o.created_at).getTime() <= cutoff);
+  const preventiveCompleted = allCompleted.filter(o => o.maintenance_type?.toUpperCase() === 'PREVENTIVO');
+  const correctiveCompleted = allCompleted.filter(o => o.maintenance_type?.toUpperCase() === 'CORRECTIVO');
+  const serviceCompleted = allCompleted.filter(o => !o.maintenance_type || !['PREVENTIVO', 'CORRECTIVO'].includes(o.maintenance_type.toUpperCase()));
+  const details = { program, completed, pending, inProgress, paused, cancelled, deleted, overdue, additions, rescheduled, incoming, carryover: inherited, backlog, backlogOverdue: backlog.filter(o => !!o.due_date && new Date(o.due_date).getTime() < cutoff), allCompleted, opened, preventiveCompleted, correctiveCompleted, serviceCompleted };
   const counts = Object.fromEntries(Object.entries(details).map(([key, list]) => [key, list.length])) as Record<keyof typeof details, number>;
   return { counts, compliance: program.length ? Math.round(completed.length / program.length * 1000) / 10 : null, details };
 }

@@ -18,7 +18,7 @@ async function readOrders(db: Db, week: string, ids: string[] = []): Promise<Wee
       { due_date: null, scheduled_date: { gte: start, lt: end } },
       ...(ids.length ? [{ id: { in: ids } }] : []),
     ] },
-    select: { id: true, folio: true, title: true, status: true, zone_id: true, zone: { select: { name: true } }, asset: { select: { name: true } }, created_at: true, completed_at: true, scheduled_date: true, due_date: true, hold_reason: true, assigned_technicians: { select: { name: true } } },
+    select: { id: true, folio: true, title: true, status: true, zone_id: true, zone: { select: { name: true } }, asset: { select: { name: true } }, created_at: true, completed_at: true, scheduled_date: true, due_date: true, hold_reason: true, maintenance_type: true, assigned_technicians: { select: { name: true } } },
     orderBy: { folio: 'asc' },
   });
   return orders.map(o => ({
@@ -27,6 +27,7 @@ async function readOrders(db: Db, week: string, ids: string[] = []): Promise<Wee
     created_at: o.created_at.toISOString(), completed_at: o.completed_at?.toISOString() || null,
     scheduled_date: o.scheduled_date?.toISOString() || null, due_date: o.due_date?.toISOString() || null,
     hold_reason: o.hold_reason, technicians: o.assigned_technicians.map(t => t.name).join(', '),
+    maintenance_type: o.maintenance_type,
   }));
 }
 
@@ -77,33 +78,62 @@ export async function getWeeklyReport(week: string, zoneIds: string[], cutId?: s
     const plan = await db.weeklyWorkOrderPlan.findUnique({ where: { week_start: week } });
     const cuts = await db.weeklyWorkOrderCut.findMany({ where: { week_start: week }, orderBy: { captured_at: 'asc' } });
     const isCurrent = now >= start && now < end;
-    // Las semanas terminadas siempre usan un corte real, nunca los estados actuales.
+    // Las semanas terminadas usan un corte real si existe; si nunca hubo seguimiento,
+    // se aproxima con los estados actuales (cierres y altas por día sí son históricos).
     const selectedCut = cutId ? cuts.find(c => c.id === cutId) : !isCurrent && now >= end ? cuts.at(-1) : undefined;
     if (cutId && !selectedCut) throw new Error('Corte no encontrado para esta semana');
     const baseline = plan ? jsonOrders(plan.baseline) : [];
     const carryover = plan ? jsonOrders(plan.carryover) : [];
-    const orders = selectedCut ? jsonOrders(selectedCut.orders) : now < end ? await readOrders(db, week, [...baseline, ...carryover].map(o => o.id)) : [];
-    const at = selectedCut?.captured_at || now;
+    const ids = [...baseline, ...carryover].map(o => o.id);
+    let orders: WeeklyOrder[];
+    let at: Date;
+    let approximate = false;
+    if (selectedCut) {
+      orders = jsonOrders(selectedCut.orders);
+      at = selectedCut.captured_at;
+    } else if (now < end) {
+      orders = await readOrders(db, week, ids);
+      at = now;
+    } else {
+      // Semana pasada sin cortes: solo estados actuales como cierre final aproximado.
+      orders = await readOrders(db, week);
+      at = new Date(end.getTime() - 1);
+      approximate = true;
+    }
     const preview = !plan;
-    const effectiveBaseline = preview && now < end ? orders.filter(o => inProgram(o, start, end) && o.status !== 'ANULADO' && (!o.completed_at || new Date(o.completed_at) >= start)) : baseline;
+    const effectiveBaseline = preview ? orders.filter(o => inProgram(o, start, end) && o.status !== 'ANULADO' && (!o.completed_at || new Date(o.completed_at) >= start)) : baseline;
     const report = summarizeWeek(effectiveBaseline, carryover, orders, week, at, zoneIds);
-    const hasData = now < end || !!selectedCut;
+    const hasData = true;
+    const zoneSet = new Set(zoneIds);
+    const inZone = (o: WeeklyOrder) => !zoneSet.size || (o.zone_id !== null && zoneSet.has(o.zone_id));
+    const dayOf = (iso: string | null) => (iso ? plantYmd(new Date(iso)) : null);
     const daily = Array.from({ length: 7 }, (_, index) => {
       const day = plantYmd(plantAddDays(start.getTime(), index));
       const cut = cuts.filter(c => c.day === day && c.captured_at <= at).at(-1);
       const live = !selectedCut && isCurrent && day === plantYmd(now);
-      if (!cut && !live) return { day, cutId: null, capturedAt: null, closed: null, cumulative: null, programCompleted: null, compliance: null };
-      const measuredAt = live ? now : cut!.captured_at;
-      const metrics = live ? report : summarizeWeek(baseline, carryover, jsonOrders(cut!.orders), week, measuredAt, zoneIds);
-      return { day, cutId: live ? null : cut!.id, capturedAt: measuredAt.toISOString(),
-        closed: metrics.details.allCompleted.filter(o => plantYmd(new Date(o.completed_at!)) === day).length,
-        cumulative: metrics.counts.allCompleted, programCompleted: metrics.counts.completed, compliance: metrics.compliance };
+      const approxLast = approximate && day === lastDay;
+      const dayOrders = live || approxLast ? orders : cut ? jsonOrders(cut.orders) : approximate ? orders : null;
+      if (!dayOrders) return { day, cutId: null, capturedAt: null, closed: null, opened: null, cumulative: null, cumulativeOpened: null, pending: null, inProgress: null, paused: null, backlog: null, programCompleted: null, compliance: null };
+      const measuredAt = live ? now : cut ? cut.captured_at : at;
+      const metrics = live ? report : summarizeWeek(baseline, carryover, dayOrders, week, measuredAt, zoneIds);
+      const closedDay = dayOrders.filter(o => inZone(o) && !o.deleted && o.status === 'FINALIZADO' && o.completed_at && dayOf(o.completed_at) === day).length;
+      const openedDay = dayOrders.filter(o => inZone(o) && !o.deleted && dayOf(o.created_at) === day).length;
+      const stateKnown = live || !!cut || approxLast;
+      return { day, cutId: cut?.id || null, capturedAt: stateKnown ? measuredAt.toISOString() : null,
+        closed: closedDay, opened: openedDay,
+        cumulative: stateKnown ? metrics.counts.allCompleted : null,
+        cumulativeOpened: stateKnown ? metrics.counts.opened : null,
+        pending: stateKnown ? metrics.counts.pending : null,
+        inProgress: stateKnown ? metrics.counts.inProgress : null,
+        paused: stateKnown ? metrics.counts.paused : null,
+        backlog: stateKnown ? metrics.counts.backlog : null,
+        programCompleted: metrics.counts.completed, compliance: metrics.compliance };
     });
     const allZoneOrders = [...effectiveBaseline, ...carryover, ...orders];
     const zones = [...new Map(allZoneOrders.filter(o => o.zone_id).map(o => [o.zone_id!, { id: o.zone_id!, name: o.zone_name }])).values()].sort((a, b) => a.name.localeCompare(b.name, 'es'));
     return {
-      week, lastDay, currentWeek: weeklyRange(plantYmd(now)).key, hasData, preview,
-      capturedAt: hasData ? at.toISOString() : null, selectedCutId: selectedCut?.id || null,
+      week, lastDay, currentWeek: weeklyRange(plantYmd(now)).key, hasData, preview, approximate,
+      capturedAt: at.toISOString(), selectedCutId: selectedCut?.id || null,
       plan: plan ? { capturedAt: plan.captured_at.toISOString(), lateStart: plan.late_start } : null,
       cuts: cuts.map(c => ({ id: c.id, day: c.day, capturedAt: c.captured_at.toISOString(), source: c.source })),
       zones, daily, ...report,

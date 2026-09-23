@@ -6,14 +6,21 @@ export type WeeklyOrder = {
   hold_reason: string | null; technicians: string; deleted?: boolean;
   original_due_date?: string | null; original_scheduled_date?: string | null; original_zone_name?: string; program_zone_name?: string;
 };
-export type WeeklyCategory = 'program' | 'completed' | 'pending' | 'inProgress' | 'paused' | 'cancelled' | 'deleted' | 'overdue' | 'additions' | 'rescheduled' | 'incoming' | 'carryover' | 'backlog' | 'backlogOverdue' | 'allCompleted';
+export type WeeklyCategory = 'program' | 'completed' | 'pending' | 'inProgress' | 'paused' | 'cancelled' | 'deleted' | 'overdue' | 'additions' | 'rescheduled' | 'incoming' | 'carryover' | 'backlog' | 'backlogOverdue' | 'allCompleted' | 'opened' | 'preventiveCompleted' | 'correctiveCompleted' | 'serviceCompleted';
+export type WeeklyDay = {
+  day: string; cutId: string | null; capturedAt: string | null;
+  closed: number | null; opened: number | null;
+  cumulative: number | null; cumulativeOpened: number | null;
+  pending: number | null; inProgress: number | null; paused: number | null; backlog: number | null;
+  programCompleted: number | null; compliance: number | null;
+};
 export type WeeklyReport = {
-  week: string; lastDay: string; currentWeek: string; hasData: boolean; preview: boolean;
+  week: string; lastDay: string; currentWeek: string; hasData: boolean; preview: boolean; approximate: boolean;
   capturedAt: string | null; selectedCutId: string | null;
   plan: { capturedAt: string; lateStart: boolean } | null;
   cuts: { id: string; day: string; capturedAt: string; source: string }[];
   zones: { id: string; name: string }[];
-  daily: { day: string; cutId: string | null; capturedAt: string | null; closed: number | null; cumulative: number | null; programCompleted: number | null; compliance: number | null }[];
+  daily: WeeklyDay[];
   counts: Record<WeeklyCategory, number>; compliance: number | null;
   details: Record<WeeklyCategory, WeeklyOrder[]>;
 };
