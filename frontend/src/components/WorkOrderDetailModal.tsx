@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, CheckCircle2, Users, PauseCircle, PlayCircle, ChevronLeft, ChevronRight, ZoomIn, StickyNote } from 'lucide-react';
+import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, CheckCircle2, Users, UserPlus, PauseCircle, PlayCircle, ChevronLeft, ChevronRight, ZoomIn, StickyNote } from 'lucide-react';
 import type { WorkOrder } from '../api/workOrders';
 import { getWorkOrderById } from '../api/workOrders';
 import { useAuth } from '../context/AuthContext';
@@ -37,6 +37,15 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const statusLabel = (status: string) => STATUS_LABELS[status] || status.replace(/_/g, ' ');
+
+const initialsOf = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase();
 
 interface Props {
   workOrder: WorkOrder | null;
@@ -125,6 +134,7 @@ export const WorkOrderDetailModal = ({
 
   const [technicians, setTechnicians] = useState<User[]>([]);
   const [assignedTechniciansIds, setAssignedTechniciansIds] = useState<string[]>([]);
+  const [showAssignList, setShowAssignList] = useState(false);
 
   const [inventoryItems, setInventoryItems] = useState<Item[]>([]);
   const [usedItems, setUsedItems] = useState<{item_id: string, name: string, amount: number, uom: string, max_stock: number, qty_mode?: string}[]>([]);
@@ -258,6 +268,7 @@ export const WorkOrderDetailModal = ({
       setSignatureCleanArea(wo.signature_clean_area || '');
       setSignatureDelivery(wo.signature_delivery || '');
       setAssignedTechniciansIds(wo.assigned_technicians?.map(t => t.id) || []);
+      setShowAssignList(false);
       if (!canEdit) {
         setBeforeImage(null);
         setAfterImage(null);
@@ -969,22 +980,65 @@ export const WorkOrderDetailModal = ({
                   )}
                 </div>
 
-                {user?.role !== 'TECNICO' && !isReadOnly ? (
-                  <div ref={assignSectionRef} className="animate-in fade-in slide-in-from-top-2 duration-300">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Personal asignado</label>
-                    <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2">
+                <div ref={assignSectionRef} className="animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                      {workOrder.status === 'FINALIZADO' ? 'Personal que intervino' : 'Personal asignado'}
+                    </label>
+                    {user?.role !== 'TECNICO' && !isReadOnly && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAssignList((v) => !v)}
+                        className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-colors ${
+                          showAssignList
+                            ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200'
+                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                        }`}
+                      >
+                        <UserPlus size={14} />
+                        {showAssignList ? 'Cerrar lista' : 'Asignar técnicos'}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {assignedTechniciansIds.length > 0 ? (
+                      assignedTechniciansIds.map((id) => {
+                        const name =
+                          technicians.find((t) => t.id === id)?.name ||
+                          workOrder.assigned_technicians?.find((t) => t.id === id)?.name ||
+                          'Técnico';
+                        return (
+                          <span
+                            key={id}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 py-1 pl-1 pr-3 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                          >
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-bold text-white">
+                              {initialsOf(name)}
+                            </span>
+                            {name}
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <span className="text-sm text-slate-500 dark:text-slate-400 italic">Nadie asignado</span>
+                    )}
+                  </div>
+
+                  {showAssignList && user?.role !== 'TECNICO' && !isReadOnly && (
+                    <div className="mt-3 max-h-40 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
                       {technicians.length === 0 ? (
-                        <div className="text-sm text-slate-500 dark:text-slate-400 italic">
+                        <div className="text-sm italic text-slate-500 dark:text-slate-400">
                           {navigator.onLine
                             ? 'No hay personal disponible'
                             : 'Sin personal en caché. Conéctate una vez para cargar la lista y poder asignar offline.'}
                         </div>
                       ) : (
                         technicians.map((tech) => (
-                          <label key={tech.id} className="flex items-center gap-3 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-lg transition-colors cursor-pointer">
+                          <label key={tech.id} className="flex cursor-pointer items-center gap-3 rounded-lg p-2 transition-colors hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-800">
                             <input
                               type="checkbox"
-                              className="w-4 h-4 text-emerald-800 dark:text-emerald-300 rounded border-slate-300 focus:ring-emerald-600"
+                              className="h-4 w-4 rounded border-slate-300 text-emerald-800 focus:ring-emerald-600 dark:text-emerald-300"
                               checked={assignedTechniciansIds.includes(tech.id)}
                               onChange={(e) => {
                                 if (e.target.checked) {
@@ -999,47 +1053,20 @@ export const WorkOrderDetailModal = ({
                         ))
                       )}
                     </div>
-                    {canShowJoin && !needsJoinToOperate && (
-                      <button
-                        type="button"
-                        onClick={handleJoin}
-                        disabled={isSubmitting}
-                        className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-sky-100 text-sky-900 hover:bg-sky-200 border border-sky-200 rounded-xl font-semibold transition-colors text-sm"
-                      >
-                        <Users size={16} />
-                        Unirme / Colaborar en esta orden
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div ref={assignSectionRef} className="animate-in fade-in slide-in-from-top-2 duration-300">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
-                      {workOrder.status === 'FINALIZADO' ? 'Personal que intervino' : 'Personal asignado'}
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {workOrder.assigned_technicians && workOrder.assigned_technicians.length > 0 ? (
-                        workOrder.assigned_technicians.map(t => (
-                          <span key={t.id} className="bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
-                            {t.name}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-sm text-slate-500 dark:text-slate-400 italic">Nadie asignado</span>
-                      )}
-                    </div>
-                    {canShowJoin && !needsJoinToOperate && (
-                      <button
-                        type="button"
-                        onClick={handleJoin}
-                        disabled={isSubmitting || isReadOnly}
-                        className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-sky-100 text-sky-900 hover:bg-sky-200 border border-sky-200 rounded-xl font-semibold transition-colors text-sm disabled:opacity-60"
-                      >
-                        <Users size={16} />
-                        Unirme / Colaborar en esta orden
-                      </button>
-                    )}
-                  </div>
-                )}
+                  )}
+
+                  {canShowJoin && !needsJoinToOperate && (
+                    <button
+                      type="button"
+                      onClick={handleJoin}
+                      disabled={isSubmitting}
+                      className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-sky-100 text-sky-900 hover:bg-sky-200 border border-sky-200 rounded-xl font-semibold transition-colors text-sm"
+                    >
+                      <Users size={16} />
+                      Unirme / Colaborar en esta orden
+                    </button>
+                  )}
+                </div>
 
                 {status === 'EN_ESPERA' && (
                   <div className="animate-in fade-in slide-in-from-top-2 duration-300 lg:col-span-2">
