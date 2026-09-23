@@ -245,7 +245,20 @@ export const MaintenancePlanModal = ({ isOpen, onClose, onSaved, plan, assets, i
             {/* Columna Derecha: Programación y Repuestos */}
             <div className="space-y-4">
               <h3 className="font-semibold text-slate-800 dark:text-slate-100 border-b pb-2">Programación</h3>
-              
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">📅 Fecha programada (primera)</label>
+                <input
+                  type="date"
+                  value={formData.next_due_date ? formData.next_due_date.slice(0, 10) : ''}
+                  onChange={(e) => setFormData({ ...formData, next_due_date: e.target.value })}
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none"
+                />
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                  La orden se generará {formData.days_in_advance ?? 3} día(s) antes de esta fecha y luego se repetirá según la frecuencia. Si la dejas vacía, se programa a partir de hoy.
+                </p>
+              </div>
+
               <div className="flex gap-4">
                 <div className="flex-1">
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Frecuencia *</label>

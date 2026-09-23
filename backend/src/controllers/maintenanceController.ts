@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { emitRefresh } from '../utils/socket';
+import { parseDateInput } from '../utils/parseDateInput';
 
 export const getMaintenancePlans = async (req: Request, res: Response) => {
   try {
@@ -26,7 +27,7 @@ export const createMaintenancePlan = async (req: Request, res: Response) => {
   try {
     const { 
       title, description, asset_id, frequency_type, frequency_value, 
-      days_in_advance, is_active, required_items 
+      days_in_advance, is_active, required_items, next_due_date: nextDueRaw
     } = req.body;
 
     if (Array.isArray(required_items)) {
@@ -39,14 +40,24 @@ export const createMaintenancePlan = async (req: Request, res: Response) => {
       }
     }
 
-    // Calcular primera fecha de vencimiento
+    // Primera fecha programada: si viene en el request se respeta (debe ser futura);
+    // si no, se calcula a partir de hoy según la frecuencia.
     const now = new Date();
-    const next_due_date = new Date(now);
-    
-    if (frequency_type === 'DIAS') next_due_date.setDate(now.getDate() + Number(frequency_value));
-    else if (frequency_type === 'SEMANAS') next_due_date.setDate(now.getDate() + (Number(frequency_value) * 7));
-    else if (frequency_type === 'MESES') next_due_date.setMonth(now.getMonth() + Number(frequency_value));
-    else if (frequency_type === 'ANUAL') next_due_date.setFullYear(now.getFullYear() + Number(frequency_value));
+    let next_due_date: Date;
+    const requestedDate = parseDateInput(nextDueRaw);
+    if (requestedDate) {
+      if (requestedDate.getTime() <= now.getTime()) {
+        res.status(400).json({ error: 'La fecha programada debe ser una fecha futura.' });
+        return;
+      }
+      next_due_date = requestedDate;
+    } else {
+      next_due_date = new Date(now);
+      if (frequency_type === 'DIAS') next_due_date.setDate(now.getDate() + Number(frequency_value));
+      else if (frequency_type === 'SEMANAS') next_due_date.setDate(now.getDate() + (Number(frequency_value) * 7));
+      else if (frequency_type === 'MESES') next_due_date.setMonth(now.getMonth() + Number(frequency_value));
+      else if (frequency_type === 'ANUAL') next_due_date.setFullYear(now.getFullYear() + Number(frequency_value));
+    }
 
     const plan = await prisma.maintenancePlan.create({
       data: {
@@ -86,7 +97,7 @@ export const updateMaintenancePlan = async (req: Request, res: Response) => {
     const id = req.params.id as string;
     const { 
       title, description, frequency_type, frequency_value, 
-      days_in_advance, is_active, required_items 
+      days_in_advance, is_active, required_items, next_due_date: nextDueRaw
     } = req.body;
 
     if (Array.isArray(required_items)) {
@@ -107,7 +118,13 @@ export const updateMaintenancePlan = async (req: Request, res: Response) => {
     }
 
     let next_due_date = existing.next_due_date;
-    if (existing.frequency_type !== frequency_type || existing.frequency_value !== Number(frequency_value)) {
+    const requestedDate = parseDateInput(nextDueRaw);
+    if (requestedDate) {
+      if (requestedDate.getTime() <= Date.now()) {
+        return res.status(400).json({ error: 'La fecha programada debe ser una fecha futura.' });
+      }
+      next_due_date = requestedDate;
+    } else if (existing.frequency_type !== frequency_type || existing.frequency_value !== Number(frequency_value)) {
       const baseDate = existing.last_triggered_at || new Date();
       next_due_date = new Date(baseDate);
       if (frequency_type === 'DIAS') next_due_date.setDate(next_due_date.getDate() + Number(frequency_value));
