@@ -328,6 +328,16 @@ Desde `/request`, **Consultar estado de una solicitud** abre `/request/status`, 
 - Incluye órdenes existentes, con 20 resultados por página y actualización manual del estado.
 - No requiere cambios de esquema. Se habilita al desplegar el frontend y backend actualizados.
 
+## Informe semanal
+
+La vista autenticada `/weekly-report` se abre desde el menú **Informe semanal** o desde **Órdenes de Trabajo**. Sigue la semana actual de lunes a domingo en hora de Ciudad de México, permite elegir cualquier semana anterior y se actualiza con los cambios de OT y cada minuto.
+
+- Cada OT permanece en su día de levantamiento y muestra su estado más reciente, también al consultar semanas anteriores.
+- El resumen cruza día, estado y tipo de mantenimiento. El detalle diario incluye folio, fechas, zona, equipo, reparación, paro, técnicos y solicitante.
+- El backlog de cada día cuenta las OT levantadas ese día que continúan pendientes, en proceso o pausadas; no es un saldo histórico acumulado.
+- Las invalidadas se muestran por separado y no forman parte de la base de porcentajes. Los días futuros aparecen con un guion.
+- El tiempo de reparación usa el trabajo acumulado sin pausas y añade el tramo activo de las OT en proceso.
+
 ## Características principales
 
 - **Órdenes de trabajo:** flujo completo (crear, aceptar, pausar, finalizar) con soporte web + móvil (PWA).

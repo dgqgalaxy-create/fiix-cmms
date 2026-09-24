@@ -688,7 +688,8 @@ export const Dashboard = () => {
           <p className="text-slate-500 dark:text-slate-300 mt-1">Gestiona y haz seguimiento del mantenimiento.</p>
         </div>
         
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <button onClick={() => navigate('/weekly-report')} className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-emerald-700 dark:border-slate-700 dark:text-emerald-400">Informe semanal</button>
           <button
             onClick={() => fetchWorkOrders()}
             className="p-2.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors shadow-sm"

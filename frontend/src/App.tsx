@@ -10,6 +10,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Login } from './pages/Login';
 
 const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
+const WeeklyReportPage = lazy(() => import('./pages/WeeklyReportPage'));
 const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })));
 const AssetsPage = lazy(() => import('./pages/AssetsPage').then((m) => ({ default: m.AssetsPage })));
 const UsersPage = lazy(() => import('./pages/UsersPage').then((m) => ({ default: m.UsersPage })));
@@ -63,7 +64,7 @@ function App() {
       const path = window.location.pathname;
       const search = window.location.search;
       const isPublic = path === '/request' || path === '/request/status' || path === '/manual';
-      const isDeepLink =
+      const isDeepLink = path === '/weekly-report' ||
         /[?&](wo|folio|asset|item)=/.test(search);
       if (token && !isPublic && !isDeepLink && path !== '/home') {
         window.location.replace('/home');
@@ -90,6 +91,7 @@ function App() {
         <BrowserRouter>
           <Suspense fallback={<PageFallback />}>
           <Routes>
+          <Route path="/weekly-report" element={<ProtectedRoute><Layout><WeeklyReportPage /></Layout></ProtectedRoute>} />
           <Route path="/login" element={<Login />} />
           <Route path="/request" element={<RequestPortal />} />
           <Route path="/request/status" element={<RequestTrackingPortal />} />

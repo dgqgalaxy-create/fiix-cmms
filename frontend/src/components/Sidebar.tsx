@@ -131,6 +131,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     const availableItems: NavItem[] = [
       { name: 'Inicio', path: '/home', icon: <Home size={16} /> },
       { name: 'Órdenes de Trabajo', path: '/dashboard', icon: <LayoutDashboard size={16} /> },
+      { name: 'Informe semanal', path: '/weekly-report', icon: <Calendar size={16} /> },
       { name: 'Mensajes', path: '/messages', icon: <MessageSquare size={16} />, badge: chatBadge },
       { name: 'Notas y pendientes', path: '/notes', icon: <StickyNote size={16} />, badge: notesBadge },
       { name: 'Activos', path: '/assets', icon: <Database size={16} /> },
