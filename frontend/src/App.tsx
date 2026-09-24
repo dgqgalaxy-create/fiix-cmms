@@ -30,6 +30,7 @@ const RCAPage = lazy(() => import('./pages/RCAPage').then((m) => ({ default: m.R
 const RequestPortal = lazy(() =>
   import('./pages/RequestPortal').then((m) => ({ default: m.RequestPortal }))
 );
+const RequestTrackingPortal = lazy(() => import('./pages/RequestTrackingPortal'));
 const SettingsPage = lazy(() =>
   import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage }))
 );
@@ -61,7 +62,7 @@ function App() {
       const token = localStorage.getItem('token');
       const path = window.location.pathname;
       const search = window.location.search;
-      const isPublic = path === '/request' || path === '/manual';
+      const isPublic = path === '/request' || path === '/request/status' || path === '/manual';
       const isDeepLink =
         /[?&](wo|folio|asset|item)=/.test(search);
       if (token && !isPublic && !isDeepLink && path !== '/home') {
@@ -91,6 +92,7 @@ function App() {
           <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/request" element={<RequestPortal />} />
+          <Route path="/request/status" element={<RequestTrackingPortal />} />
           
           <Route
             path="/home"

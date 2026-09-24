@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { FormEvent, ChangeEvent } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 import { Wifi, WifiOff, CheckCircle2, Loader2 } from 'lucide-react';
 import { BACKEND_URL } from '../api/axios';
 import { compressImageFile, dataUrlToFile, fileToDataUrl } from '../utils/imageCompress';
@@ -376,6 +377,9 @@ export const RequestPortal = () => {
             </div>
           )}
           <p className="text-slate-600 dark:text-slate-400 mb-8">El equipo de mantenimiento ha sido notificado y la orden se ha creado exitosamente.</p>
+          <Link to={`/request/status${submittedSummary?.folio ? `?folio=${encodeURIComponent(submittedSummary.folio)}` : ''}`} className="block mb-3 w-full rounded-xl border border-emerald-600 py-3 px-4 font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950">
+            Consultar estado de mi solicitud
+          </Link>
           <button
             type="button"
             onClick={resetForm}
@@ -414,6 +418,10 @@ export const RequestPortal = () => {
       </header>
 
       <main className="flex-1 p-4 w-full max-w-lg mx-auto">
+        <Link to="/request/status" className="block mb-4 rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 p-4 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-950">
+          <span className="block font-bold">Consultar estado de una solicitud →</span>
+          <span className="text-sm">Busca por folio, zona o nombre del solicitante.</span>
+        </Link>
         <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
           <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
             <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Nueva Solicitud de Mantenimiento</h2>

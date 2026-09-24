@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { getRequestTracking } from '../controllers/requestTrackingController';
 import { createPublicWorkOrder } from '../controllers/workOrderController';
 import { upload } from '../middlewares/upload';
 import { createRateLimiter } from '../middlewares/rateLimit';
@@ -26,6 +27,8 @@ router.post(
   upload.fields([{ name: 'request_image', maxCount: 1 }]),
   createPublicWorkOrder
 );
+
+router.get('/requests', publicGetLimiter, getRequestTracking);
 
 // Endpoints to populate the public form dropdowns without auth
 router.get('/locations', publicGetLimiter, async (_req, res) => {

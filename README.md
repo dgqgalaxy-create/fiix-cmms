@@ -319,6 +319,15 @@ Extensiones recomendadas (VS Code): Prettier, Tailwind CSS IntelliSense, Prisma.
 
 ---
 
+## Consulta pública de solicitudes
+
+Desde `/request`, **Consultar estado de una solicitud** abre `/request/status`, sin iniciar sesión. También aparece un enlace con el folio precargado después de enviar una solicitud.
+
+- Busca por folio (`FOL-0042` o `42`), zona o parte del nombre del solicitante. Los filtros se pueden combinar.
+- Los resultados muestran únicamente folio y estado: pendiente, en proceso, en espera, realizada o anulada. Una anulación no equivale a un trabajo realizado.
+- Incluye órdenes existentes, con 20 resultados por página y actualización manual del estado.
+- No requiere cambios de esquema. Se habilita al desplegar el frontend y backend actualizados.
+
 ## Características principales
 
 - **Órdenes de trabajo:** flujo completo (crear, aceptar, pausar, finalizar) con soporte web + móvil (PWA).
