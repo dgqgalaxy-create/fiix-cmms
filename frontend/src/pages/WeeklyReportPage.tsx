@@ -104,10 +104,23 @@ export default function WeeklyReportPage() {
       <section className="space-y-4"><h2 className="text-xl font-bold">Resumen de solicitudes por día</h2>
         {report.days.map(day => <section key={day.date} className={panel}>
           <h3 className={`px-4 py-3 font-bold capitalize ${day.date === today ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200' : 'bg-slate-100 dark:bg-slate-800'}`}>{dayLabel(day.date)}{day.date === today ? ' · Hoy' : ''}<span className="ml-3 text-sm font-normal">{day.future ? 'Día por transcurrir' : `${day.items.length} OT`}</span></h3>
-          {day.items.length === 0 ? <p className="p-4 text-sm text-slate-500 dark:text-slate-400">{day.future ? 'La actividad aparecerá cuando llegue este día.' : 'Sin solicitudes levantadas este día.'}</p> : <div className="overflow-x-auto"><table className="w-full min-w-[1400px] text-left text-sm"><thead><tr>{['Folio', 'Fecha levantamiento', 'Zona', 'Equipo', 'Estado', 'Inicio', 'Finalizado', 'Tiempo reparación', '¿Paró?', 'Técnico asignado', 'Solicitante'].map(label => <th key={label} scope="col" className="px-3 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">{label}</th>)}</tr></thead><tbody>
-            {day.items.map(order => { const ms = repairMs(order, now); const minutes = ms === null ? null : Math.floor(ms / 60000); return <tr key={order.id} className="border-t border-slate-100 align-top dark:border-slate-800">
-              <td className="px-3 py-3"><Link className="font-mono font-bold text-emerald-700 hover:underline dark:text-emerald-400" to={`/dashboard?folio=${order.folio}`}>{formatWorkOrderFolio(order.folio)}</Link></td>
-              <td className="px-3 py-3">{timestamp(order.created_at)}</td><td className="px-3 py-3">{order.zone?.name || '—'}</td><td className="px-3 py-3">{order.asset?.name || '—'}</td><td className={`px-3 py-3 font-semibold ${statusColor[order.status]}`}>{REPORT_LABELS[order.status]}</td><td className="px-3 py-3">{timestamp(order.started_at)}</td><td className="px-3 py-3">{timestamp(order.completed_at)}</td><td className="px-3 py-3 tabular-nums">{minutes === null ? '—' : `${Math.floor(minutes / 60)} h ${minutes % 60} min`}</td><td className="px-3 py-3">{order.machine_stopped ? 'Sí' : 'No'}</td><td className="px-3 py-3">{order.assigned_technicians?.map(tech => tech.name).join(', ') || 'Sin asignar'}</td><td className="px-3 py-3">{order.requester_name || '—'}</td>
+          {day.items.length === 0 ? <p className="p-4 text-sm text-slate-500 dark:text-slate-400">{day.future ? 'La actividad aparecerá cuando llegue este día.' : 'Sin solicitudes levantadas este día.'}</p> : <div className="w-full"><table className="w-full table-fixed text-left text-[10px] leading-snug xl:text-[11px] max-sm:block"><colgroup>{[8, 10, 6, 13, 8, 10, 10, 7, 4, 12, 12].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}</colgroup><thead className="max-sm:hidden"><tr>{['Folio', 'Fecha levantamiento', 'Zona', 'Equipo', 'Estado', 'Inicio', 'Finalizado', 'Tiempo reparación', '¿Paró?', 'Técnico asignado', 'Solicitante'].map(label => <th key={label} scope="col" className="px-1.5 py-2 font-semibold text-slate-500 [overflow-wrap:anywhere] dark:text-slate-400">{label}</th>)}</tr></thead><tbody className="max-sm:block">
+            {day.items.map(order => { const ms = repairMs(order, now); const minutes = ms === null ? null : Math.floor(ms / 60000); return <tr key={order.id} className="border-t border-slate-100 align-top dark:border-slate-800 max-sm:grid max-sm:grid-cols-2 max-sm:gap-x-3 max-sm:p-3">
+              {[
+                ['Folio', <Link className="font-mono font-bold text-emerald-700 hover:underline dark:text-emerald-400" to={`/dashboard?folio=${order.folio}`}>{formatWorkOrderFolio(order.folio)}</Link>],
+                ['Fecha levantamiento', timestamp(order.created_at)],
+                ['Zona', order.zone?.name || '—'],
+                ['Equipo', order.asset?.name || '—'],
+                ['Estado', <span className={`font-semibold ${statusColor[order.status]}`}>{REPORT_LABELS[order.status]}</span>],
+                ['Inicio', timestamp(order.started_at)],
+                ['Finalizado', timestamp(order.completed_at)],
+                ['Tiempo reparación', minutes === null ? '—' : `${Math.floor(minutes / 60)} h ${minutes % 60} min`],
+                ['¿Paró?', order.machine_stopped ? 'Sí' : 'No'],
+                ['Técnico asignado', order.assigned_technicians?.map(tech => tech.name).join(', ') || 'Sin asignar'],
+                ['Solicitante', order.requester_name || '—'],
+              ].map(([label, value], index) => <td key={index} className="px-1.5 py-2 [overflow-wrap:anywhere] max-sm:block max-sm:min-w-0 max-sm:px-0 max-sm:text-xs">
+                <span className="mb-0.5 block text-[10px] font-semibold text-slate-500 dark:text-slate-400 sm:hidden">{label}</span>{value}
+              </td>)}
             </tr>; })}
           </tbody></table></div>}
         </section>)}
