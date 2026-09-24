@@ -28,7 +28,6 @@ import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
 import { firstDayOfMonthYmd, todayYmd } from '../components/common/PeriodRangeFilter';
 import {
   Bar,
-  BarChart,
   CartesianGrid,
   Cell,
   ComposedChart,
@@ -286,35 +285,6 @@ export const HomePage = () => {
 
   const goControlRoom = (query: string) => navigate(`/dashboard?${query}`);
 
-  const getCurrentWeekRange = () => {
-    const now = new Date();
-    const day = now.getDay(); // 0 = Dom, 1 = Lun
-    const mondayOffset = day === 0 ? -6 : 1 - day;
-    const monday = new Date(now);
-    monday.setHours(0, 0, 0, 0);
-    monday.setDate(now.getDate() + mondayOffset);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    sunday.setHours(23, 59, 59, 999);
-    return { monday, sunday };
-  };
-
-  const { monday: weekStart, sunday: weekEnd } = getCurrentWeekRange();
-
-  const finishedThisWeek = workOrders
-    .filter(wo => {
-      if (wo.status !== 'FINALIZADO') return false;
-      const doneAt = new Date(wo.completed_at || wo.updated_at);
-      return doneAt >= weekStart && doneAt <= weekEnd;
-    })
-    .sort((a, b) => {
-      const da = new Date(a.completed_at || a.updated_at).getTime();
-      const db = new Date(b.completed_at || b.updated_at).getTime();
-      return db - da;
-    });
-
-  const weekDayLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-
   /** Top 5 planes activos por próxima fecha, con marca de vencidos. */
   const upcomingPlans = maintenancePlans
     .filter((p) => p.is_active)
@@ -337,22 +307,6 @@ export const HomePage = () => {
       month: 'short',
       year: 'numeric',
     });
-  const weeklyBarData = weekDayLabels.map((label, index) => {
-    const dayStart = new Date(weekStart);
-    dayStart.setDate(weekStart.getDate() + index);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(dayStart);
-    dayEnd.setHours(23, 59, 59, 999);
-    const count = finishedThisWeek.filter(wo => {
-      const doneAt = new Date(wo.completed_at || wo.updated_at);
-      return doneAt >= dayStart && doneAt <= dayEnd;
-    }).length;
-    return { name: label, Finalizadas: count };
-  });
-
-  const formatWeekDate = (date: Date) =>
-    date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
-
   type ShiftTechRow = {
     id: string;
     name: string;
@@ -1008,92 +962,6 @@ export const HomePage = () => {
       )}
 
 
-      {/* Resumen semanal de finalizadas (Lunes → Domingo) */}
-      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-          <div>
-            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-              <CheckCircle2 size={20} className="text-emerald-600" />
-              Órdenes finalizadas esta semana
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Semana actual: {formatWeekDate(weekStart)} — {formatWeekDate(weekEnd)} (Lunes a Domingo)
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="px-4 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Total</span>
-              <div className="text-3xl font-black text-emerald-700 dark:text-emerald-300 leading-none mt-0.5">
-                {finishedThisWeek.length}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => goToStatus('FINALIZADO')}
-              className="text-sm font-semibold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-3 py-2 rounded-xl border border-emerald-200 transition-colors"
-            >
-              Ver historial
-            </button>
-          </div>
-        </div>
-
-        <div className="h-48 w-full mb-5">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={weeklyBarData} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
-              <XAxis dataKey="name" tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }} tickLine={false} axisLine={false} />
-              <YAxis allowDecimals={false} tick={{ fill: 'var(--color-fg-muted)', fontSize: 12 }} tickLine={false} axisLine={false} />
-              <Tooltip
-                contentStyle={{ borderRadius: '12px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-fg)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                formatter={(value: any) => [value, 'Finalizadas']}
-              />
-              <Bar dataKey="Finalizadas" fill="#10b981" radius={[6, 6, 0, 0]} barSize={36} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {finishedThisWeek.length === 0 ? (
-          <p className="text-sm text-slate-400 text-center py-4 border-t border-slate-100 dark:border-slate-700">
-            Aún no hay órdenes finalizadas en esta semana.
-          </p>
-        ) : (
-          <div className="border-t border-slate-100 dark:border-slate-700 pt-4 space-y-2 max-h-64 overflow-y-auto">
-            {finishedThisWeek.slice(0, 12).map(wo => (
-              <button
-                key={wo.id}
-                type="button"
-                onClick={() => navigate(`/dashboard?wo=${wo.id}`)}
-                className="w-full flex items-center justify-between gap-3 text-left px-3 py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
-                    <span className="text-emerald-700 dark:text-emerald-400 mr-2">
-                      {formatWorkOrderFolio(wo.folio)}
-                    </span>
-                    {wo.title}
-                  </p>
-                  <p className="text-xs text-slate-500 truncate">
-                    {wo.asset?.name || 'Sin equipo'}
-                    {wo.zone?.name ? ` · ${wo.zone.name}` : ''}
-                  </p>
-                </div>
-                <span className="text-[11px] text-slate-400 shrink-0">
-                  {new Date(wo.completed_at || wo.updated_at).toLocaleDateString('es-MX', {
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short',
-                  })}
-                </span>
-              </button>
-            ))}
-            {finishedThisWeek.length > 12 && (
-              <p className="text-xs text-center text-slate-400 pt-1">
-                +{finishedThisWeek.length - 12} más esta semana
-              </p>
-            )}
-          </div>
-        )}
-      </div>
 
 
     </>

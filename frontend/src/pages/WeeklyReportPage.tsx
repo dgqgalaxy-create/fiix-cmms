@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { getWorkOrders, updateWorkOrder, type WorkOrder } from '../api/workOrders';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatWorkOrderFolio } from '../utils/folio';
-import { addDays, plantDay, weekStart, weekQuery, weeklyReport, repairMs, REPORT_TZ, REPORT_STATUSES, REPORT_TYPES, REPORT_LABELS, TYPE_LABELS } from '../utils/weeklyReport';
+import { addDays, plantDay, weekStart, weekQuery, weeklyReport, weeklyCompletions, repairMs, REPORT_TZ, REPORT_STATUSES, REPORT_TYPES, REPORT_LABELS, TYPE_LABELS } from '../utils/weeklyReport';
 
 const dayLabel = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString('es-MX', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'short' });
 const timestamp = (value?: string) => value ? new Date(value).toLocaleString('es-MX', { timeZone: REPORT_TZ, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
@@ -23,7 +24,7 @@ export default function WeeklyReportPage() {
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const monday = selectedWeek ?? currentWeek;
   const sunday = addDays(monday, 6);
-  const [loaded, setLoaded] = useState<{ week: string; orders: WorkOrder[]; at: string } | null>(null);
+  const [loaded, setLoaded] = useState<{ week: string; orders: WorkOrder[]; completed: WorkOrder[]; at: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const controller = useRef<AbortController | null>(null);
@@ -35,8 +36,12 @@ export default function WeeklyReportPage() {
     setLoading(true);
     setError('');
     try {
-      const orders = await getWorkOrders({ ...weekQuery(monday), sort: 'oldest' }, request.signal);
-      if (!request.signal.aborted) setLoaded({ week: monday, orders, at: new Date().toISOString() });
+      const range = weekQuery(monday);
+      const [orders, completed] = await Promise.all([
+        getWorkOrders({ ...range, sort: 'oldest' }, request.signal),
+        getWorkOrders({ status: 'FINALIZADO', completedFrom: range.startDate, completedTo: range.endDate }, request.signal),
+      ]);
+      if (!request.signal.aborted) setLoaded({ week: monday, orders, completed, at: new Date().toISOString() });
     } catch {
       if (!request.signal.aborted) setError('No se pudo actualizar el informe. Verifica la conexión e intenta nuevamente.');
     } finally {
@@ -57,6 +62,8 @@ export default function WeeklyReportPage() {
   useSocketRefresh(['refresh_work_orders', 'work_order_updated', 'connect'], load);
   const data = loaded?.week === monday ? loaded : null;
   const report = useMemo(() => weeklyReport(data?.orders ?? [], monday, today), [data, monday, today]);
+  const completionData = useMemo(() => weeklyCompletions(data?.completed ?? [], monday, today), [data, monday, today]);
+  const completedTotal = completionData.reduce((sum, day) => sum + day.PREVENTIVO + day.CORRECTIVO + day.SERVICIO, 0);
   const selectWeek = (day: string) => {
     if (!day) return;
     const week = weekStart(day);
@@ -82,6 +89,30 @@ export default function WeeklyReportPage() {
     {error && <div role="alert" className="rounded-xl bg-red-50 p-4 text-red-800 dark:bg-red-950 dark:text-red-200">{error}{data && ' Se muestran los últimos datos recibidos.'}</div>}
     {!data && loading && <p role="status">Cargando informe semanal…</p>}
     {data && <>
+      <section className={`${panel} w-full p-4 sm:p-5`} aria-labelledby="weekly-completions-title">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 id="weekly-completions-title" className="text-lg font-bold">Órdenes finalizadas {monday === currentWeek ? 'esta semana' : 'en la semana seleccionada'}</h2>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Por fecha de finalización, incluidas las solicitudes levantadas en semanas anteriores.</p>
+          </div>
+          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Total: {completedTotal} OT</p>
+        </div>
+        <div className="h-72 w-full min-w-0 sm:h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={completionData} accessibilityLayer margin={{ top: 10, right: 8, bottom: 8, left: 0 }} barGap={2} barCategoryGap="20%">
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
+              <XAxis dataKey="name" interval={0} tick={{ fill: 'var(--color-fg-muted)', fontSize: 11 }} tickLine={false} axisLine={false} />
+              <YAxis width={40} allowDecimals={false} domain={[0, 'auto']} tick={{ fill: 'var(--color-fg-muted)', fontSize: 11 }} tickLine={false} axisLine={false} label={{ value: 'OT', position: 'insideTopLeft', fill: 'var(--color-fg-muted)', fontSize: 10 }} />
+              <Tooltip labelFormatter={(_label, payload) => payload?.[0]?.payload?.date ? dayLabel(payload[0].payload.date) : ''} contentStyle={{ borderRadius: '12px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-fg)' }} />
+              <Legend wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
+              <Bar dataKey="PREVENTIVO" name="Preventivo" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={32} />
+              <Bar dataKey="CORRECTIVO" name="Correctivo" fill="#ef4444" radius={[3, 3, 0, 0]} maxBarSize={32} />
+              <Bar dataKey="SERVICIO" name="Servicio" fill="#3b82f6" radius={[3, 3, 0, 0]} maxBarSize={32} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        {completedTotal === 0 && <p className="mt-2 text-center text-sm text-slate-500 dark:text-slate-400">No hay órdenes finalizadas en esta semana.</p>}
+      </section>
       <section className={panel}>
         <h2 className="p-4 text-lg font-bold">Resumen de la semana {monday === currentWeek ? 'actual' : 'seleccionada'}</h2>
         <div className="hidden w-full lg:block">

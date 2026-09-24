@@ -54,3 +54,18 @@ export function weeklyReport(orders: WorkOrder[], monday: string, today: string)
   const total = Object.values(totals).reduce((sum, n) => sum + n, 0);
   return { days, totals, total, valid: total - totals.ANULADO };
 }
+
+/** Completions follow the completion date, even for requests created before this week. */
+export function weeklyCompletions(orders: WorkOrder[], monday: string, today: string) {
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = addDays(monday, index);
+    const items = date > today ? [] : orders.filter(order => order.status === 'FINALIZADO' && order.completed_at && plantDay(order.completed_at) === date);
+    return {
+      date,
+      name: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'][index],
+      PREVENTIVO: items.filter(order => order.maintenance_type === 'PREVENTIVO').length,
+      CORRECTIVO: items.filter(order => order.maintenance_type === 'CORRECTIVO').length,
+      SERVICIO: items.filter(order => order.maintenance_type === 'SERVICIO').length,
+    };
+  });
+}

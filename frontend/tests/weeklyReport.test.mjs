@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import ts from 'typescript';
 const source = readFileSync(new URL('../src/utils/weeklyReport.ts', import.meta.url), 'utf8');
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } }).outputText;
-const { plantDay, weekStart, addDays, weeklyReport, repairMs, weekQuery } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
+const { plantDay, weekStart, addDays, weeklyReport, repairMs, weekQuery, weeklyCompletions } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
 const order = (values = {}) => ({ id: 'one', created_at: '2026-09-21T15:00:00Z', status: 'PENDIENTE', maintenance_type: 'CORRECTIVO', ...values });
 
 test('plant timezone and Monday weeks handle midnight and year boundaries', () => {
@@ -45,4 +45,21 @@ test('repair time excludes pauses and includes only a running active segment', (
 test('API bounds use plant midnight regardless of server timezone', () => {
   assert.deepEqual(weekQuery('2026-09-21'), { startDate: '2026-09-21T06:00:00.000Z', endDate: '2026-09-28T05:59:59.999Z' });
   assert.equal(weekQuery('2021-07-12').startDate, '2021-07-12T05:00:00.000Z');
+});
+
+test('completion chart groups by completion day and type, including older requests', () => {
+  const rows = weeklyCompletions([
+    order({ created_at: '2026-09-01T15:00:00Z', status: 'FINALIZADO', completed_at: '2026-09-24T15:00:00Z' }),
+    order({ status: 'FINALIZADO', maintenance_type: 'PREVENTIVO', completed_at: '2026-09-24T15:00:00Z' }),
+    order({ status: 'FINALIZADO', maintenance_type: 'SERVICIO', completed_at: '2026-09-24T05:59:59Z' }),
+    order({ status: 'ANULADO', completed_at: '2026-09-24T15:00:00Z' }),
+    order({ status: 'FINALIZADO', completed_at: '2026-09-28T06:00:00Z' }),
+    order({ status: 'FINALIZADO' }),
+  ], '2026-09-21', '2026-09-24');
+  assert.equal(rows.length, 7);
+  assert.equal(rows[0].CORRECTIVO, 0);
+  assert.equal(rows[3].CORRECTIVO, 1);
+  assert.equal(rows[3].PREVENTIVO, 1);
+  assert.equal(rows[2].SERVICIO, 1);
+  assert.equal(rows.reduce((sum, row) => sum + row.PREVENTIVO + row.CORRECTIVO + row.SERVICIO, 0), 3);
 });
