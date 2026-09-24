@@ -81,14 +81,29 @@ export default function WeeklyReportPage() {
     {data && <>
       <section className={panel}>
         <h2 className="p-4 text-lg font-bold">Resumen de la semana {monday === currentWeek ? 'actual' : 'seleccionada'}</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1600px] border-collapse text-center text-xs">
+        <div className="hidden w-full lg:block">
+          <table className="w-full table-fixed border-collapse text-center text-[9px] leading-snug xl:text-[10px] 2xl:text-[11px] [&_td]:[overflow-wrap:anywhere] [&_th]:[overflow-wrap:anywhere]">
             <caption className="sr-only">Cantidad de órdenes por día de levantamiento, estado y tipo de mantenimiento</caption>
-            <thead className="bg-slate-100 dark:bg-slate-800"><tr><th rowSpan={2} scope="col" className="sticky left-0 z-10 bg-slate-100 p-3 text-left dark:bg-slate-800">Estado de OT</th>{report.days.map(day => <th key={day.date} scope="colgroup" colSpan={3} className={`border-l border-slate-200 p-3 capitalize dark:border-slate-700 ${day.date === today ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200' : ''}`}>{dayLabel(day.date)}{day.date === today ? ' · Hoy' : ''}</th>)}</tr><tr>{report.days.flatMap(day => REPORT_TYPES.map(type => <th key={`${day.date}-${type}`} scope="col" className="px-2 py-2 font-medium">{TYPE_LABELS[type]}</th>))}</tr></thead>
-            <tbody>{REPORT_STATUSES.map(status => <tr key={status} className="border-t border-slate-100 dark:border-slate-800"><th scope="row" className={`sticky left-0 bg-white p-3 text-left dark:bg-slate-900 ${statusColor[status]}`}>{REPORT_LABELS[status]}</th>{report.days.flatMap(day => REPORT_TYPES.map(type => <td key={`${day.date}-${type}`} className={`p-3 tabular-nums ${day.future ? 'text-slate-400' : ''}`}>{day.future ? '—' : day.counts[status][type]}</td>))}</tr>)}
-              <tr className="border-t border-slate-200 bg-slate-50 font-bold dark:border-slate-700 dark:bg-slate-800"><th scope="row" className="sticky left-0 bg-slate-50 p-3 text-left dark:bg-slate-800">Backlog</th>{report.days.map(day => <td key={day.date} colSpan={3} className="border-l border-slate-200 p-3 dark:border-slate-700">{day.future ? '—' : day.backlog}</td>)}</tr>
+            <colgroup><col style={{ width: '12%' }} />{report.days.flatMap(day => REPORT_TYPES.map(type => <col key={`${day.date}-${type}`} style={{ width: `${88 / 21}%` }} />))}</colgroup>
+            <thead className="bg-slate-100 dark:bg-slate-800"><tr><th rowSpan={2} scope="col" className="px-2 py-2 text-left">Estado de OT</th>{report.days.map(day => <th key={day.date} scope="colgroup" colSpan={3} className={`border-l border-slate-200 px-1 py-2 capitalize dark:border-slate-700 ${day.date === today ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200' : ''}`}>{dayLabel(day.date)}{day.date === today ? ' · Hoy' : ''}</th>)}</tr><tr>{report.days.flatMap(day => REPORT_TYPES.map(type => <th key={`${day.date}-${type}`} scope="col" className="px-0.5 py-1.5 font-medium"><abbr title={TYPE_LABELS[type]} className="no-underline">{{ PREVENTIVO: 'Prev.', CORRECTIVO: 'Corr.', SERVICIO: 'Serv.' }[type]}</abbr></th>))}</tr></thead>
+            <tbody>{REPORT_STATUSES.map(status => <tr key={status} className="border-t border-slate-100 dark:border-slate-800"><th scope="row" className={`px-2 py-2 text-left ${statusColor[status]}`}>{REPORT_LABELS[status]}</th>{report.days.flatMap(day => REPORT_TYPES.map(type => <td key={`${day.date}-${type}`} className={`px-0.5 py-2 tabular-nums ${day.future ? 'text-slate-400' : ''}`}>{day.future ? '—' : day.counts[status][type]}</td>))}</tr>)}
+              <tr className="border-t border-slate-200 bg-slate-50 font-bold dark:border-slate-700 dark:bg-slate-800"><th scope="row" className="px-2 py-2 text-left">Backlog</th>{report.days.map(day => <td key={day.date} colSpan={3} className="border-l border-slate-200 px-1 py-2 dark:border-slate-700">{day.future ? '—' : day.backlog}</td>)}</tr>
             </tbody>
           </table>
+          <p className="px-4 pt-2 text-[10px] text-slate-500 dark:text-slate-400">Prev.: preventivos · Corr.: correctivos · Serv.: servicios</p>
+        </div>
+        <div className="grid gap-3 px-3 sm:grid-cols-2 lg:hidden">
+          {report.days.map(day => <div key={day.date} className="min-w-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+            <h3 className={`px-3 py-2 text-xs font-bold capitalize ${day.date === today ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200' : 'bg-slate-100 dark:bg-slate-800'}`}>{dayLabel(day.date)}{day.date === today ? ' · Hoy' : ''}</h3>
+            <table className="w-full table-fixed text-center text-[10px] leading-snug [&_td]:[overflow-wrap:anywhere] [&_th]:[overflow-wrap:anywhere]">
+              <caption className="sr-only">Resumen de {dayLabel(day.date)}</caption>
+              <colgroup><col style={{ width: '31%' }} />{REPORT_TYPES.map(type => <col key={type} style={{ width: '23%' }} />)}</colgroup>
+              <thead><tr><th scope="col" className="px-2 py-2 text-left">Estado</th>{REPORT_TYPES.map(type => <th key={type} scope="col" className="px-1 py-2 font-medium">{TYPE_LABELS[type]}</th>)}</tr></thead>
+              <tbody>{REPORT_STATUSES.map(status => <tr key={status} className="border-t border-slate-100 dark:border-slate-800"><th scope="row" className={`px-2 py-1.5 text-left ${statusColor[status]}`}>{REPORT_LABELS[status]}</th>{REPORT_TYPES.map(type => <td key={type} className="px-1 py-1.5 tabular-nums">{day.future ? '—' : day.counts[status][type]}</td>)}</tr>)}
+                <tr className="border-t border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800"><th scope="row" className="px-2 py-2 text-left">Backlog</th><td colSpan={3} className="px-1 py-2 font-bold">{day.future ? '—' : day.backlog}</td></tr>
+              </tbody>
+            </table>
+          </div>)}
         </div>
         <p className="p-4 text-xs text-slate-500 dark:text-slate-400">Backlog: OT levantadas ese día que siguen pendientes, en proceso o pausadas. No incluye solicitudes de otros días. Los días futuros se muestran con —.</p>
       </section>
