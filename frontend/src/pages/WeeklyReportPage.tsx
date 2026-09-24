@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
-import { getWorkOrders, type WorkOrder } from '../api/workOrders';
+import { getWorkOrders, updateWorkOrder, type WorkOrder } from '../api/workOrders';
+import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { addDays, plantDay, weekStart, weekQuery, weeklyReport, repairMs, REPORT_TZ, REPORT_STATUSES, REPORT_TYPES, REPORT_LABELS, TYPE_LABELS } from '../utils/weeklyReport';
@@ -13,6 +15,7 @@ const panel = 'overflow-hidden rounded-2xl border border-slate-200 bg-white dark
 const statusColor = { PENDIENTE: 'text-amber-700 dark:text-amber-300', EN_PROCESO: 'text-sky-700 dark:text-sky-300', EN_ESPERA: 'text-orange-700 dark:text-orange-300', FINALIZADO: 'text-emerald-700 dark:text-emerald-300', ANULADO: 'text-slate-500 dark:text-slate-400' };
 
 export default function WeeklyReportPage() {
+  const [selectedOrder, setSelectedOrder] = useState<WorkOrder | null>(null);
   const [now, setNow] = useState(Date.now);
   const today = plantDay(new Date(now));
   const currentWeek = weekStart(today);
@@ -88,6 +91,7 @@ export default function WeeklyReportPage() {
             <thead className="bg-slate-100 dark:bg-slate-800"><tr><th rowSpan={2} scope="col" className="px-2 py-2 text-left">Estado de OT</th>{report.days.map(day => <th key={day.date} scope="colgroup" colSpan={3} className={`border-l border-slate-200 px-1 py-2 capitalize dark:border-slate-700 ${day.date === today ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200' : ''}`}>{dayLabel(day.date)}{day.date === today ? ' · Hoy' : ''}</th>)}</tr><tr>{report.days.flatMap(day => REPORT_TYPES.map(type => <th key={`${day.date}-${type}`} scope="col" className="px-0.5 py-1.5 font-medium"><abbr title={TYPE_LABELS[type]} className="no-underline">{{ PREVENTIVO: 'Prev.', CORRECTIVO: 'Corr.', SERVICIO: 'Serv.' }[type]}</abbr></th>))}</tr></thead>
             <tbody>{REPORT_STATUSES.map(status => <tr key={status} className="border-t border-slate-100 dark:border-slate-800"><th scope="row" className={`px-2 py-2 text-left ${statusColor[status]}`}>{REPORT_LABELS[status]}</th>{report.days.flatMap(day => REPORT_TYPES.map(type => <td key={`${day.date}-${type}`} className={`px-0.5 py-2 tabular-nums ${day.future ? 'text-slate-400' : ''}`}>{day.future ? '—' : day.counts[status][type]}</td>))}</tr>)}
               <tr className="border-t border-slate-200 bg-slate-50 font-bold dark:border-slate-700 dark:bg-slate-800"><th scope="row" className="px-2 py-2 text-left">Backlog</th>{report.days.map(day => <td key={day.date} colSpan={3} className="border-l border-slate-200 px-1 py-2 dark:border-slate-700">{day.future ? '—' : day.backlog}</td>)}</tr>
+              <tr className="border-t border-slate-200 bg-slate-50 font-bold dark:border-slate-700 dark:bg-slate-800"><th scope="row" className="px-2 py-2 text-left">OT levantadas</th>{report.days.map(day => <td key={day.date} colSpan={3} className="border-l border-slate-200 px-1 py-2 dark:border-slate-700">{day.future ? '—' : day.items.length}</td>)}</tr>
             </tbody>
           </table>
           <p className="px-4 pt-2 text-[10px] text-slate-500 dark:text-slate-400">Prev.: preventivos · Corr.: correctivos · Serv.: servicios</p>
@@ -101,11 +105,12 @@ export default function WeeklyReportPage() {
               <thead><tr><th scope="col" className="px-2 py-2 text-left">Estado</th>{REPORT_TYPES.map(type => <th key={type} scope="col" className="px-1 py-2 font-medium">{TYPE_LABELS[type]}</th>)}</tr></thead>
               <tbody>{REPORT_STATUSES.map(status => <tr key={status} className="border-t border-slate-100 dark:border-slate-800"><th scope="row" className={`px-2 py-1.5 text-left ${statusColor[status]}`}>{REPORT_LABELS[status]}</th>{REPORT_TYPES.map(type => <td key={type} className="px-1 py-1.5 tabular-nums">{day.future ? '—' : day.counts[status][type]}</td>)}</tr>)}
                 <tr className="border-t border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800"><th scope="row" className="px-2 py-2 text-left">Backlog</th><td colSpan={3} className="px-1 py-2 font-bold">{day.future ? '—' : day.backlog}</td></tr>
+                <tr className="border-t border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800"><th scope="row" className="px-2 py-2 text-left">OT levantadas</th><td colSpan={3} className="px-1 py-2 font-bold">{day.future ? '—' : day.items.length}</td></tr>
               </tbody>
             </table>
           </div>)}
         </div>
-        <p className="p-4 text-xs text-slate-500 dark:text-slate-400">Backlog: OT levantadas ese día que siguen pendientes, en proceso o pausadas. No incluye solicitudes de otros días. Los días futuros se muestran con —.</p>
+        <p className="p-4 text-xs text-slate-500 dark:text-slate-400">Backlog: OT levantadas ese día que siguen pendientes, en proceso o pausadas. No incluye solicitudes de otros días. OT levantadas: total de solicitudes creadas ese día, incluidas las invalidadas. Los días futuros se muestran con —.</p>
       </section>
       <section className={`${panel} p-4`}>
         <h2 className="mb-3 text-lg font-bold">Totales semanales</h2>
@@ -122,7 +127,7 @@ export default function WeeklyReportPage() {
           {day.items.length === 0 ? <p className="p-4 text-sm text-slate-500 dark:text-slate-400">{day.future ? 'La actividad aparecerá cuando llegue este día.' : 'Sin solicitudes levantadas este día.'}</p> : <div className="w-full"><table className="w-full table-fixed text-left text-[10px] leading-snug xl:text-[11px] max-sm:block"><colgroup>{[8, 10, 6, 13, 8, 10, 10, 7, 4, 12, 12].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}</colgroup><thead className="max-sm:hidden"><tr>{['Folio', 'Fecha levantamiento', 'Zona', 'Equipo', 'Estado', 'Inicio', 'Finalizado', 'Tiempo reparación', '¿Paró?', 'Técnico asignado', 'Solicitante'].map(label => <th key={label} scope="col" className="px-1.5 py-2 font-semibold text-slate-500 [overflow-wrap:anywhere] dark:text-slate-400">{label}</th>)}</tr></thead><tbody className="max-sm:block">
             {day.items.map(order => { const ms = repairMs(order, now); const minutes = ms === null ? null : Math.floor(ms / 60000); return <tr key={order.id} className="border-t border-slate-100 align-top dark:border-slate-800 max-sm:grid max-sm:grid-cols-2 max-sm:gap-x-3 max-sm:p-3">
               {[
-                ['Folio', <Link className="font-mono font-bold text-emerald-700 hover:underline dark:text-emerald-400" to={`/dashboard?folio=${order.folio}`}>{formatWorkOrderFolio(order.folio)}</Link>],
+                ['Folio', <button type="button" aria-haspopup="dialog" aria-label={`Ver detalles de ${formatWorkOrderFolio(order.folio)}`} className="text-left font-mono font-bold text-emerald-700 hover:underline focus-visible:outline-emerald-600 dark:text-emerald-400" onClick={() => setSelectedOrder(order)}>{formatWorkOrderFolio(order.folio)}</button>],
                 ['Fecha levantamiento', timestamp(order.created_at)],
                 ['Zona', order.zone?.name || '—'],
                 ['Equipo', order.asset?.name || '—'],
@@ -142,5 +147,18 @@ export default function WeeklyReportPage() {
         <p className="text-xs text-slate-500 dark:text-slate-400">Tiempo de reparación: trabajo acumulado, excluyendo pausas; incluye el tramo activo de las OT en proceso.</p>
       </section>
     </>}
+    {selectedOrder && <ErrorBoundary>
+      <WorkOrderDetailModal
+        key={selectedOrder.id}
+        workOrder={selectedOrder}
+        isOpen
+        onClose={() => setSelectedOrder(null)}
+        onUpdate={async (id, changes) => {
+          const result = await updateWorkOrder(id, changes);
+          await load();
+          return result;
+        }}
+      />
+    </ErrorBoundary>}
   </div>;
 }
