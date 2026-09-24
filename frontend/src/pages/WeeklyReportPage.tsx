@@ -75,7 +75,8 @@ export default function WeeklyReportPage() {
       <div><h1 className="text-2xl font-bold sm:text-3xl">Informe semanal</h1><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">OT agrupadas por fecha de levantamiento, con su estado actualizado.</p></div>
       <Link to="/dashboard" className={button}>Órdenes de Trabajo</Link>
     </div>
-    <section className={`${panel} p-4`}>
+    <section className={`${panel} grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-center`}>
+      <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-3">
         <button className={button} onClick={() => selectWeek(addDays(monday, -7))} aria-label="Semana anterior"><ChevronLeft size={18} /></button>
         <label className="text-sm font-semibold">Semana del <input aria-label="Seleccionar fecha de la semana" type="date" value={monday} max={today} onChange={e => selectWeek(e.target.value)} className="ml-2 rounded-lg border border-slate-200 bg-transparent p-2 dark:border-slate-700" /></label>
@@ -85,6 +86,16 @@ export default function WeeklyReportPage() {
       </div>
       <p className="mt-3 font-semibold capitalize">{dayLabel(monday)} al {dayLabel(sunday)} · {sunday.slice(0, 4)}</p>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Hora de planta (Ciudad de México). {data ? `Última actualización: ${timestamp(data.at)}` : 'Consultando datos…'}</p>
+      </div>
+      <div className="border-t border-slate-100 pt-4 text-center dark:border-slate-800 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0" aria-live="polite">
+        <h2 className="text-sm font-bold tracking-wider text-slate-700 dark:text-slate-200">CUMPLIMIENTO</h2>
+        <p className="mt-2 text-4xl font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
+          {data && report.valid > 0 ? `${(report.totals.FINALIZADO / report.valid * 100).toFixed(1)} %` : '—'}
+        </p>
+        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+          {data ? report.valid > 0 ? `${report.totals.FINALIZADO} de ${report.valid} OT válidas finalizadas` : 'Sin OT válidas en esta semana' : loading ? 'Cargando…' : 'Datos no disponibles'}
+        </p>
+      </div>
     </section>
     {error && <div role="alert" className="rounded-xl bg-red-50 p-4 text-red-800 dark:bg-red-950 dark:text-red-200">{error}{data && ' Se muestran los últimos datos recibidos.'}</div>}
     {!data && loading && <p role="status">Cargando informe semanal…</p>}
