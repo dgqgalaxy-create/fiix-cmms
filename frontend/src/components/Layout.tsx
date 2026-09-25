@@ -24,7 +24,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
-  const isWidePage = location.pathname.startsWith('/calendar') || location.pathname.startsWith('/roster');
+  const isWidePage = location.pathname.startsWith('/inventory') || location.pathname.startsWith('/calendar') || location.pathname.startsWith('/roster');
 
   useEffect(() => {
     // Prefetch personal para asignación OT offline (caché en localStorage).

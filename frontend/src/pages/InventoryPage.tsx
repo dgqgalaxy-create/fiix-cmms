@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, AlertTriangle, Ban, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter, DollarSign, Trash2 } from 'lucide-react';
+import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, AlertTriangle, Ban, ShoppingCart, PanelLeftClose, PanelLeftOpen, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter, DollarSign, Trash2 } from 'lucide-react';
 import { 
   getItems, getItemsPage, getItemById, getTransactionsPage, getTransactionsSummary, getCategories, getLocations, getVendors, getInventorySummary, deleteItem, deleteTransaction
 } from '../api/inventory';
@@ -37,6 +37,16 @@ export const InventoryPage = () => {
 
   const [activeTab, setActiveTab] = useState<'items' | 'transactions' | 'categories' | 'locations' | 'vendors'>('items');
   
+  const [catalogNavCollapsed, setCatalogNavCollapsed] = useState(() => {
+    try { return localStorage.getItem('fiix-inventory-nav-collapsed') !== 'false'; }
+    catch { return true; }
+  });
+  const toggleCatalogNav = () => {
+    const next = !catalogNavCollapsed;
+    setCatalogNavCollapsed(next);
+    try { localStorage.setItem('fiix-inventory-nav-collapsed', String(next)); } catch { /* Optional preference storage. */ }
+  };
+
   const [items, setItems] = useState<Item[]>([]);
   const [serverTransactions, setServerTransactions] = useState<InventoryTransaction[]>([]);
   const [categories, setCategories] = useState<ItemCategory[]>([]);
@@ -1023,22 +1033,22 @@ export const InventoryPage = () => {
             {/* Desktop View (Table) */}
             <div className="hidden sm:block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-600">
-                  <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold shadow-md shadow-[#739239]/40 dark:shadow-[#739239]/20 relative z-10">
+                <table className="w-full table-fixed text-left text-xs leading-snug text-slate-600">
+                  <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-bold  relative z-10">
                     <tr>
-                      <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortBy('code'); setSortDirection(sortBy === 'code' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                      <th className="w-24 px-2 py-1.5 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortBy('code'); setSortDirection(sortBy === 'code' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
                         <div className="flex items-center gap-1.5">Código {sortBy === 'code' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
                       </th>
-                      <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortBy('name'); setSortDirection(sortBy === 'name' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                      <th className="px-2 py-1.5 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortBy('name'); setSortDirection(sortBy === 'name' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
                         <div className="flex items-center gap-1.5">Repuesto {sortBy === 'name' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
                       </th>
-                      <th className="px-6 py-4 text-center cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortBy('stock'); setSortDirection(sortBy === 'stock' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                      <th className="w-24 px-2 py-1.5 text-center cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortBy('stock'); setSortDirection(sortBy === 'stock' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
                         <div className="flex items-center justify-center gap-1.5">Stock Actual {sortBy === 'stock' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
                       </th>
-                      <th className="px-6 py-4 hidden md:table-cell cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortBy('category'); setSortDirection(sortBy === 'category' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
+                      <th className="w-32 xl:w-40 px-2 py-1.5 hidden md:table-cell cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortBy('category'); setSortDirection(sortBy === 'category' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
                         <div className="flex items-center gap-1.5">Categoría / Ubic. {sortBy === 'category' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
                       </th>
-                      <th className="px-6 py-4 text-right whitespace-nowrap uppercase tracking-wider text-[11px] font-bold">Acciones</th>
+                      <th className="w-28 px-2 py-1.5 text-right whitespace-nowrap text-[10px] font-bold">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1046,7 +1056,7 @@ export const InventoryPage = () => {
                       <tr>
                         <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
                           <div className="inline-flex items-center gap-2">
-                            <Loader2 size={18} className="animate-spin text-emerald-600" />
+                            <Loader2 size={15} className="animate-spin text-emerald-600" />
                             Cargando repuestos…
                           </div>
                         </td>
@@ -1061,8 +1071,8 @@ export const InventoryPage = () => {
                         onClick={() => itemSelectionMode ? toggleItemSelection(item.id) : handleOpenItemModal(item)}
                         onContextMenu={(e) => { if (!itemSelectionMode) { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, item }); } }}
                       >
-                        <td className="px-6 py-4 font-mono text-slate-500 font-medium">
-                          <div className="flex items-center gap-3">
+                        <td className="px-2 py-1.5 font-mono text-[10px] text-slate-500 font-medium [overflow-wrap:anywhere]">
+                          <div className="flex items-center gap-2">
                             {itemSelectionMode && (
                               <input
                                 type="checkbox"
@@ -1075,75 +1085,75 @@ export const InventoryPage = () => {
                             {item.internal_code}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
+                        <td className="px-2 py-1.5">
+                          <div className="flex items-center gap-2">
                             <div className="flex-shrink-0">
                               {item.image_url ? (
-                                <img src={mediaUrl(item.image_url)} alt={item.name} className="w-10 h-10 object-cover rounded border border-slate-200" />
+                                <img src={mediaUrl(item.image_url)} alt={item.name} className="w-7 h-7 object-cover rounded border border-slate-200" />
                               ) : (
-                                <div className="w-10 h-10 bg-slate-100 rounded flex items-center justify-center text-slate-400">
-                                  <Package size={20} />
+                                <div className="w-7 h-7 bg-slate-100 rounded flex items-center justify-center text-slate-400">
+                                  <Package size={16} />
                                 </div>
                               )}
                             </div>
-                            <div>
-                              <div className="font-semibold text-slate-900 flex items-center gap-2 flex-wrap">
-                                {item.name}
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate font-semibold text-slate-900" title={item.name}>{item.name}</div>
+                              <div className="flex flex-wrap items-center gap-1">
                                 {!item.is_active && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700">Descontinuado</span>
+                                  <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700">Descontinuado</span>
                                 )}
                                 {!item.vendor_id && item.stock <= item.minimum_inventory && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                  <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
                                     Sin proveedor
                                   </span>
                                 )}
                               </div>
-                              <div className="text-xs text-slate-500 truncate max-w-[200px]">{item.description}</div>
+                              <div className="truncate text-[10px] text-slate-500" title={item.description || undefined}>{item.description}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="inline-flex items-center justify-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-                            <span className={`font-bold text-base ${item.stock <= item.minimum_inventory ? 'text-rose-600' : 'text-emerald-600'}`}>
+                        <td className="px-2 py-1.5 text-center">
+                          <div className="inline-flex items-center justify-center gap-1.5 bg-slate-50 px-1.5 py-0.5 rounded-lg border border-slate-200">
+                            <span className={`font-bold text-sm ${item.stock <= item.minimum_inventory ? 'text-rose-600' : 'text-emerald-600'}`}>
                               {item.stock}
                             </span>
                             <span className="text-xs text-slate-400 font-medium">{item.uom}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 hidden md:table-cell">
-                          <div className="flex flex-col gap-1">
-                            <span className="inline-flex w-max items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                              {item.category?.name || 'Sin Cat.'}
+                        <td className="px-2 py-1.5 hidden md:table-cell">
+                          <div className="flex min-w-0 flex-col gap-0.5">
+                            <span className="inline-flex max-w-full items-center px-1 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                              <span className="truncate" title={item.category?.name || 'Sin Cat.'}>{item.category?.name || 'Sin Cat.'}</span>
                             </span>
                             <span className="text-xs text-slate-500 flex items-center gap-1">
-                              <MapPin size={12} /> {item.location?.name || 'N/A'}
+                              <MapPin size={11} className="shrink-0" /> <span className="truncate" title={item.location?.name || 'N/A'}>{item.location?.name || 'N/A'}</span>
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                        <td className="px-2 py-1.5 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                             <button 
                               onClick={(e) => { e.stopPropagation(); handleOpenTransactionModal(item.id); }}
-                              className="inline-flex min-h-11 min-w-11 items-center justify-center p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-100"
+                              className="inline-flex min-h-8 min-w-8 items-center justify-center p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-100"
                               title="Realizar Movimiento"
                             >
-                              <ArrowRightLeft size={18} />
+                              <ArrowRightLeft size={15} />
                             </button>
                             {canManage && (
                               <>
                                 <button 
                                   onClick={() => setQrItem(item)}
-                                  className="inline-flex min-h-11 min-w-11 items-center justify-center p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-100"
+                                  className="inline-flex min-h-8 min-w-8 items-center justify-center p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-100"
                                   title="Imprimir QR"
                                 >
-                                  <QrCode size={18} />
+                                  <QrCode size={15} />
                                 </button>
                                 <button 
                                   onClick={() => handleOpenItemModal(item, { edit: true })}
-                                  className="inline-flex min-h-11 min-w-11 items-center justify-center p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                                  className="inline-flex min-h-8 min-w-8 items-center justify-center p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
                                   title="Editar"
                                 >
-                                  <Edit2 size={18} />
+                                  <Edit2 size={15} />
                                 </button>
                               </>
                             )}
@@ -1853,14 +1863,20 @@ export const InventoryPage = () => {
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className="w-full lg:w-64 flex-shrink-0">
-          <nav className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
+      <div className="flex flex-col gap-3 lg:flex-row">
+        <div className={`w-full flex-shrink-0 ${catalogNavCollapsed ? 'lg:w-12' : 'lg:w-44'}`}>
+          <button type="button" onClick={toggleCatalogNav} aria-label={catalogNavCollapsed ? 'Expandir navegación de inventario' : 'Plegar navegación de inventario'} aria-expanded={!catalogNavCollapsed} aria-controls="inventory-catalog-nav" title={catalogNavCollapsed ? 'Expandir navegación de inventario' : 'Plegar navegación de inventario'} className="mb-2 hidden h-9 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-500 hover:text-slate-900 lg:flex">
+            {catalogNavCollapsed ? <PanelLeftOpen size={16} /> : <><PanelLeftClose size={16} /> Plegar menú</>}
+          </button>
+          <nav id="inventory-catalog-nav" aria-label="Secciones de inventario" className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all whitespace-nowrap ${
+                title={tab.label}
+                aria-label={tab.label}
+                aria-current={activeTab === tab.id ? 'page' : undefined}
+                className={`flex items-center gap-2 px-3 py-2 text-xs rounded-lg transition-colors whitespace-nowrap ${catalogNavCollapsed ? 'lg:justify-center lg:px-2' : ''} ${
                   activeTab === tab.id 
                     ? 'bg-white shadow-sm border border-slate-200 text-slate-900 font-semibold' 
                     : 'text-slate-500 hover:bg-white/60 hover:text-slate-700 font-medium'
@@ -1869,7 +1885,7 @@ export const InventoryPage = () => {
                 <div className={`${activeTab === tab.id ? 'text-blue-600' : 'text-slate-400'}`}>
                   {tab.icon}
                 </div>
-                {tab.label}
+                <span className={catalogNavCollapsed ? 'lg:hidden' : ''}>{tab.label}</span>
               </button>
             ))}
           </nav>
@@ -1877,7 +1893,7 @@ export const InventoryPage = () => {
 
         <div className="flex-1 min-w-0">
           {activeTab === 'items' && (
-            <div className="mb-6 space-y-3">
+            <div className="mb-3 space-y-2">
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1 bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex items-center">
                   <div className="pl-3 pr-2 text-slate-400">
@@ -1886,7 +1902,7 @@ export const InventoryPage = () => {
                   <input
                     type="text"
                     placeholder="Buscar en repuestos..."
-                    className="w-full bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 px-2 py-1.5 outline-none"
+                    className="w-full bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 px-2 py-1 text-sm outline-none"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -1986,7 +2002,7 @@ export const InventoryPage = () => {
               <input
                 type="text"
                 placeholder="Buscar en ubicaciones..."
-                className="w-full bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 px-2 py-1.5 outline-none"
+                className="w-full bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 px-2 py-1 text-sm outline-none"
                 value={locationSearchTerm}
                 onChange={(e) => setLocationSearchTerm(e.target.value)}
               />
