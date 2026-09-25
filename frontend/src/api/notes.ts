@@ -104,9 +104,7 @@ export const listPersonalNotes = async (includeDone = false): Promise<PersonalNo
 };
 
 export const createPersonalNote = async (data: {
-  title: string;
-  body?: string;
-  remind_at?: string | null;
+  content: string;
 }): Promise<PersonalNote> => {
   const res = await api.post('/notes/personal', data);
   return res.data;
@@ -114,14 +112,9 @@ export const createPersonalNote = async (data: {
 
 export const updatePersonalNote = async (
   id: string,
-  data: Partial<{ title: string; body: string | null; remind_at: string | null; is_done: boolean }>
+  data: Partial<{ content: string; is_done: boolean }>
 ): Promise<PersonalNote> => {
   const res = await api.put(`/notes/personal/${id}`, data);
-  return res.data;
-};
-
-export const snoozePersonalNote = async (id: string, mode: SnoozeMode): Promise<PersonalNote> => {
-  const res = await api.post(`/notes/personal/${id}/snooze`, { mode });
   return res.data;
 };
 

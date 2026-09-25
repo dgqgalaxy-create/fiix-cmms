@@ -17,33 +17,11 @@ async function notifyUsers(userIds: string[], title: string, message: string, li
 }
 
 /**
- * Envía recordatorios in-app + push para notas personales y pendientes vencidos
+ * Envía recordatorios in-app + push para pendientes operativos vencidos
  * que aún no han sido avisados. Idempotente vía reminded_at.
  */
 export async function runNotesReminders(now = new Date()): Promise<{ notes: number; tasks: number }> {
-  const dueNotes = await prisma.personalNote.findMany({
-    where: {
-      is_done: false,
-      remind_at: { lte: now },
-      reminded_at: null,
-    },
-    take: 100,
-  });
-
-  let notes = 0;
-  for (const note of dueNotes) {
-    await notifyUsers(
-      [note.user_id],
-      'Recordatorio de nota',
-      note.title,
-      '/notes'
-    );
-    await prisma.personalNote.update({
-      where: { id: note.id },
-      data: { reminded_at: now },
-    });
-    notes += 1;
-  }
+  const notes = 0; // Personal sticky notes never schedule notifications.
 
   const dueTasks = await prisma.operationalTask.findMany({
     where: {

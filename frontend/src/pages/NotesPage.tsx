@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   StickyNote,
-  Plus,
   Check,
   Trash2,
   RefreshCw,
@@ -18,10 +17,6 @@ import {
 } from 'lucide-react';
 import {
   listPersonalNotes,
-  createPersonalNote,
-  updatePersonalNote,
-  deletePersonalNote,
-  snoozePersonalNote,
   listOperationalTasks,
   createOperationalTask,
   updateOperationalTask,
@@ -40,6 +35,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatDateTime } from '../utils/dateUtils';
 import { AnnouncementsPanel } from '../components/AnnouncementsPanel';
+import { PersonalNotesBoard } from '../components/notes/PersonalNotesBoard';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 
 type Tab = 'notes' | 'tasks' | 'avisos';
@@ -92,11 +88,6 @@ export default function NotesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [noteTitle, setNoteTitle] = useState('');
-  const [noteBody, setNoteBody] = useState('');
-  const [noteRemind, setNoteRemind] = useState('');
-  const [editingNote, setEditingNote] = useState<PersonalNote | null>(null);
 
   const [taskTitle, setTaskTitle] = useState('');
   const [taskBody, setTaskBody] = useState('');
@@ -221,48 +212,6 @@ export default function NotesPage() {
     }
   };
 
-  const handleSaveNote = async () => {
-    if (!noteTitle.trim()) {
-      setError('Escribe un título para la nota');
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    try {
-      const payload = {
-        title: noteTitle.trim(),
-        body: noteBody.trim() || null,
-        remind_at: fromLocalInputValue(noteRemind),
-      };
-      if (editingNote) {
-        await updatePersonalNote(editingNote.id, payload);
-      } else {
-        await createPersonalNote({
-          title: payload.title,
-          body: payload.body || undefined,
-          remind_at: payload.remind_at,
-        });
-      }
-      setNoteTitle('');
-      setNoteBody('');
-      setNoteRemind('');
-      setEditingNote(null);
-      await load(true);
-    } catch (err: any) {
-      setError(err?.response?.data?.error || 'No se pudo guardar la nota');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const startEditNote = (note: PersonalNote) => {
-    setEditingNote(note);
-    setNoteTitle(note.title);
-    setNoteBody(note.body || '');
-    setNoteRemind(toLocalInputValue(note.remind_at));
-    setTab('notes');
-  };
-
   const handleSaveTask = async () => {
     if (!canManageTasks) {
       setError('Solo Administradores y Gestionadores pueden crear o editar pendientes');
@@ -373,7 +322,7 @@ export default function NotesPage() {
                 onChange={(e) => setIncludeDone(e.target.checked)}
                 className="rounded border-slate-300"
               />
-              Completados
+              {tab === 'notes' ? 'Mostrar archivadas' : 'Completados'}
             </label>
           )}
           <button
@@ -453,191 +402,7 @@ export default function NotesPage() {
         </div>
       )}
 
-      {tab === 'notes' && (
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-          {canWriteOps ? (
-          <article className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-                {editingNote ? <Pencil size={15} /> : <Plus size={15} />}
-                {editingNote ? 'Editar nota' : 'Nueva nota'}
-              </h2>
-              {editingNote && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingNote(null);
-                    setNoteTitle('');
-                    setNoteBody('');
-                    setNoteRemind('');
-                  }}
-                  className="text-xs text-slate-500 hover:text-slate-800"
-                >
-                  Cancelar
-                </button>
-              )}
-            </div>
-            <input
-              value={noteTitle}
-              onChange={(e) => setNoteTitle(e.target.value)}
-              placeholder="Título"
-              className="mt-2.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-            />
-            <textarea
-              value={noteBody}
-              onChange={(e) => setNoteBody(e.target.value)}
-              placeholder="Detalle (opcional)"
-              rows={2}
-              className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-            />
-            <label className="mt-2 block text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-              Recordatorio
-              <input
-                type="datetime-local"
-                value={noteRemind}
-                onChange={(e) => setNoteRemind(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => void handleSaveNote()}
-              disabled={saving}
-              className="mt-2.5 w-full rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-50"
-            >
-              {saving ? 'Guardando…' : editingNote ? 'Guardar cambios' : 'Guardar nota'}
-            </button>
-          </article>
-          ) : (
-            <article className="rounded-2xl border border-violet-200 bg-violet-50/60 p-3 sm:p-4 text-sm text-violet-900 dark:border-violet-900/40 dark:bg-violet-950/30 dark:text-violet-200">
-              Como Observador puedes consultar avisos y pendientes asignados, pero no crear ni editar notas.
-            </article>
-          )}
-
-          <div className={`space-y-1.5 sm:space-y-2 ${canWriteOps ? '' : 'lg:col-span-2'}`}>
-            {loading && notes.length === 0 ? (
-              <p className="text-sm text-slate-400 py-6 text-center">Cargando…</p>
-            ) : notes.length === 0 ? (
-              <p className="text-sm text-slate-400 py-6 text-center">Sin notas todavía.</p>
-            ) : (
-              notes.map((note) => {
-                const tone = dueTone(note.remind_at);
-                return (
-                  <article
-                    key={note.id}
-                    className={`rounded-xl border px-2.5 py-2 sm:px-3 sm:py-2.5 shadow-sm ${cardToneClass(tone, note.is_done)}`}
-                  >
-                    <div className="flex items-start gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p
-                          className={`text-sm font-bold text-slate-900 dark:text-slate-100 ${
-                            note.is_done ? 'line-through' : ''
-                          }`}
-                        >
-                          {note.title}
-                        </p>
-                        {note.body && (
-                          <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap line-clamp-3">
-                            {note.body}
-                          </p>
-                        )}
-                        {note.remind_at && (
-                          <p
-                            className={`mt-1 text-[11px] font-medium ${
-                              tone === 'overdue'
-                                ? 'text-rose-700 dark:text-rose-300'
-                                : tone === 'soon'
-                                  ? 'text-amber-800 dark:text-amber-300'
-                                  : 'text-amber-700 dark:text-amber-300'
-                            }`}
-                          >
-                            {tone === 'overdue' ? 'Vencido · ' : tone === 'soon' ? 'Pronto · ' : ''}
-                            {formatDateTime(note.remind_at)}
-                            {note.reminded_at ? ' · avisado' : ''}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex shrink-0 flex-wrap justify-end gap-0.5">
-                        {canWriteOps && !note.is_done && (
-                          <>
-                            <button
-                              type="button"
-                              title="Editar"
-                              onClick={() => startEditNote(note)}
-                              className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"
-                            >
-                              <Pencil size={15} />
-                            </button>
-                            <button
-                              type="button"
-                              title="+1 hora"
-                              onClick={() =>
-                                void snoozePersonalNote(note.id, '1h').then(() => load(true))
-                              }
-                              className="rounded-lg p-1.5 text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/40"
-                            >
-                              <AlarmClock size={15} />
-                            </button>
-                            <button
-                              type="button"
-                              title="Mañana 9:00"
-                              onClick={() =>
-                                void snoozePersonalNote(note.id, 'tomorrow').then(() => load(true))
-                              }
-                              className="rounded-lg px-1.5 py-1 text-[10px] font-bold text-amber-800 hover:bg-amber-50 dark:text-amber-300"
-                            >
-                              +1d
-                            </button>
-                            <button
-                              type="button"
-                              title="Hecha"
-                              onClick={() =>
-                                void updatePersonalNote(note.id, { is_done: true }).then(() =>
-                                  load(true)
-                                )
-                              }
-                              className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                            >
-                              <Check size={15} />
-                            </button>
-                          </>
-                        )}
-                        {canWriteOps && note.is_done && (
-                          <button
-                            type="button"
-                            title="Reabrir"
-                            onClick={() =>
-                              void updatePersonalNote(note.id, { is_done: false }).then(() =>
-                                load(true)
-                              )
-                            }
-                            className="rounded-lg p-1.5 text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40"
-                          >
-                            <RotateCcw size={15} />
-                          </button>
-                        )}
-                        {canWriteOps && (
-                        <button
-                          type="button"
-                          title="Eliminar"
-                          onClick={() => {
-                            if (!window.confirm('¿Eliminar esta nota?')) return;
-                            void deletePersonalNote(note.id).then(() => load(true));
-                          }}
-                          className="rounded-lg p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
+      {tab === 'notes' && <PersonalNotesBoard notes={notes} loading={loading} canWrite={canWriteOps} onChanged={() => load(true)} />}
 
       {tab === 'tasks' && (
         <div className="space-y-3">

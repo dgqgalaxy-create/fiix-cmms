@@ -6,7 +6,6 @@ import {
   createPersonalNote,
   updatePersonalNote,
   deletePersonalNote,
-  snoozePersonalNote,
   listOperationalTasks,
   createOperationalTask,
   updateOperationalTask,
@@ -31,7 +30,6 @@ router.get('/summary', notesSummary);
 router.get('/personal', listPersonalNotes);
 router.post('/personal', requireWritable, createPersonalNote);
 router.put('/personal/:id', requireWritable, updatePersonalNote);
-router.post('/personal/:id/snooze', requireWritable, snoozePersonalNote);
 router.delete('/personal/:id', requireWritable, deletePersonalNote);
 
 router.get('/tasks', listOperationalTasks);

@@ -53,7 +53,7 @@ export const listPersonalNotes = async (req: AuthRequest, res: Response) => {
         user_id: userId,
         ...(includeDone ? {} : { is_done: false }),
       },
-      orderBy: [{ is_done: 'asc' }, { remind_at: 'asc' }, { updated_at: 'desc' }],
+      orderBy: [{ is_done: 'asc' }, { updated_at: 'desc' }],
       take: 200,
     });
     res.json(notes);
@@ -68,22 +68,20 @@ export const createPersonalNote = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const title = typeof req.body?.title === 'string' ? req.body.title.trim() : '';
-    if (!title) return res.status(400).json({ error: 'El título es obligatorio' });
-
-    const body =
-      typeof req.body?.body === 'string' ? req.body.body.trim().slice(0, 4000) || null : null;
-    const remindAt = parseOptionalDate(req.body?.remind_at);
-    if (req.body?.remind_at != null && req.body.remind_at !== '' && remindAt === undefined) {
-      return res.status(400).json({ error: 'Fecha de recordatorio inválida' });
+    const content = req.body?.content;
+    if (content !== undefined && (typeof content !== 'string' || !content.trim() || content.length > 10000)) {
+      return res.status(400).json({ error: 'Escribe una nota de hasta 10000 caracteres.' });
     }
+    const title = content !== undefined ? '' : typeof req.body?.title === 'string' ? req.body.title.trim().slice(0, 200) : '';
+    const body = content !== undefined ? content : typeof req.body?.body === 'string' ? req.body.body.slice(0, 4000) : null;
+    if (!title && !body?.trim()) return res.status(400).json({ error: 'Escribe el contenido de la nota.' });
 
     const note = await prisma.personalNote.create({
       data: {
         user_id: userId,
         title: title.slice(0, 200),
         body,
-        remind_at: remindAt ?? null,
+        remind_at: null,
       },
     });
     emitNotes();
@@ -122,16 +120,15 @@ export const updatePersonalNote = async (req: AuthRequest, res: Response) => {
       data.body =
         typeof req.body.body === 'string' ? req.body.body.trim().slice(0, 4000) || null : null;
     }
-    if (req.body?.remind_at !== undefined) {
-      const remindAt = parseOptionalDate(req.body.remind_at);
-      if (req.body.remind_at !== null && req.body.remind_at !== '' && remindAt === undefined) {
-        return res.status(400).json({ error: 'Fecha de recordatorio inválida' });
+    data.remind_at = null;
+    data.reminded_at = null;
+    if (req.body?.content !== undefined) {
+      const content = req.body.content;
+      if (typeof content !== 'string' || !content.trim() || content.length > 10000) {
+        return res.status(400).json({ error: 'Escribe una nota de hasta 10000 caracteres.' });
       }
-      data.remind_at = remindAt ?? null;
-      // Si cambian la fecha, permitir re-avisar
-      if (remindAt && (!existing.remind_at || remindAt.getTime() !== existing.remind_at.getTime())) {
-        data.reminded_at = null;
-      }
+      data.title = '';
+      data.body = content;
     }
     if (typeof req.body?.is_done === 'boolean') {
       data.is_done = req.body.is_done;
@@ -509,39 +506,6 @@ export const deleteOperationalTask = async (req: AuthRequest, res: Response) => 
   } catch (error) {
     console.error('deleteOperationalTask', error);
     res.status(500).json({ error: 'Error al eliminar pendiente' });
-  }
-};
-
-/** Posponer recordatorio de nota personal: 1h o mañana 09:00 México. */
-export const snoozePersonalNote = async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.user?.userId;
-    const id = req.params.id as string;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-
-    const existing = await prisma.personalNote.findUnique({ where: { id } });
-    if (!existing || existing.user_id !== userId) {
-      return res.status(404).json({ error: 'Nota no encontrada' });
-    }
-    if (existing.is_done) {
-      return res.status(400).json({ error: 'La nota ya está marcada como hecha' });
-    }
-
-    const mode = String(req.body?.mode || '1h');
-    const next = computeSnoozeAt(mode);
-    if (!next) {
-      return res.status(400).json({ error: 'Modo de snooze inválido (usa 1h o tomorrow)' });
-    }
-
-    const note = await prisma.personalNote.update({
-      where: { id },
-      data: { remind_at: next, reminded_at: null, is_done: false },
-    });
-    emitNotes();
-    res.json(note);
-  } catch (error) {
-    console.error('snoozePersonalNote', error);
-    res.status(500).json({ error: 'Error al posponer recordatorio' });
   }
 };
 
