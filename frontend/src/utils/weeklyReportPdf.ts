@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import type { WorkOrder } from '../api/workOrders';
 import { formatWorkOrderFolio } from './folio';
-import { addDays, REPORT_LABELS, REPORT_STATUSES, REPORT_TYPES, REPORT_TZ, repairMs, weeklyCompletions, weeklyReport } from './weeklyReport';
+import { addDays, REPORT_LABELS, REPORT_STATUSES, REPORT_TYPES, REPORT_TZ, repairMs, weekNumber, weeklyCompletions, weeklyReport } from './weeklyReport';
 
 export interface WeeklyPdfInput {
   monday: string;
@@ -30,6 +30,8 @@ export function buildWeeklyReportPdf(input: WeeklyPdfInput) {
   };
   const header = () => {
     text('Informe semanal', 12, 15, 18, true);
+    text('SEMANA', 190, 13, 10, true);
+    text(String(weekNumber(monday)), 195, 23, 19, true);
     text(`${monday} al ${addDays(monday, 6)} | Hora de planta: Ciudad de México`, 12, 22);
     text(`Datos actualizados: ${dateTime(updatedAt)}`, 12, 28, 8);
     doc.setDrawColor('#cbd5e1'); doc.line(12, 32, 285, 32);

@@ -30,3 +30,16 @@ test('large report paginates without losing folios or oversized cell content', (
   assert.ok(pdf.includes('50.0 %'));
   if (process.env.PDF_SAMPLE) writeFileSync(process.env.PDF_SAMPLE, Buffer.from(doc.output('arraybuffer')));
 });
+
+
+test('PDF header uses selected ISO week on every page, including year boundaries', () => {
+  for (const [monday, number] of [['2026-09-28', 40], ['2026-09-21', 39], ['2026-12-28', 53], ['2027-01-04', 1]]) {
+    const doc = buildWeeklyReportPdf({ ...base, monday });
+    for (const page of doc.internal.pages.slice(1)) {
+      const content = page.join('\n');
+      assert.ok(content.includes('(SEMANA) Tj'));
+      assert.ok(content.includes(`(${number}) Tj`));
+    }
+    if (process.env.PDF_WEEK_SAMPLE && number === 40) writeFileSync(process.env.PDF_WEEK_SAMPLE, Buffer.from(doc.output('arraybuffer')));
+  }
+});
