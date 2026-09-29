@@ -7,7 +7,7 @@ import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatWorkOrderFolio } from '../utils/folio';
-import { addDays, plantDay, weekStart, weekQuery, weeklyReport, weeklyCompletions, repairMs, REPORT_TZ, REPORT_STATUSES, REPORT_TYPES, REPORT_LABELS, TYPE_LABELS } from '../utils/weeklyReport';
+import { addDays, plantDay, weekStart, weekNumber, weekQuery, weeklyReport, weeklyCompletions, repairMs, REPORT_TZ, REPORT_STATUSES, REPORT_TYPES, REPORT_LABELS, TYPE_LABELS } from '../utils/weeklyReport';
 
 const dayLabel = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString('es-MX', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'short' });
 const timestamp = (value?: string) => value ? new Date(value).toLocaleString('es-MX', { timeZone: REPORT_TZ, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
@@ -96,7 +96,7 @@ export default function WeeklyReportPage() {
         <Link to="/dashboard" className={button}>Órdenes de Trabajo</Link>
       </div>
     </div>
-    <section className={`${panel} grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-center`}>
+    <section className={`${panel} grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-center`}>
       <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-3">
         <button className={button} onClick={() => selectWeek(addDays(monday, -7))} aria-label="Semana anterior"><ChevronLeft size={18} /></button>
@@ -108,7 +108,12 @@ export default function WeeklyReportPage() {
       <p className="mt-3 font-semibold capitalize">{dayLabel(monday)} al {dayLabel(sunday)} · {sunday.slice(0, 4)}</p>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Hora de planta (Ciudad de México). {data ? `Última actualización: ${timestamp(data.at)}` : 'Consultando datos…'}</p>
       </div>
-      <div className="border-t border-slate-100 pt-4 text-center dark:border-slate-800 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0" aria-live="polite">
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-3 border-t border-slate-100 pt-4 text-center dark:border-slate-800 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0" aria-live="polite">
+        <div className="border-r border-slate-100 pr-3 dark:border-slate-800">
+          <h2 className="text-sm font-bold tracking-wider text-slate-700 dark:text-slate-200">SEMANA</h2>
+          <p className="mt-2 text-4xl font-extrabold tabular-nums text-slate-800 dark:text-slate-100">{weekNumber(monday)}</p>
+        </div>
+        <div className="min-w-0">
         <h2 className="text-sm font-bold tracking-wider text-slate-700 dark:text-slate-200">CUMPLIMIENTO</h2>
         <p className="mt-2 text-4xl font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
           {data && report.valid > 0 ? `${(report.totals.FINALIZADO / report.valid * 100).toFixed(1)} %` : '—'}
@@ -116,6 +121,7 @@ export default function WeeklyReportPage() {
         <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
           {data ? report.valid > 0 ? `${report.totals.FINALIZADO} de ${report.valid} OT válidas finalizadas` : 'Sin OT válidas en esta semana' : loading ? 'Cargando…' : 'Datos no disponibles'}
         </p>
+        </div>
       </div>
     </section>
     {exportError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{exportError}</p>}

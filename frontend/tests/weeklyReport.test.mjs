@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import ts from 'typescript';
 const source = readFileSync(new URL('../src/utils/weeklyReport.ts', import.meta.url), 'utf8');
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } }).outputText;
-const { plantDay, weekStart, addDays, weeklyReport, repairMs, weekQuery, weeklyCompletions } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
+const { plantDay, weekStart, weekNumber, addDays, weeklyReport, repairMs, weekQuery, weeklyCompletions } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
 const order = (values = {}) => ({ id: 'one', created_at: '2026-09-21T15:00:00Z', status: 'PENDIENTE', maintenance_type: 'CORRECTIVO', ...values });
 
 test('plant timezone and Monday weeks handle midnight and year boundaries', () => {
@@ -62,4 +62,14 @@ test('completion chart groups by completion day and type, including older reques
   assert.equal(rows[3].PREVENTIVO, 1);
   assert.equal(rows[2].SERVICIO, 1);
   assert.equal(rows.reduce((sum, row) => sum + row.PREVENTIVO + row.CORRECTIVO + row.SERVICIO, 0), 3);
+});
+
+
+test('ISO week number follows selected dates including year boundaries', () => {
+  assert.equal(weekNumber('2026-09-29'), 40);
+  assert.equal(weekNumber('2026-09-21'), 39);
+  assert.equal(weekNumber('2026-10-04'), 40);
+  assert.equal(weekNumber('2027-01-01'), 53);
+  assert.equal(weekNumber('2027-01-04'), 1);
+  assert.equal(weekNumber('2024-12-30'), 1);
 });

@@ -18,6 +18,13 @@ export function addDays(day: string, count: number): string {
 export function weekStart(day: string): string {
   return addDays(day, -((new Date(`${day}T12:00:00Z`).getUTCDay() + 6) % 7));
 }
+/** ISO weeks start on Monday; the first week contains January 4. */
+export function weekNumber(day: string): number {
+  const monday = weekStart(day);
+  const year = addDays(monday, 3).slice(0, 4);
+  const firstMonday = weekStart(`${year}-01-04`);
+  return 1 + Math.round((Date.parse(`${monday}T12:00:00Z`) - Date.parse(`${firstMonday}T12:00:00Z`)) / (7 * 86400000));
+}
 /** Convert a civil plant midnight to an instant, including historical DST. */
 export function plantMidnight(day: string): number {
   const wall = Date.parse(`${day}T00:00:00Z`);
