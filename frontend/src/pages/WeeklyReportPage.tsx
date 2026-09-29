@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, RefreshCw } from 'lucide-react';
 import { getWorkOrders, updateWorkOrder, type WorkOrder } from '../api/workOrders';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -27,6 +27,8 @@ export default function WeeklyReportPage() {
   const [loaded, setLoaded] = useState<{ week: string; orders: WorkOrder[]; completed: WorkOrder[]; at: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
   const controller = useRef<AbortController | null>(null);
 
   const load = useCallback(async () => {
@@ -70,10 +72,29 @@ export default function WeeklyReportPage() {
     if (week <= currentWeek) setSelectedWeek(week === currentWeek ? null : week);
   };
 
+  const downloadPdf = async () => {
+    if (!data || loading || exporting) return;
+    setExporting(true);
+    setExportError('');
+    try {
+      const { downloadWeeklyReportPdf } = await import('../utils/weeklyReportPdf');
+      downloadWeeklyReportPdf({ monday, today, orders: data.orders, completed: data.completed, updatedAt: data.at, now });
+    } catch {
+      setExportError('No se pudo generar el PDF. Intenta descargarlo nuevamente.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return <div className="space-y-6 text-slate-800 dark:text-slate-100">
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div><h1 className="text-2xl font-bold sm:text-3xl">Informe semanal</h1><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">OT agrupadas por fecha de levantamiento, con su estado actualizado.</p></div>
-      <Link to="/dashboard" className={button}>Órdenes de Trabajo</Link>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className={`${button} inline-flex items-center gap-2`} onClick={() => void downloadPdf()} disabled={!data || loading || exporting || !!error}>
+          <Download size={16} />{exporting ? 'Generando PDF…' : 'Descargar PDF'}
+        </button>
+        <Link to="/dashboard" className={button}>Órdenes de Trabajo</Link>
+      </div>
     </div>
     <section className={`${panel} grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-center`}>
       <div className="min-w-0">
@@ -97,6 +118,7 @@ export default function WeeklyReportPage() {
         </p>
       </div>
     </section>
+    {exportError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{exportError}</p>}
     {error && <div role="alert" className="rounded-xl bg-red-50 p-4 text-red-800 dark:bg-red-950 dark:text-red-200">{error}{data && ' Se muestran los últimos datos recibidos.'}</div>}
     {!data && loading && <p role="status">Cargando informe semanal…</p>}
     {data && <>
