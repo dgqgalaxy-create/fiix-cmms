@@ -7,11 +7,12 @@ import { ContextMenu } from './common/ContextMenu';
 
 interface Props {
   requesters: Requester[];
+  emptyMessage?: string;
   onEdit: (requester: Requester) => void;
   onDelete: (id: string) => void;
 }
 
-export const RequestersTable = ({ requesters, onEdit, onDelete }: Props) => {
+export const RequestersTable = ({ requesters, onEdit, onDelete, emptyMessage = 'No hay solicitantes registrados.' }: Props) => {
   const [sortField, setSortField] = useState<'name' | 'email' | 'department' | 'date'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; requester: Requester } | null>(null);
@@ -62,7 +63,7 @@ export const RequestersTable = ({ requesters, onEdit, onDelete }: Props) => {
             {requesters.length === 0 ? (
               <tr>
                 <td colSpan={5} className="p-8 text-center text-slate-500 dark:text-slate-400">
-                  No hay solicitantes registrados.
+                  {emptyMessage}
                 </td>
               </tr>
             ) : (

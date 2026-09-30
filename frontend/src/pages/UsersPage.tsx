@@ -33,6 +33,7 @@ export const UsersPage = () => {
   
   const [showInactive, setShowInactive] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [requesterSearch, setRequesterSearch] = useState('');
 
   // Vista del Directorio: tarjetas (default) o tabla; se guarda por usuario.
   const viewKey = `fiix_users_view_v1_${user?.userId ?? user?.id ?? 'anon'}`;
@@ -192,6 +193,8 @@ export const UsersPage = () => {
   };
 
   const onDutyCount = users.filter(person => person.is_active && rosterStatuses.get(person.id)?.onDuty).length;
+  const normalizeName = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const filteredRequesters = requesters.filter(person => normalizeName(person.name).includes(normalizeName(requesterSearch)));
   let filteredUsers = [...users];
   
   if (!showInactive) {
@@ -352,14 +355,24 @@ export const UsersPage = () => {
           )}
         </>
       ) : (
-        <RequestersTable 
-          requesters={requesters}
+        <>
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <div className="relative w-full sm:w-80">
+            <Search size={18} className="pointer-events-none absolute left-3 top-2.5 text-slate-400" />
+            <input type="search" aria-label="Buscar solicitantes por nombre" placeholder="Buscar solicitante por nombre..." value={requesterSearch} onChange={e => setRequesterSearch(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" />
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400" aria-live="polite">{filteredRequesters.length} de {requesters.length} solicitantes</p>
+        </div>
+        <RequestersTable
+          requesters={filteredRequesters}
+          emptyMessage={requesterSearch.trim() ? 'No hay solicitantes que coincidan con la búsqueda.' : undefined}
           onEdit={hasPermission('MANAGE_USERS') ? (r) => {
             setSelectedRequester(r);
             setIsRequesterModalOpen(true);
           } : () => {}}
           onDelete={hasPermission('MANAGE_USERS') ? handleDeleteRequester : () => {}}
         />
+        </>
       )}
 
       <UserModal 

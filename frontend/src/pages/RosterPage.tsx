@@ -111,11 +111,13 @@ export const RosterPage = () => {
     fetchData();
   }, [currentDate]);
 
-  useSocketRefresh('refresh_roster', () => { void fetchData(true); });
+  useSocketRefresh(['refresh_roster', 'refresh_users'], () => { void fetchData(true); });
+
+  const activeTechnicians = (data?.technicians || []).filter(person => person.is_active);
 
   const handleAssignPattern = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser || !selectedPattern || !patternStartDate) return;
+    if (!activeTechnicians.some(person => person.id === selectedUser) || !selectedPattern || !patternStartDate) return;
     
     await assignPattern({
       user_id: selectedUser,
@@ -154,7 +156,7 @@ export const RosterPage = () => {
 
   const handleDropFromOutside = useCallback(
     ({ start }: { start: Date, end: Date, allDay?: boolean }) => {
-      if (!draggedException) return;
+      if (!draggedException || !data?.technicians.some(person => person.id === draggedException.user_id && person.is_active)) return;
 
       const dateStr = format(start, 'yyyy-MM-dd');
       if (['TIEMPO_EXTRA', 'TIEMPO_POR_TIEMPO'].includes(draggedException.type)) {
@@ -173,7 +175,7 @@ export const RosterPage = () => {
 
       setDraggedException(null);
     },
-    [draggedException]
+    [draggedException, data]
   );
 
   const handleSelectEvent = async (event: RosterEvent) => {
@@ -495,13 +497,13 @@ export const RosterPage = () => {
                     onChange={(v) => {
                       setDraggedException(prev => prev ? { ...prev, user_id: v } : { type: 'FALTA', user_id: v })
                     }}
-                    options={(data?.technicians || []).map((t) => ({ value: t.id, label: t.name }))}
+                    options={activeTechnicians.map((t) => ({ value: t.id, label: t.name }))}
                     placeholder="Selecciona un técnico..."
                     inputClassName="w-full px-3 py-2 pr-8 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                   />
                 </div>
 
-                {draggedException?.user_id && (
+                {draggedException?.user_id && activeTechnicians.some(person => person.id === draggedException.user_id) && (
                   <div className="space-y-2 mt-4">
                     <label className="block text-sm">Fecha para asignar horas<input type="date" value={assignmentDate} onChange={e => setAssignmentDate(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 p-2 dark:bg-slate-800" /></label>
                     <div className="flex flex-wrap gap-2">{['TIEMPO_EXTRA', 'TIEMPO_POR_TIEMPO'].map(type => <button key={type} disabled={!assignmentDate} type="button" onClick={() => setHoursAssignment({ user_id: draggedException.user_id, date: assignmentDate, exception_type: type })} className="rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white">{type === 'TIEMPO_EXTRA' ? 'Asignar tiempo extra' : 'Deudas y abonos TxT'}</button>)}</div>
@@ -552,7 +554,7 @@ export const RosterPage = () => {
                   required
                   value={selectedUser}
                   onChange={setSelectedUser}
-                  options={(data?.technicians || []).map((t) => ({ value: t.id, label: t.name }))}
+                  options={activeTechnicians.map((t) => ({ value: t.id, label: t.name }))}
                   placeholder="Seleccionar técnico"
                   inputClassName="w-full px-4 py-2 pr-8 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                 />
@@ -750,7 +752,7 @@ export const RosterPage = () => {
                       <div className="font-semibold text-slate-800 dark:text-slate-200">{event.title.split(' - ')[0]}</div>
                       <div className="text-sm text-slate-500">Turno actual: <span className="font-medium">{EXCEPTION_TYPES.find(t => t.type === event.shiftTitle)?.label || event.shiftTitle}</span>{event.hoursLabel && <p>{event.hoursLabel}</p>}</div>
                     </div>
-                    {canManageShifts && (
+                    {canManageShifts && (event.isException || activeTechnicians.some(person => person.id === event.user_id)) && (
                       <div className="mt-3 sm:mt-0 flex gap-2">
                         {event.isException ? (
                           <button 

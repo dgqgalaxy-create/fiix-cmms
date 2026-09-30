@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.66.2";
+export const APP_VERSION = "1.67.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "29 de Septiembre, 2026";
+  const updateDate = "30 de Septiembre, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Personal muestra cuántas personas están en turno ahora y su estado debajo del rol, según Horarios y la hora de planta.",
+    "Nuevo: Tiempo extra permite elegir entrada y salida; Tiempo por tiempo registra deudas, abonos parciales e historial con saldo pendiente.",
+    "Mejora: Horarios excluye al personal inactivo de los selectores de asignación y rechaza nuevas asignaciones a personas inactivas.",
+    "Mejora: Catálogo de solicitantes incorpora búsqueda por nombre sin distinguir mayúsculas ni acentos.",
+    "Mejora: Informe semanal separa visualmente las tres columnas de cada día.",
     "Mejora: Resumen por periodo más compacto, con tarjetas, gráfica y espacios ajustados para reducir aproximadamente un 20% su altura.",
     "Mejora: Inicio muestra Resumen por periodo en primer lugar, encima de Líneas paradas y Racha sin paro, conservando sus filtros y el diseño actual.",
     "Versión estable 1.66.0: nuevo punto de restauración; conserva los respaldos estables anteriores.",

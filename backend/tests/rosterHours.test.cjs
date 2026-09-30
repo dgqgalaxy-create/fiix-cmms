@@ -61,3 +61,22 @@ test('roster queries include the first day at database DATE midnight', async () 
     assert.equal(invalid.code, 400);
   } finally { models.forEach((model, i) => prisma[model].findMany = originals[i]); }
 });
+
+test('inactive people cannot receive a pattern even through a direct request', async () => {
+  const { assignPattern } = require('../src/controllers/rosterController');
+  const find = prisma.user.findUnique;
+  const upsert = prisma.technicianPattern.upsert;
+  let writes = 0;
+  prisma.user.findUnique = async () => ({ is_active: false });
+  prisma.technicianPattern.upsert = async ({ create }) => { writes++; return create; };
+  const request = { body: { user_id, start_date: '2026-09-30', pattern_type: 'MIXTO' } };
+  try {
+    const blocked = response(); await assignPattern(request, blocked);
+    assert.equal(blocked.code, 400);
+    assert.equal(writes, 0);
+    prisma.user.findUnique = async () => ({ is_active: true });
+    const allowed = response(); await assignPattern(request, allowed);
+    assert.equal(allowed.code, 200);
+    assert.equal(writes, 1);
+  } finally { prisma.user.findUnique = find; prisma.technicianPattern.upsert = upsert; }
+});

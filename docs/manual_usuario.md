@@ -346,3 +346,9 @@ Con permiso para gestionar horarios, selecciona una persona en el panel de incid
 Tiempo por tiempo permite registrar una deuda con fecha, horas y motivo, y abonar tramos trabajados en distintas fechas. Por ejemplo, una deuda de 9 horas se puede cubrir con tres abonos de 3 horas. El formulario muestra total, abonos y saldo, además del historial. El saldo descuenta todos los abonos registrados, incluidos los programados para fechas futuras; no representa una verificación de asistencia. Quitar un abono devuelve sus horas al saldo. No se permiten abonos superiores al saldo ni horarios superpuestos con otro tiempo extra o abono de la misma persona.
 
 Las incidencias con horas se muestran junto al turno regular, incluso cuando este proviene del calendario Excel. Los datos anteriores se conservan; para TE/TxT importados sin horas, asigna el tramo correspondiente desde el panel. Registrar una deuda no cambia automáticamente el turno del día de la deuda.
+
+### Personal inactivo y búsqueda de solicitantes — v1.67.0
+
+En Horarios, los selectores para asignar patrones e incidencias muestran solo personal activo. Si una persona se da de baja mientras tienes el módulo abierto, las opciones se actualizan automáticamente. Sus turnos anteriores permanecen en el calendario para consulta.
+
+En Personal → Catálogo de solicitantes, utiliza «Buscar solicitante por nombre». Puedes escribir parte del nombre sin distinguir mayúsculas ni acentos. El contador muestra las coincidencias sobre el total del catálogo; limpiar el cuadro vuelve a mostrar todos los solicitantes.

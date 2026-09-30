@@ -1,5 +1,7 @@
 # GTZ CMMS
 
+**Versión actual: v1.67.0 · 30 de septiembre de 2026.** [Personal, horarios y control de horas](docs/releases/v1.67.0.md).
+
 **Versión estable: v1.66.0 · 29 de septiembre de 2026.** [Mejoras y alcance de la entrega](docs/releases/v1.66.0.md).
 
 Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, activos, inventario, preventivos, checklist, KPIs, compras, RCA, roster y notificaciones (Telegram + Web Push PWA).

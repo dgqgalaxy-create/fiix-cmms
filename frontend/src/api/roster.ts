@@ -62,7 +62,7 @@ export interface RosterResponse {
   patterns: TechnicianPattern[];
   exceptions: TechnicianException[];
   shifts: TechnicianShift[];
-  technicians: { id: string; name: string; role: string }[];
+  technicians: { id: string; name: string; role: string; is_active: boolean }[];
   holidays: Holiday[];
 }
 

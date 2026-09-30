@@ -3,6 +3,15 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: Septiembre de 2026)*
 
+### Novedades en v1.67.0 (30 de septiembre de 2026)
+
+- Personal: contador de personas en turno y estado individual según Horarios, con soporte de turnos nocturnos.
+- Horarios: entrada/salida para tiempo extra; deudas, abonos parciales y saldo para tiempo por tiempo.
+- Exclusión de personal inactivo en asignaciones y búsqueda por nombre en Catálogo de solicitantes.
+- Informe semanal: separadores entre los grupos de columnas de cada día.
+
+[Detalle, validación y actualización de esquema](releases/v1.67.0.md).
+
 ### Novedades en v1.66.0 — Estable (29 de septiembre de 2026)
 
 - Nuevo: Informe semanal con selector de semana, número de semana ISO, detalle diario, cumplimiento y gráfica de cierres por tipo.

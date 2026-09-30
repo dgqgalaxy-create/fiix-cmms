@@ -1,5 +1,9 @@
 # Contexto Global del Proyecto (CMMS)
 
+## Versión actual
+
+v1.67.0, 30 de septiembre de 2026: Personal en turno según hora de planta, tiempo extra con horario, deudas y abonos de tiempo por tiempo, exclusión de inactivos y búsqueda de solicitantes. [Alcance y despliegue](releases/v1.67.0.md).
+
 ## Versión estable vigente
 
 v1.66.0, 29 de septiembre de 2026. Punto de restauración: `v1.66.0-stable` / `backup/v1.66.0-stable`. Ver [mejoras y validación](releases/v1.66.0.md).

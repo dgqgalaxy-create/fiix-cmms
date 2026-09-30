@@ -45,7 +45,7 @@ export const getRoster = async (req: Request, res: Response) => {
     });
 
     const technicians = await prisma.user.findMany({
-      select: { id: true, name: true, role: true },
+      select: { id: true, name: true, role: true, is_active: true },
       orderBy: { name: 'asc' }
     });
 
@@ -95,6 +95,9 @@ export const assignPattern = async (req: Request, res: Response) => {
   try {
     const { user_id, pattern_type, start_date } = req.body;
     
+    if (!uuid(user_id)) { res.status(400).json({ error: 'Selecciona una persona válida.' }); return; }
+    const person = await prisma.user.findUnique({ where: { id: user_id } });
+    if (!person?.is_active) { res.status(400).json({ error: 'No se puede asignar un turno a personal inactivo.' }); return; }
     const start = parseDateInput(start_date);
     if (!start) {
       res.status(400).json({ error: 'Fecha de inicio inválida' });
