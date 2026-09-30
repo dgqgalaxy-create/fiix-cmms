@@ -310,3 +310,17 @@ Solo se admite una importación a la vez, incluso con varios procesos del servid
 El cumplimiento MTTR usa solo correctivos finalizados con duración positiva; muestra cuántos se excluyeron por no tener tiempo válido. Cero no equivale a una reparación instantánea exitosa.
 La disponibilidad calendario utiliza 24 horas por día y agrupa los paros superpuestos por zona para no contarlos dos veces. No equivale a disponibilidad durante turnos programados.
 El MTBF se presenta como estimación: depende de los activos operativos actuales y las horas diarias configuradas en el servidor (24 por defecto). Sin calendario histórico por activo no representa una medición exacta de sus horas operadas.
+
+
+## Novedades v1.66.0 estable — 29 de septiembre de 2026
+
+### Informe semanal y PDF
+Selecciona Informe semanal y una fecha de la semana a consultar. El encabezado muestra su número ISO y el intervalo de lunes a domingo. Pulsa un día para abrir el detalle. Descargar PDF guarda el informe seleccionado, incluyendo número de semana en cada página.
+
+El resumen agrupa por fecha de levantamiento y muestra el estado actual. El cumplimiento divide las finalizadas entre las órdenes válidas de esa semana, excluyendo anuladas. La gráfica de finalizadas usa fecha de cierre y puede incluir solicitudes levantadas antes. Al consultar semanas anteriores verás los estados actuales, no una fotografía histórica.
+
+### Consulta pública de solicitudes
+Desde el portal de solicitudes abre la consulta de estado. Busca por folio o utiliza zona y nombre del solicitante. La vista pública devuelve únicamente folio y estado; no permite editar ni muestra el detalle interno de la orden.
+
+### Inventario, notas y preventivos
+El inventario presenta una tabla compacta y navegación plegable. Las notas personales se editan como notas adhesivas de texto libre, sin recordatorios; los pendientes operativos conservan su flujo independiente. En los planes preventivos puedes elegir zona y fecha programada inicial. En el detalle de las órdenes utiliza Asignar técnicos para modificar la asignación cuando tus permisos y el estado lo permitan.

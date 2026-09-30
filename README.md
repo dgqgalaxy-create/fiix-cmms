@@ -1,5 +1,7 @@
 # GTZ CMMS
 
+**Versión estable: v1.66.0 · 29 de septiembre de 2026.** [Mejoras y alcance de la entrega](docs/releases/v1.66.0.md).
+
 Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, activos, inventario, preventivos, checklist, KPIs, compras, RCA, roster y notificaciones (Telegram + Web Push PWA).
 
 **Stack:** PostgreSQL · Prisma · Node.js 22+ / Express · React/Vite · Tailwind v4 · Socket.IO · PM2 o Docker (servidor)

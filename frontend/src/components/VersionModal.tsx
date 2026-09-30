@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.65.0";
+export const APP_VERSION = "1.66.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "23 de Septiembre, 2026";
+  const updateDate = "29 de Septiembre, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,6 +31,15 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Versión estable 1.66.0: nuevo punto de restauración; conserva los respaldos estables anteriores.",
+    "Nuevo: Informe semanal con selector de semana, número de semana ISO, detalle diario, cumplimiento y gráfica de cierres por tipo.",
+    "Nuevo: descarga del informe semanal en PDF, con número de semana en cada página y paginación para informes extensos.",
+    "Nuevo: consulta pública del estado de solicitudes por folio o filtros de zona y solicitante; muestra únicamente folio y estado.",
+    "Mejora: inventario con tabla compacta y navegación plegable; notas personales como tablero de notas adhesivas sin recordatorios.",
+    "Mejora: planes preventivos con zona y fecha programada inicial; cambios de roles y permisos reflejados sin esperar un nuevo inicio de sesión.",
+    "Mejora: técnicos asignados presentados como texto con botón de asignación; Turno actual considera el horario del día.",
+    "Correcciones: adaptación del informe semanal a pantallas pequeñas, panel de usuarios en línea y acceso a Nuevo Activo en ambas pestañas.",
+
     "Nuevo: Órdenes de Trabajo — filtro múltiple de zonas en el marco del listado: aplica a la tabla, totales, paginación y exportaciones.",
     "Corrección: la importación de Google Sheets y CSV ya no se cancela por filas inválidas (los exportes reales las traen): esas filas se OMITEN y se reportan en el resumen/bitácora (p. ej. movimientos que referencian repuestos inexistentes). La transacción sigue revirtiendo ante errores reales.",
     "Nuevo: Compras permite entregas parciales, muestra lo recibido y pendiente, y evita duplicar existencias al reintentar una entrega.",

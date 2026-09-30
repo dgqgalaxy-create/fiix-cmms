@@ -1,5 +1,9 @@
 # Contexto Global del Proyecto (CMMS)
 
+## Versión estable vigente
+
+v1.66.0, 29 de septiembre de 2026. Punto de restauración: `v1.66.0-stable` / `backup/v1.66.0-stable`. Ver [mejoras y validación](releases/v1.66.0.md).
+
 ## ¿Qué estamos construyendo?
 Un Sistema Computarizado de Gestión de Mantenimiento (CMMS / GMAO) self-hosted para entornos industriales. Nombre del producto: **GTZ CMMS**.
 

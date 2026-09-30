@@ -1,23 +1,23 @@
-﻿---
-description: Baseline estable v1.56.58 — no romper lo funcional; restaurar si hace falta
+---
+description: Baseline estable v1.66.0 — no romper lo funcional; restaurar si hace falta
 alwaysApply: true
 ---
 
 # Baseline estable (protegido)
 
-Hasta que el usuario diga lo contrario, **v1.56.58** es el punto de restauración permanente.
+Hasta que el usuario diga lo contrario, **v1.66.0** es el punto de restauración permanente.
 
-- **Commit:** `f34d597ed45da2d55555158c71f6a0bc27eca33a` — Release v1.56.58
-- **Tag:** `v1.56.58-stable`
-- **Rama de respaldo:** `backup/v1.56.58-stable` (no desarrollar encima; solo restaurar)
-- **Anteriores:** `v1.56.53-stable` / `v1.56.51-stable` / `v1.56.50-stable` / `v1.56.45-stable` / `v1.56.40-stable` / `v1.56.39-stable` siguen disponibles.
+- **Referencia exacta:** commit al que apunta `v1.66.0-stable` — Release v1.66.0 (29 de septiembre de 2026)
+- **Tag:** `v1.66.0-stable`
+- **Rama de respaldo:** `backup/v1.66.0-stable` (no desarrollar encima; solo restaurar)
+- **Anteriores:** `v1.56.58-stable` / `v1.56.53-stable` / `v1.56.51-stable` / `v1.56.50-stable` / `v1.56.45-stable` / `v1.56.40-stable` / `v1.56.39-stable` siguen disponibles.
 
 ## Cómo trabajar
 
 - Nuevas mejoras van en `main` o ramas de feature.
 - No mezclar refactors ajenos al pedido; no “arreglar de paso” lo que ya funciona en el baseline.
 - Si un cambio rompe comportamiento validado del baseline, revertir o restaurar desde el tag/rama de backup antes de seguir.
-- Restaurar código: `git checkout v1.56.58-stable -- <paths>` o desde `backup/v1.56.58-stable` solo con petición explícita del usuario.
+- Restaurar código: `git checkout v1.66.0-stable -- <paths>` o desde `backup/v1.66.0-stable` solo con petición explícita del usuario.
 
 ## Entorno de producción
 

@@ -3,6 +3,18 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: Septiembre de 2026)*
 
+### Novedades en v1.66.0 — Estable (29 de septiembre de 2026)
+
+- Nuevo: Informe semanal con selector de semana, número de semana ISO, detalle diario, cumplimiento y gráfica de cierres por tipo.
+- Nuevo: descarga del informe semanal en PDF, con número de semana en cada página y paginación para informes extensos.
+- Nuevo: consulta pública del estado de solicitudes por folio o filtros de zona y solicitante; muestra únicamente folio y estado.
+- Mejora: inventario con tabla compacta y navegación plegable; notas personales como tablero de notas adhesivas sin recordatorios.
+- Mejora: planes preventivos con zona y fecha programada inicial; cambios de roles y permisos reflejados sin esperar un nuevo inicio de sesión.
+- Mejora: técnicos asignados presentados como texto con botón de asignación; Turno actual considera el horario del día.
+- Correcciones: adaptación del informe semanal a pantallas pequeñas, panel de usuarios en línea y acceso a Nuevo Activo en ambas pestañas.
+
+[Detalle de la versión](releases/v1.66.0.md).
+
 ### Novedades en v1.59.0 (Informe MTTR/MTBF por línea, tabla de Activos personalizable y SLA conmutable)
 - **Nuevo:** KPIs — informe **MTTR/MTBF por línea (L1–L5)** con periodo seleccionable: tabla por línea (paros, MTTR, MTBF), desglose por equipo de cada línea y detalle de los paros de cada equipo. Export a Excel con hoja por línea y por equipos.
 - **Nuevo:** Activos — tabla **personalizable por usuario** (clic derecho en el encabezado o botón de columnas): mostrar/ocultar y reordenar columnas, guardado por usuario en el navegador.
