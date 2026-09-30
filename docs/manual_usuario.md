@@ -324,3 +324,11 @@ Desde el portal de solicitudes abre la consulta de estado. Busca por folio o uti
 
 ### Inventario, notas y preventivos
 El inventario presenta una tabla compacta y navegación plegable. Las notas personales se editan como notas adhesivas de texto libre, sin recordatorios; los pendientes operativos conservan su flujo independiente. En los planes preventivos puedes elegir zona y fecha programada inicial. En el detalle de las órdenes utiliza Asignar técnicos para modificar la asignación cuando tus permisos y el estado lo permitan.
+
+
+### Inicio — v1.66.1 (29 de septiembre de 2026)
+
+Resumen por periodo aparece primero, debajo del encabezado de Inicio. Sus fechas filtran únicamente las tarjetas y la distribución de mantenimiento dentro del marco. Líneas paradas, Racha sin paro y las demás secciones aparecen debajo, conservando su funcionamiento.
+
+### Resumen compacto — v1.66.2
+El marco Resumen por periodo utiliza tarjetas y gráfica más compactas para reducir su altura aproximadamente un 20%, según el ancho de pantalla y contenido. Conserva los filtros y controles; Total recibidas mantiene una cifra ligeramente mayor que las otras tarjetas.

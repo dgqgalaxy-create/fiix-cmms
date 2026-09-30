@@ -429,6 +429,126 @@ export const HomePage = () => {
         </div>
       )}
 
+      <FilterScopeFrame
+        compact
+        title="Resumen por periodo"
+        icon={CalendarClock}
+        tone="blue"
+        hint="El periodo seleccionado se aplica a todas las tarjetas y a la distribución de mantenimiento dentro de este marco."
+        toolbar={
+          <>
+            <div className="flex items-center gap-2">
+              <CalendarClock size={18} className="text-slate-500" />
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Filtro para resumen superior:</span>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+              Desde:
+              <input type="date" value={summaryStartDate} onChange={e => setSummaryStartDate(e.target.value)} className="text-sm px-2 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
+            </label>
+            <label className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+              Hasta:
+              <input type="date" value={summaryEndDate} onChange={e => setSummaryEndDate(e.target.value)} className="text-sm px-2 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
+            </label>
+            {summaryStartDate || summaryEndDate ? (
+              <button type="button" onClick={() => { setSummaryStartDate(''); setSummaryEndDate(''); }} className="text-xs text-rose-500 hover:text-rose-700 font-medium px-2 py-1 bg-rose-50 rounded-lg">
+                Limpiar filtro
+              </button>
+            ) : (
+              <span className="text-xs px-2.5 py-1 bg-blue-50 text-blue-700 font-bold rounded-lg border border-blue-200 flex items-center gap-1.5">
+                <Activity size={14} /> Modo Histórico (Viendo Todo)
+              </span>
+            )}
+          </>
+        }
+      >
+
+      <div className="flex flex-col xl:flex-row gap-3 mb-1">
+        <div className="flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-6 gap-2 sm:gap-3">
+          <SummaryCard title="Total recibidas" value={totalRecibidas} icon={<LayoutDashboard />} color="slate" emphasized hint="Sin contar invalidadas" detail={(summaryStartDate && summaryEndDate) ? `${summaryStartDate} — ${summaryEndDate}` : 'Histórico completo'} onClick={() => navigate('/dashboard?tab=all')} />
+          <SummaryCard title="Pendientes" value={summary.PENDIENTE || 0} icon={<Clock />} color="amber" onClick={() => goToStatus('PENDIENTE')} detail={
+            <div className="flex flex-wrap gap-1">
+              {urgentCount > 0 && <span className="bg-rose-600 text-white px-1.5 py-0.5 rounded-sm">{urgentCount} URG</span>}
+              {normalCount > 0 && <span className="bg-amber-700 text-white px-1.5 py-0.5 rounded-sm">{normalCount} NOR</span>}
+              {lowCount > 0 && <span className="bg-emerald-700 text-white px-1.5 py-0.5 rounded-sm">{lowCount} BAJ</span>}
+            </div>
+          } />
+          <SummaryCard title="En Proceso" value={summary.EN_PROCESO || 0} icon={<Wrench />} color="blue" onClick={() => goToStatus('EN_PROCESO')} detail={activeTechsText && `👤 ${activeTechsText}`} />
+          <SummaryCard title="Pausadas" value={summary.EN_ESPERA || 0} icon={<AlertCircle />} color="purple" onClick={() => goToStatus('EN_ESPERA')} detail={pausedTechsText && `👤 ${pausedTechsText}`} />
+          <SummaryCard title="Finalizadas" value={summary.FINALIZADO || 0} icon={<CheckCircle2 />} color="emerald" onClick={() => goToStatus('FINALIZADO')} />
+          <SummaryCard title="Invalidadas" value={summary.ANULADO || 0} icon={<XCircle />} color="gray" onClick={() => goToStatus('ANULADO')} />
+        </div>
+
+        <div className="relative w-full xl:w-80 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-gradient-to-br from-white via-slate-50 to-emerald-50/60 dark:from-slate-800 dark:via-slate-800 dark:to-emerald-950/30 p-4 shadow-sm">
+          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-emerald-200/30 blur-2xl dark:bg-emerald-500/10" />
+          <div className="relative">
+            <div className="mb-2">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Distribución de mantenimiento</h3>
+              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">Proporción por tipo de orden</p>
+            </div>
+          {pieData.length > 0 ? (
+            <div className="relative mx-auto h-32 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={39}
+                    outerRadius={54}
+                    paddingAngle={4}
+                    cornerRadius={6}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {pieData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: any, _name: any, item: any) => [
+                      `${value} orden${Number(value) === 1 ? '' : 'es'}`,
+                      item.payload.name,
+                    ]}
+                    wrapperStyle={{ zIndex: 20 }}
+                    contentStyle={{ borderRadius: '12px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-fg)', boxShadow: '0 8px 20px rgb(15 23 42 / 0.12)' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-black leading-none text-slate-800 dark:text-white">{maintenanceTotal}</span>
+                <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Órdenes</span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex h-32 items-center justify-center text-xs text-slate-400">Sin datos para el periodo</div>
+          )}
+          <div className="space-y-2">
+            {pieData.map(entry => {
+              const percentage = maintenanceTotal ? Math.round((entry.value / maintenanceTotal) * 100) : 0;
+              return (
+              <div key={entry.name}>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full shadow-sm" style={{ backgroundColor: entry.color }} />
+                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{entry.name}</span>
+                  </div>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                    {entry.value} <span className="font-medium text-slate-400">· {percentage}%</span>
+                  </span>
+                </div>
+                <div className="h-1 overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-700">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${percentage}%`, backgroundColor: entry.color }}
+                  />
+                </div>
+              </div>
+              );
+            })}
+          </div>
+          </div>
+        </div>
+      </div>
+      </FilterScopeFrame>
+
       <section className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div
           className={`rounded-2xl border p-3 sm:p-4 shadow-sm ${
@@ -735,124 +855,7 @@ export const HomePage = () => {
         </section>
       )}
 
-      <FilterScopeFrame
-        title="Resumen por periodo"
-        icon={CalendarClock}
-        tone="blue"
-        hint="El periodo seleccionado se aplica a todas las tarjetas y a la distribución de mantenimiento dentro de este marco."
-        toolbar={
-          <>
-            <div className="flex items-center gap-2">
-              <CalendarClock size={18} className="text-slate-500" />
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Filtro para resumen superior:</span>
-            </div>
-            <label className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-              Desde:
-              <input type="date" value={summaryStartDate} onChange={e => setSummaryStartDate(e.target.value)} className="text-sm px-2 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
-            </label>
-            <label className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-              Hasta:
-              <input type="date" value={summaryEndDate} onChange={e => setSummaryEndDate(e.target.value)} className="text-sm px-2 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
-            </label>
-            {summaryStartDate || summaryEndDate ? (
-              <button type="button" onClick={() => { setSummaryStartDate(''); setSummaryEndDate(''); }} className="text-xs text-rose-500 hover:text-rose-700 font-medium px-2 py-1 bg-rose-50 rounded-lg">
-                Limpiar filtro
-              </button>
-            ) : (
-              <span className="text-xs px-2.5 py-1 bg-blue-50 text-blue-700 font-bold rounded-lg border border-blue-200 flex items-center gap-1.5">
-                <Activity size={14} /> Modo Histórico (Viendo Todo)
-              </span>
-            )}
-          </>
-        }
-      >
 
-      <div className="flex flex-col xl:flex-row gap-4 mb-6 sm:mb-8">
-        <div className="flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-6 gap-3 sm:gap-4">
-          <SummaryCard title="Total recibidas" value={totalRecibidas} icon={<LayoutDashboard />} color="slate" emphasized hint="Sin contar invalidadas" detail={(summaryStartDate && summaryEndDate) ? `${summaryStartDate} — ${summaryEndDate}` : 'Histórico completo'} onClick={() => navigate('/dashboard?tab=all')} />
-          <SummaryCard title="Pendientes" value={summary.PENDIENTE || 0} icon={<Clock />} color="amber" onClick={() => goToStatus('PENDIENTE')} detail={
-            <div className="flex flex-wrap gap-1">
-              {urgentCount > 0 && <span className="bg-rose-600 text-white px-1.5 py-0.5 rounded-sm">{urgentCount} URG</span>}
-              {normalCount > 0 && <span className="bg-amber-700 text-white px-1.5 py-0.5 rounded-sm">{normalCount} NOR</span>}
-              {lowCount > 0 && <span className="bg-emerald-700 text-white px-1.5 py-0.5 rounded-sm">{lowCount} BAJ</span>}
-            </div>
-          } />
-          <SummaryCard title="En Proceso" value={summary.EN_PROCESO || 0} icon={<Wrench />} color="blue" onClick={() => goToStatus('EN_PROCESO')} detail={activeTechsText && `👤 ${activeTechsText}`} />
-          <SummaryCard title="Pausadas" value={summary.EN_ESPERA || 0} icon={<AlertCircle />} color="purple" onClick={() => goToStatus('EN_ESPERA')} detail={pausedTechsText && `👤 ${pausedTechsText}`} />
-          <SummaryCard title="Finalizadas" value={summary.FINALIZADO || 0} icon={<CheckCircle2 />} color="emerald" onClick={() => goToStatus('FINALIZADO')} />
-          <SummaryCard title="Invalidadas" value={summary.ANULADO || 0} icon={<XCircle />} color="gray" onClick={() => goToStatus('ANULADO')} />
-        </div>
-
-        <div className="relative w-full xl:w-80 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-gradient-to-br from-white via-slate-50 to-emerald-50/60 dark:from-slate-800 dark:via-slate-800 dark:to-emerald-950/30 p-5 shadow-sm">
-          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-emerald-200/30 blur-2xl dark:bg-emerald-500/10" />
-          <div className="relative">
-            <div className="mb-2">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Distribución de mantenimiento</h3>
-              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">Proporción por tipo de orden</p>
-            </div>
-          {pieData.length > 0 ? (
-            <div className="relative mx-auto h-40 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={49}
-                    outerRadius={68}
-                    paddingAngle={4}
-                    cornerRadius={6}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {pieData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: any, _name: any, item: any) => [
-                      `${value} orden${Number(value) === 1 ? '' : 'es'}`,
-                      item.payload.name,
-                    ]}
-                    wrapperStyle={{ zIndex: 20 }}
-                    contentStyle={{ borderRadius: '12px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-fg)', boxShadow: '0 8px 20px rgb(15 23 42 / 0.12)' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-black leading-none text-slate-800 dark:text-white">{maintenanceTotal}</span>
-                <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Órdenes</span>
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-40 items-center justify-center text-xs text-slate-400">Sin datos para el periodo</div>
-          )}
-          <div className="space-y-2.5">
-            {pieData.map(entry => {
-              const percentage = maintenanceTotal ? Math.round((entry.value / maintenanceTotal) * 100) : 0;
-              return (
-              <div key={entry.name}>
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full shadow-sm" style={{ backgroundColor: entry.color }} />
-                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{entry.name}</span>
-                  </div>
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                    {entry.value} <span className="font-medium text-slate-400">· {percentage}%</span>
-                  </span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-700">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${percentage}%`, backgroundColor: entry.color }}
-                  />
-                </div>
-              </div>
-              );
-            })}
-          </div>
-          </div>
-        </div>
-      </div>
-      </FilterScopeFrame>
 
 
       {shiftByTech.length > 0 && (
@@ -1013,15 +1016,15 @@ const SummaryCard = ({ title, value, icon, color, onClick, detail, hint, emphasi
   hint?: string;
   emphasized?: boolean;
 }) => {
-  const className = `text-left p-3.5 sm:p-4 rounded-2xl border flex flex-col relative overflow-hidden group shadow-sm min-h-[130px] ${onClick ? 'cursor-pointer transition-all hover:scale-[1.03]' : 'cursor-default'} ${cardColors[color]}`;
+  const className = `text-left p-2.5 sm:p-3 rounded-2xl border flex flex-col relative overflow-hidden group shadow-sm min-h-[104px] ${onClick ? 'cursor-pointer transition-all hover:scale-[1.03]' : 'cursor-default'} ${cardColors[color]}`;
   const content = (
     <>
-    <div className="absolute -right-2 -top-2 opacity-20 group-hover:scale-110 transition-transform [&>svg]:w-20 [&>svg]:h-20">{icon}</div>
+    <div className="absolute -right-2 -top-2 opacity-20 group-hover:scale-110 transition-transform [&>svg]:w-16 [&>svg]:h-16">{icon}</div>
     <div className="relative z-10 h-full flex flex-col">
-      <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider leading-tight h-8">{title}</span>
+      <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider leading-tight h-6">{title}</span>
       <PulsingValue
         value={value}
-        className={`${emphasized ? 'text-3xl sm:text-[2.75rem]' : 'text-2xl sm:text-4xl'} font-black ${color === 'slate' || color === 'amber' ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}
+        className={`${emphasized ? 'text-[1.75rem] sm:text-4xl' : 'text-2xl sm:text-3xl'} font-black ${color === 'slate' || color === 'amber' ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}
       />
       {hint && <span className="text-[9px] sm:text-[10px] font-medium opacity-70 leading-tight mt-0.5">{hint}</span>}
       {detail && <div className="mt-auto pt-2 text-[10px] font-semibold leading-tight line-clamp-2">{detail}</div>}

@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.66.0";
+export const APP_VERSION = "1.66.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Mejora: Resumen por periodo más compacto, con tarjetas, gráfica y espacios ajustados para reducir aproximadamente un 20% su altura.",
+    "Mejora: Inicio muestra Resumen por periodo en primer lugar, encima de Líneas paradas y Racha sin paro, conservando sus filtros y el diseño actual.",
     "Versión estable 1.66.0: nuevo punto de restauración; conserva los respaldos estables anteriores.",
     "Nuevo: Informe semanal con selector de semana, número de semana ISO, detalle diario, cumplimiento y gráfica de cierres por tipo.",
     "Nuevo: descarga del informe semanal en PDF, con número de semana en cada página y paginación para informes extensos.",
