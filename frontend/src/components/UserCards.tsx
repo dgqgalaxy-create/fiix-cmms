@@ -1,4 +1,5 @@
 import { Mail, ClipboardList, CheckCircle2 } from 'lucide-react';
+import type { PersonnelRosterStatus } from '../utils/personnelRoster';
 import type { User } from '../api/users';
 import type { WorkOrder } from '../api/workOrders';
 
@@ -58,6 +59,8 @@ const avatarColor = (name: string) => {
 
 interface UserCardsProps {
   users: User[];
+  rosterStatuses?: Map<string, PersonnelRosterStatus>;
+  rosterUnavailable?: string;
   /** ids de usuarios con sesión activa (heartbeat/socket). */
   onlineIds: Set<string>;
   /** Órdenes abiertas asignadas por usuario. */
@@ -71,6 +74,8 @@ interface UserCardsProps {
 /** Vista de tarjetas del Directorio: avatar con iniciales, rol, estado en línea y carga de OT. */
 export const UserCards = ({
   users,
+  rosterStatuses,
+  rosterUnavailable,
   onlineIds,
   openByUser,
   completedByUser,
@@ -88,6 +93,8 @@ export const UserCards = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       {users.map((u) => {
+        const rosterStatus = rosterStatuses?.get(u.id);
+        const scheduleLabel = !u.is_active ? 'Inactivo' : rosterUnavailable || rosterStatus?.label || 'Sin horario registrado';
         const online = onlineIds.has(u.id);
         const openList = openByUser.get(u.id) ?? [];
         const openCount = openList.length;
@@ -113,6 +120,7 @@ export const UserCards = ({
                   <h3 className="font-semibold text-slate-800 dark:text-slate-100 truncate" title={u.name}>
                     {u.name}
                   </h3>
+                  <div className="flex max-w-[55%] flex-col items-end gap-1">
                   <span
                     className={`inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-full border shrink-0 ${
                       ROLE_CHIP[u.role] || ROLE_CHIP.OBSERVADOR
@@ -120,6 +128,10 @@ export const UserCards = ({
                   >
                     {ROLE_LABEL[u.role] || u.role}
                   </span>
+                  <span title={`Horario de hoy: ${scheduleLabel}`} className={`rounded-md px-2 py-0.5 text-right text-[10px] font-medium ${!rosterUnavailable && u.is_active && rosterStatus?.kind === 'work' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : !rosterUnavailable && rosterStatus?.kind === 'absence' ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
+                    {scheduleLabel}
+                  </span>
+                  </div>
                 </div>
                 <p
                   className={`mt-1 inline-flex items-center gap-1.5 text-xs font-medium ${

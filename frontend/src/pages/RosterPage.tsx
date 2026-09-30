@@ -17,6 +17,8 @@ import { Trash2, UserPlus, Calendar as CalendarIcon, Clock, AlertCircle, X, Prin
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 
+import { RosterHoursModal, type HoursAssignment } from '../components/RosterHoursModal';
+
 const locales = { 'es': es };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
 // Cast is needed because vite/rollup export handling of this HOC can be tricky
@@ -31,6 +33,7 @@ interface RosterEvent extends Event {
   user_id: string;
   shiftTitle: string;
   shiftCode?: string;
+  hoursLabel?: string;
   dateStr: string;
 }
 
@@ -68,6 +71,8 @@ export const RosterPage = () => {
   const isGestor = user?.role === 'GESTIONADOR';
   const isTecnico = user?.role === 'TECNICO';
   const canFilterByPerson = isAdmin || isGestor;
+  const [hoursAssignment, setHoursAssignment] = useState<HoursAssignment | null>(null);
+  const [assignmentDate, setAssignmentDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [data, setData] = useState<RosterResponse | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
@@ -152,6 +157,11 @@ export const RosterPage = () => {
       if (!draggedException) return;
 
       const dateStr = format(start, 'yyyy-MM-dd');
+      if (['TIEMPO_EXTRA', 'TIEMPO_POR_TIEMPO'].includes(draggedException.type)) {
+        setHoursAssignment({ user_id: draggedException.user_id, date: dateStr, exception_type: draggedException.type });
+        setDraggedException(null);
+        return;
+      }
       
       addException({
         user_id: draggedException.user_id,
@@ -220,6 +230,15 @@ export const RosterPage = () => {
         if (visibleIds && !visibleIds.has(tech.id)) return;
         const shortName = tech.name.split(' ')[0];
 
+        const dayExceptions = exceptionMap.get(`${tech.id}|${currStr}`) || [];
+        const timedExceptions = dayExceptions.filter(exc => ['TIEMPO_EXTRA', 'TIEMPO_POR_TIEMPO'].includes(exc.exception_type));
+        for (const exc of timedExceptions) {
+          const label = exc.exception_type === 'TIEMPO_EXTRA' ? 'TE' : 'TxT';
+          const hoursLabel = exc.start_time && exc.end_time ? `${exc.start_time}–${exc.end_time}${exc.end_time < exc.start_time ? ' (+1 día)' : ''}` : 'Horas sin registrar';
+          _events.push({ id: `exc-${exc.id}`, isException: true, exceptionId: exc.id, user_id: tech.id,
+            shiftTitle: exc.exception_type, title: `${shortName} [${label}] ${hoursLabel}`, hoursLabel,
+            start: new Date(curr), end: new Date(curr), allDay: true, dateStr: currStr });
+        }
         // 1) Turno explícito importado desde Excel (prioridad sobre patrón e incidencias)
         const shift = shiftMap.get(`${tech.id}|${currStr}`);
         if (shift) {
@@ -240,9 +259,7 @@ export const RosterPage = () => {
         }
 
         const pattern = patternMap.get(tech.id);
-        if (!pattern) return;
-
-        const userExceptions = exceptionMap.get(`${tech.id}|${currStr}`) || [];
+        const userExceptions = dayExceptions.filter(exc => !timedExceptions.includes(exc));
         if (userExceptions.length > 0) {
           userExceptions.forEach(exc => {
             const eType = EXCEPTION_TYPES.find(t => t.type === exc.exception_type);
@@ -262,6 +279,7 @@ export const RosterPage = () => {
           return;
         }
 
+        if (!pattern) return;
         const [yyyy, mm, dd] = pattern.start_date.split('T')[0].split('-');
         const patternStart = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
         const daysDiff = differenceInDays(curr, patternStart);
@@ -485,6 +503,8 @@ export const RosterPage = () => {
 
                 {draggedException?.user_id && (
                   <div className="space-y-2 mt-4">
+                    <label className="block text-sm">Fecha para asignar horas<input type="date" value={assignmentDate} onChange={e => setAssignmentDate(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 p-2 dark:bg-slate-800" /></label>
+                    <div className="flex flex-wrap gap-2">{['TIEMPO_EXTRA', 'TIEMPO_POR_TIEMPO'].map(type => <button key={type} disabled={!assignmentDate} type="button" onClick={() => setHoursAssignment({ user_id: draggedException.user_id, date: assignmentDate, exception_type: type })} className="rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white">{type === 'TIEMPO_EXTRA' ? 'Asignar tiempo extra' : 'Deudas y abonos TxT'}</button>)}</div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipos de Incidencia:</label>
                     {EXCEPTION_TYPES.map(type => (
                       <div
@@ -516,6 +536,8 @@ export const RosterPage = () => {
           )}
         </div>
       </div>
+
+      {hoursAssignment && <RosterHoursModal key={`${hoursAssignment.user_id}-${hoursAssignment.date}-${hoursAssignment.exception_type}`} assignment={hoursAssignment} name={data?.technicians.find(t => t.id === hoursAssignment.user_id)?.name || ''} onClose={() => setHoursAssignment(null)} onSaved={() => void fetchData(true)} />}
 
       {/* Modal Asignar Patrón */}
       {showPatternModal && (
@@ -726,7 +748,7 @@ export const RosterPage = () => {
                   <div key={event.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                     <div>
                       <div className="font-semibold text-slate-800 dark:text-slate-200">{event.title.split(' - ')[0]}</div>
-                      <div className="text-sm text-slate-500">Turno actual: <span className="font-medium">{event.shiftTitle}</span></div>
+                      <div className="text-sm text-slate-500">Turno actual: <span className="font-medium">{EXCEPTION_TYPES.find(t => t.type === event.shiftTitle)?.label || event.shiftTitle}</span>{event.hoursLabel && <p>{event.hoursLabel}</p>}</div>
                     </div>
                     {canManageShifts && (
                       <div className="mt-3 sm:mt-0 flex gap-2">
@@ -747,6 +769,10 @@ export const RosterPage = () => {
                             value=""
                             onChange={async (v) => {
                               if (v) {
+                                if (['TIEMPO_EXTRA', 'TIEMPO_POR_TIEMPO'].includes(v)) {
+                                  setHoursAssignment({ user_id: event.user_id, exception_type: v, date: format(selectedDay, 'yyyy-MM-dd') });
+                                  return;
+                                }
                                 await addException({
                                   user_id: event.user_id,
                                   exception_type: v,

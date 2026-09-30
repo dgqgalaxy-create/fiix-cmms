@@ -124,6 +124,7 @@ model User {
 
   pattern              TechnicianPattern?
   exceptions           TechnicianException[]
+  time_debts           TechnicianTimeDebt[]
   shifts               TechnicianShift[]
   preferences          Json?       @default("{}")
 }
@@ -142,9 +143,26 @@ model TechnicianException {
   user_id        String   @db.Uuid
   user           User     @relation(fields: [user_id], references: [id])
   date           DateTime @db.Date
+  start_time     String?
+  end_time       String?
+  paid_minutes   Int?
+  time_debt_id   String? @db.Uuid
+  time_debt      TechnicianTimeDebt? @relation(fields: [time_debt_id], references: [id])
   exception_type String   // "FALTA", "VACACIONES", "PERMISO_CG", "PERMISO_SG", "TIEMPO_EXTRA", "FESTIVO"
   notes          String?  
   created_at     DateTime @default(now())
+}
+
+model TechnicianTimeDebt {
+  id            String @id @default(uuid()) @db.Uuid
+  user_id       String @db.Uuid
+  user          User @relation(fields: [user_id], references: [id])
+  date          DateTime @db.Date
+  total_minutes Int
+  notes         String?
+  payments      TechnicianException[]
+  created_at    DateTime @default(now())
+  @@index([user_id])
 }
 
 /// Turno explícito por día (calendario importado desde Excel). Sobrescribe el patrón

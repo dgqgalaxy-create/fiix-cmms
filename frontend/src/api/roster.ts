@@ -17,6 +17,10 @@ export interface TechnicianException {
   user_id: string;
   date: string;
   exception_type: string;
+  start_time?: string | null;
+  end_time?: string | null;
+  paid_minutes?: number | null;
+  time_debt_id?: string | null;
   notes?: string;
   user: {
     id: string;
@@ -72,7 +76,7 @@ export const assignPattern = async (data: { user_id: string; pattern_type: strin
   return response.data;
 };
 
-export const addException = async (data: { user_id: string; date: string; exception_type: string; notes?: string }) => {
+export const addException = async (data: { user_id: string; date: string; exception_type: string; notes?: string; start_time?: string; end_time?: string; time_debt_id?: string }) => {
   const response = await api.post('/roster/exception', data);
   return response.data;
 };
@@ -91,3 +95,17 @@ export const importRosterCalendar = async (file: File, createMissing: boolean) =
   });
   return response.data as { success: boolean; summary: RosterImportSummary; sheetName?: string };
 };
+
+
+export interface TimeDebt {
+  id: string;
+  user_id: string;
+  date: string;
+  total_minutes: number;
+  paid_minutes: number;
+  remaining_minutes: number;
+  notes?: string;
+  payments: TechnicianException[];
+}
+export const getTimeDebts = async (): Promise<TimeDebt[]> => (await api.get('/roster/time-debts')).data;
+export const createTimeDebt = async (data: { user_id: string; date: string; total_minutes: number; notes?: string }) => (await api.post('/roster/time-debts', data)).data;

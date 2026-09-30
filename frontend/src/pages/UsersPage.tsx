@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, RefreshCw, Users, Search, Eye, EyeOff, LayoutGrid, Table2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getUsers, createUser, updateUser, deleteUser, getOnlineUsers } from '../api/users';
@@ -16,7 +16,12 @@ import { RequesterModal } from '../components/RequesterModal';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { PageLoadError, PageLoadingState, isLikelyServerUnreachable } from '../components/PageLoadState';
 
+import { usePersonnelRoster } from '../hooks/usePersonnelRoster';
+import { personnelCurrentStatus } from '../utils/personnelRoster';
+
 export const UsersPage = () => {
+  const { roster, today, now, failed: rosterFailed, refresh: refreshRoster } = usePersonnelRoster();
+  const rosterStatuses = useMemo(() => new Map((roster?.technicians ?? []).map(person => [person.id, personnelCurrentStatus(roster!, person.id, new Date(now))])), [roster, now]);
   const { hasPermission, user } = useAuth();
   
   const [activeTab, setActiveTab] = useState<'users' | 'requesters'>('users');
@@ -186,6 +191,7 @@ export const UsersPage = () => {
     setIsRequesterModalOpen(true);
   };
 
+  const onDutyCount = users.filter(person => person.is_active && rosterStatuses.get(person.id)?.onDuty).length;
   let filteredUsers = [...users];
   
   if (!showInactive) {
@@ -211,9 +217,14 @@ export const UsersPage = () => {
           <p className="text-slate-500 dark:text-slate-300 mt-1">Gestiona técnicos, gestionadores y administradores del sistema.</p>
         </div>
         
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          {activeTab === 'users' && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 dark:border-emerald-900 dark:bg-emerald-950/40" aria-live="polite">
+            <p className="text-xs font-bold uppercase text-emerald-700 dark:text-emerald-300">Personal en turno ahora</p>
+            <p className="text-2xl font-extrabold text-emerald-800 dark:text-emerald-200">{roster && !isLoading && !loadError ? onDutyCount : '—'}</p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400">{rosterFailed ? 'Horario no disponible' : !roster ? 'Consultando horarios…' : `${today} · ${new Date(now).toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' })} · Hora de planta`}</p>
+          </div>}
           <button 
-            onClick={activeTab === 'users' ? () => void fetchUsers(true) : () => void fetchRequesters(true)}
+            onClick={activeTab === 'users' ? () => { void fetchUsers(true); void refreshRoster(); } : () => void fetchRequesters(true)}
             className="p-2.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors shadow-sm"
             title="Actualizar"
           >
@@ -317,6 +328,8 @@ export const UsersPage = () => {
           {viewMode === 'cards' ? (
             <UserCards
               users={filteredUsers}
+              rosterStatuses={rosterStatuses}
+              rosterUnavailable={rosterFailed ? 'Horario no disponible' : !roster ? 'Consultando horario…' : undefined}
               onlineIds={onlineIds}
               openByUser={openOrdersByUser}
               completedByUser={completedByUser}

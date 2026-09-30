@@ -332,3 +332,17 @@ Resumen por periodo aparece primero, debajo del encabezado de Inicio. Sus fechas
 
 ### Resumen compacto — v1.66.2
 El marco Resumen por periodo utiliza tarjetas y gráfica más compactas para reducir su altura aproximadamente un 20%, según el ancho de pantalla y contenido. Conserva los filtros y controles; Total recibidas mantiene una cifra ligeramente mayor que las otras tarjetas.
+
+### Personal: estado del horario y personas en turno
+
+El encabezado de Personal interno cuenta a las personas activas que están dentro de su horario en ese momento, sin depender de los filtros del directorio ni de su conexión a la app. Las tarjetas muestran el estado debajo del rol. El cálculo usa la hora de Ciudad de México y se actualiza cada minuto, al volver a la ventana y cuando cambian los horarios.
+
+Día: 07:00–19:00. Noche: 19:00–07:00 del día siguiente. Mixto: lunes a viernes 07:00–16:00 y sábado 07:00–12:00. Los patrones mixtos descansan el domingo. Las horas de salida ya no se cuentan como tiempo en turno. Un registro sin horario no se supone descanso, y tiempo extra/TxT sin horas registradas no se cuenta como presencia actual.
+
+### Horarios: tiempo extra y tiempo por tiempo
+
+Con permiso para gestionar horarios, selecciona una persona en el panel de incidencias. Puedes arrastrar Tiempo extra o Tiempo por tiempo a un día, o elegir fecha y usar los botones del panel. En ambos casos se solicitan entrada y salida. Una salida anterior a la entrada termina al día siguiente.
+
+Tiempo por tiempo permite registrar una deuda con fecha, horas y motivo, y abonar tramos trabajados en distintas fechas. Por ejemplo, una deuda de 9 horas se puede cubrir con tres abonos de 3 horas. El formulario muestra total, abonos y saldo, además del historial. El saldo descuenta todos los abonos registrados, incluidos los programados para fechas futuras; no representa una verificación de asistencia. Quitar un abono devuelve sus horas al saldo. No se permiten abonos superiores al saldo ni horarios superpuestos con otro tiempo extra o abono de la misma persona.
+
+Las incidencias con horas se muestran junto al turno regular, incluso cuando este proviene del calendario Excel. Los datos anteriores se conservan; para TE/TxT importados sin horas, asigna el tramo correspondiente desde el panel. Registrar una deuda no cambia automáticamente el turno del día de la deuda.

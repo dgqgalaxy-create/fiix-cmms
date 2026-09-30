@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { getRoster, assignPattern, addException, removeException, importRosterCalendar } from '../controllers/rosterController';
+import { getTimeDebts, createTimeDebt, getRoster, assignPattern, addException, removeException, importRosterCalendar } from '../controllers/rosterController';
 import { authenticate, requirePermission, requireRole } from '../middlewares/authMiddleware';
 
 const router = Router();
@@ -14,6 +14,8 @@ const uploadCalendar = multer({
 });
 
 router.get('/', getRoster);
+router.get('/time-debts', requirePermission('MANAGE_SHIFTS'), getTimeDebts);
+router.post('/time-debts', requirePermission('MANAGE_SHIFTS'), createTimeDebt);
 router.post('/pattern', requireRole(['ADMINISTRADOR']), assignPattern);
 router.post('/exception', requirePermission('MANAGE_SHIFTS'), addException);
 router.post(
