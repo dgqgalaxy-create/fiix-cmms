@@ -1,3 +1,4 @@
+import { SummaryOrdersModal } from '../components/SummaryOrdersModal';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -76,6 +77,7 @@ function pickMessage(list: string[], seed = Date.now()): string {
 
 export const HomePage = () => {
   const navigate = useNavigate();
+  const [summaryStatus, setSummaryStatus] = useState<string | null>(null);
   const { user, slaEnabled } = useAuth();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [summary, setSummary] = useState<Record<string, number>>({});
@@ -144,16 +146,13 @@ export const HomePage = () => {
     try {
       if (!backgroundFetch) {
         setIsLoading(true);
+        setSummary({});
         setLoadError(false);
       }
-      const end = summaryEndDate || new Date().toISOString().slice(0, 10);
-      const start =
-        summaryStartDate ||
-        new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
       const [openOrdersData, periodOrders, summaryData, stoppageData, plansData] =
         await Promise.all([
           getWorkOrders({ openOnly: true }, ac.signal),
-          getWorkOrders({ startDate: start, endDate: end }, ac.signal),
+          getWorkOrders({ startDate: summaryStartDate || undefined, endDate: summaryEndDate || undefined }, ac.signal),
           getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined, ac.signal),
           getLineStoppageStatus(ac.signal),
           getMaintenancePlans().catch(() => [] as MaintenancePlan[]),
@@ -178,7 +177,7 @@ export const HomePage = () => {
   useEffect(() => {
     fetchDashboard();
     return () => dashboardAbortRef.current?.abort();
-  }, []);
+  }, [summaryStartDate, summaryEndDate]);
 
   // Light rotation of streak encouragement (does not refetch data).
   useEffect(() => {
@@ -192,22 +191,11 @@ export const HomePage = () => {
   useSocketRefresh('refresh_purchase_orders', () => fetchDashboard(true));
   useSocketRefresh('refresh_settings', () => fetchDashboard(true));
 
-  useEffect(() => {
-    const fetchSummary = async () => {
-      try {
-        setSummary(await getWorkOrdersSummary(summaryStartDate || undefined, summaryEndDate || undefined));
-      } catch (error) {
-        console.error('Error fetching dashboard summary', error);
-      }
-    };
-    fetchSummary();
-  }, [summaryStartDate, summaryEndDate]);
-
   const isInSummaryRange = (workOrder: WorkOrder) => {
-    const created = new Date(workOrder.created_at);
-    const start = summaryStartDate ? new Date(`${summaryStartDate}T00:00:00`) : new Date(0);
-    const end = summaryEndDate ? new Date(`${summaryEndDate}T23:59:59`) : new Date(8640000000000000);
-    return created >= start && created <= end;
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(workOrder.created_at));
+    const part = (type: string) => parts.find(p => p.type === type)?.value;
+    const created = `${part('year')}-${part('month')}-${part('day')}`;
+    return (!summaryStartDate || created >= summaryStartDate) && (!summaryEndDate || created <= summaryEndDate);
   };
 
   const countPendingByPriority = (priority: string) =>
@@ -267,10 +255,7 @@ export const HomePage = () => {
     ].filter(item => item.value > 0);
   };
 
-  const totalRecibidas = Object.entries(summary).reduce(
-    (total, [status, count]) => status === 'ANULADO' ? total : total + (count || 0),
-    0,
-  );
+  const totalRecibidas = ['PENDIENTE', 'EN_PROCESO', 'EN_ESPERA', 'FINALIZADO'].reduce((total, status) => total + (summary[status] || 0), 0);
   const paretoData = getParetoData();
   const pieData = getMaintenanceTypeData();
   const maintenanceTotal = pieData.reduce((total, entry) => total + entry.value, 0);
@@ -280,8 +265,6 @@ export const HomePage = () => {
   const activeTechsText = getTechsTextByStatus('EN_PROCESO');
   const pausedTechsText = getTechsTextByStatus('EN_ESPERA');
 
-  const goToStatus = (status?: string) =>
-    navigate(status ? `/dashboard?status=${status}` : '/dashboard');
 
   const goControlRoom = (query: string) => navigate(`/dashboard?${query}`);
 
@@ -392,6 +375,7 @@ export const HomePage = () => {
 
   return (
     <>
+      {summaryStatus && <SummaryOrdersModal key={`${summaryStatus}:${summaryStartDate}:${summaryEndDate}`} status={summaryStatus} startDate={summaryStartDate} endDate={summaryEndDate} onClose={() => setSummaryStatus(null)} onChanged={() => void fetchDashboard(true)} />}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Inicio</h1>
@@ -464,18 +448,18 @@ export const HomePage = () => {
 
       <div className="flex flex-col xl:flex-row gap-3 mb-1">
         <div className="flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-6 gap-2 sm:gap-3">
-          <SummaryCard title="Total recibidas" value={totalRecibidas} icon={<LayoutDashboard />} color="slate" emphasized hint="Sin contar invalidadas" detail={(summaryStartDate && summaryEndDate) ? `${summaryStartDate} — ${summaryEndDate}` : 'Histórico completo'} onClick={() => navigate('/dashboard?tab=all')} />
-          <SummaryCard title="Pendientes" value={summary.PENDIENTE || 0} icon={<Clock />} color="amber" onClick={() => goToStatus('PENDIENTE')} detail={
+          <SummaryCard title="Total recibidas" value={totalRecibidas} icon={<LayoutDashboard />} color="slate" emphasized hint="Sin contar invalidadas" detail={(summaryStartDate || summaryEndDate) ? `${summaryStartDate || 'Sin inicio'} — ${summaryEndDate || 'Sin fin'}` : 'Histórico completo'} onClick={() => setSummaryStatus('TOTAL')} />
+          <SummaryCard title="Pendientes" value={summary.PENDIENTE || 0} icon={<Clock />} color="amber" onClick={() => setSummaryStatus('PENDIENTE')} detail={
             <div className="flex flex-wrap gap-1">
               {urgentCount > 0 && <span className="bg-rose-600 text-white px-1.5 py-0.5 rounded-sm">{urgentCount} URG</span>}
               {normalCount > 0 && <span className="bg-amber-700 text-white px-1.5 py-0.5 rounded-sm">{normalCount} NOR</span>}
               {lowCount > 0 && <span className="bg-emerald-700 text-white px-1.5 py-0.5 rounded-sm">{lowCount} BAJ</span>}
             </div>
           } />
-          <SummaryCard title="En Proceso" value={summary.EN_PROCESO || 0} icon={<Wrench />} color="blue" onClick={() => goToStatus('EN_PROCESO')} detail={activeTechsText && `👤 ${activeTechsText}`} />
-          <SummaryCard title="Pausadas" value={summary.EN_ESPERA || 0} icon={<AlertCircle />} color="purple" onClick={() => goToStatus('EN_ESPERA')} detail={pausedTechsText && `👤 ${pausedTechsText}`} />
-          <SummaryCard title="Finalizadas" value={summary.FINALIZADO || 0} icon={<CheckCircle2 />} color="emerald" onClick={() => goToStatus('FINALIZADO')} />
-          <SummaryCard title="Invalidadas" value={summary.ANULADO || 0} icon={<XCircle />} color="gray" onClick={() => goToStatus('ANULADO')} />
+          <SummaryCard title="En Proceso" value={summary.EN_PROCESO || 0} icon={<Wrench />} color="blue" onClick={() => setSummaryStatus('EN_PROCESO')} detail={activeTechsText && `👤 ${activeTechsText}`} />
+          <SummaryCard title="Pausadas" value={summary.EN_ESPERA || 0} icon={<AlertCircle />} color="purple" onClick={() => setSummaryStatus('EN_ESPERA')} detail={pausedTechsText && `👤 ${pausedTechsText}`} />
+          <SummaryCard title="Finalizadas" value={summary.FINALIZADO || 0} icon={<CheckCircle2 />} color="emerald" onClick={() => setSummaryStatus('FINALIZADO')} />
+          <SummaryCard title="Invalidadas" value={summary.ANULADO || 0} icon={<XCircle />} color="gray" onClick={() => setSummaryStatus('ANULADO')} />
         </div>
 
         <div className="relative w-full xl:w-80 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-gradient-to-br from-white via-slate-50 to-emerald-50/60 dark:from-slate-800 dark:via-slate-800 dark:to-emerald-950/30 p-4 shadow-sm">

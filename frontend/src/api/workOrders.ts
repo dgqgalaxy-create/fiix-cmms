@@ -104,6 +104,7 @@ export type WorkOrderListParams = {
   completedTo?: string;
   assignedTo?: string;
   openOnly?: boolean;
+  excludeCancelled?: boolean;
   includeUnscheduled?: boolean;
   overdue?: boolean;
   sort?: 'newest' | 'oldest' | 'priority';
@@ -188,11 +189,7 @@ export const getWorkOrdersSummary = async (
   endDate?: string,
   signal?: AbortSignal
 ): Promise<Record<string, number>> => {
-  let url = '/work-orders/summary';
-  if (startDate && endDate) {
-    url += `?startDate=${startDate}&endDate=${endDate}`;
-  }
-  const response = await api.get(url, { signal });
+  const response = await api.get('/work-orders/summary', { params: { startDate, endDate }, signal });
   return response.data;
 };
 

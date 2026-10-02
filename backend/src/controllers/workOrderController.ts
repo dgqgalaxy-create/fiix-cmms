@@ -1,3 +1,4 @@
+import { workOrderPeriod } from '../utils/workOrderPeriod';
 import { Request, Response } from 'express';
 import type { Prisma } from '@prisma/client';
 import prisma from '../config/prisma';
@@ -298,6 +299,7 @@ function buildWorkOrderWhere(req: AuthRequest): Record<string, unknown> {
   }
 
   if (status) and.push({ status: String(status) });
+  if (req.query.excludeCancelled === 'true') and.push({ status: { not: 'ANULADO' } });
   if (priority) and.push({ priority: String(priority) });
   if (unassigned === '1' || unassigned === 'true') {
     and.push({ assigned_technicians: { none: {} } });
@@ -314,12 +316,7 @@ function buildWorkOrderWhere(req: AuthRequest): Record<string, unknown> {
   }
 
   if (startDate || endDate) {
-    and.push({
-      created_at: {
-        ...(startDate ? { gte: parseYmdStart(String(startDate)) } : {}),
-        ...(endDate ? { lte: parseYmdEnd(String(endDate)) } : {}),
-      },
-    });
+    and.push(workOrderPeriod(startDate, endDate));
   }
 
   if (completedFrom || completedTo) {
@@ -479,14 +476,7 @@ export const getWorkOrders = async (req: AuthRequest, res: Response): Promise<vo
 export const getWorkOrdersSummary = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { startDate, endDate } = req.query;
-    let whereClause: any = {};
-
-    if (startDate && endDate) {
-      whereClause.created_at = {
-        gte: new Date(startDate as string),
-        lte: new Date(endDate as string),
-      };
-    }
+    const whereClause = workOrderPeriod(startDate, endDate);
 
     const groupResult = await prisma.workOrder.groupBy({
       by: ['status'],

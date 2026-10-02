@@ -352,3 +352,8 @@ Las incidencias con horas se muestran junto al turno regular, incluso cuando est
 En Horarios, los selectores para asignar patrones e incidencias muestran solo personal activo. Si una persona se da de baja mientras tienes el módulo abierto, las opciones se actualizan automáticamente. Sus turnos anteriores permanecen en el calendario para consulta.
 
 En Personal → Catálogo de solicitantes, utiliza «Buscar solicitante por nombre». Puedes escribir parte del nombre sin distinguir mayúsculas ni acentos. El contador muestra las coincidencias sobre el total del catálogo; limpiar el cuadro vuelve a mostrar todos los solicitantes.
+
+
+## Inicio: consultar solicitudes por tarjeta — v1.68.0 (1 de octubre de 2026)
+Selecciona Desde y Hasta en Resumen por periodo y pulsa Total recibidas, Pendientes, En proceso, Pausadas, Finalizadas o Invalidadas. Una ventana muestra las solicitudes de ese estado cuya fecha de creación está dentro del periodo, incluyendo ambos días completos en hora de Ciudad de México. Total recibidas excluye invalidadas; las vencidas ya están incluidas en su estado y no se suman de nuevo.
+Pulsa una solicitud para abrir su detalle sin salir de Inicio. Al cerrar el detalle vuelves a la lista; sus permisos y restricciones siguen vigentes. Usa Anterior/Siguiente si hay más de 20 resultados. Actualizar consulta los datos recientes: si alguien cambia un estado, los recuentos pueden variar. Puedes filtrar con solo una fecha o limpiar ambas para consultar todo el historial.
