@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import ts from 'typescript';
 const source = readFileSync(new URL('../src/utils/weeklyReport.ts', import.meta.url), 'utf8');
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } }).outputText;
-const { plantDay, weekStart, weekNumber, addDays, weeklyReport, repairMs, weekQuery, weeklyCompletions } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
+const { monthDays, shiftMonth, plantDay, weekStart, weekNumber, addDays, weeklyReport, repairMs, weekQuery, weeklyCompletions } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
 const order = (values = {}) => ({ id: 'one', created_at: '2026-09-21T15:00:00Z', status: 'PENDIENTE', maintenance_type: 'CORRECTIVO', ...values });
 
 test('plant timezone and Monday weeks handle midnight and year boundaries', () => {
@@ -72,4 +72,22 @@ test('ISO week number follows selected dates including year boundaries', () => {
   assert.equal(weekNumber('2027-01-01'), 53);
   assert.equal(weekNumber('2027-01-04'), 1);
   assert.equal(weekNumber('2024-12-30'), 1);
+});
+
+
+test('monthly periods handle leap years, year transitions and local midnight', () => {
+  assert.equal(monthDays('2024-02-01'), 29);
+  assert.equal(monthDays('2026-02-01'), 28);
+  assert.equal(monthDays('2026-04-01'), 30);
+  assert.equal(monthDays('2026-10-01'), 31);
+  assert.equal(shiftMonth('2026-12-31', 1), '2027-01-01');
+  assert.equal(shiftMonth('2027-01-01', -1), '2026-12-01');
+  assert.deepEqual(weekQuery('2026-10-01', 31), { startDate: '2026-10-01T06:00:00.000Z', endDate: '2026-11-01T05:59:59.999Z' });
+  const rows = [order({created_at:'2026-10-01T05:59:59Z'}), order({created_at:'2026-10-01T06:00:00Z',status:'FINALIZADO'}), order({created_at:'2026-10-02T06:00:00Z',status:'ANULADO'}), order({created_at:'2026-11-01T06:00:00Z'})];
+  const report = weeklyReport(rows, '2026-10-01', '2026-10-02', 31);
+  assert.equal(report.total, 2); assert.equal(report.valid, 1);
+  assert.equal(report.totals.FINALIZADO, 1);
+  assert.equal(report.days.length, 31); assert.equal(report.days[2].future, true);
+  const closed = weeklyCompletions([order({status:'FINALIZADO',completed_at:'2026-10-02T12:00:00Z'})], '2026-10-01', '2026-10-02', 31);
+  assert.equal(closed[1].CORRECTIVO, 1); assert.equal(closed[1].name, '2');
 });

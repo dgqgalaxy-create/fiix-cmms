@@ -1,9 +1,10 @@
 import { jsPDF } from 'jspdf';
 import type { WorkOrder } from '../api/workOrders';
 import { formatWorkOrderFolio } from './folio';
-import { addDays, REPORT_LABELS, REPORT_STATUSES, REPORT_TYPES, REPORT_TZ, repairMs, weekNumber, weeklyCompletions, weeklyReport } from './weeklyReport';
+import { monthDays, monthLabel, addDays, REPORT_LABELS, REPORT_STATUSES, REPORT_TYPES, REPORT_TZ, repairMs, weekNumber, weeklyCompletions, weeklyReport } from './weeklyReport';
 
 export interface WeeklyPdfInput {
+  monthly?: boolean;
   monday: string;
   today: string;
   orders: WorkOrder[];
@@ -17,8 +18,12 @@ const dayLabel = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateStr
 /** Vector text and tables stay sharp and paginate independently of screen size. */
 export function buildWeeklyReportPdf(input: WeeklyPdfInput) {
   const { monday, today, orders, completed, updatedAt, now } = input;
-  const report = weeklyReport(orders, monday, today);
-  const completions = weeklyCompletions(completed, monday, today);
+  const monthly = input.monthly ?? false;
+  const title = monthly ? 'Informe mensual' : 'Informe semanal';
+  const count = monthly ? monthDays(monday) : 7;
+  const end = addDays(monday, count - 1);
+  const report = weeklyReport(orders, monday, today, count);
+  const completions = weeklyCompletions(completed, monday, today, count);
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const width = 273;
   let y = 0;
@@ -29,10 +34,10 @@ export function buildWeeklyReportPdf(input: WeeklyPdfInput) {
     doc.text(value, x, top);
   };
   const header = () => {
-    text('Informe semanal', 12, 15, 18, true);
-    text('SEMANA', 190, 13, 10, true);
-    text(String(weekNumber(monday)), 195, 23, 19, true);
-    text(`${monday} al ${addDays(monday, 6)} | Hora de planta: Ciudad de México`, 12, 22);
+    text(title, 12, 15, 18, true);
+    text(monthly ? 'MES' : 'SEMANA', 190, 13, 10, true);
+    text(monthly ? monday.slice(5, 7) : String(weekNumber(monday)), 195, 23, 19, true);
+    text(`${monday} al ${end} | Hora de planta: Ciudad de México`, 12, 22);
     text(`Datos actualizados: ${dateTime(updatedAt)}`, 12, 28, 8);
     doc.setDrawColor('#cbd5e1'); doc.line(12, 32, 285, 32);
     y = 39;
@@ -85,12 +90,21 @@ export function buildWeeklyReportPdf(input: WeeklyPdfInput) {
     }
     y += 6;
   };
+  const renderTotals = () => {
+  text(monthly ? 'Totales mensuales' : 'Totales semanales', 12, y, 12, true); y += 6;
+  table(['Indicador', 'Cantidad', 'Porcentaje'], [
+    ['Total levantadas', String(report.total), '-'],
+    ['Solicitudes válidas', String(report.valid), report.valid ? '100 %' : '-'],
+    ...REPORT_STATUSES.map(status => [REPORT_LABELS[status], String(report.totals[status]), status === 'ANULADO' ? 'Fuera del porcentaje' : report.valid ? `${(report.totals[status] / report.valid * 100).toFixed(1)} %` : '-']),
+  ], [130, 60, 83]);
+  note('Las invalidadas se excluyen del cálculo de porcentajes. Las OT conservan su fecha de levantamiento y muestran su estado actualizado.');
+  };
   header();
   text('CUMPLIMIENTO', 227, 13, 10, true);
   text(report.valid ? `${(report.totals.FINALIZADO / report.valid * 100).toFixed(1)} %` : '-', 237, 23, 19, true);
   text('Órdenes finalizadas por día', 12, y, 12, true);
   text(`Total: ${completions.reduce((sum, day) => sum + day.PREVENTIVO + day.CORRECTIVO + day.SERVICIO, 0)} OT`, 240, y, 10, true); y += 6;
-  note('Por fecha de finalización; incluye OT levantadas en semanas anteriores.');
+  note('Por fecha de finalización; incluye OT levantadas en periodos anteriores.');
   const colors = ['#10b981', '#ef4444', '#3b82f6'];
   const maximum = Math.max(1, ...completions.flatMap(day => REPORT_TYPES.map(type => day[type])));
   const ceiling = Math.ceil(maximum / 4) * 4;
@@ -101,14 +115,16 @@ export function buildWeeklyReportPdf(input: WeeklyPdfInput) {
     text(String(ceiling * tick / 4), 14, top + 1, 8);
   }
   completions.forEach((day, i) => {
-    const x = 31 + i * 36;
+    const step = 252 / count;
+    const bar = Math.min(7, step / 4);
+    const x = 28 + i * step;
     REPORT_TYPES.forEach((type, j) => {
       const height = day[type] / ceiling * 36;
       doc.setFillColor(colors[j]);
-      if (height > 0) doc.rect(x + j * 7, base - height, 6, height, 'F');
-      if (day[type]) text(String(day[type]), x + j * 7, base - height - 1, 7);
+      if (height > 0) doc.rect(x + j * bar, base - height, bar * 0.85, height, 'F');
+      if (day[type] && !monthly) text(String(day[type]), x + j * bar, base - height - 1, 7);
     });
-    text(dayLabel(day.date), x - 2, base + 5, 8);
+    text(monthly ? day.date.slice(8) : dayLabel(day.date), x - 1, base + 5, monthly ? 6 : 8);
   });
   y = base + 12;
   ['Preventivo', 'Correctivo', 'Servicio'].forEach((label, i) => {
@@ -116,21 +132,22 @@ export function buildWeeklyReportPdf(input: WeeklyPdfInput) {
     text(label, 90 + i * 40, y, 8);
   });
   y += 8;
+  if (monthly) {
+    renderTotals();
+    newPage();
+    text(`Resumen de ${monthLabel(monday)}`, 12, y, 12, true); y += 6;
+    table(['Día', ...REPORT_STATUSES.map(status => REPORT_LABELS[status]), 'Backlog', 'OT levantadas'], report.days.map(day => [dayLabel(day.date), ...REPORT_STATUSES.map(status => day.future ? '-' : REPORT_TYPES.map(type => day.counts[status][type]).join(' / ')), day.future ? '-' : String(day.backlog), day.future ? '-' : String(day.items.length)]), [35, ...Array(7).fill(34)]);
+  } else {
   text('Resumen de la semana seleccionada', 12, y, 12, true); y += 6;
   table(['Estado de OT', ...report.days.map(day => dayLabel(day.date))], [
     ...REPORT_STATUSES.map(status => [REPORT_LABELS[status], ...report.days.map(day => day.future ? '-' : REPORT_TYPES.map(type => day.counts[status][type]).join(' / '))]),
     ['Backlog', ...report.days.map(day => day.future ? '-' : String(day.backlog))],
     ['OT levantadas', ...report.days.map(day => day.future ? '-' : String(day.items.length))],
   ], [35, ...Array(7).fill(34)]);
+  }
   note('Cada celda: Preventivo / Correctivo / Servicio. Backlog: OT levantadas ese día aún pendientes, en proceso o pausadas. Días futuros: -.');
   newPage();
-  text('Totales semanales', 12, y, 12, true); y += 6;
-  table(['Indicador', 'Cantidad', 'Porcentaje'], [
-    ['Total levantadas', String(report.total), '-'],
-    ['Solicitudes válidas', String(report.valid), report.valid ? '100 %' : '-'],
-    ...REPORT_STATUSES.map(status => [REPORT_LABELS[status], String(report.totals[status]), status === 'ANULADO' ? 'Fuera del porcentaje' : report.valid ? `${(report.totals[status] / report.valid * 100).toFixed(1)} %` : '-']),
-  ], [130, 60, 83]);
-  note('Las invalidadas se excluyen del cálculo de porcentajes. Las OT conservan su fecha de levantamiento y muestran su estado actualizado.');
+  if (!monthly) renderTotals();
   text('Resumen de solicitudes por día', 12, y, 12, true); y += 7;
   for (const day of report.days) {
     if (y + 35 > 193) newPage();
@@ -146,11 +163,11 @@ export function buildWeeklyReportPdf(input: WeeklyPdfInput) {
   const pages = doc.getNumberOfPages();
   for (let page = 1; page <= pages; page++) {
     doc.setPage(page);
-    text(`Informe semanal | ${monday} | Página ${page} de ${pages}`, 12, 203, 8);
+    text(`${title} | ${monday} | Página ${page} de ${pages}`, 12, 203, 8);
   }
   return doc;
 }
 
 export function downloadWeeklyReportPdf(input: WeeklyPdfInput) {
-  buildWeeklyReportPdf(input).save(`Informe-semanal_${input.monday}_al_${addDays(input.monday, 6)}.pdf`);
+  buildWeeklyReportPdf(input).save(`Informe-${input.monthly ? 'mensual' : 'semanal'}_${input.monday}_al_${addDays(input.monday, input.monthly ? monthDays(input.monday) - 1 : 6)}.pdf`);
 }

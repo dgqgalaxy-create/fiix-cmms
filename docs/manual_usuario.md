@@ -357,3 +357,11 @@ En Personal → Catálogo de solicitantes, utiliza «Buscar solicitante por nomb
 ## Inicio: consultar solicitudes por tarjeta — v1.68.0 (1 de octubre de 2026)
 Selecciona Desde y Hasta en Resumen por periodo y pulsa Total recibidas, Pendientes, En proceso, Pausadas, Finalizadas o Invalidadas. Una ventana muestra las solicitudes de ese estado cuya fecha de creación está dentro del periodo, incluyendo ambos días completos en hora de Ciudad de México. Total recibidas excluye invalidadas; las vencidas ya están incluidas en su estado y no se suman de nuevo.
 Pulsa una solicitud para abrir su detalle sin salir de Inicio. Al cerrar el detalle vuelves a la lista; sus permisos y restricciones siguen vigentes. Usa Anterior/Siguiente si hay más de 20 resultados. Actualizar consulta los datos recientes: si alguien cambia un estado, los recuentos pueden variar. Puedes filtrar con solo una fecha o limpiar ambas para consultar todo el historial.
+
+### Informes semanales y mensuales
+
+El módulo **Informes** reúne las pestañas **Semanal** y **Mensual**. La semanal conserva sus controles y cálculos; la mensual abre el mes actual y permite consultar meses anteriores. El informe se actualiza al transcurrir el tiempo y al cambiar las órdenes. La ruta anterior `/weekly-report` sigue funcionando; `?period=month` abre la vista mensual.
+
+El mensual muestra cumplimiento, cierres diarios por tipo, una fila por día con cantidades en orden Preventivo / Correctivo / Servicio, backlog, OT levantadas, totales y detalle de solicitudes. Los folios abren el detalle de la orden. El cumplimiento es el porcentaje de finalizadas entre las OT válidas levantadas en ese mes; las invalidadas quedan fuera. El estado es el actual, incluso para meses anteriores. La gráfica cuenta cierres ocurridos dentro del mes, aunque la solicitud se haya creado antes.
+
+**Descargar PDF** exporta la pestaña y el periodo seleccionados, con gráfica, totales, resumen diario y detalle paginado. El PDF mensual usa el número real de días del mes, incluyendo febrero en años bisiestos. Los días futuros aparecen sin actividad.

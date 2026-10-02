@@ -38,19 +38,24 @@ export function plantMidnight(day: string): number {
   }
   return instant;
 }
-export function weekQuery(monday: string) {
-  return { startDate: new Date(plantMidnight(monday)).toISOString(), endDate: new Date(plantMidnight(addDays(monday, 7)) - 1).toISOString() };
+export function weekQuery(monday: string, dayCount = 7) {
+  return { startDate: new Date(plantMidnight(monday)).toISOString(), endDate: new Date(plantMidnight(addDays(monday, dayCount)) - 1).toISOString() };
 }
 export function repairMs(order: WorkOrder, now: number): number | null {
   if (!order.started_at && !order.accumulated_time_ms) return null;
   return Math.max(0, Number(order.accumulated_time_ms || 0)) +
     (order.status === 'EN_PROCESO' && order.last_resumed_at ? Math.max(0, now - Date.parse(order.last_resumed_at)) : 0);
 }
-export function weeklyReport(orders: WorkOrder[], monday: string, today: string) {
+export function weeklyReport(orders: WorkOrder[], monday: string, today: string, dayCount = 7) {
+  const byDay = new Map<string, WorkOrder[]>();
+  for (const order of orders) {
+    const date = plantDay(order.created_at);
+    const items = byDay.get(date) ?? []; items.push(order); byDay.set(date, items);
+  }
   const totals = Object.fromEntries(REPORT_STATUSES.map(status => [status, 0])) as Record<WorkOrder['status'], number>;
-  const days = Array.from({ length: 7 }, (_, index) => {
+  const days = Array.from({ length: dayCount }, (_, index) => {
     const date = addDays(monday, index);
-    const items = date > today ? [] : orders.filter(order => plantDay(order.created_at) === date);
+    const items = date > today ? [] : (byDay.get(date) ?? []);
     const counts = Object.fromEntries(REPORT_STATUSES.map(status => [status,
       Object.fromEntries(REPORT_TYPES.map(type => [type, items.filter(order => order.status === status && order.maintenance_type === type).length]))
     ])) as Record<WorkOrder['status'], Record<WorkOrder['maintenance_type'], number>>;
@@ -63,16 +68,32 @@ export function weeklyReport(orders: WorkOrder[], monday: string, today: string)
 }
 
 /** Completions follow the completion date, even for requests created before this week. */
-export function weeklyCompletions(orders: WorkOrder[], monday: string, today: string) {
-  return Array.from({ length: 7 }, (_, index) => {
+export function weeklyCompletions(orders: WorkOrder[], monday: string, today: string, dayCount = 7) {
+  const byDay = new Map<string, WorkOrder[]>();
+  for (const order of orders) {
+    if (order.status !== 'FINALIZADO' || !order.completed_at) continue;
+    const date = plantDay(order.completed_at);
+    const items = byDay.get(date) ?? []; items.push(order); byDay.set(date, items);
+  }
+  return Array.from({ length: dayCount }, (_, index) => {
     const date = addDays(monday, index);
-    const items = date > today ? [] : orders.filter(order => order.status === 'FINALIZADO' && order.completed_at && plantDay(order.completed_at) === date);
+    const items = date > today ? [] : (byDay.get(date) ?? []);
     return {
       date,
-      name: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'][index],
+      name: dayCount === 7 ? ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'][index] : String(index + 1),
       PREVENTIVO: items.filter(order => order.maintenance_type === 'PREVENTIVO').length,
       CORRECTIVO: items.filter(order => order.maintenance_type === 'CORRECTIVO').length,
       SERVICIO: items.filter(order => order.maintenance_type === 'SERVICIO').length,
     };
   });
 }
+
+export function shiftMonth(day: string, count: number): string {
+  const date = new Date(`${day.slice(0, 7)}-01T12:00:00Z`);
+  date.setUTCMonth(date.getUTCMonth() + count);
+  return date.toISOString().slice(0, 10);
+}
+export function monthDays(day: string): number {
+  return Math.round((Date.parse(`${shiftMonth(day, 1)}T12:00:00Z`) - Date.parse(`${day.slice(0, 7)}-01T12:00:00Z`)) / 86400000);
+}
+export const monthLabel = (day: string) => new Date(`${day.slice(0, 7)}-01T12:00:00Z`).toLocaleDateString('es-MX', { timeZone: 'UTC', month: 'long', year: 'numeric' });

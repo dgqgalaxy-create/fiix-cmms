@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ChevronLeft, ChevronRight, Download, RefreshCw } from 'lucide-react';
 import { getWorkOrders, updateWorkOrder, type WorkOrder } from '../api/workOrders';
@@ -7,7 +7,7 @@ import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatWorkOrderFolio } from '../utils/folio';
-import { addDays, plantDay, weekStart, weekNumber, weekQuery, weeklyReport, weeklyCompletions, repairMs, REPORT_TZ, REPORT_STATUSES, REPORT_TYPES, REPORT_LABELS, TYPE_LABELS } from '../utils/weeklyReport';
+import { monthDays, monthLabel, shiftMonth, addDays, plantDay, weekStart, weekNumber, weekQuery, weeklyReport, weeklyCompletions, repairMs, REPORT_TZ, REPORT_STATUSES, REPORT_TYPES, REPORT_LABELS, TYPE_LABELS } from '../utils/weeklyReport';
 
 const dayLabel = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString('es-MX', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'short' });
 const timestamp = (value?: string) => value ? new Date(value).toLocaleString('es-MX', { timeZone: REPORT_TZ, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
@@ -17,14 +17,19 @@ const panel = 'overflow-hidden rounded-2xl border border-slate-200 bg-white dark
 const statusColor = { PENDIENTE: 'text-amber-700 dark:text-amber-300', EN_PROCESO: 'text-sky-700 dark:text-sky-300', EN_ESPERA: 'text-orange-700 dark:text-orange-300', FINALIZADO: 'text-emerald-700 dark:text-emerald-300', ANULADO: 'text-slate-500 dark:text-slate-400' };
 
 export default function WeeklyReportPage() {
+  const [params, setParams] = useSearchParams();
+  const monthly = params.get('period') === 'month';
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<WorkOrder | null>(null);
   const [now, setNow] = useState(Date.now);
   const today = plantDay(new Date(now));
-  const currentWeek = weekStart(today);
+  const currentWeek = monthly ? `${today.slice(0, 7)}-01` : weekStart(today);
   // null follows the current week, including when the page stays open across midnight.
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
-  const monday = selectedWeek ?? currentWeek;
-  const sunday = addDays(monday, 6);
+  const monday = (monthly ? selectedMonth : selectedWeek) ?? currentWeek;
+  const dayCount = monthly ? monthDays(monday) : 7;
+  const periodKey = `${monthly ? 'month' : 'week'}:${monday}`;
+  const sunday = addDays(monday, dayCount - 1);
   const [loaded, setLoaded] = useState<{ week: string; orders: WorkOrder[]; completed: WorkOrder[]; at: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -39,18 +44,18 @@ export default function WeeklyReportPage() {
     setLoading(true);
     setError('');
     try {
-      const range = weekQuery(monday);
+      const range = weekQuery(monday, dayCount);
       const [orders, completed] = await Promise.all([
         getWorkOrders({ ...range, sort: 'oldest' }, request.signal),
         getWorkOrders({ status: 'FINALIZADO', completedFrom: range.startDate, completedTo: range.endDate }, request.signal),
       ]);
-      if (!request.signal.aborted) setLoaded({ week: monday, orders, completed, at: new Date().toISOString() });
+      if (!request.signal.aborted) setLoaded({ week: periodKey, orders, completed, at: new Date().toISOString() });
     } catch {
       if (!request.signal.aborted) setError('No se pudo actualizar el informe. Verifica la conexión e intenta nuevamente.');
     } finally {
       if (!request.signal.aborted) setLoading(false);
     }
-  }, [monday]);
+  }, [monday, dayCount, periodKey]);
 
   useEffect(() => {
     // Fetch the selected week from the external API and reset its loading state.
@@ -63,14 +68,14 @@ export default function WeeklyReportPage() {
     return () => { controller.current?.abort(); clearInterval(timer); window.removeEventListener('focus', resume); window.removeEventListener('online', resume); };
   }, [load]);
   useSocketRefresh(['refresh_work_orders', 'work_order_updated', 'connect'], load);
-  const data = loaded?.week === monday ? loaded : null;
-  const report = useMemo(() => weeklyReport(data?.orders ?? [], monday, today), [data, monday, today]);
-  const completionData = useMemo(() => weeklyCompletions(data?.completed ?? [], monday, today), [data, monday, today]);
+  const data = loaded?.week === periodKey ? loaded : null;
+  const report = useMemo(() => weeklyReport(data?.orders ?? [], monday, today, dayCount), [data, monday, today, dayCount]);
+  const completionData = useMemo(() => weeklyCompletions(data?.completed ?? [], monday, today, dayCount), [data, monday, today, dayCount]);
   const completedTotal = completionData.reduce((sum, day) => sum + day.PREVENTIVO + day.CORRECTIVO + day.SERVICIO, 0);
   const selectWeek = (day: string) => {
     if (!day) return;
-    const week = weekStart(day);
-    if (week <= currentWeek) setSelectedWeek(week === currentWeek ? null : week);
+    const week = monthly ? `${day.slice(0, 7)}-01` : weekStart(day);
+    if (week <= currentWeek) (monthly ? setSelectedMonth : setSelectedWeek)(week === currentWeek ? null : week);
   };
 
   const downloadPdf = async () => {
@@ -79,7 +84,7 @@ export default function WeeklyReportPage() {
     setExportError('');
     try {
       const { downloadWeeklyReportPdf } = await import('../utils/weeklyReportPdf');
-      downloadWeeklyReportPdf({ monday, today, orders: data.orders, completed: data.completed, updatedAt: data.at, now });
+      downloadWeeklyReportPdf({ monthly, monday, today, orders: data.orders, completed: data.completed, updatedAt: data.at, now });
     } catch {
       setExportError('No se pudo generar el PDF. Intenta descargarlo nuevamente.');
     } finally {
@@ -89,7 +94,7 @@ export default function WeeklyReportPage() {
 
   return <div className="space-y-6 text-slate-800 dark:text-slate-100">
     <div className="flex flex-wrap items-start justify-between gap-4">
-      <div><h1 className="text-2xl font-bold sm:text-3xl">Informe semanal</h1><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">OT agrupadas por fecha de levantamiento, con su estado actualizado.</p></div>
+      <div><h1 className="text-2xl font-bold sm:text-3xl">Informes</h1><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">OT agrupadas por fecha de levantamiento, con su estado actualizado.</p></div>
       <div className="flex flex-wrap gap-2">
         <button type="button" className={`${button} inline-flex items-center gap-2`} onClick={() => void downloadPdf()} disabled={!data || loading || exporting || !!error}>
           <Download size={16} />{exporting ? 'Generando PDF…' : 'Descargar PDF'}
@@ -97,13 +102,16 @@ export default function WeeklyReportPage() {
         <Link to="/dashboard" className={button}>Órdenes de Trabajo</Link>
       </div>
     </div>
+    <div className="flex gap-2" aria-label="Tipo de informe">
+      {(['week', 'month'] as const).map(period => <button key={period} type="button" aria-pressed={(period === 'month') === monthly} onClick={() => { setParams(period === 'month' ? { period } : {}); setExportError(''); }} className={`${button} ${(period === 'month') === monthly ? 'bg-emerald-600 text-white hover:bg-emerald-700' : ''}`}>{period === 'month' ? 'Mensual' : 'Semanal'}</button>)}
+    </div>
     <section className={`${panel} grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-center`}>
       <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-3">
-        <button className={button} onClick={() => selectWeek(addDays(monday, -7))} aria-label="Semana anterior"><ChevronLeft size={18} /></button>
-        <label className="text-sm font-semibold">Semana del <input aria-label="Seleccionar fecha de la semana" type="date" value={monday} max={today} onChange={e => selectWeek(e.target.value)} className="ml-2 rounded-lg border border-slate-200 bg-transparent p-2 dark:border-slate-700" /></label>
-        <button className={button} onClick={() => selectWeek(addDays(monday, 7))} disabled={monday >= currentWeek} aria-label="Semana siguiente"><ChevronRight size={18} /></button>
-        <button className={button} onClick={() => setSelectedWeek(null)}>Semana actual</button>
+        <button className={button} onClick={() => selectWeek(monthly ? shiftMonth(monday, -1) : addDays(monday, -7))} aria-label={monthly ? 'Mes anterior' : 'Semana anterior'}><ChevronLeft size={18} /></button>
+        <label className="text-sm font-semibold">{monthly ? 'Mes' : 'Semana del'} <input aria-label={monthly ? 'Seleccionar mes' : 'Seleccionar fecha de la semana'} type={monthly ? 'month' : 'date'} value={monthly ? monday.slice(0, 7) : monday} max={monthly ? today.slice(0, 7) : today} onChange={e => selectWeek(e.target.value)} className="ml-2 rounded-lg border border-slate-200 bg-transparent p-2 dark:border-slate-700" /></label>
+        <button className={button} onClick={() => selectWeek(monthly ? shiftMonth(monday, 1) : addDays(monday, 7))} disabled={monday >= currentWeek} aria-label={monthly ? 'Mes siguiente' : 'Semana siguiente'}><ChevronRight size={18} /></button>
+        <button className={button} onClick={() => (monthly ? setSelectedMonth : setSelectedWeek)(null)}>{monthly ? 'Mes actual' : 'Semana actual'}</button>
         <button className={`${button} inline-flex items-center gap-2`} onClick={() => void load()} disabled={loading}><RefreshCw size={16} className={loading ? 'animate-spin' : ''} />Actualizar</button>
       </div>
       <p className="mt-3 font-semibold capitalize">{dayLabel(monday)} al {dayLabel(sunday)} · {sunday.slice(0, 4)}</p>
@@ -111,8 +119,8 @@ export default function WeeklyReportPage() {
       </div>
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-3 border-t border-slate-100 pt-4 text-center dark:border-slate-800 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0" aria-live="polite">
         <div className="border-r border-slate-100 pr-3 dark:border-slate-800">
-          <h2 className="text-sm font-bold tracking-wider text-slate-700 dark:text-slate-200">SEMANA</h2>
-          <p className="mt-2 text-4xl font-extrabold tabular-nums text-slate-800 dark:text-slate-100">{weekNumber(monday)}</p>
+          <h2 className="text-sm font-bold tracking-wider text-slate-700 dark:text-slate-200">{monthly ? 'MES' : 'SEMANA'}</h2>
+          <p className="mt-2 text-4xl font-extrabold tabular-nums text-slate-800 dark:text-slate-100">{monthly ? Number(monday.slice(5, 7)) : weekNumber(monday)}</p>
         </div>
         <div className="min-w-0">
         <h2 className="text-sm font-bold tracking-wider text-slate-700 dark:text-slate-200">CUMPLIMIENTO</h2>
@@ -120,20 +128,20 @@ export default function WeeklyReportPage() {
           {data && report.valid > 0 ? `${(report.totals.FINALIZADO / report.valid * 100).toFixed(1)} %` : '—'}
         </p>
         <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-          {data ? report.valid > 0 ? `${report.totals.FINALIZADO} de ${report.valid} OT válidas finalizadas` : 'Sin OT válidas en esta semana' : loading ? 'Cargando…' : 'Datos no disponibles'}
+          {data ? report.valid > 0 ? `${report.totals.FINALIZADO} de ${report.valid} OT válidas finalizadas` : 'Sin OT válidas en este periodo' : loading ? 'Cargando…' : 'Datos no disponibles'}
         </p>
         </div>
       </div>
     </section>
     {exportError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{exportError}</p>}
     {error && <div role="alert" className="rounded-xl bg-red-50 p-4 text-red-800 dark:bg-red-950 dark:text-red-200">{error}{data && ' Se muestran los últimos datos recibidos.'}</div>}
-    {!data && loading && <p role="status">Cargando informe semanal…</p>}
+    {!data && loading && <p role="status">Cargando informe…</p>}
     {data && <>
       <section className={`${panel} w-full p-4 sm:p-5`} aria-labelledby="weekly-completions-title">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 id="weekly-completions-title" className="text-lg font-bold">Órdenes finalizadas {monday === currentWeek ? 'esta semana' : 'en la semana seleccionada'}</h2>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Por fecha de finalización, incluidas las solicitudes levantadas en semanas anteriores.</p>
+            <h2 id="weekly-completions-title" className="text-lg font-bold">Órdenes finalizadas {monthly ? `en ${monthLabel(monday)}` : monday === currentWeek ? 'esta semana' : 'en la semana seleccionada'}</h2>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Por fecha de finalización, incluidas las solicitudes levantadas en periodos anteriores.</p>
           </div>
           <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Total: {completedTotal} OT</p>
         </div>
@@ -141,7 +149,7 @@ export default function WeeklyReportPage() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={completionData} accessibilityLayer margin={{ top: 10, right: 8, bottom: 8, left: 0 }} barGap={2} barCategoryGap="20%">
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
-              <XAxis dataKey="name" interval={0} tick={{ fill: 'var(--color-fg-muted)', fontSize: 11 }} tickLine={false} axisLine={false} />
+              <XAxis dataKey="name" interval={monthly ? 'preserveStartEnd' : 0} tick={{ fill: 'var(--color-fg-muted)', fontSize: 11 }} tickLine={false} axisLine={false} />
               <YAxis width={40} allowDecimals={false} domain={[0, 'auto']} tick={{ fill: 'var(--color-fg-muted)', fontSize: 11 }} tickLine={false} axisLine={false} label={{ value: 'OT', position: 'insideTopLeft', fill: 'var(--color-fg-muted)', fontSize: 10 }} />
               <Tooltip labelFormatter={(_label, payload) => payload?.[0]?.payload?.date ? dayLabel(payload[0].payload.date) : ''} contentStyle={{ borderRadius: '12px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-fg)' }} />
               <Legend wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
@@ -151,10 +159,22 @@ export default function WeeklyReportPage() {
             </BarChart>
           </ResponsiveContainer>
         </div>
-        {completedTotal === 0 && <p className="mt-2 text-center text-sm text-slate-500 dark:text-slate-400">No hay órdenes finalizadas en esta semana.</p>}
+        {completedTotal === 0 && <p className="mt-2 text-center text-sm text-slate-500 dark:text-slate-400">No hay órdenes finalizadas en este periodo.</p>}
       </section>
       <section className={panel}>
-        <h2 className="p-4 text-lg font-bold">Resumen de la semana {monday === currentWeek ? 'actual' : 'seleccionada'}</h2>
+        <h2 className="p-4 text-lg font-bold">{monthly ? `Resumen de ${monthLabel(monday)}` : `Resumen de la semana ${monday === currentWeek ? 'actual' : 'seleccionada'}`}</h2>
+        {monthly ? <div className="overflow-x-auto">
+          <table className="w-full text-center text-xs border-collapse">
+            <caption className="sr-only">Resumen mensual por día. Cantidades en orden preventivo, correctivo y servicio.</caption>
+            <thead className="bg-slate-100 dark:bg-slate-800"><tr>{['Día', ...REPORT_STATUSES.map(status => REPORT_LABELS[status]), 'Backlog', 'OT levantadas'].map(label => <th key={label} className="p-2">{label}</th>)}</tr></thead>
+            <tbody>{report.days.map(day => <tr key={day.date} className={`border-t border-slate-200 dark:border-slate-700 ${day.date === today ? 'bg-emerald-50 dark:bg-emerald-950' : ''}`}>
+              <th className="p-2 text-left whitespace-nowrap">{dayLabel(day.date)}</th>
+              {REPORT_STATUSES.map(status => <td key={status} className="border-l border-slate-200 p-2 whitespace-nowrap dark:border-slate-700">{day.future ? '—' : REPORT_TYPES.map(type => day.counts[status][type]).join(' / ')}</td>)}
+              <td className="p-2 font-bold">{day.future ? '—' : day.backlog}</td><td className="p-2 font-bold">{day.future ? '—' : day.items.length}</td>
+            </tr>)}</tbody>
+          </table>
+          <p className="px-4 pt-2 text-xs text-slate-500">Cada celda: Preventivo / Correctivo / Servicio.</p>
+        </div> : <>
         <div className="hidden w-full lg:block">
           <table className="w-full table-fixed border-collapse text-center text-[9px] leading-snug xl:text-[10px] 2xl:text-[11px] [&_td]:[overflow-wrap:anywhere] [&_th]:[overflow-wrap:anywhere]">
             <caption className="sr-only">Cantidad de órdenes por día de levantamiento, estado y tipo de mantenimiento</caption>
@@ -181,10 +201,11 @@ export default function WeeklyReportPage() {
             </table>
           </div>)}
         </div>
+        </>}
         <p className="p-4 text-xs text-slate-500 dark:text-slate-400">Backlog: OT levantadas ese día que siguen pendientes, en proceso o pausadas. No incluye solicitudes de otros días. OT levantadas: total de solicitudes creadas ese día, incluidas las invalidadas. Los días futuros se muestran con —.</p>
       </section>
       <section className={`${panel} p-4`}>
-        <h2 className="mb-3 text-lg font-bold">Totales semanales</h2>
+        <h2 className="mb-3 text-lg font-bold">{monthly ? 'Totales mensuales' : 'Totales semanales'}</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><p className="text-sm">Total levantadas</p><strong className="text-2xl">{report.total}</strong></div>
           <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><p className="text-sm">Solicitudes válidas · base del 100 %</p><strong className="text-2xl">{report.valid}</strong></div>

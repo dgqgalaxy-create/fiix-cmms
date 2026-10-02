@@ -43,3 +43,15 @@ test('PDF header uses selected ISO week on every page, including year boundaries
     if (process.env.PDF_WEEK_SAMPLE && number === 40) writeFileSync(process.env.PDF_WEEK_SAMPLE, Buffer.from(doc.output('arraybuffer')));
   }
 });
+
+
+test('monthly PDF includes full selected month and paginates daily summary', () => {
+  const orders = Array.from({length:31}, (_, i) => ({id:String(i),folio:i+100,created_at:`2026-10-${String(i+1).padStart(2,'0')}T15:00:00Z`,status:'FINALIZADO',maintenance_type:'CORRECTIVO',completed_at:`2026-10-${String(i+1).padStart(2,'0')}T18:00:00Z`,asset:{name:'Compresor principal'},requester_name:'Persona de prueba'}));
+  const doc = buildWeeklyReportPdf({...base,monthly:true,monday:'2026-10-01',today:'2026-11-01',orders,completed:orders});
+  const pdf = doc.output();
+  assert.ok(pdf.includes('Informe mensual')); assert.ok(pdf.includes('2026-10-01 al 2026-10-31'));
+  assert.ok(!pdf.includes('(SEMANA)')); assert.ok(pdf.includes('100.0 %'));
+  for (const order of orders) assert.ok(pdf.includes(`FOL-${String(order.folio).padStart(4,'0')}`));
+  assert.ok(doc.getNumberOfPages() > 3);
+  if (process.env.MONTHLY_PDF_SAMPLE) writeFileSync(process.env.MONTHLY_PDF_SAMPLE,Buffer.from(doc.output('arraybuffer')));
+});
