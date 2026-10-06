@@ -40,6 +40,7 @@ export function getOperatingHoursPerDay(): number {
 const DEFAULT_GOALS: Record<string, { targetValue: number; unit: string }> = {
   COMPLETED_MONTHLY: { targetValue: 50, unit: 'órdenes' },
   MTTR: { targetValue: 4, unit: 'horas' },
+  MTBF: { targetValue: 0, unit: 'horas' },
   RESPONSE_TIME: { targetValue: 1, unit: 'horas' },
   SLA: { targetValue: 90, unit: '%' },
   BACKLOG: { targetValue: 10, unit: 'órdenes' },
@@ -236,7 +237,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
       goals[goal.metricKey] = normalizeGoal(goal.metricKey, goal.targetValue, goal.unit);
     });
 
-    const [periodOrders, openOrders, downtimeOrders, zones, settings] = await Promise.all([
+    const [periodOrders, openOrders, downtimeOrders, zones, settings, operativeAssets] = await Promise.all([
       prisma.workOrder.findMany({
         where: {
           status: { not: 'ANULADO' },
@@ -273,6 +274,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
       }),
       prisma.zone.findMany({ select: { id: true } }),
       prisma.systemSettings.findFirst({ select: { response_time_zone_ids: true } }),
+      prisma.asset.count({ where: { status: 'OPERATIVO' } }),
     ]);
 
     const completedOrders = periodOrders.filter(
@@ -284,6 +286,16 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
     );
 
     const correctiveCompleted = completedOrders.filter((wo) => wo.maintenance_type === 'CORRECTIVO');
+
+    // Histórico empieza en la primera OT registrada, no en el epoch del filtro ALL.
+    const mtbfStart = req.query.period === 'ALL'
+      ? new Date(periodOrders.reduce((earliest, wo) => Math.min(earliest, wo.created_at.getTime()), effectiveEnd.getTime()))
+      : start;
+    const hoursPerDay = getOperatingHoursPerDay();
+    const operationalHours = Math.max(0, effectiveEnd.getTime() - mtbfStart.getTime()) / 86_400_000 * hoursPerDay * operativeAssets;
+    const mtbfHours = correctiveCompleted.length > 0 && operationalHours > 0
+      ? operationalHours / correctiveCompleted.length
+      : null;
 
     // MTTR: tiempo activo de labor en correctivas finalizadas (horas)
     const mttrHours = avg(
@@ -458,6 +470,14 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
           value: Number(mttrHours.toFixed(2)),
           goal: goals.MTTR,
           sampleSize: correctiveCompleted.filter((wo) => wo.accumulated_time_ms > 0).length,
+        },
+        MTBF: {
+          value: mtbfHours === null ? 0 : Number(mtbfHours.toFixed(2)),
+          goal: goals.MTBF,
+          goalConfigured: goals.MTBF.targetValue > 0,
+          sampleSize: correctiveCompleted.length,
+          isNull: mtbfHours === null,
+          methodology: `MTBF estimado de flota: horas del periodo × ${hoursPerDay} h/día × equipos operativos actuales / correctivas finalizadas. Histórico: desde la primera OT registrada. No mide horas reales de operación.`,
         },
         RESPONSE_TIME: {
           value: Number(responseHours.toFixed(2)),

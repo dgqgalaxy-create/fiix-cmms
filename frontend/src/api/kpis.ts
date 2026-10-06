@@ -11,6 +11,7 @@ export interface KPIMetric {
   isNull?: boolean;
   missingCount?: number;
   methodology?: string;
+  goalConfigured?: boolean;
 }
 
 export interface KPIResponse {
@@ -23,6 +24,7 @@ export interface KPIResponse {
   metrics: {
     COMPLETED_MONTHLY: KPIMetric;
     MTTR: KPIMetric;
+    MTBF: KPIMetric;
     RESPONSE_TIME: KPIMetric;
     SLA: KPIMetric;
     BACKLOG: KPIMetric;

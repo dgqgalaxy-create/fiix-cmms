@@ -365,3 +365,11 @@ El módulo **Informes** reúne las pestañas **Semanal** y **Mensual**. La seman
 El mensual muestra cumplimiento, cierres diarios por tipo, una fila por día con cantidades en orden Preventivo / Correctivo / Servicio, backlog, OT levantadas, totales y detalle de solicitudes. Los folios abren el detalle de la orden. El cumplimiento es el porcentaje de finalizadas entre las OT válidas levantadas en ese mes; las invalidadas quedan fuera. El estado es el actual, incluso para meses anteriores. La gráfica cuenta cierres ocurridos dentro del mes, aunque la solicitud se haya creado antes.
 
 **Descargar PDF** exporta la pestaña y el periodo seleccionados, con gráfica, totales, resumen diario y detalle paginado. El PDF mensual usa el número real de días del mes, incluyendo febrero en años bisiestos. Los días futuros aparecen sin actividad.
+
+### MTBF en Indicadores por periodo
+
+En **KPI y Metas → Indicadores por periodo → Salud de planta**, la tarjeta **MTBF** acompaña a Disponibilidad, MTTR y Backlog. Utiliza el mismo selector de periodo, incluidas las fechas personalizadas.
+
+El valor es una estimación en horas: duración transcurrida del periodo en días × horas de operación diarias configuradas × equipos actualmente operativos / OT correctivas finalizadas en el periodo. Se utiliza el supuesto de operación de la gráfica MTBF (24 h/día por defecto, configurable con `FIIX_OPERATING_HOURS_PER_DAY`). No representa horas históricas medidas. En Histórico, la observación comienza en la primera OT no anulada registrada.
+
+Un valor mayor es mejor. Sin correctivas finalizadas o sin horas operativas calculables se muestra **—**. La meta se configura en horas; un valor de **0** deja la tarjeta **Sin meta**, sin calificarla como cumplida. MTBF también se incluye en la exportación de indicadores.

@@ -100,6 +100,7 @@ const KPI_BLOCK_ORDER: KpiBlockKey[] = ['salud', 'ejecucion', 'graficas', 'por_l
 
 const GOAL_LABELS: Record<string, { label: string; unit: string; hint: string }> = {
   COMPLETED_MONTHLY: { label: 'OT finalizadas', unit: 'órdenes', hint: 'Meta de órdenes cerradas en el periodo' },
+  MTBF: { label: 'MTBF', unit: 'horas', hint: 'Tiempo medio estimado entre fallas (mayor es mejor). 0 = sin meta.' },
   MTTR: { label: 'MTTR', unit: 'horas', hint: 'Tiempo medio de reparación correctiva' },
   RESPONSE_TIME: { label: 'Tiempo de respuesta', unit: 'horas', hint: 'Desde creación hasta inicio de trabajo' },
   SLA: { label: 'Cumplimiento MTTR', unit: '%', hint: '% de correctivas bajo la meta de MTTR' },
@@ -610,7 +611,8 @@ export const KPIPage = () => {
     onClick?: () => void,
     hero = false,
   ) => {
-    const status = getStatus(metric, moreIsBetter);
+    const hasGoal = metric.goalConfigured !== false;
+    const status = hasGoal ? getStatus(metric, moreIsBetter) : 'neutral';
     const styles = statusStyles[status];
     const pct = progressPct(metric, moreIsBetter);
 
@@ -636,16 +638,17 @@ export const KPIPage = () => {
           <div className="rounded-xl bg-slate-100 dark:bg-slate-800 p-2 text-slate-600 dark:text-slate-400">{icon}</div>
         </div>
 
-        <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+        {hasGoal && <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
           <div className={`h-full rounded-full transition-all ${styles.bar}`} style={{ width: `${pct}%` }} />
-        </div>
+        </div>}
 
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <span className="font-medium text-slate-500 dark:text-slate-400">
-            Meta: {formatter(metric.goal.targetValue)} {unit}
+            {hasGoal ? `Meta: ${formatter(metric.goal.targetValue)} ${unit}` : 'Meta sin configurar'}
           </span>
-          <span className={`rounded-full border px-2 py-0.5 font-bold ${styles.chip}`}>{styles.label}</span>
+          <span className={`rounded-full border px-2 py-0.5 font-bold ${styles.chip}`}>{!hasGoal && !metric.isNull ? 'Sin meta' : styles.label}</span>
         </div>
+        {title === 'MTBF' && <p className="mt-2 text-[11px] text-slate-500">Estimado · mayor es mejor</p>}
         {typeof metric.sampleSize === 'number' && (
           <p className="mt-2 text-[11px] text-slate-400">{metric.sampleSize} muestra{metric.sampleSize === 1 ? '' : 's'}{metric.missingCount ? ` · ${metric.missingCount} sin tiempo válido (excluidas)` : ''}</p>
         )}
@@ -929,7 +932,7 @@ export const KPIPage = () => {
           <section {...blockProps('salud')} className={blockClass('salud')}>
             {dragHandle}
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Salud de planta</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               {renderKpiCard(
                 'Disponibilidad',
                 <Activity size={18} />,
@@ -949,6 +952,17 @@ export const KPIPage = () => {
                 (v) => v.toFixed(1),
                 'h',
                 'Tiempo medio de labor activa en correctivas finalizadas.',
+                undefined,
+                true,
+              )}
+              {renderKpiCard(
+                'MTBF',
+                <Clock size={18} />,
+                data.metrics.MTBF,
+                true,
+                (v) => v.toLocaleString('es-MX', { maximumFractionDigits: 1 }),
+                'h',
+                data.metrics.MTBF.methodology || 'Tiempo medio estimado entre fallas.',
                 undefined,
                 true,
               )}
