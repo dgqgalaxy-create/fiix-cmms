@@ -1045,7 +1045,7 @@ export const KPIPage = () => {
                   <strong>MTTR:</strong> reparación (↓ mejor)
                 </span>
                 <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
-                  <strong>MTBF estimado:</strong> entre fallas (↑ mejor). Usa equipos operativos actuales y {charts[0]?.mtbfAssumptionHoursPerDay ?? 24} h/día; no es una medición histórica de horas reales.
+                  <strong>MTBF estimado:</strong> entre fallas (↑ mejor). Usa equipos operativos de las zonas seleccionadas en «Zonas de respuesta» y {charts[0]?.mtbfAssumptionHoursPerDay ?? 24} h/día; no es una medición histórica de horas reales.
                 </span>
               </div>
               <div className="h-80">
@@ -1816,9 +1816,9 @@ export const KPIPage = () => {
           <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col border border-slate-200 dark:border-slate-700">
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <div>
-                <h3 className="font-bold text-slate-800 dark:text-slate-100">Zonas del Tiempo de respuesta</h3>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100">Zonas de Tiempo de respuesta y MTBF</h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  El indicador «Tiempo respuesta» mide solo las zonas marcadas. Si no marcas ninguna, se miden todas.
+                  «Tiempo respuesta» mide las zonas marcadas. La tarjeta y la gráfica MTBF incluyen solo equipos y correctivas de equipos de esas zonas. Si no marcas ninguna, se miden todas.
                 </p>
               </div>
               <button onClick={() => setZonesConfigOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg">

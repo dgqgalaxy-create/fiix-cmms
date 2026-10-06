@@ -37,6 +37,21 @@ export function getOperatingHoursPerDay(): number {
   return Math.min(24, Math.max(1, parsed));
 }
 
+// MTBF se delimita por la zona del equipo, no por la zona capturada en la OT.
+// Vacío/null conserva el significado del selector: todas las zonas.
+const mtbfZoneIds = (raw: unknown): string[] =>
+  Array.isArray(raw) ? raw.filter((id): id is string => typeof id === 'string') : [];
+
+const isMtbfOrderInScope = (
+  order: { asset?: { zone_id: string | null } | null },
+  zoneIds: string[],
+): boolean => !!order.asset && (zoneIds.length === 0 ||
+  (order.asset.zone_id !== null && zoneIds.includes(order.asset.zone_id)));
+
+const countMtbfAssets = (zoneIds: string[]) => prisma.asset.count({
+  where: { status: 'OPERATIVO', ...(zoneIds.length ? { zone_id: { in: zoneIds } } : {}) },
+});
+
 const DEFAULT_GOALS: Record<string, { targetValue: number; unit: string }> = {
   COMPLETED_MONTHLY: { targetValue: 50, unit: 'órdenes' },
   MTTR: { targetValue: 4, unit: 'horas' },
@@ -237,7 +252,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
       goals[goal.metricKey] = normalizeGoal(goal.metricKey, goal.targetValue, goal.unit);
     });
 
-    const [periodOrders, openOrders, downtimeOrders, zones, settings, operativeAssets] = await Promise.all([
+    const [periodOrders, openOrders, downtimeOrders, zones, settings] = await Promise.all([
       prisma.workOrder.findMany({
         where: {
           status: { not: 'ANULADO' },
@@ -274,7 +289,6 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
       }),
       prisma.zone.findMany({ select: { id: true } }),
       prisma.systemSettings.findFirst({ select: { response_time_zone_ids: true } }),
-      prisma.asset.count({ where: { status: 'OPERATIVO' } }),
     ]);
 
     const completedOrders = periodOrders.filter(
@@ -287,14 +301,20 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
 
     const correctiveCompleted = completedOrders.filter((wo) => wo.maintenance_type === 'CORRECTIVO');
 
-    // Histórico empieza en la primera OT registrada, no en el epoch del filtro ALL.
+    const selectedMtbfZones = mtbfZoneIds(settings?.response_time_zone_ids);
+    const operativeAssets = await countMtbfAssets(selectedMtbfZones);
+    const mtbfOrders = periodOrders.filter(wo => isMtbfOrderInScope(wo, selectedMtbfZones));
+    const mtbfFailures = correctiveCompleted.filter(wo => isMtbfOrderInScope(wo, selectedMtbfZones));
+
+    // Histórico empieza en la primera OT de los equipos incluidos en las zonas.
+
     const mtbfStart = req.query.period === 'ALL'
-      ? new Date(periodOrders.reduce((earliest, wo) => Math.min(earliest, wo.created_at.getTime()), effectiveEnd.getTime()))
+      ? new Date(mtbfOrders.reduce((earliest, wo) => Math.min(earliest, wo.created_at.getTime()), effectiveEnd.getTime()))
       : start;
     const hoursPerDay = getOperatingHoursPerDay();
     const operationalHours = Math.max(0, effectiveEnd.getTime() - mtbfStart.getTime()) / 86_400_000 * hoursPerDay * operativeAssets;
-    const mtbfHours = correctiveCompleted.length > 0 && operationalHours > 0
-      ? operationalHours / correctiveCompleted.length
+    const mtbfHours = mtbfFailures.length > 0 && operationalHours > 0
+      ? operationalHours / mtbfFailures.length
       : null;
 
     // MTTR: tiempo activo de labor en correctivas finalizadas (horas)
@@ -475,9 +495,9 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
           value: mtbfHours === null ? 0 : Number(mtbfHours.toFixed(2)),
           goal: goals.MTBF,
           goalConfigured: goals.MTBF.targetValue > 0,
-          sampleSize: correctiveCompleted.length,
+          sampleSize: mtbfFailures.length,
           isNull: mtbfHours === null,
-          methodology: `MTBF estimado de flota: horas del periodo × ${hoursPerDay} h/día × equipos operativos actuales / correctivas finalizadas. Histórico: desde la primera OT registrada. No mide horas reales de operación.`,
+          methodology: `MTBF estimado de las zonas seleccionadas en «Zonas de respuesta»: días transcurridos × ${hoursPerDay} h/día × equipos operativos actuales de esas zonas / correctivas finalizadas de equipos de esas zonas. Sin selección: todas las zonas. Histórico: desde la primera OT de los equipos incluidos. No mide horas reales de operación.`,
         },
         RESPONSE_TIME: {
           value: Number(responseHours.toFixed(2)),
@@ -639,7 +659,7 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
     const globalStart = intervals[0].start;
     const globalEnd = intervals[intervals.length - 1].end;
 
-    const [workOrders, inventoryTransactions, operativeAssets] = await Promise.all([
+    const [workOrders, inventoryTransactions, settings] = await Promise.all([
       prisma.workOrder.findMany({
         where: {
           status: { not: 'ANULADO' },
@@ -648,6 +668,7 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
             { created_at: { gte: globalStart, lte: globalEnd } },
           ],
         },
+        include: { asset: { select: { zone_id: true } } },
       }),
       prisma.inventoryTransaction.findMany({
         where: {
@@ -657,8 +678,10 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
         },
         include: { item: true },
       }),
-      prisma.asset.count({ where: { status: 'OPERATIVO' } }),
+      prisma.systemSettings.findFirst({ select: { response_time_zone_ids: true } }),
     ]);
+    const selectedMtbfZones = mtbfZoneIds(settings?.response_time_zone_ids);
+    const operativeAssets = await countMtbfAssets(selectedMtbfZones);
 
     const chartData = intervals.map((interval) => {
       const intervalCompleted = workOrders.filter(
@@ -685,10 +708,10 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
 
       // MTBF de flota: horas operativas / fallas correctivas. El supuesto de horas/día
       // es ahora explícito (getOperatingHoursPerDay) en vez de un 24 fijo implícito.
-      const failures = correctiveCompleted.length;
+      const failures = correctiveCompleted.filter(wo => isMtbfOrderInScope(wo, selectedMtbfZones)).length;
       const hoursPerDay = getOperatingHoursPerDay();
       const operationalHours = Math.max(0, interval.end.getTime() - interval.start.getTime()) / 86400000 * hoursPerDay * operativeAssets;
-      const mtbfHours = failures > 0 ? operationalHours / failures : null;
+      const mtbfHours = failures > 0 && operationalHours > 0 ? operationalHours / failures : null;
 
       return {
         month: interval.label,

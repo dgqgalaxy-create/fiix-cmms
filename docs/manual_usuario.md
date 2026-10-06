@@ -370,6 +370,8 @@ El mensual muestra cumplimiento, cierres diarios por tipo, una fila por día con
 
 En **KPI y Metas → Indicadores por periodo → Salud de planta**, la tarjeta **MTBF** acompaña a Disponibilidad, MTTR y Backlog. Utiliza el mismo selector de periodo, incluidas las fechas personalizadas.
 
-El valor es una estimación en horas: duración transcurrida del periodo en días × horas de operación diarias configuradas × equipos actualmente operativos / OT correctivas finalizadas en el periodo. Se utiliza el supuesto de operación de la gráfica MTBF (24 h/día por defecto, configurable con `FIIX_OPERATING_HOURS_PER_DAY`). No representa horas históricas medidas. En Histórico, la observación comienza en la primera OT no anulada registrada.
+La tarjeta y la gráfica MTBF respetan las zonas guardadas en **Zonas de respuesta**. Se incluyen únicamente equipos pertenecientes a esas zonas y sus OT correctivas finalizadas dentro del periodo; las OT sin equipo quedan excluidas. La zona se toma del equipo aunque la OT indique otra. Sin zonas marcadas se incluyen todas, como indica el selector. Al guardar la selección se recalculan ambos.
+
+El valor es una estimación en horas: duración transcurrida del periodo en días × horas de operación diarias configuradas × equipos actualmente operativos de esas zonas / OT correctivas finalizadas de equipos de esas zonas en el periodo. Se utiliza el supuesto de operación de la gráfica MTBF (24 h/día por defecto, configurable con `FIIX_OPERATING_HOURS_PER_DAY`). No representa horas históricas medidas. En Histórico, la observación comienza en la primera OT no anulada de los equipos incluidos en las zonas.
 
 Un valor mayor es mejor. Sin correctivas finalizadas o sin horas operativas calculables se muestra **—**. La meta se configura en horas; un valor de **0** deja la tarjeta **Sin meta**, sin calificarla como cumplida. MTBF también se incluye en la exportación de indicadores.
