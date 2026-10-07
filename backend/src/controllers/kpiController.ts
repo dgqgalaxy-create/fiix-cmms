@@ -305,7 +305,11 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
     const selectedMtbfZones = mtbfZoneIds(settings?.response_time_zone_ids);
     const mtbfZoneCount = await countMtbfZones(selectedMtbfZones);
     const mtbfOrders = periodOrders.filter(wo => isMtbfOrderInScope(wo, selectedMtbfZones));
-    const mtbfFailures = correctiveCompleted.filter(wo => isMtbfOrderInScope(wo, selectedMtbfZones));
+    // Denominador MTBF = correctivas LEVANTADAS (creadas) en el periodo, excluidas anuladas.
+    const correctiveCreated = periodOrders.filter(
+      (wo) => wo.maintenance_type === 'CORRECTIVO' && wo.created_at >= start && wo.created_at <= effectiveEnd,
+    );
+    const mtbfFailures = correctiveCreated.filter(wo => isMtbfOrderInScope(wo, selectedMtbfZones));
 
     // Histórico empieza en la primera OT de las zonas incluidas.
 
@@ -498,7 +502,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
           goalConfigured: goals.MTBF.targetValue > 0,
           sampleSize: mtbfFailures.length,
           isNull: mtbfHours === null,
-          methodology: `MTBF = días transcurridos × ${hoursPerDay} h/día × ${mtbfZoneCount} zona(s) seleccionada(s) en «Zonas de respuesta» / OT correctivas finalizadas en el periodo. Sin selección: todas las zonas. Histórico: desde la primera OT de las zonas incluidas.`,
+          methodology: `MTBF = días transcurridos × ${hoursPerDay} h/día × ${mtbfZoneCount} zona(s) seleccionada(s) en «Zonas de respuesta» / OT correctivas levantadas (creadas) en el periodo, excluidas las anuladas. Sin selección: todas las zonas. Histórico: desde la primera OT de las zonas incluidas.`,
         },
         RESPONSE_TIME: {
           value: Number(responseHours.toFixed(2)),
@@ -709,7 +713,10 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
 
       // MTBF de flota: horas operativas / fallas correctivas. El supuesto de horas/día
       // es ahora explícito (getOperatingHoursPerDay) en vez de un 24 fijo implícito.
-      const failures = correctiveCompleted.filter(wo => isMtbfOrderInScope(wo, selectedMtbfZones)).length;
+      const correctiveCreated = workOrders.filter(
+        (wo) => wo.maintenance_type === 'CORRECTIVO' && wo.created_at >= interval.start && wo.created_at <= interval.end,
+      );
+      const failures = correctiveCreated.filter(wo => isMtbfOrderInScope(wo, selectedMtbfZones)).length;
       const hoursPerDay = getOperatingHoursPerDay();
       const operationalHours = Math.max(0, interval.end.getTime() - interval.start.getTime()) / 86400000 * hoursPerDay * mtbfZoneCount;
       const mtbfHours = failures > 0 && operationalHours > 0 ? operationalHours / failures : null;
@@ -918,7 +925,7 @@ export const getTechnicianPerformance = async (req: AuthRequest, res: Response):
  * - MTTR = promedio de accumulated_time_ms (fallback completed_at − started_at) de los
  *   paros FINALIZADOS dentro del periodo, en horas.
  * - MTBF = días del periodo × horas/día (FIIX_OPERATING_HOURS_PER_DAY, default 24) ×
- *   1 zona (la línea) / correctivas FINALIZADAS dentro del periodo. null sin correctivas.
+ *   1 zona (la línea) / correctivas LEVANTADAS dentro del periodo (excluidas anuladas).
  */
 export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -1010,13 +1017,9 @@ export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promis
       }
       const mttrHours = repairSample > 0 ? totalRepairMs / repairSample / MS_PER_HOUR : null;
 
-      // MTBF: días del periodo × horas/día × 1 zona (la línea) / correctivas finalizadas.
+      // MTBF: días del periodo × horas/día × 1 zona / correctivas LEVANTADAS en el periodo.
       const mtbfFailures = lineOrders.filter(
-        (wo) =>
-          wo.status === 'FINALIZADO' &&
-          wo.completed_at &&
-          wo.completed_at >= start &&
-          wo.completed_at <= effectiveEnd,
+        (wo) => wo.created_at >= start && wo.created_at <= effectiveEnd,
       );
       const operativeCount = operativeByLine.get(line) ?? 0;
       const operationalHours = (Math.max(0, effectiveEnd.getTime() - mtbfStart.getTime()) / DAY_MS) * hoursPerDay;
@@ -1053,7 +1056,7 @@ export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promis
  * Misma definición que /by-line, a nivel equipo:
  * - paros = correctivas con máquina detenida del equipo creadas en el periodo.
  * - MTTR = promedio de accumulated_time_ms de sus paros finalizados.
- * - MTBF = días del periodo × horas/día / correctivas finalizadas del equipo.
+ * - MTBF = días del periodo × horas/día / correctivas levantadas del equipo.
  */
 export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -1144,13 +1147,9 @@ export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Pr
       }
       const mttrHours = repairSample > 0 ? totalRepairMs / repairSample / MS_PER_HOUR : null;
 
-      // MTBF por equipo: días del periodo × horas/día / correctivas finalizadas del equipo.
+      // MTBF por equipo: días del periodo × horas/día / correctivas LEVANTADAS del equipo.
       const mtbfFailures = orders.filter(
-        (wo) =>
-          wo.status === 'FINALIZADO' &&
-          wo.completed_at &&
-          wo.completed_at >= start &&
-          wo.completed_at <= effectiveEnd,
+        (wo) => wo.created_at >= start && wo.created_at <= effectiveEnd,
       );
       const operationalHours = (Math.max(0, effectiveEnd.getTime() - mtbfStart.getTime()) / DAY_MS) * hoursPerDay;
       const mtbfHours =
