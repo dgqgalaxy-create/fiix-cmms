@@ -8,8 +8,7 @@ test('MTBF uses filtered completed correctives, elapsed period, operating hours 
   const mock = (object, key, fn) => { originals.push(() => { object[key] = fn.original; }); fn.original = object[key]; object[key] = fn; };
   const oldHours = process.env.FIIX_OPERATING_HOURS_PER_DAY;
   process.env.FIIX_OPERATING_HOURS_PER_DAY = '12';
-  let assets = 2, goals = [], selectedZones = null;
-  let assetWhere;
+  let zoneCount = 2, goals = [], selectedZones = null;
   let orders = [
     ['CORRECTIVO', 'FINALIZADO', '2026-09-01T12:00:00Z'],
     ['CORRECTIVO', 'FINALIZADO', '2026-09-02T12:00:00Z'],
@@ -21,7 +20,7 @@ test('MTBF uses filtered completed correctives, elapsed period, operating hours 
     created_at: new Date('2026-09-01T06:00:00Z'), accumulated_time_ms: 3600000,
   }));
   mock(prisma.kPIGoal, 'findMany', async () => goals);
-  mock(prisma.asset, 'count', async ({where}) => { assert.equal(where.status, 'OPERATIVO'); assetWhere = where; return selectedZones?.length ? (selectedZones.includes('A') ? assets : 1) : assets; });
+  mock(prisma.zone, 'count', async () => zoneCount);
   mock(prisma.zone, 'findMany', async () => []);
   mock(prisma.systemSettings, 'findFirst', async () => ({ response_time_zone_ids: selectedZones }));
   mock(prisma.inventoryTransaction, 'findMany', async () => []);
@@ -53,7 +52,7 @@ test('MTBF uses filtered completed correctives, elapsed period, operating hours 
       const failures = orders.filter(o => o.status === 'FINALIZADO' && o.maintenance_type === 'CORRECTIVO' && o.completed_at >= start && o.completed_at <= end).length;
       assert.equal(data.metrics.MTBF.sampleSize, failures, period);
       const observationStart = period === 'ALL' ? orders[0].created_at : start;
-      const expected = failures ? Number(((end - observationStart) / 86400000 * 12 * assets / failures).toFixed(2)) : 0;
+      const expected = failures ? Number(((end - observationStart) / 86400000 * 12 * zoneCount / failures).toFixed(2)) : 0;
       assert.equal(data.metrics.MTBF.value, expected, period);
       assert.ok(end <= new Date());
     }
@@ -65,17 +64,16 @@ test('MTBF uses filtered completed correctives, elapsed period, operating hours 
     ];
     selectedZones = ['A'];
     data = await fetch(query);
-    assert.deepEqual(assetWhere.zone_id, {in:['A']});
-    assert.equal(data.metrics.MTBF.value, 24);
+    assert.equal(data.metrics.MTBF.value, 12);
     assert.equal(data.metrics.MTBF.sampleSize, 2);
     const historic = await fetch({period:'ALL'});
-    const expectedHistory = Number(((new Date(historic.period.end) - baseOrders[0].created_at) / 86400000 * 12 * assets / 3).toFixed(2));
+    const expectedHistory = Number(((new Date(historic.period.end) - baseOrders[0].created_at) / 86400000 * 12 * selectedZones.length / 3).toFixed(2));
     assert.equal(historic.metrics.MTBF.value, expectedHistory);
     const chartRes = {json(body) { this.body = body; }, status(code) { this.code = code; return this; }};
     await getChartData({query}, chartRes);
     assert.notEqual(chartRes.code, 500);
     assert.deepEqual(chartRes.body.map(day => day.mtbfSample), [1,1]);
-    assert.deepEqual(chartRes.body.map(day => day.mtbf), [24,24]);
+    assert.deepEqual(chartRes.body.map(day => day.mtbf), [12,12]);
     selectedZones = ['B'];
     data = await fetch(query);
     assert.equal(data.metrics.MTBF.sampleSize, 1);
@@ -84,14 +82,13 @@ test('MTBF uses filtered completed correctives, elapsed period, operating hours 
     assert.equal((await fetch(query)).metrics.MTBF.isNull, true);
     selectedZones = [];
     data = await fetch(query);
-    assert.equal(assetWhere.zone_id, undefined);
     assert.equal(data.metrics.MTBF.sampleSize, 3); // no incluye OT sin equipo
     assert.equal(data.metrics.MTBF.value, 16);
     selectedZones = null;
     orders = baseOrders;
-    assets = 0;
+    zoneCount = 0;
     assert.equal((await fetch(query)).metrics.MTBF.isNull, true);
-    assets = 2;
+    zoneCount = 2;
     orders = [];
     assert.equal((await fetch(query)).metrics.MTBF.isNull, true);
   } finally {

@@ -31,6 +31,9 @@ yarn-error.log*
 # Arranque local (PIDs / logs de start-local.sh)
 .run/
 
+# Cluster PostgreSQL local de desarrollo
+.local/
+
 # SO
 .DS_Store
 Thumbs.db

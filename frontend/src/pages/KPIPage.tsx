@@ -525,6 +525,7 @@ export const KPIPage = () => {
     const lineasRows = (lineMttrMtbf?.lines ?? []).map((l) => ({
       Línea: l.line,
       'Paros (fallas)': l.failures,
+      'Correctivas finalizadas (MTBF)': l.mtbfSample ?? '',
       'MTTR (h)': l.mttrHours ?? '',
       'MTBF (h)': l.mtbfHours ?? '',
       'Activos operativos': l.assets,
@@ -1045,7 +1046,7 @@ export const KPIPage = () => {
                   <strong>MTTR:</strong> reparación (↓ mejor)
                 </span>
                 <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
-                  <strong>MTBF estimado:</strong> entre fallas (↑ mejor). Usa equipos operativos de las zonas seleccionadas en «Zonas de respuesta» y {charts[0]?.mtbfAssumptionHoursPerDay ?? 24} h/día; no es una medición histórica de horas reales.
+                  <strong>MTBF estimado:</strong> entre fallas (↑ mejor). Usa el número de zonas seleccionadas en «Zonas de respuesta» y {charts[0]?.mtbfAssumptionHoursPerDay ?? 24} h/día ÷ correctivas finalizadas; no es una medición histórica de horas reales.
                 </span>
               </div>
               <div className="h-80">
@@ -1142,7 +1143,7 @@ export const KPIPage = () => {
                 <p className="text-xs text-slate-400">
                   Paros correctivos con máquina detenida ·{' '}
                   {lineMttrMtbf
-                    ? `${lineMttrMtbf.days} días × ${lineMttrMtbf.hoursPerDay} h/día × activos operativos de cada línea`
+                    ? `${lineMttrMtbf.days} días × ${lineMttrMtbf.hoursPerDay} h/día × 1 zona por línea`
                     : 'Cargando periodo…'}
                 </p>
               </div>
@@ -1153,7 +1154,7 @@ export const KPIPage = () => {
                 <strong>MTTR:</strong> promedio de reparación de paros finalizados (↓ mejor)
               </span>
               <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
-                <strong>MTBF estimado:</strong> horas supuestas ÷ fallas (↑ mejor); población de equipos actual.
+                <strong>MTBF estimado:</strong> días × h/día × 1 zona ÷ correctivas finalizadas (↑ mejor)
               </span>
             </div>
 

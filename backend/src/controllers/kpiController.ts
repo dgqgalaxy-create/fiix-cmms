@@ -48,9 +48,10 @@ const isMtbfOrderInScope = (
 ): boolean => !!order.asset && (zoneIds.length === 0 ||
   (order.asset.zone_id !== null && zoneIds.includes(order.asset.zone_id)));
 
-const countMtbfAssets = (zoneIds: string[]) => prisma.asset.count({
-  where: { status: 'OPERATIVO', ...(zoneIds.length ? { zone_id: { in: zoneIds } } : {}) },
-});
+// MTBF usa el NÚMERO DE ZONAS del alcance («Zonas de respuesta»), no de equipos.
+// Sin selección: todas las zonas.
+const countMtbfZones = async (zoneIds: string[]): Promise<number> =>
+  zoneIds.length > 0 ? zoneIds.length : prisma.zone.count();
 
 const DEFAULT_GOALS: Record<string, { targetValue: number; unit: string }> = {
   COMPLETED_MONTHLY: { targetValue: 50, unit: 'órdenes' },
@@ -302,17 +303,17 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
     const correctiveCompleted = completedOrders.filter((wo) => wo.maintenance_type === 'CORRECTIVO');
 
     const selectedMtbfZones = mtbfZoneIds(settings?.response_time_zone_ids);
-    const operativeAssets = await countMtbfAssets(selectedMtbfZones);
+    const mtbfZoneCount = await countMtbfZones(selectedMtbfZones);
     const mtbfOrders = periodOrders.filter(wo => isMtbfOrderInScope(wo, selectedMtbfZones));
     const mtbfFailures = correctiveCompleted.filter(wo => isMtbfOrderInScope(wo, selectedMtbfZones));
 
-    // Histórico empieza en la primera OT de los equipos incluidos en las zonas.
+    // Histórico empieza en la primera OT de las zonas incluidas.
 
     const mtbfStart = req.query.period === 'ALL'
       ? new Date(mtbfOrders.reduce((earliest, wo) => Math.min(earliest, wo.created_at.getTime()), effectiveEnd.getTime()))
       : start;
     const hoursPerDay = getOperatingHoursPerDay();
-    const operationalHours = Math.max(0, effectiveEnd.getTime() - mtbfStart.getTime()) / 86_400_000 * hoursPerDay * operativeAssets;
+    const operationalHours = Math.max(0, effectiveEnd.getTime() - mtbfStart.getTime()) / 86_400_000 * hoursPerDay * mtbfZoneCount;
     const mtbfHours = mtbfFailures.length > 0 && operationalHours > 0
       ? operationalHours / mtbfFailures.length
       : null;
@@ -497,7 +498,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
           goalConfigured: goals.MTBF.targetValue > 0,
           sampleSize: mtbfFailures.length,
           isNull: mtbfHours === null,
-          methodology: `MTBF estimado de las zonas seleccionadas en «Zonas de respuesta»: días transcurridos × ${hoursPerDay} h/día × equipos operativos actuales de esas zonas / correctivas finalizadas de equipos de esas zonas. Sin selección: todas las zonas. Histórico: desde la primera OT de los equipos incluidos. No mide horas reales de operación.`,
+          methodology: `MTBF = días transcurridos × ${hoursPerDay} h/día × ${mtbfZoneCount} zona(s) seleccionada(s) en «Zonas de respuesta» / OT correctivas finalizadas en el periodo. Sin selección: todas las zonas. Histórico: desde la primera OT de las zonas incluidas.`,
         },
         RESPONSE_TIME: {
           value: Number(responseHours.toFixed(2)),
@@ -681,7 +682,7 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
       prisma.systemSettings.findFirst({ select: { response_time_zone_ids: true } }),
     ]);
     const selectedMtbfZones = mtbfZoneIds(settings?.response_time_zone_ids);
-    const operativeAssets = await countMtbfAssets(selectedMtbfZones);
+    const mtbfZoneCount = await countMtbfZones(selectedMtbfZones);
 
     const chartData = intervals.map((interval) => {
       const intervalCompleted = workOrders.filter(
@@ -710,7 +711,7 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
       // es ahora explícito (getOperatingHoursPerDay) en vez de un 24 fijo implícito.
       const failures = correctiveCompleted.filter(wo => isMtbfOrderInScope(wo, selectedMtbfZones)).length;
       const hoursPerDay = getOperatingHoursPerDay();
-      const operationalHours = Math.max(0, interval.end.getTime() - interval.start.getTime()) / 86400000 * hoursPerDay * operativeAssets;
+      const operationalHours = Math.max(0, interval.end.getTime() - interval.start.getTime()) / 86400000 * hoursPerDay * mtbfZoneCount;
       const mtbfHours = failures > 0 && operationalHours > 0 ? operationalHours / failures : null;
 
       return {
@@ -912,26 +913,32 @@ export const getTechnicianPerformance = async (req: AuthRequest, res: Response):
  * MTTR/MTBF por línea de producción (L1–L5), para el periodo seleccionado.
  *
  * Alcance acordado:
- * - Fallas = paros correctivos con machine_stopped=true (cualquier estado salvo ANULADO)
- *   creados dentro del periodo (evento de paro).
+ * - Paros = correctivas con machine_stopped=true (cualquier estado salvo ANULADO)
+ *   creados dentro del periodo (columna «Paros»).
  * - MTTR = promedio de accumulated_time_ms (fallback completed_at − started_at) de los
  *   paros FINALIZADOS dentro del periodo, en horas.
- * - MTBF = horas operativas de la línea / nº de fallas. Horas operativas =
- *   días del periodo × horas/día (FIIX_OPERATING_HOURS_PER_DAY, default 24) × nº de
- *   activos OPERATIVOS de esa línea. null cuando no hay fallas en el periodo.
+ * - MTBF = días del periodo × horas/día (FIIX_OPERATING_HOURS_PER_DAY, default 24) ×
+ *   1 zona (la línea) / correctivas FINALIZADAS dentro del periodo. null sin correctivas.
  */
 export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { start, effectiveEnd } = rangeFromReq(req);
     const hoursPerDay = getOperatingHoursPerDay();
     const DAY_MS = 86_400_000;
-    const days = Math.max(1, Math.ceil((effectiveEnd.getTime() - start.getTime()) / DAY_MS));
+    // Histórico (ALL) arranca en la primera OT; el resto usa el inicio del periodo.
+    const mtbfStart = req.query.period === 'ALL'
+      ? (await prisma.workOrder.findFirst({
+          where: { status: { not: 'ANULADO' } },
+          orderBy: { created_at: 'asc' },
+          select: { created_at: true },
+        }))?.created_at ?? effectiveEnd
+      : start;
+    const days = Math.max(1, Math.ceil((effectiveEnd.getTime() - mtbfStart.getTime()) / DAY_MS));
 
     const [workOrders, operativeAssets] = await Promise.all([
       prisma.workOrder.findMany({
         where: {
           maintenance_type: 'CORRECTIVO',
-          machine_stopped: true,
           status: { not: 'ANULADO' },
           OR: [
             { created_at: { gte: start, lte: effectiveEnd } },
@@ -941,6 +948,7 @@ export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promis
         select: {
           id: true,
           status: true,
+          machine_stopped: true,
           created_at: true,
           started_at: true,
           completed_at: true,
@@ -971,13 +979,14 @@ export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promis
         return resolved === line;
       });
 
-      // Fallas del periodo: eventos de paro creados dentro del periodo.
-      const failures = lineOrders.filter(
+      // Paros (columna «Paros»): correctivas con máquina detenida creadas en el periodo.
+      const paros = lineOrders.filter((wo) => wo.machine_stopped === true);
+      const failures = paros.filter(
         (wo) => wo.created_at >= start && wo.created_at <= effectiveEnd,
       );
 
       // MTTR: paros finalizados dentro del periodo con tiempo de reparación válido.
-      const finalized = lineOrders.filter(
+      const finalized = paros.filter(
         (wo) =>
           wo.status === 'FINALIZADO' &&
           wo.completed_at &&
@@ -1001,10 +1010,19 @@ export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promis
       }
       const mttrHours = repairSample > 0 ? totalRepairMs / repairSample / MS_PER_HOUR : null;
 
-      // MTBF: horas operativas de la línea / fallas del periodo.
+      // MTBF: días del periodo × horas/día × 1 zona (la línea) / correctivas finalizadas.
+      const mtbfFailures = lineOrders.filter(
+        (wo) =>
+          wo.status === 'FINALIZADO' &&
+          wo.completed_at &&
+          wo.completed_at >= start &&
+          wo.completed_at <= effectiveEnd,
+      );
       const operativeCount = operativeByLine.get(line) ?? 0;
-      const operationalHours = days * hoursPerDay * operativeCount;
-      const mtbfHours = failures.length > 0 ? operationalHours / failures.length : null;
+      const operationalHours = (Math.max(0, effectiveEnd.getTime() - mtbfStart.getTime()) / DAY_MS) * hoursPerDay;
+      const mtbfHours = mtbfFailures.length > 0 && operationalHours > 0
+        ? operationalHours / mtbfFailures.length
+        : null;
 
       return {
         line,
@@ -1012,6 +1030,7 @@ export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promis
         mttrHours: mttrHours === null ? null : Number(mttrHours.toFixed(2)),
         mttrSample: repairSample,
         mtbfHours: mtbfHours === null ? null : Number(mtbfHours.toFixed(2)),
+        mtbfSample: mtbfFailures.length,
         assets: operativeCount,
         operationalHours: Math.round(operationalHours),
       };
@@ -1032,9 +1051,9 @@ export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promis
 /**
  * Desglose por equipo de una línea (L1–L5): MTTR/MTBF por activo en el periodo.
  * Misma definición que /by-line, a nivel equipo:
- * - fallas = paros correctivos (machine_stopped) del equipo creados en el periodo.
+ * - paros = correctivas con máquina detenida del equipo creadas en el periodo.
  * - MTTR = promedio de accumulated_time_ms de sus paros finalizados.
- * - MTBF = horas operativas del equipo (solo si está OPERATIVO) / fallas.
+ * - MTBF = días del periodo × horas/día / correctivas finalizadas del equipo.
  */
 export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -1047,7 +1066,15 @@ export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Pr
     const { start, effectiveEnd } = rangeFromReq(req);
     const hoursPerDay = getOperatingHoursPerDay();
     const DAY_MS = 86_400_000;
-    const days = Math.max(1, Math.ceil((effectiveEnd.getTime() - start.getTime()) / DAY_MS));
+    // Histórico (ALL) arranca en la primera OT; el resto usa el inicio del periodo.
+    const mtbfStart = req.query.period === 'ALL'
+      ? (await prisma.workOrder.findFirst({
+          where: { status: { not: 'ANULADO' } },
+          orderBy: { created_at: 'asc' },
+          select: { created_at: true },
+        }))?.created_at ?? effectiveEnd
+      : start;
+    const days = Math.max(1, Math.ceil((effectiveEnd.getTime() - mtbfStart.getTime()) / DAY_MS));
 
     const lineAssets = await prisma.asset.findMany({
       where: { zone: { name: { equals: line, mode: 'insensitive' } } },
@@ -1061,7 +1088,6 @@ export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Pr
           where: {
             asset_id: { in: assetIds },
             maintenance_type: 'CORRECTIVO',
-            machine_stopped: true,
             status: { not: 'ANULADO' },
             OR: [
               { created_at: { gte: start, lte: effectiveEnd } },
@@ -1072,6 +1098,7 @@ export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Pr
             id: true,
             asset_id: true,
             status: true,
+            machine_stopped: true,
             created_at: true,
             started_at: true,
             completed_at: true,
@@ -1089,10 +1116,11 @@ export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Pr
 
     const assets = lineAssets.map((asset) => {
       const orders = byAsset.get(asset.id) ?? [];
-      const failures = orders.filter(
+      const paros = orders.filter((wo) => wo.machine_stopped === true);
+      const failures = paros.filter(
         (wo) => wo.created_at >= start && wo.created_at <= effectiveEnd,
       );
-      const finalized = orders.filter(
+      const finalized = paros.filter(
         (wo) =>
           wo.status === 'FINALIZADO' &&
           wo.completed_at &&
@@ -1116,10 +1144,17 @@ export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Pr
       }
       const mttrHours = repairSample > 0 ? totalRepairMs / repairSample / MS_PER_HOUR : null;
 
-      // MTBF por equipo: sus horas operativas (solo si está OPERATIVO) / sus fallas.
-      const operationalHours = asset.status === 'OPERATIVO' ? days * hoursPerDay : 0;
+      // MTBF por equipo: días del periodo × horas/día / correctivas finalizadas del equipo.
+      const mtbfFailures = orders.filter(
+        (wo) =>
+          wo.status === 'FINALIZADO' &&
+          wo.completed_at &&
+          wo.completed_at >= start &&
+          wo.completed_at <= effectiveEnd,
+      );
+      const operationalHours = (Math.max(0, effectiveEnd.getTime() - mtbfStart.getTime()) / DAY_MS) * hoursPerDay;
       const mtbfHours =
-        failures.length > 0 && operationalHours > 0 ? operationalHours / failures.length : null;
+        mtbfFailures.length > 0 && operationalHours > 0 ? operationalHours / mtbfFailures.length : null;
 
       return {
         id: asset.id,
