@@ -99,7 +99,7 @@ type KpiBlockKey = 'salud' | 'ejecucion' | 'graficas' | 'por_linea' | 'top_falla
 const KPI_BLOCK_ORDER: KpiBlockKey[] = ['salud', 'ejecucion', 'graficas', 'por_linea', 'top_fallas', 'tecnicos', 'retrabajo'];
 
 const GOAL_LABELS: Record<string, { label: string; unit: string; hint: string }> = {
-  COMPLETED_MONTHLY: { label: 'OT finalizadas', unit: 'órdenes', hint: 'Meta de órdenes cerradas en el periodo' },
+  COMPLETED_MONTHLY: { label: 'OT finalizadas', unit: '%', hint: 'Porcentaje de órdenes generadas en el periodo que se finalizaron' },
   MTBF: { label: 'MTBF', unit: 'horas', hint: 'Tiempo medio estimado entre fallas (mayor es mejor). 0 = sin meta.' },
   MTTR: { label: 'MTTR', unit: 'horas', hint: 'Tiempo medio de reparación correctiva' },
   RESPONSE_TIME: { label: 'Tiempo de respuesta', unit: 'horas', hint: 'Desde creación hasta inicio de trabajo' },
@@ -528,7 +528,6 @@ export const KPIPage = () => {
       'Correctivas levantadas (MTBF)': l.mtbfSample ?? '',
       'MTTR (h)': l.mttrHours ?? '',
       'MTBF (h)': l.mtbfHours ?? '',
-      'Activos operativos': l.assets,
       'Horas operativas': l.operationalHours,
       Días: lineMttrMtbf?.days ?? '',
       'Horas/día': lineMttrMtbf?.hoursPerDay ?? '',
@@ -942,7 +941,7 @@ export const KPIPage = () => {
                 true,
                 (v) => v.toFixed(1),
                 '%',
-                'Tiempo productivo menos paros con máquina detenida, recortado al periodo.',
+                data.metrics.ASSET_AVAILABILITY.methodology || 'Disponibilidad calendario.',
                 undefined,
                 true,
               )}
@@ -953,7 +952,7 @@ export const KPIPage = () => {
                 false,
                 (v) => v.toFixed(1),
                 'h',
-                'Tiempo medio de labor activa en correctivas finalizadas.',
+                data.metrics.MTTR.methodology || 'Tiempo medio de reparación.',
                 undefined,
                 true,
               )}
@@ -975,7 +974,7 @@ export const KPIPage = () => {
                 false,
                 (v) => v.toString(),
                 'OT',
-                'Órdenes abiertas ahora: pendientes, en proceso y en espera.',
+                data.metrics.BACKLOG.methodology || 'Órdenes abiertas ahora.',
                 () => navigate('/dashboard'),
                 true,
               )}
@@ -991,9 +990,9 @@ export const KPIPage = () => {
                 <CheckCircle2 size={18} />,
                 data.metrics.COMPLETED_MONTHLY,
                 true,
-                (v) => v.toString(),
-                'OT',
-                'Órdenes finalizadas con completed_at dentro del periodo.',
+                (v) => v.toFixed(1),
+                '%',
+                data.metrics.COMPLETED_MONTHLY.methodology || 'Porcentaje de finalizadas.',
                 () => navigate('/dashboard?status=FINALIZADO'),
               )}
               {renderKpiCard(
@@ -1003,7 +1002,7 @@ export const KPIPage = () => {
                 false,
                 (v) => v.toFixed(1),
                 'h',
-                'Promedio desde creación hasta inicio, de órdenes creadas dentro del periodo y en las zonas configuradas (botón «Zonas de respuesta»).',
+                data.metrics.RESPONSE_TIME.methodology || 'Promedio de tiempo de respuesta.',
               )}
               {renderKpiCard(
                 'Cumpl. MTTR',
@@ -1012,7 +1011,7 @@ export const KPIPage = () => {
                 true,
                 (v) => v.toFixed(1),
                 '%',
-                '% de correctivas finalizadas bajo la meta de MTTR.',
+                data.metrics.SLA.methodology || 'Cumplimiento MTTR.',
               )}
               {renderKpiCard(
                 'Retrabajo',
@@ -1021,7 +1020,7 @@ export const KPIPage = () => {
                 false,
                 (v) => v.toFixed(1),
                 '%',
-                'Correctivas con falla previa del mismo equipo dentro de la ventana de retrabajo.',
+                data.metrics.REINCIDENCIA.methodology || 'Retrabajo.',
               )}
             </div>
           </section>
@@ -1170,7 +1169,6 @@ export const KPIPage = () => {
                         <th className="py-2 pr-3 text-right font-medium">Correctivas</th>
                         <th className="py-2 pr-3 text-right font-medium">MTTR (h)</th>
                         <th className="py-2 pr-3 text-right font-medium">MTBF (h)</th>
-                        <th className="py-2 text-right font-medium">Activos</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1199,11 +1197,10 @@ export const KPIPage = () => {
                             <td className="py-2.5 pr-3 text-right text-emerald-600 dark:text-emerald-400">
                               {l.mtbfHours !== null ? Math.round(l.mtbfHours).toLocaleString('es-MX') : 'Sin fallas'}
                             </td>
-                            <td className="py-2.5 text-right text-slate-700 dark:text-slate-200">{l.assets}</td>
                           </tr>
                           {expandedLine === l.line && (
                             <tr className="border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/60 dark:bg-slate-800/20">
-                              <td colSpan={6} className="p-3">
+                              <td colSpan={5} className="p-3">
                                 {isLoadingLineAssets ? (
                                   <div className="py-4 text-center text-xs text-slate-400 dark:text-slate-500">Cargando equipos…</div>
                                 ) : lineAssets && lineAssets.line === l.line ? (

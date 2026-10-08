@@ -32,11 +32,19 @@ const HOURS_PER_DAY = 24;
 const mtbfZoneIds = (raw: unknown): string[] =>
   Array.isArray(raw) ? raw.filter((id): id is string => typeof id === 'string') : [];
 
+/** Zona efectiva de una OT: la de la propia OT y, si no tiene, la de su equipo. */
+const orderZoneId = (
+  order: { zone_id?: string | null; asset?: { zone_id?: string | null } | null },
+): string | null => order.zone_id ?? order.asset?.zone_id ?? null;
+
 const isMtbfOrderInScope = (
-  order: { asset?: { zone_id: string | null } | null },
+  order: { zone_id?: string | null; asset?: { zone_id: string | null } | null },
   zoneIds: string[],
-): boolean => !!order.asset && (zoneIds.length === 0 ||
-  (order.asset.zone_id !== null && zoneIds.includes(order.asset.zone_id)));
+): boolean => {
+  if (zoneIds.length === 0) return !!order.asset; // sin selección: todas (con equipo)
+  const zoneId = orderZoneId(order);
+  return zoneId !== null && zoneIds.includes(zoneId);
+};
 
 // MTBF usa el NÚMERO DE ZONAS del alcance («Zonas de respuesta»), no de equipos.
 // Sin selección: todas las zonas.
@@ -44,7 +52,7 @@ const countMtbfZones = async (zoneIds: string[]): Promise<number> =>
   zoneIds.length > 0 ? zoneIds.length : prisma.zone.count();
 
 const DEFAULT_GOALS: Record<string, { targetValue: number; unit: string }> = {
-  COMPLETED_MONTHLY: { targetValue: 50, unit: 'órdenes' },
+  COMPLETED_MONTHLY: { targetValue: 80, unit: '%' },
   MTTR: { targetValue: 4, unit: 'horas' },
   MTBF: { targetValue: 0, unit: 'horas' },
   RESPONSE_TIME: { targetValue: 1, unit: 'horas' },
@@ -292,6 +300,14 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
 
     const correctiveCompleted = completedOrders.filter((wo) => wo.maintenance_type === 'CORRECTIVO');
 
+    // «OT finalizadas» como porcentaje: finalizadas del periodo / generadas del periodo.
+    const generatedOrders = periodOrders.filter(
+      (wo) => wo.created_at >= start && wo.created_at <= effectiveEnd,
+    );
+    const completionRate = generatedOrders.length > 0
+      ? (completedOrders.length / generatedOrders.length) * 100
+      : null;
+
     const selectedMtbfZones = mtbfZoneIds(settings?.response_time_zone_ids);
     const mtbfZoneCount = await countMtbfZones(selectedMtbfZones);
     const mtbfOrders = periodOrders.filter(wo => isMtbfOrderInScope(wo, selectedMtbfZones));
@@ -477,14 +493,17 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
       },
       metrics: {
         COMPLETED_MONTHLY: {
-          value: completedOrders.length,
+          value: completionRate === null ? 0 : Number(completionRate.toFixed(1)),
           goal: goals.COMPLETED_MONTHLY,
-          sampleSize: completedOrders.length,
+          sampleSize: generatedOrders.length,
+          isNull: completionRate === null,
+          methodology: 'OT finalizadas en el periodo ÷ OT generadas (creadas) en el periodo × 100.',
         },
         MTTR: {
           value: Number(mttrHours.toFixed(2)),
           goal: goals.MTTR,
           sampleSize: correctiveCompleted.filter((wo) => wo.accumulated_time_ms > 0).length,
+          methodology: 'Promedio de horas de labor (accumulated_time_ms) de las OT correctivas finalizadas con tiempo > 0.',
         },
         MTBF: {
           value: mtbfHours === null ? 0 : Number(mtbfHours.toFixed(2)),
@@ -498,6 +517,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
           value: Number(responseHours.toFixed(2)),
           goal: goals.RESPONSE_TIME,
           sampleSize: startedInZone.length,
+          methodology: 'Promedio de (inicio − creación) en horas, de OT creadas e iniciadas dentro del periodo, en las zonas configuradas en «Zonas de respuesta».',
         },
         SLA: {
           value: mttrCompliance === null ? 0 : Number(mttrCompliance.toFixed(1)),
@@ -505,24 +525,27 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
           sampleSize: validRepairTimes.length,
           missingCount: correctiveCompleted.length - validRepairTimes.length,
           isNull: mttrCompliance === null,
+          methodology: 'Porcentaje de OT correctivas finalizadas cuyo tiempo de reparación está dentro de la meta de MTTR.',
         },
         BACKLOG: {
           value: backlog,
           goal: goals.BACKLOG,
           sampleSize: backlog,
+          methodology: 'Número de OT abiertas ahora: pendientes + en proceso + en espera.',
         },
         ASSET_AVAILABILITY: {
           value: Number(assetAvailability.toFixed(1)),
           goal: goals.ASSET_AVAILABILITY,
           sampleSize: zones.length,
           isNull: zones.length === 0,
-          methodology: 'Disponibilidad sobre tiempo calendario (24 h/día), con paros solapados unidos por zona. No equivale a disponibilidad sobre turnos programados.',
+          methodology: '(tiempo calendario − tiempo de paro con máquina detenida) ÷ tiempo calendario × 100. Tiempo calendario = nº de zonas × duración del periodo; paros solapados unidos por zona.',
         },
         REINCIDENCIA: {
           value: Number(reincidencia.toFixed(1)),
           goal: goals.REINCIDENCIA,
           details: Array.from(recurrentAssetsMap.values()).sort((a, b) => b.count - a.count),
           sampleSize: correctiveFinalized.length,
+          methodology: 'Correctivas finalizadas con falla previa del mismo equipo dentro de la ventana de retrabajo ÷ correctivas finalizadas × 100.',
         },
       },
     });
@@ -931,7 +954,7 @@ export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promis
       : start;
     const days = Math.max(1, Math.ceil((effectiveEnd.getTime() - mtbfStart.getTime()) / DAY_MS));
 
-    const [workOrders, operativeAssets] = await Promise.all([
+    const [workOrders, zones, settings] = await Promise.all([
       prisma.workOrder.findMany({
         where: {
           maintenance_type: 'CORRECTIVO',
@@ -949,30 +972,38 @@ export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promis
           started_at: true,
           completed_at: true,
           accumulated_time_ms: true,
+          zone_id: true,
           zone: { select: { name: true } },
-          asset: { select: { zone: { select: { name: true } } } },
+          asset: { select: { zone_id: true, zone: { select: { name: true } } } },
         },
       }),
-      prisma.asset.findMany({
-        where: { status: 'OPERATIVO' },
-        select: { zone: { select: { name: true } } },
-      }),
+      prisma.zone.findMany({ select: { id: true, name: true } }),
+      prisma.systemSettings.findFirst({ select: { response_time_zone_ids: true } }),
     ]);
 
-    // Activos operativos por línea (L1–L5) para las horas operativas del MTBF.
-    const operativeByLine = new Map<string, number>();
-    for (const line of PRODUCTION_LINES) operativeByLine.set(line, 0);
-    for (const asset of operativeAssets) {
-      const line = resolveProductionLine(asset.zone?.name ?? null);
-      if (line) operativeByLine.set(line, (operativeByLine.get(line) ?? 0) + 1);
+    // Zonas marcadas en «Zonas de respuesta» → líneas L1–L5 dentro del alcance.
+    const markedZones = mtbfZoneIds(settings?.response_time_zone_ids);
+    const lineByZoneId = new Map<string, string>();
+    for (const z of zones) {
+      const line = resolveProductionLine(z.name);
+      if (line) lineByZoneId.set(z.id, line);
     }
+    const markedLines = markedZones.length
+      ? new Set(markedZones.map((id) => lineByZoneId.get(id)).filter((l): l is string => !!l))
+      : new Set<string>(PRODUCTION_LINES);
 
-    const lines = PRODUCTION_LINES.map((line) => {
-      const lineOrders = workOrders.filter((wo) => {
-        const resolved =
-          resolveProductionLine(wo.zone?.name ?? null) ??
-          resolveProductionLine(wo.asset?.zone?.name ?? null);
-        return resolved === line;
+    // Solo correctivas cuya zona efectiva (OT → equipo) esté dentro de las marcadas.
+    const scopedOrders = markedZones.length
+      ? workOrders.filter((wo) => {
+          const zid = orderZoneId(wo);
+          return zid !== null && markedZones.includes(zid);
+        })
+      : workOrders;
+
+    const lines = [...markedLines].sort().map((line) => {
+      const lineOrders = scopedOrders.filter((wo) => {
+        const zid = orderZoneId(wo);
+        return zid !== null && lineByZoneId.get(zid) === line;
       });
 
       // Paros (columna «Paros»): correctivas con máquina detenida creadas en el periodo.
@@ -1010,7 +1041,6 @@ export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promis
       const mtbfFailures = lineOrders.filter(
         (wo) => wo.created_at >= start && wo.created_at <= effectiveEnd,
       );
-      const operativeCount = operativeByLine.get(line) ?? 0;
       const operationalHours = days * hoursPerDay;
       const mtbfHours = mtbfFailures.length > 0 && operationalHours > 0
         ? operationalHours / mtbfFailures.length
@@ -1023,7 +1053,6 @@ export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promis
         mttrSample: repairSample,
         mtbfHours: mtbfHours === null ? null : Number(mtbfHours.toFixed(2)),
         mtbfSample: mtbfFailures.length,
-        assets: operativeCount,
         operationalHours: Math.round(operationalHours),
       };
     });
@@ -1068,6 +1097,17 @@ export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Pr
       : start;
     const days = Math.max(1, Math.ceil((effectiveEnd.getTime() - mtbfStart.getTime()) / DAY_MS));
 
+    const [settings, zones] = await Promise.all([
+      prisma.systemSettings.findFirst({ select: { response_time_zone_ids: true } }),
+      prisma.zone.findMany({ select: { id: true, name: true } }),
+    ]);
+    const markedZones = mtbfZoneIds(settings?.response_time_zone_ids);
+    const lineByZoneId = new Map<string, string>();
+    for (const z of zones) {
+      const l = resolveProductionLine(z.name);
+      if (l) lineByZoneId.set(z.id, l);
+    }
+
     const lineAssets = await prisma.asset.findMany({
       where: { zone: { name: { equals: line, mode: 'insensitive' } } },
       select: { id: true, name: true, internal_code: true, status: true },
@@ -1089,6 +1129,8 @@ export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Pr
           select: {
             id: true,
             asset_id: true,
+            zone_id: true,
+            asset: { select: { zone_id: true } },
             status: true,
             machine_stopped: true,
             created_at: true,
@@ -1099,8 +1141,17 @@ export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Pr
         })
       : [];
 
-    const byAsset = new Map<string, typeof stoppages>();
-    for (const wo of stoppages) {
+    // Solo correctivas cuya zona efectiva (OT → equipo) corresponde a esta línea
+    // y está dentro de las zonas marcadas en «Zonas de respuesta».
+    const scopedStoppages = stoppages.filter((wo) => {
+      const zid = orderZoneId(wo);
+      if (lineByZoneId.get(zid ?? '') !== line) return false;
+      if (markedZones.length && (zid === null || !markedZones.includes(zid))) return false;
+      return true;
+    });
+
+    const byAsset = new Map<string, typeof scopedStoppages>();
+    for (const wo of scopedStoppages) {
       const list = byAsset.get(wo.asset_id) ?? [];
       list.push(wo);
       byAsset.set(wo.asset_id, list);

@@ -192,8 +192,6 @@ export interface LineMttrMtbf {
   mtbfHours: number | null;
   /** Correctivas levantadas (creadas) en el periodo (denominador del MTBF). */
   mtbfSample: number;
-  /** Activos OPERATIVOS de la línea (informativo). */
-  assets: number;
   operationalHours: number;
 }
 
