@@ -348,12 +348,11 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
       startedInZone.map((wo) => (wo.started_at!.getTime() - wo.created_at.getTime()) / MS_PER_HOUR),
     );
 
-    // Cumplimiento MTTR (antes etiquetado como SLA)
+    // Cumplimiento MTTR: % de correctivas finalizadas (en las zonas marcadas) bajo la meta.
     const mttrGoalHours = goals.MTTR.targetValue;
-    const validRepairTimes = correctiveCompleted.filter(wo => Number(wo.accumulated_time_ms) > 0);
-    const mttrCompliance = validRepairTimes.length
-      ? (validRepairTimes.filter((wo) => Number(wo.accumulated_time_ms) / MS_PER_HOUR <= mttrGoalHours).length /
-          validRepairTimes.length) *
+    const mttrCompliance = correctiveCompletedInScope.length
+      ? (correctiveCompletedInScope.filter((wo) => Number(wo.accumulated_time_ms) / MS_PER_HOUR <= mttrGoalHours).length /
+          correctiveCompletedInScope.length) *
         100
       : null;
 
@@ -467,10 +466,9 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
         SLA: {
           value: mttrCompliance === null ? 0 : Number(mttrCompliance.toFixed(1)),
           goal: goals.SLA,
-          sampleSize: validRepairTimes.length,
-          missingCount: correctiveCompleted.length - validRepairTimes.length,
+          sampleSize: correctiveCompletedInScope.length,
           isNull: mttrCompliance === null,
-          methodology: 'Porcentaje de OT correctivas finalizadas cuyo tiempo de reparación está dentro de la meta de MTTR.',
+          methodology: 'Porcentaje de OT correctivas finalizadas (en las zonas marcadas) cuyo tiempo de reparación está dentro de la meta de MTTR.',
         },
         BACKLOG: {
           value: backlog,
@@ -956,30 +954,16 @@ export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promis
         (wo) => wo.created_at >= start && wo.created_at <= effectiveEnd,
       );
 
-      // MTTR: paros finalizados dentro del periodo con tiempo de reparación válido.
-      const finalized = paros.filter(
+      // MTTR: promedio de accumulated_time_ms de TODAS las correctivas finalizadas.
+      const finalized = lineOrders.filter(
         (wo) =>
           wo.status === 'FINALIZADO' &&
           wo.completed_at &&
           wo.completed_at >= start &&
           wo.completed_at <= effectiveEnd,
       );
-
-      let totalRepairMs = 0;
-      let repairSample = 0;
-      for (const wo of finalized) {
-        let repairMs = Number(wo.accumulated_time_ms);
-        if (!repairMs || repairMs <= 0) {
-          const end = wo.completed_at!.getTime();
-          const begin = wo.started_at ? wo.started_at.getTime() : wo.created_at.getTime();
-          repairMs = end > begin ? end - begin : 0;
-        }
-        if (repairMs > 0) {
-          totalRepairMs += repairMs;
-          repairSample += 1;
-        }
-      }
-      const mttrHours = repairSample > 0 ? totalRepairMs / repairSample / MS_PER_HOUR : null;
+      const totalRepairMs = finalized.reduce((sum, wo) => sum + Number(wo.accumulated_time_ms), 0);
+      const mttrHours = finalized.length > 0 ? totalRepairMs / finalized.length / MS_PER_HOUR : null;
 
       // MTBF: días del periodo × 24 h/día × 1 zona / correctivas LEVANTADAS en el periodo.
       const mtbfFailures = lineOrders.filter(
@@ -994,7 +978,7 @@ export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promis
         line,
         failures: failures.length,
         mttrHours: mttrHours === null ? null : Number(mttrHours.toFixed(2)),
-        mttrSample: repairSample,
+        mttrSample: finalized.length,
         mtbfHours: mtbfHours === null ? null : Number(mtbfHours.toFixed(2)),
         mtbfSample: mtbfFailures.length,
         operationalHours: Math.round(operationalHours),
@@ -1107,29 +1091,15 @@ export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Pr
       const failures = paros.filter(
         (wo) => wo.created_at >= start && wo.created_at <= effectiveEnd,
       );
-      const finalized = paros.filter(
+      const finalized = orders.filter(
         (wo) =>
           wo.status === 'FINALIZADO' &&
           wo.completed_at &&
           wo.completed_at >= start &&
           wo.completed_at <= effectiveEnd,
       );
-
-      let totalRepairMs = 0;
-      let repairSample = 0;
-      for (const wo of finalized) {
-        let repairMs = Number(wo.accumulated_time_ms);
-        if (!repairMs || repairMs <= 0) {
-          const end = wo.completed_at!.getTime();
-          const begin = wo.started_at ? wo.started_at.getTime() : wo.created_at.getTime();
-          repairMs = end > begin ? end - begin : 0;
-        }
-        if (repairMs > 0) {
-          totalRepairMs += repairMs;
-          repairSample += 1;
-        }
-      }
-      const mttrHours = repairSample > 0 ? totalRepairMs / repairSample / MS_PER_HOUR : null;
+      const totalRepairMs = finalized.reduce((sum, wo) => sum + Number(wo.accumulated_time_ms), 0);
+      const mttrHours = finalized.length > 0 ? totalRepairMs / finalized.length / MS_PER_HOUR : null;
 
       // MTBF por equipo: días del periodo × 24 h/día / correctivas LEVANTADAS del equipo.
       const mtbfFailures = orders.filter(
