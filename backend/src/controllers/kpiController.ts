@@ -316,11 +316,11 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
       ? operationalHours / mtbfFailures.length
       : null;
 
-    // MTTR: tiempo activo de labor en correctivas finalizadas (horas)
+    // MTTR: promedio del tiempo de reparación de TODAS las correctivas finalizadas
+    // (incluye tiempo 0), dentro de las «Zonas de respuesta» marcadas.
+    const correctiveCompletedInScope = correctiveCompleted.filter(wo => isMtbfOrderInScope(wo, selectedMtbfZones));
     const mttrHours = avg(
-      correctiveCompleted
-        .filter((wo) => Number(wo.accumulated_time_ms) > 0)
-        .map((wo) => Number(wo.accumulated_time_ms) / MS_PER_HOUR),
+      correctiveCompletedInScope.map((wo) => Number(wo.accumulated_time_ms) / MS_PER_HOUR),
     );
 
     // Tiempo de respuesta: created_at → started_at (horas) de órdenes CREADAS en el
@@ -447,8 +447,8 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
         MTTR: {
           value: Number(mttrHours.toFixed(2)),
           goal: goals.MTTR,
-          sampleSize: correctiveCompleted.filter((wo) => wo.accumulated_time_ms > 0).length,
-          methodology: 'Promedio de horas de labor (accumulated_time_ms) de las OT correctivas finalizadas con tiempo > 0.',
+          sampleSize: correctiveCompletedInScope.length,
+          methodology: 'Σ tiempo de reparación de las OT correctivas finalizadas (excl. anuladas) en las zonas marcadas ÷ nº de correctivas finalizadas.',
         },
         MTBF: {
           value: mtbfHours === null ? 0 : Number(mtbfHours.toFixed(2)),
@@ -656,10 +656,9 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
       );
 
       const correctiveCompleted = intervalCompleted.filter((wo) => wo.maintenance_type === 'CORRECTIVO');
+      const correctiveCompletedInScope = correctiveCompleted.filter(wo => isMtbfOrderInScope(wo, selectedMtbfZones));
       const mttrHours = avg(
-        correctiveCompleted
-          .filter((wo) => Number(wo.accumulated_time_ms) > 0)
-          .map((wo) => Number(wo.accumulated_time_ms) / MS_PER_HOUR),
+        correctiveCompletedInScope.map((wo) => Number(wo.accumulated_time_ms) / MS_PER_HOUR),
       );
 
       const intervalTx = inventoryTransactions.filter(
