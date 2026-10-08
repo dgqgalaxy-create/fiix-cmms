@@ -541,6 +541,7 @@ export const KPIPage = () => {
           Código: a.internalCode,
           Estado: a.status,
           'Paros (fallas)': a.failures,
+          'Correctivas levantadas (MTBF)': a.mtbfSample ?? '',
           'MTTR (h)': a.mttrHours ?? '',
           'MTBF (h)': a.mtbfHours ?? '',
           'Horas operativas': a.operationalHours,
@@ -1154,7 +1155,7 @@ export const KPIPage = () => {
                 <strong>MTTR:</strong> promedio de reparación de paros finalizados (↓ mejor)
               </span>
               <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
-                <strong>MTBF estimado:</strong> días × h/día × 1 zona ÷ correctivas levantadas (↑ mejor)
+                <strong>MTBF estimado:</strong> días × 24 h/día × 1 zona ÷ correctivas levantadas (↑ mejor)
               </span>
             </div>
 
@@ -1166,6 +1167,7 @@ export const KPIPage = () => {
                       <tr className="text-left text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-200 dark:border-slate-700">
                         <th className="py-2 pr-3 font-medium">Línea</th>
                         <th className="py-2 pr-3 text-right font-medium">Paros</th>
+                        <th className="py-2 pr-3 text-right font-medium">Correctivas</th>
                         <th className="py-2 pr-3 text-right font-medium">MTTR (h)</th>
                         <th className="py-2 pr-3 text-right font-medium">MTBF (h)</th>
                         <th className="py-2 text-right font-medium">Activos</th>
@@ -1190,6 +1192,7 @@ export const KPIPage = () => {
                               </span>
                             </td>
                             <td className="py-2.5 pr-3 text-right text-slate-700 dark:text-slate-200">{l.failures}</td>
+                            <td className="py-2.5 pr-3 text-right text-slate-600 dark:text-slate-300">{l.mtbfSample}</td>
                             <td className="py-2.5 pr-3 text-right text-amber-600 dark:text-amber-400">
                               {l.mttrHours !== null ? l.mttrHours.toFixed(2) : '—'}
                             </td>
@@ -1200,7 +1203,7 @@ export const KPIPage = () => {
                           </tr>
                           {expandedLine === l.line && (
                             <tr className="border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/60 dark:bg-slate-800/20">
-                              <td colSpan={5} className="p-3">
+                              <td colSpan={6} className="p-3">
                                 {isLoadingLineAssets ? (
                                   <div className="py-4 text-center text-xs text-slate-400 dark:text-slate-500">Cargando equipos…</div>
                                 ) : lineAssets && lineAssets.line === l.line ? (
@@ -1212,6 +1215,7 @@ export const KPIPage = () => {
                                         <tr className="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-200 dark:border-slate-700">
                                           <th className="py-1.5 pr-3 font-medium">Equipo</th>
                                           <th className="py-1.5 pr-3 text-right font-medium">Paros</th>
+                                          <th className="py-1.5 pr-3 text-right font-medium">Correctivas</th>
                                           <th className="py-1.5 pr-3 text-right font-medium">MTTR (h)</th>
                                           <th className="py-1.5 pr-3 text-right font-medium">MTBF (h)</th>
                                         </tr>
@@ -1229,6 +1233,7 @@ export const KPIPage = () => {
                                               <div className="text-[10px] text-slate-400">{a.internalCode}</div>
                                             </td>
                                             <td className="py-1.5 pr-3 text-right text-slate-600 dark:text-slate-300">{a.failures}</td>
+                                            <td className="py-1.5 pr-3 text-right text-slate-600 dark:text-slate-300">{a.mtbfSample}</td>
                                             <td className="py-1.5 pr-3 text-right text-amber-600 dark:text-amber-400">
                                               {a.mttrHours !== null ? a.mttrHours.toFixed(2) : '—'}
                                             </td>

@@ -24,18 +24,8 @@ const parseReworkWindowDays = (raw: unknown): number => {
   return Math.min(MAX_REWORK_WINDOW_DAYS, Math.max(MIN_REWORK_WINDOW_DAYS, Math.round(parsed)));
 };
 
-/**
- * Horas de operación al día que asume el MTBF (antes fijas en 24). El supuesto es
- * ahora EXPLÍCITO y configurable por entorno (FIIX_OPERATING_HOURS_PER_DAY, 1–24);
- * por defecto 24 solo si la planta opera las 24 h. Cambiar a 24 no altera el
- * comportamiento histórico.
- */
-export function getOperatingHoursPerDay(): number {
-  const raw = process.env.FIIX_OPERATING_HOURS_PER_DAY;
-  const parsed = raw != null && raw.trim() !== '' ? Number(raw) : NaN;
-  if (!Number.isFinite(parsed)) return 24;
-  return Math.min(24, Math.max(1, parsed));
-}
+// Horas productivas al día que asume el MTBF (fijas en 24).
+const HOURS_PER_DAY = 24;
 
 // MTBF se delimita por la zona del equipo, no por la zona capturada en la OT.
 // Vacío/null conserva el significado del selector: todas las zonas.
@@ -316,7 +306,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
     const mtbfStart = req.query.period === 'ALL'
       ? new Date(mtbfOrders.reduce((earliest, wo) => Math.min(earliest, wo.created_at.getTime()), effectiveEnd.getTime()))
       : start;
-    const hoursPerDay = getOperatingHoursPerDay();
+    const hoursPerDay = HOURS_PER_DAY;
     const operationalHours = Math.max(0, effectiveEnd.getTime() - mtbfStart.getTime()) / 86_400_000 * hoursPerDay * mtbfZoneCount;
     const mtbfHours = mtbfFailures.length > 0 && operationalHours > 0
       ? operationalHours / mtbfFailures.length
@@ -711,13 +701,12 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
         return sum + Math.abs(tx.amount) * resolvePartsUnitCost(tx);
       }, 0);
 
-      // MTBF de flota: horas operativas / fallas correctivas. El supuesto de horas/día
-      // es ahora explícito (getOperatingHoursPerDay) en vez de un 24 fijo implícito.
+      // MTBF de flota: horas operativas (24 h/día) / fallas correctivas creadas.
       const correctiveCreated = workOrders.filter(
         (wo) => wo.maintenance_type === 'CORRECTIVO' && wo.created_at >= interval.start && wo.created_at <= interval.end,
       );
       const failures = correctiveCreated.filter(wo => isMtbfOrderInScope(wo, selectedMtbfZones)).length;
-      const hoursPerDay = getOperatingHoursPerDay();
+      const hoursPerDay = HOURS_PER_DAY;
       const operationalHours = Math.max(0, interval.end.getTime() - interval.start.getTime()) / 86400000 * hoursPerDay * mtbfZoneCount;
       const mtbfHours = failures > 0 && operationalHours > 0 ? operationalHours / failures : null;
 
@@ -924,13 +913,13 @@ export const getTechnicianPerformance = async (req: AuthRequest, res: Response):
  *   creados dentro del periodo (columna «Paros»).
  * - MTTR = promedio de accumulated_time_ms (fallback completed_at − started_at) de los
  *   paros FINALIZADOS dentro del periodo, en horas.
- * - MTBF = días del periodo × horas/día (FIIX_OPERATING_HOURS_PER_DAY, default 24) ×
- *   1 zona (la línea) / correctivas LEVANTADAS dentro del periodo (excluidas anuladas).
+ * - MTBF = días del periodo × 24 h/día × 1 zona (la línea) / correctivas LEVANTADAS
+ *   dentro del periodo (excluidas anuladas).
  */
 export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { start, effectiveEnd } = rangeFromReq(req);
-    const hoursPerDay = getOperatingHoursPerDay();
+    const hoursPerDay = HOURS_PER_DAY;
     const DAY_MS = 86_400_000;
     // Histórico (ALL) arranca en la primera OT; el resto usa el inicio del periodo.
     const mtbfStart = req.query.period === 'ALL'
@@ -1017,12 +1006,12 @@ export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promis
       }
       const mttrHours = repairSample > 0 ? totalRepairMs / repairSample / MS_PER_HOUR : null;
 
-      // MTBF: días del periodo × horas/día × 1 zona / correctivas LEVANTADAS en el periodo.
+      // MTBF: días del periodo × 24 h/día × 1 zona / correctivas LEVANTADAS en el periodo.
       const mtbfFailures = lineOrders.filter(
         (wo) => wo.created_at >= start && wo.created_at <= effectiveEnd,
       );
       const operativeCount = operativeByLine.get(line) ?? 0;
-      const operationalHours = (Math.max(0, effectiveEnd.getTime() - mtbfStart.getTime()) / DAY_MS) * hoursPerDay;
+      const operationalHours = days * hoursPerDay;
       const mtbfHours = mtbfFailures.length > 0 && operationalHours > 0
         ? operationalHours / mtbfFailures.length
         : null;
@@ -1056,7 +1045,7 @@ export const getMttrMtbfByLine = async (req: AuthRequest, res: Response): Promis
  * Misma definición que /by-line, a nivel equipo:
  * - paros = correctivas con máquina detenida del equipo creadas en el periodo.
  * - MTTR = promedio de accumulated_time_ms de sus paros finalizados.
- * - MTBF = días del periodo × horas/día / correctivas levantadas del equipo.
+ * - MTBF = días del periodo × 24 h/día / correctivas levantadas del equipo.
  */
 export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -1067,7 +1056,7 @@ export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Pr
     }
 
     const { start, effectiveEnd } = rangeFromReq(req);
-    const hoursPerDay = getOperatingHoursPerDay();
+    const hoursPerDay = HOURS_PER_DAY;
     const DAY_MS = 86_400_000;
     // Histórico (ALL) arranca en la primera OT; el resto usa el inicio del periodo.
     const mtbfStart = req.query.period === 'ALL'
@@ -1147,11 +1136,11 @@ export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Pr
       }
       const mttrHours = repairSample > 0 ? totalRepairMs / repairSample / MS_PER_HOUR : null;
 
-      // MTBF por equipo: días del periodo × horas/día / correctivas LEVANTADAS del equipo.
+      // MTBF por equipo: días del periodo × 24 h/día / correctivas LEVANTADAS del equipo.
       const mtbfFailures = orders.filter(
         (wo) => wo.created_at >= start && wo.created_at <= effectiveEnd,
       );
-      const operationalHours = (Math.max(0, effectiveEnd.getTime() - mtbfStart.getTime()) / DAY_MS) * hoursPerDay;
+      const operationalHours = days * hoursPerDay;
       const mtbfHours =
         mtbfFailures.length > 0 && operationalHours > 0 ? operationalHours / mtbfFailures.length : null;
 
@@ -1161,6 +1150,7 @@ export const getLineAssetsMttrMtbf = async (req: AuthRequest, res: Response): Pr
         internalCode: asset.internal_code,
         status: asset.status,
         failures: failures.length,
+        mtbfSample: mtbfFailures.length,
         mttrHours: mttrHours === null ? null : Number(mttrHours.toFixed(2)),
         mtbfHours: mtbfHours === null ? null : Number(mtbfHours.toFixed(2)),
         operationalHours: Math.round(operationalHours),

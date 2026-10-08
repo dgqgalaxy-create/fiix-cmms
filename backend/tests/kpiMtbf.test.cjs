@@ -6,8 +6,6 @@ const { getKPIs, getChartData } = require('../src/controllers/kpiController');
 test('MTBF = dias x horas x zonas / correctivas levantadas (creadas, excluye anuladas)', async () => {
   const originals = [];
   const mock = (object, key, fn) => { originals.push(() => { object[key] = fn.original; }); fn.original = object[key]; object[key] = fn; };
-  const oldHours = process.env.FIIX_OPERATING_HOURS_PER_DAY;
-  process.env.FIIX_OPERATING_HOURS_PER_DAY = '12';
   let zoneCount = 2, goals = [], selectedZones = null;
 
   // [tipo, estado, created_at, completed_at]
@@ -46,8 +44,8 @@ test('MTBF = dias x horas x zonas / correctivas levantadas (creadas, excluye anu
     // 3 correctivas LEVANTADAS en 09-01..09-02: dos FINALIZADAS + una EN_PROCESO.
     // (la ANULADA y la PREVENTIVA quedan fuera)
     assert.equal(data.metrics.MTBF.sampleSize, 3);
-    // 2 dias x 12 h x 2 zonas / 3 = 16
-    assert.equal(data.metrics.MTBF.value, 16);
+    // 2 dias x 24 h x 2 zonas / 3 = 32
+    assert.equal(data.metrics.MTBF.value, 32);
     assert.equal(data.metrics.MTBF.isNull, false);
 
     goals = [{ metricKey: 'MTBF', targetValue: 1500, unit: 'horas' }];
@@ -68,7 +66,7 @@ test('MTBF = dias x horas x zonas / correctivas levantadas (creadas, excluye anu
         ? Math.min(...orders.filter(o => o.status !== 'ANULADO' && o.asset).map(o => o.created_at.getTime()))
         : start;
       const expected = failures
-        ? Number(((end - observationStart) / 86400000 * 12 * zoneCount / failures).toFixed(2))
+        ? Number(((end - observationStart) / 86400000 * 24 * zoneCount / failures).toFixed(2))
         : 0;
       assert.equal(data.metrics.MTBF.value, expected, period);
       assert.ok(end <= Date.now());
@@ -78,7 +76,7 @@ test('MTBF = dias x horas x zonas / correctivas levantadas (creadas, excluye anu
     selectedZones = ['A'];
     data = await fetch(query);
     assert.equal(data.metrics.MTBF.sampleSize, 3);
-    assert.equal(data.metrics.MTBF.value, 8); // 2 dias x 12 h x 1 zona / 3 = 8
+    assert.equal(data.metrics.MTBF.value, 16); // 2 dias x 24 h x 1 zona / 3 = 16
 
     selectedZones = ['missing'];
     assert.equal((await fetch(query)).metrics.MTBF.isNull, true);
@@ -95,7 +93,5 @@ test('MTBF = dias x horas x zonas / correctivas levantadas (creadas, excluye anu
     assert.equal((await fetch(query)).metrics.MTBF.isNull, true);
   } finally {
     originals.reverse().forEach(restore => restore());
-    if (oldHours === undefined) delete process.env.FIIX_OPERATING_HOURS_PER_DAY;
-    else process.env.FIIX_OPERATING_HOURS_PER_DAY = oldHours;
   }
 });

@@ -188,9 +188,9 @@ export interface LineMttrMtbf {
   /** MTTR en horas (promedio de tiempo de reparación de paros finalizados). null sin muestra. */
   mttrHours: number | null;
   mttrSample: number;
-  /** MTBF en horas = días × h/día × 1 zona / correctivas finalizadas. null sin correctivas. */
+  /** MTBF en horas = días × 24 h/día × 1 zona / correctivas levantadas (creadas). null sin correctivas. */
   mtbfHours: number | null;
-  /** Correctivas finalizadas en el periodo (denominador del MTBF). */
+  /** Correctivas levantadas (creadas) en el periodo (denominador del MTBF). */
   mtbfSample: number;
   /** Activos OPERATIVOS de la línea (informativo). */
   assets: number;
@@ -222,8 +222,10 @@ export interface LineAssetMttrMtbf {
   status: string;
   /** Paros correctivos (machine_stopped) del equipo creados en el periodo. */
   failures: number;
+  /** Correctivas levantadas (creadas) del equipo en el periodo (denominador del MTBF). */
+  mtbfSample: number;
   mttrHours: number | null;
-  /** MTBF del equipo = horas operativas (si está OPERATIVO) / fallas. null sin fallas o no operativo. */
+  /** MTBF del equipo = días × 24 h/día / correctivas levantadas (creadas). null sin correctivas. */
   mtbfHours: number | null;
   operationalHours: number;
 }
