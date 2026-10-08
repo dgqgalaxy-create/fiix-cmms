@@ -104,7 +104,7 @@ const GOAL_LABELS: Record<string, { label: string; unit: string; hint: string }>
   MTTR: { label: 'MTTR', unit: 'horas', hint: 'Tiempo medio de reparación correctiva' },
   RESPONSE_TIME: { label: 'Tiempo de respuesta', unit: 'horas', hint: 'Desde creación hasta inicio de trabajo' },
   SLA: { label: 'Cumplimiento MTTR', unit: '%', hint: '% de correctivas bajo la meta de MTTR' },
-  BACKLOG: { label: 'Backlog', unit: 'órdenes', hint: 'Órdenes abiertas (pendiente, proceso, espera)' },
+  BACKLOG: { label: 'Backlog', unit: 'órdenes', hint: 'Backlog al cierre del periodo: no finalizadas ni anuladas a esa fecha' },
   ASSET_AVAILABILITY: { label: 'Disponibilidad', unit: '%', hint: 'MTBF ÷ (MTBF + MTTR) × 100' },
   REINCIDENCIA: { label: 'Retrabajo', unit: '%', hint: 'Correctivas con falla previa dentro de la ventana definida' },
 };
@@ -974,7 +974,7 @@ export const KPIPage = () => {
                 false,
                 (v) => v.toString(),
                 'OT',
-                data.metrics.BACKLOG.methodology || 'Órdenes abiertas ahora.',
+                data.metrics.BACKLOG.methodology || 'Backlog al cierre del periodo.',
                 () => navigate('/dashboard'),
                 true,
               )}

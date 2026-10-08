@@ -249,7 +249,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
       goals[goal.metricKey] = normalizeGoal(goal.metricKey, goal.targetValue, goal.unit);
     });
 
-    const [periodOrders, openOrders, settings] = await Promise.all([
+    const [periodOrders, backlog, settings] = await Promise.all([
       prisma.workOrder.findMany({
         where: {
           status: { not: 'ANULADO' },
@@ -261,11 +261,17 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
         },
         include: { asset: { select: { id: true, name: true, zone_id: true } } },
       }),
-      prisma.workOrder.findMany({
+      // Backlog al cierre del periodo: OT existentes a esa fecha que no estaban
+      // finalizadas ni anuladas (equivale a backlog inicial + nuevas − finalizadas − invalidadas).
+      prisma.workOrder.count({
         where: {
-          status: { in: ['PENDIENTE', 'EN_PROCESO', 'EN_ESPERA'] },
+          created_at: { lte: effectiveEnd },
+          status: { not: 'ANULADO' },
+          OR: [
+            { completed_at: null },
+            { completed_at: { gt: effectiveEnd } },
+          ],
         },
-        select: { id: true },
       }),
       prisma.systemSettings.findFirst({ select: { response_time_zone_ids: true } }),
     ]);
@@ -350,9 +356,6 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
           validRepairTimes.length) *
         100
       : null;
-
-    // Backlog: stock abierto actual
-    const backlog = openOrders.length;
 
     // Disponibilidad (clásica): MTBF ÷ (MTBF + MTTR) × 100. Sin fallas (MTBF nulo) → null.
     const assetAvailability = mtbfHours !== null && mtbfHours > 0
@@ -473,7 +476,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
           value: backlog,
           goal: goals.BACKLOG,
           sampleSize: backlog,
-          methodology: 'Número de OT abiertas ahora: pendientes + en proceso + en espera.',
+          methodology: 'Backlog al cierre del periodo = backlog inicial (antes del periodo) + nuevas del periodo − finalizadas − invalidadas.',
         },
         ASSET_AVAILABILITY: {
           value: assetAvailability === null ? 0 : Number(assetAvailability.toFixed(1)),
