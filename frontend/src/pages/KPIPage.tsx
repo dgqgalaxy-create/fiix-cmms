@@ -105,7 +105,7 @@ const GOAL_LABELS: Record<string, { label: string; unit: string; hint: string }>
   RESPONSE_TIME: { label: 'Tiempo de respuesta', unit: 'horas', hint: 'Desde creación hasta inicio de trabajo' },
   SLA: { label: 'Cumplimiento MTTR', unit: '%', hint: '% de correctivas bajo la meta de MTTR' },
   BACKLOG: { label: 'Backlog', unit: 'órdenes', hint: 'Órdenes abiertas (pendiente, proceso, espera)' },
-  ASSET_AVAILABILITY: { label: 'Disponibilidad calendario', unit: '%', hint: 'Tiempo calendario (24 h/día) menos paros, sin duplicar intervalos' },
+  ASSET_AVAILABILITY: { label: 'Disponibilidad', unit: '%', hint: 'MTBF ÷ (MTBF + MTTR) × 100' },
   REINCIDENCIA: { label: 'Retrabajo', unit: '%', hint: 'Correctivas con falla previa dentro de la ventana definida' },
 };
 
@@ -941,7 +941,7 @@ export const KPIPage = () => {
                 true,
                 (v) => v.toFixed(1),
                 '%',
-                data.metrics.ASSET_AVAILABILITY.methodology || 'Disponibilidad calendario.',
+                data.metrics.ASSET_AVAILABILITY.methodology || 'Disponibilidad.',
                 undefined,
                 true,
               )}

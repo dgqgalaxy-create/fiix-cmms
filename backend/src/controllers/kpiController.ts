@@ -62,8 +62,6 @@ const DEFAULT_GOALS: Record<string, { targetValue: number; unit: string }> = {
   REINCIDENCIA: { targetValue: 10, unit: '%' },
 };
 
-const clip = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
-
 type DateRangeOpts = { startDate?: unknown; endDate?: unknown };
 
 /** YYYY-MM-DD → instante UTC de medianoche (o 23:59:59.999) del día civil de PLANTA. */
@@ -251,7 +249,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
       goals[goal.metricKey] = normalizeGoal(goal.metricKey, goal.targetValue, goal.unit);
     });
 
-    const [periodOrders, openOrders, downtimeOrders, zones, settings] = await Promise.all([
+    const [periodOrders, openOrders, settings] = await Promise.all([
       prisma.workOrder.findMany({
         where: {
           status: { not: 'ANULADO' },
@@ -269,24 +267,6 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
         },
         select: { id: true },
       }),
-      prisma.workOrder.findMany({
-        where: {
-          machine_stopped: true,
-          maintenance_type: 'CORRECTIVO',
-          status: { not: 'ANULADO' },
-          created_at: { lte: effectiveEnd },
-          OR: [
-            { completed_at: { gte: start } },
-            { completed_at: null, status: { in: ['PENDIENTE', 'EN_PROCESO', 'EN_ESPERA'] } },
-          ],
-        },
-        select: {
-          created_at: true,
-          completed_at: true,
-          asset: { select: { id: true, zone_id: true } },
-        },
-      }),
-      prisma.zone.findMany({ select: { id: true } }),
       prisma.systemSettings.findFirst({ select: { response_time_zone_ids: true } }),
     ]);
 
@@ -374,50 +354,10 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
     // Backlog: stock abierto actual
     const backlog = openOrders.length;
 
-    // Disponibilidad: paros con machine_stopped, recortados al periodo y SIN contar dos
-    // veces los paros superpuestos: por cada línea/zona se unen los intervalos solapados
-    // y solo se suma la cobertura efectiva (una línea parada = un tramo, haya 1 o N OT).
-    const lineCount = Math.max(zones.length, 1);
-    const periodMs = Math.max(effectiveEnd.getTime() - start.getTime(), 1);
-    const totalTheoreticalMs = lineCount * periodMs;
-
-    let totalDowntimeMs = 0;
-    {
-      const groups = new Map<string, Array<[number, number]>>();
-      for (const wo of downtimeOrders) {
-        const left = Math.max(wo.created_at.getTime(), start.getTime());
-        const right = Math.min(
-          wo.completed_at ? wo.completed_at.getTime() : effectiveEnd.getTime(),
-          effectiveEnd.getTime(),
-        );
-        if (right <= left) continue;
-        const key = wo.asset?.zone_id || `asset:${wo.asset?.id ?? 'sin-activo'}`;
-        const list = groups.get(key) ?? [];
-        list.push([left, right]);
-        groups.set(key, list);
-      }
-      for (const intervals of groups.values()) {
-        intervals.sort((a, b) => a[0] - b[0]);
-        let curFrom = intervals[0][0];
-        let curTo = intervals[0][1];
-        for (let i = 1; i < intervals.length; i++) {
-          const [f, t] = intervals[i];
-          if (f <= curTo) {
-            if (t > curTo) curTo = t;
-          } else {
-            totalDowntimeMs += curTo - curFrom;
-            curFrom = f;
-            curTo = t;
-          }
-        }
-        totalDowntimeMs += curTo - curFrom;
-      }
-    }
-
-    let assetAvailability = 100;
-    if (totalTheoreticalMs > 0) {
-      assetAvailability = clip(((totalTheoreticalMs - totalDowntimeMs) / totalTheoreticalMs) * 100, 0, 100);
-    }
+    // Disponibilidad (clásica): MTBF ÷ (MTBF + MTTR) × 100. Sin fallas (MTBF nulo) → null.
+    const assetAvailability = mtbfHours !== null && mtbfHours > 0
+      ? (mtbfHours / (mtbfHours + mttrHours)) * 100
+      : null;
 
     // Retrabajo: correctivas finalizadas en periodo con falla previa dentro de la ventana configurada
     // (mismo activo y, si existe, mismo problema).
@@ -536,11 +476,11 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
           methodology: 'Número de OT abiertas ahora: pendientes + en proceso + en espera.',
         },
         ASSET_AVAILABILITY: {
-          value: Number(assetAvailability.toFixed(1)),
+          value: assetAvailability === null ? 0 : Number(assetAvailability.toFixed(1)),
           goal: goals.ASSET_AVAILABILITY,
-          sampleSize: zones.length,
-          isNull: zones.length === 0,
-          methodology: '(tiempo calendario − tiempo de paro con máquina detenida) ÷ tiempo calendario × 100. Tiempo calendario = nº de zonas × duración del periodo; paros solapados unidos por zona.',
+          sampleSize: mtbfFailures.length,
+          isNull: assetAvailability === null,
+          methodology: 'Disponibilidad = MTBF ÷ (MTBF + MTTR) × 100.',
         },
         REINCIDENCIA: {
           value: Number(reincidencia.toFixed(1)),

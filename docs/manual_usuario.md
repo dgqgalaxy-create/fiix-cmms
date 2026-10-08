@@ -308,8 +308,8 @@ Solo se admite una importación a la vez, incluso con varios procesos del servid
 
 ### Interpretación de indicadores
 El cumplimiento MTTR usa solo correctivos finalizados con duración positiva; muestra cuántos se excluyeron por no tener tiempo válido. Cero no equivale a una reparación instantánea exitosa.
-La disponibilidad calendario utiliza 24 horas por día y agrupa los paros superpuestos por zona para no contarlos dos veces. No equivale a disponibilidad durante turnos programados.
-El MTBF se presenta como estimación: depende de los activos operativos actuales y las horas diarias configuradas en el servidor (24 por defecto). Sin calendario histórico por activo no representa una medición exacta de sus horas operadas.
+La disponibilidad se calcula con la fórmula clásica `MTBF ÷ (MTBF + MTTR) × 100`. Sin correctivas en el periodo (MTBF nulo) no se calcula.
+El MTBF se presenta como estimación: 24 h/día × días del periodo × zonas marcadas ÷ correctivas levantadas. No representa una medición exacta de horas reales de operación.
 
 
 ## Novedades v1.66.0 estable — 29 de septiembre de 2026
