@@ -300,12 +300,14 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
 
     const correctiveCompleted = completedOrders.filter((wo) => wo.maintenance_type === 'CORRECTIVO');
 
-    // «OT finalizadas» como porcentaje: finalizadas del periodo / generadas del periodo.
+    // «OT finalizadas» como porcentaje: de las OT recibidas (creadas) en el periodo,
+    // qué porcentaje ya está finalizado. Excluye anuladas.
     const generatedOrders = periodOrders.filter(
       (wo) => wo.created_at >= start && wo.created_at <= effectiveEnd,
     );
+    const finalizadasDeGeneradas = generatedOrders.filter((wo) => wo.status === 'FINALIZADO').length;
     const completionRate = generatedOrders.length > 0
-      ? (completedOrders.length / generatedOrders.length) * 100
+      ? (finalizadasDeGeneradas / generatedOrders.length) * 100
       : null;
 
     const selectedMtbfZones = mtbfZoneIds(settings?.response_time_zone_ids);
@@ -497,7 +499,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
           goal: goals.COMPLETED_MONTHLY,
           sampleSize: generatedOrders.length,
           isNull: completionRate === null,
-          methodology: 'OT finalizadas en el periodo ÷ OT generadas (creadas) en el periodo × 100.',
+          methodology: 'OT recibidas en el periodo que ya están finalizadas ÷ OT recibidas (creadas) en el periodo × 100. Excluye anuladas.',
         },
         MTTR: {
           value: Number(mttrHours.toFixed(2)),
