@@ -926,12 +926,17 @@ router.get('/data-quality', verifyDevPassword, async (_req: Request, res: Respon
 });
 
 /** Importa las 7 pestañas mapeadas desde Google Sheets (mismo motor que CSV). */
-router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
+/**
+ * Ejecuta la importación de Google Sheets (+ Drive) en SEGUNDO PLANO.
+ * El POST responde de inmediato y el cliente sondea GET /import-progress,
+ * para no chocar con el timeout de 100 s de Cloudflare (524) en importaciones largas.
+ */
+async function runSheetsImportJob(opts: {
+  userId: string | null;
+  useGoogleDrive: boolean;
+  skipAssets: boolean;
+}): Promise<void> {
   const tempPaths: string[] = [];
-  if (!await tryStartImportJob('Importación de datos en curso. Modo solo lectura.')) {
-    res.status(409).json({ message: 'Ya hay una importación en curso. Espera a que termine e inténtalo de nuevo.' });
-    return;
-  }
   try {
     resetImportProgress();
     setImportProgress('sheets', 5, 'Leyendo pestañas de Google Sheets…');
@@ -939,10 +944,12 @@ router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Respo
     const tabs = await fetchAllImportTabs();
     const nonEmpty = tabs.filter((t) => t.records.length > 0);
     if (nonEmpty.length === 0) {
-      setImportProgress('error', 0, 'Hojas vacías o sin filas', { active: false });
-      res.status(400).json({
-        message:
-          'Las pestañas de Google Sheets están vacías o no se pudieron leer filas de datos.',
+      setImportProgress('error', 0, 'Hojas vacías o sin filas', { active: false, finishedAt: new Date().toISOString() });
+      await logImportAudit({
+        source: 'sheets',
+        userId: opts.userId,
+        errorMessage: 'Hojas vacías o sin filas',
+        useGoogleDrive: opts.useGoogleDrive,
       });
       return;
     }
@@ -959,21 +966,10 @@ router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Respo
       return { originalname, path: tempPath };
     });
 
-    const useGoogleDrive =
-      String((req.body as any)?.useGoogleDrive || '').toLowerCase() === 'true' ||
-      String((req.body as any)?.useGoogleDrive || '') === '1' ||
-      // Por defecto: sí usar Drive en sync Sheets si hay key/carpetas (sin zip).
-      ((req.body as any)?.useGoogleDrive === undefined && Boolean(getDriveApiKey()));
-
-    const skipAssets =
-      String((req.body as any)?.skipAssets || '').toLowerCase() === 'true' ||
-      String((req.body as any)?.skipAssets || '') === '1';
-
-    const authReq = req as AuthRequest;
     const results = await processCsvImportFiles(files, {
       includeLocalPhotoFolders: true,
-      useGoogleDrive,
-      skipAssets,
+      useGoogleDrive: opts.useGoogleDrive,
+      skipAssets: opts.skipAssets,
     });
 
     const sheetsMeta = tabs.map((t) => ({
@@ -982,52 +978,30 @@ router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Respo
     }));
     await logImportAudit({
       source: 'sheets',
-      userId: authReq.user?.userId,
+      userId: opts.userId,
       results,
-      useGoogleDrive,
+      useGoogleDrive: opts.useGoogleDrive,
       sheets: sheetsMeta,
     });
 
-    res.json({
-      success: true,
-      message: 'Datos importados desde Google Sheets con éxito.',
-      results,
-      sheets: sheetsMeta,
-      progress: getImportProgress(),
+    setImportProgress('done', 100, 'Importación terminada', {
+      active: false,
+      result: results,
+      finishedAt: new Date().toISOString(),
     });
   } catch (error: any) {
-    setImportProgress('error', 0, error?.message || 'Error en importación', { active: false });
-    const authReq = req as AuthRequest;
+    const msg = String(error?.message || error);
+    setImportProgress('error', 0, msg || 'Error en importación', {
+      active: false,
+      finishedAt: new Date().toISOString(),
+    });
     await logImportAudit({
       source: 'sheets',
-      userId: authReq.user?.userId,
-      errorMessage: error?.message || String(error),
-      useGoogleDrive:
-        String((req.body as any)?.useGoogleDrive || '').toLowerCase() === 'true' ||
-        String((req.body as any)?.useGoogleDrive || '') === '1' ||
-        ((req.body as any)?.useGoogleDrive === undefined && Boolean(getDriveApiKey())),
+      userId: opts.userId,
+      errorMessage: msg,
+      useGoogleDrive: opts.useGoogleDrive,
     });
-    if (error instanceof GoogleSheetsError) {
-      res.status(error.status).json({ message: error.message });
-      return;
-    }
-    if (error instanceof CsvImportError) {
-      res.status(error.status).json({ message: error.message });
-      return;
-    }
     console.error('Sheets import error:', error);
-    const msg = String(error?.message || error);
-    if (/403|permission|forbidden|enlace → Lector|cualquier persona/i.test(msg)) {
-      res.status(403).json({
-        message:
-          'Sin acceso al Google Sheet. Pon ambos documentos en «Cualquier persona con el enlace → Lector» (modo temporal).',
-      });
-      return;
-    }
-    res.status(500).json({
-      message: 'Error importando desde Google Sheets.',
-      error: error.message,
-    });
   } finally {
     await endImportJob();
     for (const p of tempPaths) {
@@ -1038,6 +1012,25 @@ router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Respo
       }
     }
   }
+}
+
+router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
+  if (!(await tryStartImportJob('Importación de datos en curso. Modo solo lectura.'))) {
+    res.status(409).json({ message: 'Ya hay una importación en curso. Espera a que termine e inténtalo de nuevo.' });
+    return;
+  }
+  const authReq = req as AuthRequest;
+  const useGoogleDrive =
+    String((req.body as any)?.useGoogleDrive || '').toLowerCase() === 'true' ||
+    String((req.body as any)?.useGoogleDrive || '') === '1' ||
+    ((req.body as any)?.useGoogleDrive === undefined && Boolean(getDriveApiKey()));
+  const skipAssets =
+    String((req.body as any)?.skipAssets || '').toLowerCase() === 'true' ||
+    String((req.body as any)?.skipAssets || '') === '1';
+
+  // Trabajo en segundo plano: el cliente sondea GET /import-progress hasta done/error.
+  void runSheetsImportJob({ userId: authReq.user?.userId ?? null, useGoogleDrive, skipAssets });
+  res.json({ started: true, message: 'Importación iniciada en segundo plano.' });
 });
 
 /** Progreso de import CSV/Sheets/Drive (poll mientras corre el POST). */

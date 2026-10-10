@@ -26,6 +26,10 @@ export type ImportProgress = {
   listed?: number;
   /** 'items' | 'wo' | etc. */
   label?: string;
+  /** Resumen del import (CsvImportResults) cuando phase === 'done'. */
+  result?: unknown;
+  /** ISO timestamp de cuándo terminó (done/error). */
+  finishedAt?: string;
 };
 
 let importProgress: ImportProgress = {
@@ -52,7 +56,7 @@ export function setImportProgress(
   phase: ImportProgressPhase,
   percent: number,
   message: string,
-  extra?: Partial<Pick<ImportProgress, 'downloaded' | 'total' | 'listed' | 'label' | 'active'>>
+  extra?: Partial<Pick<ImportProgress, 'downloaded' | 'total' | 'listed' | 'label' | 'active' | 'result' | 'finishedAt'>>
 ): void {
   const active = extra?.active ?? (phase !== 'done' && phase !== 'error' && phase !== 'idle');
   importProgress = {
@@ -64,5 +68,7 @@ export function setImportProgress(
     total: extra?.total,
     listed: extra?.listed,
     label: extra?.label,
+    result: extra?.result,
+    finishedAt: extra?.finishedAt,
   };
 }

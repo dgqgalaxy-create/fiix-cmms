@@ -1316,57 +1316,63 @@ export const DeveloperOptions = () => {
           headers: { 'x-dev-password': password },
           timeout: 8000,
         });
-        if (prog.data && typeof prog.data.percent === 'number') {
-          setImportLiveProgress({
-            percent: prog.data.percent,
-            message: prog.data.message || '',
-            downloaded: prog.data.downloaded,
-            total: prog.data.total,
-            listed: prog.data.listed,
-            phase: prog.data.phase,
-          });
-          if (prog.data.message) {
-            setLoadingMessage(prog.data.message);
+        const d = prog.data;
+        if (!d || typeof d.percent !== 'number') return;
+        setImportLiveProgress({
+          percent: d.percent,
+          message: d.message || '',
+          downloaded: d.downloaded,
+          total: d.total,
+          listed: d.listed,
+          phase: d.phase,
+        });
+        if (d.message) setLoadingMessage(d.message);
+        if (d.phase === 'done') {
+          window.clearInterval(pollId);
+          setLoadingMessage(null);
+          setImportLiveProgress(null);
+          setIsLoading(false);
+          setSuccessMsg(
+            d.result
+              ? formatImportResultsMessage(d.result, 'Google Sheets importados')
+              : 'Google Sheets importados con éxito.'
+          );
+          if (isAdmin) {
+            setAuditOpen(true);
+            void fetchAuditLogs();
           }
-          // El POST puede tardar en cerrar (limpieza / proxy); no dejes el modal bloqueado.
-          if (prog.data.phase === 'done' || prog.data.phase === 'error') {
-            setLoadingMessage(null);
-            setImportLiveProgress(null);
-            setIsLoading(false);
-          }
+          setTimeout(() => setSuccessMsg(null), 15000);
+        } else if (d.phase === 'error') {
+          window.clearInterval(pollId);
+          setLoadingMessage(null);
+          setImportLiveProgress(null);
+          setIsLoading(false);
+          setError(`Fallo al importar desde Google Sheets: ${d.message || 'Error desconocido'}`);
         }
       } catch {
-        // El POST principal sigue; el poll es solo visual.
+        // El poll reintenta en el siguiente tick.
       }
     }, 800);
 
     try {
+      // Solo "lanza" el trabajo en segundo plano; la respuesta es inmediata.
       const res = await axios.post(
         '/dev/import-sheets',
         { useGoogleDrive, skipAssets },
-        {
-          headers: { 'x-dev-password': password },
-          timeout: 120 * 60 * 1000,
-        }
+        { headers: { 'x-dev-password': password }, timeout: 30_000 }
       );
-      const results = res.data.results;
-      if (res.data?.progress?.message) {
-        setImportLiveProgress({
-          percent: res.data.progress.percent ?? 100,
-          message: res.data.progress.message,
-          downloaded: res.data.progress.downloaded,
-          total: res.data.progress.total,
-          listed: res.data.progress.listed,
-          phase: res.data.progress.phase,
-        });
+      if (res.data?.started !== true) {
+        window.clearInterval(pollId);
+        setLoadingMessage(null);
+        setImportLiveProgress(null);
+        setIsLoading(false);
+        setError('La importación no se pudo iniciar.');
       }
-      setSuccessMsg(formatImportResultsMessage(results, 'Google Sheets importados'));
-      if (isAdmin) {
-        setAuditOpen(true);
-        void fetchAuditLogs();
-      }
-      setTimeout(() => setSuccessMsg(null), 15000);
     } catch (err: unknown) {
+      window.clearInterval(pollId);
+      setLoadingMessage(null);
+      setImportLiveProgress(null);
+      setIsLoading(false);
       let detail = 'Error desconocido';
       if (isAxiosError(err)) {
         const status = err.response?.status;
@@ -1386,11 +1392,6 @@ export const DeveloperOptions = () => {
         detail = err.message;
       }
       setError(`Fallo al importar desde Google Sheets: ${detail}`);
-    } finally {
-      window.clearInterval(pollId);
-      setIsLoading(false);
-      setLoadingMessage(null);
-      setImportLiveProgress(null);
     }
   };
 
