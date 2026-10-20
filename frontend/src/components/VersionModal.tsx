@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.69.3";
+export const APP_VERSION = "1.69.4";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Inicio → Sala de Control, «Personal en turno hoy» vuelve a contar al personal técnico y gestionador PROGRAMADO para hoy según Horarios (turno explícito, patrón 4x4/mixto o excepción); antes solo contaba a quien estaba dentro de la ventana horaria asumida en ese minuto (los turnos mixtos/nocturnos mostraban 0). La ventana indica el turno de cada persona y si está «En turno ahora» o «Programado hoy».",
     "Corrección: el aviso de actualización proporciona el comando Docker con git pull explícito desde origin/main.",
     "Corrección: el actualizador instala PM2 en el Node activo cuando no está disponible tras cambiar a Node 22.",
     "Corrección: las actualizaciones del servidor apuntan explícitamente a origin/main; evita el error de Git «Cannot fast-forward to multiple branches» cuando la rama local tiene varios upstreams configurados.",
