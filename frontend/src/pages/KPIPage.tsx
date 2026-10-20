@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   getKPIs,
   updateKPIGoals,
@@ -175,6 +175,7 @@ const progressPct = (metric: KPIMetric, moreIsBetter: boolean) => {
 };
 
 export const KPIPage = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const { hasPermission, user } = useAuth();
   const [data, setData] = useState<KPIResponse | null>(null);
@@ -1672,8 +1673,8 @@ export const KPIPage = () => {
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {techPerformance.map((row) => (
                           <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                            <td className="pl-2 pr-1 py-1.5 font-medium text-slate-700 dark:text-slate-300 truncate" title={row.name}>
-                              {row.name}
+                            <td className="pl-2 pr-1 py-1.5 font-medium truncate" title={`Ver desempeño de ${row.name}`}>
+                              <button type="button" onClick={() => navigate(`/kpis/technicians/${row.id}`, { state: { returnTo: { pathname: location.pathname, search: location.search, hash: location.hash } } })} className="text-left text-emerald-700 hover:underline dark:text-emerald-400">{row.name}</button>
                             </td>
                             <td className="px-0.5 py-1.5 text-right font-semibold text-sky-700 dark:text-sky-400 tabular-nums">
                               {row.CargaHoy ?? 0}

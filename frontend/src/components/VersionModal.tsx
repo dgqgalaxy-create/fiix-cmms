@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.68.6";
+export const APP_VERSION = "1.69.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "1 de Octubre, 2026";
+  const updateDate = "20 de Octubre, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -31,9 +31,13 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
-    "Nuevo: las tarjetas de Inicio abren sus solicitudes del periodo en una ventana, con paginación y acceso al detalle sin salir de Inicio.",
+    "Nuevo: KPIs y Metas — desempeño individual de cada técnico o gestionador con métricas, gráficas, ranking, historial filtrable y exportación PDF.",
+    "Mejora: ranking de desempeño con podio por colores; compara al personal activo que atiende OT y excluye administradores.",
+    "Nuevo: Personal — botón «Ver desempeño» en tarjetas de técnicos y gestionadores; al volver conserva el módulo de origen y el estado de Personal.",
+    "Nuevo: Inicio — «Personal en turno ahora» en Sala de Control abre la lista del personal técnico y gestionador activo según Horarios y hora de planta.",
+    "Mejora: Sala de Control — «Urgentes abiertas» y «Sin asignar» muestran sus OT en una ventana; cada orden abre el detalle superpuesto y al cerrarlo regresa a la lista.",
+    "Mejora: las tarjetas de Resumen por periodo en Inicio abren sus solicitudes en una ventana, con paginación y acceso al detalle sin salir de Inicio.",
     "Corrección: recuento y listado comparten fechas completas en hora de planta; Total recibidas ya no suma vencidas por segunda vez.",
-    "Nuevo: Personal muestra cuántas personas están en turno ahora y su estado debajo del rol, según Horarios y la hora de planta.",
     "Nuevo: Tiempo extra permite elegir entrada y salida; Tiempo por tiempo registra deudas, abonos parciales e historial con saldo pendiente.",
     "Mejora: Horarios excluye al personal inactivo de los selectores de asignación y rechaza nuevas asignaciones a personas inactivas.",
     "Mejora: Catálogo de solicitantes incorpora búsqueda por nombre sin distinguir mayúsculas ni acentos.",

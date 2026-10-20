@@ -59,6 +59,8 @@ interface Props {
   onNavigateWorkOrder?: (wo: WorkOrder) => void;
   /** Al abrir, hacer scroll a la sección indicada. */
   initialFocus?: 'assign';
+  /** Coloca el foco en cerrar al abrir como ventana superpuesta. */
+  autoFocusClose?: boolean;
 }
 
 const EvidenceThumb = ({
@@ -100,6 +102,7 @@ export const WorkOrderDetailModal = ({
   workOrderList,
   onNavigateWorkOrder,
   initialFocus,
+  autoFocusClose,
 }: Props) => {
   const navigate = useNavigate();
   const { user, hasPermission, canWriteOps } = useAuth();
@@ -701,7 +704,7 @@ export const WorkOrderDetailModal = ({
                 <StickyNote size={20} />
               </button>
             )}
-            <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
+            <button autoFocus={autoFocusClose} onClick={onClose} aria-label="Cerrar detalle de orden" className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
               <X size={20} />
             </button>
           </div>

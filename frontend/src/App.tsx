@@ -15,6 +15,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default:
 const AssetsPage = lazy(() => import('./pages/AssetsPage').then((m) => ({ default: m.AssetsPage })));
 const UsersPage = lazy(() => import('./pages/UsersPage').then((m) => ({ default: m.UsersPage })));
 const KPIPage = lazy(() => import('./pages/KPIPage').then((m) => ({ default: m.KPIPage })));
+const TechnicianPerformancePage = lazy(() => import('./pages/TechnicianPerformancePage').then((m) => ({ default: m.TechnicianPerformancePage })));
 const PermissionsPage = lazy(() =>
   import('./pages/PermissionsPage').then((m) => ({ default: m.PermissionsPage }))
 );
@@ -209,6 +210,8 @@ function App() {
               </ProtectedRoute>
             } 
           />
+
+          <Route path="/kpis/technicians/:technicianId" element={<ProtectedRoute><Layout><TechnicianPerformancePage /></Layout></ProtectedRoute>} />
 
           <Route 
             path="/checklists" 

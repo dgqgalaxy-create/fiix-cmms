@@ -1,5 +1,5 @@
 import { SummaryOrdersModal } from '../components/SummaryOrdersModal';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -44,14 +44,26 @@ import {
 import { getLineStoppageStatus, getWorkOrders, getWorkOrdersSummary } from '../api/workOrders';
 import type { LineStoppageStatus, ProductionLine, WorkOrder } from '../api/workOrders';
 import { getMaintenancePlans, type MaintenancePlan } from '../api/maintenance';
-import { getRoster } from '../api/roster';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { useAuth } from '../context/AuthContext';
 import { useControlRoomAlerts } from '../hooks/useControlRoomAlerts';
+import { usePersonnelRoster } from '../hooks/usePersonnelRoster';
+import { personnelCurrentStatus } from '../utils/personnelRoster';
+import { Modal } from '../components/ui/Modal';
 
 const isOpenWo = (wo: WorkOrder) => wo.status !== 'FINALIZADO' && wo.status !== 'ANULADO';
 const PRODUCTION_LINES: ProductionLine[] = ['L1', 'L2', 'L3', 'L4', 'L5'];
+const WORKING_SHIFT_CODES = new Set(['D', 'N', 'M', 'D_TE', 'N_TE', 'TE', 'TXT', 'CURSO']);
+type SummaryOrdersFilter = {
+  status: string;
+  title?: string;
+  priority?: string;
+  unassigned?: boolean;
+  openOnly?: boolean;
+  startDate?: string;
+  endDate?: string;
+};
 
 /** Plant-friendly nudges when the current streak is still below the record. */
 const STREAK_ENCOURAGE = [
@@ -77,7 +89,7 @@ function pickMessage(list: string[], seed = Date.now()): string {
 
 export const HomePage = () => {
   const navigate = useNavigate();
-  const [summaryStatus, setSummaryStatus] = useState<string | null>(null);
+  const [summaryFilter, setSummaryFilter] = useState<SummaryOrdersFilter | null>(null);
   const { user, slaEnabled } = useAuth();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [summary, setSummary] = useState<Record<string, number>>({});
@@ -88,40 +100,32 @@ export const HomePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [streakMsgSeed, setStreakMsgSeed] = useState(() => Date.now());
-  /** Personal que trabaja HOY según el horario (id → nombre). null = sin horario disponible. */
-  const [todayWorking, setTodayWorking] = useState<Map<string, string> | null>(null);
+  const [isOnDutyModalOpen, setIsOnDutyModalOpen] = useState(false);
+  const { roster: personnelRoster, today: rosterToday, now: rosterNow, failed: rosterFailed, refresh: refreshRoster } = usePersonnelRoster();
   const dashboardAbortRef = useRef<AbortController | null>(null);
 
-  /** Fecha de hoy en hora de planta (America/Mexico_City) para el horario. */
-  const plantToday = () =>
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  /** Personal programado hoy, utilizado por el resumen de carga de OT. */
+  const todayWorking = useMemo(() => {
+    if (!personnelRoster) return null;
+    const todayShifts = personnelRoster.shifts.filter((shift) =>
+      shift.date.slice(0, 10) === rosterToday && WORKING_SHIFT_CODES.has(shift.shift_code),
+    );
+    if (personnelRoster.shifts.filter((shift) => shift.date.slice(0, 10) === rosterToday).length === 0) return null;
+    return new Map(todayShifts.map((shift) => [shift.user_id, shift.user.name]));
+  }, [personnelRoster, rosterToday]);
 
-  const WORKING_SHIFT_CODES = new Set(['D', 'N', 'M', 'D_TE', 'N_TE', 'TE', 'TXT', 'CURSO']);
-
-  const loadTodayWorking = useCallback(async () => {
-    try {
-      const today = plantToday();
-      const res = await getRoster(today, today);
-      if (res.shifts.length === 0) {
-        // Sin registros para hoy: mantener el comportamiento anterior (todos con OT).
-        setTodayWorking(null);
-        return;
-      }
-      const working = new Map<string, string>();
-      for (const s of res.shifts) {
-        if (WORKING_SHIFT_CODES.has(s.shift_code)) working.set(s.user_id, s.user.name);
-      }
-      setTodayWorking(working);
-    } catch {
-      setTodayWorking(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadTodayWorking();
-  }, [loadTodayWorking]);
-
-  useSocketRefresh('refresh_roster', () => void loadTodayWorking());
+  /** Personas de campo que están dentro de su horario en este momento. */
+  const onDutyPersonnel = useMemo(() => {
+    if (!personnelRoster) return [];
+    return personnelRoster.technicians
+      .filter((person) => person.is_active && ['TECNICO', 'GESTIONADOR'].includes(person.role))
+      .map((person) => ({
+        ...person,
+        status: personnelCurrentStatus(personnelRoster, person.id, new Date(rosterNow)),
+      }))
+      .filter((person) => person.status.onDuty)
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  }, [personnelRoster, rosterNow]);
 
   const isControlRoomRole =
     user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR';
@@ -375,7 +379,18 @@ export const HomePage = () => {
 
   return (
     <>
-      {summaryStatus && <SummaryOrdersModal key={`${summaryStatus}:${summaryStartDate}:${summaryEndDate}`} status={summaryStatus} startDate={summaryStartDate} endDate={summaryEndDate} onClose={() => setSummaryStatus(null)} onChanged={() => void fetchDashboard(true)} />}
+      {summaryFilter && <SummaryOrdersModal
+        key={`${summaryFilter.status}:${summaryFilter.title ?? ''}:${summaryFilter.priority ?? ''}:${summaryFilter.unassigned ?? ''}:${summaryFilter.startDate ?? summaryStartDate}:${summaryFilter.endDate ?? summaryEndDate}`}
+        status={summaryFilter.status}
+        title={summaryFilter.title}
+        priority={summaryFilter.priority}
+        unassigned={summaryFilter.unassigned}
+        openOnly={summaryFilter.openOnly}
+        startDate={summaryFilter.startDate ?? summaryStartDate}
+        endDate={summaryFilter.endDate ?? summaryEndDate}
+        onClose={() => setSummaryFilter(null)}
+        onChanged={() => void fetchDashboard(true)}
+      />}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Inicio</h1>
@@ -448,18 +463,18 @@ export const HomePage = () => {
 
       <div className="flex flex-col xl:flex-row gap-3 mb-1">
         <div className="flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-6 gap-2 sm:gap-3">
-          <SummaryCard title="Total recibidas" value={totalRecibidas} icon={<LayoutDashboard />} color="slate" emphasized hint="Sin contar invalidadas" detail={(summaryStartDate || summaryEndDate) ? `${summaryStartDate || 'Sin inicio'} — ${summaryEndDate || 'Sin fin'}` : 'Histórico completo'} onClick={() => setSummaryStatus('TOTAL')} />
-          <SummaryCard title="Pendientes" value={summary.PENDIENTE || 0} icon={<Clock />} color="amber" onClick={() => setSummaryStatus('PENDIENTE')} detail={
+          <SummaryCard title="Total recibidas" value={totalRecibidas} icon={<LayoutDashboard />} color="slate" emphasized hint="Sin contar invalidadas" detail={(summaryStartDate || summaryEndDate) ? `${summaryStartDate || 'Sin inicio'} — ${summaryEndDate || 'Sin fin'}` : 'Histórico completo'} onClick={() => setSummaryFilter({ status: 'TOTAL' })} />
+          <SummaryCard title="Pendientes" value={summary.PENDIENTE || 0} icon={<Clock />} color="amber" onClick={() => setSummaryFilter({ status: 'PENDIENTE' })} detail={
             <div className="flex flex-wrap gap-1">
               {urgentCount > 0 && <span className="bg-rose-600 text-white px-1.5 py-0.5 rounded-sm">{urgentCount} URG</span>}
               {normalCount > 0 && <span className="bg-amber-700 text-white px-1.5 py-0.5 rounded-sm">{normalCount} NOR</span>}
               {lowCount > 0 && <span className="bg-emerald-700 text-white px-1.5 py-0.5 rounded-sm">{lowCount} BAJ</span>}
             </div>
           } />
-          <SummaryCard title="En Proceso" value={summary.EN_PROCESO || 0} icon={<Wrench />} color="blue" onClick={() => setSummaryStatus('EN_PROCESO')} detail={activeTechsText && `👤 ${activeTechsText}`} />
-          <SummaryCard title="Pausadas" value={summary.EN_ESPERA || 0} icon={<AlertCircle />} color="purple" onClick={() => setSummaryStatus('EN_ESPERA')} detail={pausedTechsText && `👤 ${pausedTechsText}`} />
-          <SummaryCard title="Finalizadas" value={summary.FINALIZADO || 0} icon={<CheckCircle2 />} color="emerald" onClick={() => setSummaryStatus('FINALIZADO')} />
-          <SummaryCard title="Invalidadas" value={summary.ANULADO || 0} icon={<XCircle />} color="gray" onClick={() => setSummaryStatus('ANULADO')} />
+          <SummaryCard title="En Proceso" value={summary.EN_PROCESO || 0} icon={<Wrench />} color="blue" onClick={() => setSummaryFilter({ status: 'EN_PROCESO' })} detail={activeTechsText && `👤 ${activeTechsText}`} />
+          <SummaryCard title="Pausadas" value={summary.EN_ESPERA || 0} icon={<AlertCircle />} color="purple" onClick={() => setSummaryFilter({ status: 'EN_ESPERA' })} detail={pausedTechsText && `👤 ${pausedTechsText}`} />
+          <SummaryCard title="Finalizadas" value={summary.FINALIZADO || 0} icon={<CheckCircle2 />} color="emerald" onClick={() => setSummaryFilter({ status: 'FINALIZADO' })} />
+          <SummaryCard title="Invalidadas" value={summary.ANULADO || 0} icon={<XCircle />} color="gray" onClick={() => setSummaryFilter({ status: 'ANULADO' })} />
         </div>
 
         <div className="relative w-full xl:w-80 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-gradient-to-br from-white via-slate-50 to-emerald-50/60 dark:from-slate-800 dark:via-slate-800 dark:to-emerald-950/30 p-4 shadow-sm">
@@ -794,10 +809,10 @@ export const HomePage = () => {
             <Siren size={14} />
             Sala de control · atención inmediata
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className={`grid grid-cols-2 gap-3 ${slaEnabled ? 'lg:grid-cols-5' : 'lg:grid-cols-3'}`}>
             <button
               type="button"
-              onClick={() => goControlRoom('priority=URGENTE')}
+              onClick={() => setSummaryFilter({ status: 'TOTAL', title: 'Urgentes abiertas', priority: 'URGENTE', openOnly: true, startDate: '', endDate: '' })}
               className="rounded-xl border border-rose-200 bg-white p-3 text-left shadow-sm transition hover:border-rose-400 dark:border-rose-900 dark:bg-slate-900"
             >
               <p className="text-[11px] font-semibold uppercase text-rose-600">Urgentes abiertas</p>
@@ -805,7 +820,7 @@ export const HomePage = () => {
             </button>
             <button
               type="button"
-              onClick={() => goControlRoom('unassigned=1')}
+              onClick={() => setSummaryFilter({ status: 'TOTAL', title: 'Órdenes abiertas sin asignar', unassigned: true, openOnly: true, startDate: '', endDate: '' })}
               className="rounded-xl border border-amber-200 bg-white p-3 text-left shadow-sm transition hover:border-amber-400 dark:border-amber-900 dark:bg-slate-900"
             >
               <p className="text-[11px] font-semibold uppercase text-amber-700 flex items-center gap-1">
@@ -835,9 +850,55 @@ export const HomePage = () => {
                 </button>
               </>
             )}
+            <button
+              type="button"
+              onClick={() => setIsOnDutyModalOpen(true)}
+              className="rounded-xl border border-emerald-200 bg-white p-3 text-left shadow-sm transition hover:border-emerald-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-emerald-900 dark:bg-slate-900"
+              aria-label="Ver personal de mantenimiento en turno ahora"
+            >
+              <p className="text-[11px] font-semibold uppercase text-emerald-700 dark:text-emerald-300">Personal en turno ahora</p>
+              {personnelRoster
+                ? <PulsingValue value={onDutyPersonnel.length} className="mt-1 text-2xl font-black text-slate-900 dark:text-white" />
+                : <span className="mt-1 text-2xl font-black text-slate-900 dark:text-white">—</span>}
+              <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                {rosterFailed ? 'Horario no disponible' : !personnelRoster ? 'Consultando horarios…' : `${new Date(`${rosterToday}T12:00:00Z`).toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', year: 'numeric' })} · ${new Date(rosterNow).toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' })} · Hora de planta`}
+              </p>
+            </button>
           </div>
         </section>
       )}
+
+      <Modal
+        isOpen={isOnDutyModalOpen}
+        onClose={() => setIsOnDutyModalOpen(false)}
+        title="Personal de mantenimiento en turno"
+        description={`${new Date(`${rosterToday}T12:00:00Z`).toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · Hora de planta`}
+        size="md"
+        icon={<Users size={20} className="mt-0.5 text-emerald-600 dark:text-emerald-400" />}
+      >
+        {rosterFailed || !personnelRoster ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+            <p>{rosterFailed ? 'No se pudo consultar el horario del personal.' : 'Consultando el horario del personal…'}</p>
+            {rosterFailed && <button type="button" onClick={() => void refreshRoster()} className="mt-3 font-bold underline">Reintentar</button>}
+          </div>
+        ) : onDutyPersonnel.length === 0 ? (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            No hay técnicos o gestionadores en turno en este momento.
+          </div>
+        ) : (
+          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+            {onDutyPersonnel.map((person) => (
+              <li key={person.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-slate-800 dark:text-slate-100">{person.name}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{person.role === 'GESTIONADOR' ? 'Gestionador' : 'Técnico'} · {person.status.label}</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">En turno</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Modal>
 
 
 

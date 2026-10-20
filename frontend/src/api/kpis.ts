@@ -181,6 +181,75 @@ export const getTechnicianPerformance = async (
   return response.data;
 };
 
+export interface TechnicianPerformanceDetail {
+  technician: { id: string; name: string; role: string; is_active: boolean };
+  period: { start: string; end: string };
+  ranking: {
+    /** Posición competitiva por OT finalizadas en el periodo; empates comparten lugar. */
+    place: number | null;
+    totalPeers: number;
+    completed: number;
+    tiedCount: number;
+    nextPlaceCompleted: number | null;
+  };
+  metrics: {
+    assigned: number;
+    completed: number;
+    open: number;
+    cancelled: number;
+    responseAverageMs: number | null;
+    repairAverageMs: number | null;
+    cycleAverageMs: number | null;
+    totalLaborMs: number;
+    overdueOpen: number;
+    responseWithinGoalPercent: number | null;
+    repairWithinGoalPercent: number | null;
+    responseTargetHours: number;
+    repairTargetHours: number;
+    responseSample: number;
+    repairSample: number;
+    repairGoalSample: number;
+  };
+  trend: Array<{
+    month: string;
+    label: string;
+    created: number;
+    completed: number;
+    responseAverageMs: number | null;
+    repairAverageMs: number | null;
+    responseSample: number;
+    repairSample: number;
+  }>;
+  orders: Array<{
+    id: string;
+    folio: number;
+    title: string;
+    status: string;
+    priority: string;
+    maintenance_type: string;
+    machine_stopped: boolean;
+    created_at: string;
+    started_at: string | null;
+    completed_at: string | null;
+    due_date: string | null;
+    accumulated_time_ms: number;
+    assigned_technicians: { id: string; name: string }[];
+    asset: { id: string; name: string };
+    zone: { id: string; name: string } | null;
+  }>;
+}
+
+export const getTechnicianPerformanceDetail = async (
+  technicianId: string,
+  periodOrQuery?: string | KpiPeriodQuery,
+): Promise<TechnicianPerformanceDetail> => {
+  const params: KpiPeriodQuery = typeof periodOrQuery === 'object' && periodOrQuery
+    ? periodOrQuery
+    : { period: periodOrQuery };
+  const response = await api.get(`/kpis/technician-performance/${encodeURIComponent(technicianId)}${buildKpiQuery(params)}`);
+  return response.data;
+};
+
 export interface LineMttrMtbf {
   line: string;
   /** Paros correctivos (machine_stopped) creados en el periodo. */

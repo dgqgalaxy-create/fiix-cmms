@@ -1,4 +1,4 @@
-import { Mail, ClipboardList, CheckCircle2 } from 'lucide-react';
+import { Mail, ClipboardList, CheckCircle2, Activity } from 'lucide-react';
 import type { PersonnelRosterStatus } from '../utils/personnelRoster';
 import type { User } from '../api/users';
 import type { WorkOrder } from '../api/workOrders';
@@ -69,6 +69,7 @@ interface UserCardsProps {
   completedByUser: Map<string, number>;
   canManage: boolean;
   onUserClick?: (user: User) => void;
+  onViewPerformance?: (user: User) => void;
 }
 
 /** Vista de tarjetas del Directorio: avatar con iniciales, rol, estado en línea y carga de OT. */
@@ -81,6 +82,7 @@ export const UserCards = ({
   completedByUser,
   canManage,
   onUserClick,
+  onViewPerformance,
 }: UserCardsProps) => {
   if (users.length === 0) {
     return (
@@ -173,6 +175,20 @@ export const UserCards = ({
                 {completed} completadas (12m)
               </span>
             </div>
+
+            {(u.role === 'TECNICO' || u.role === 'GESTIONADOR') && onViewPerformance && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onViewPerformance(u);
+                }}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-50 hover:text-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-200"
+                aria-label={`Ver desempeño de ${u.name}`}
+              >
+                <Activity size={14} /> Ver desempeño
+              </button>
+            )}
 
             {openCount > 0 && (
               <div className="mt-2 space-y-1">

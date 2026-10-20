@@ -870,6 +870,226 @@ export const getTechnicianPerformance = async (req: AuthRequest, res: Response):
   }
 };
 
+/** Expediente individual con métricas y órdenes asignadas dentro del periodo. */
+export const getTechnicianPerformanceDetail = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { start, effectiveEnd } = rangeFromReq(req);
+    const technicianId = Array.isArray(req.params.technicianId) ? req.params.technicianId[0] : req.params.technicianId;
+    const technician = await prisma.user.findUnique({
+      where: { id: technicianId },
+      select: { id: true, name: true, role: true, is_active: true },
+    });
+    if (!technician || !['TECNICO', 'GESTIONADOR'].includes(technician.role)) {
+      res.status(404).json({ error: 'Técnico no encontrado' });
+      return;
+    }
+
+    const periodParts = plantDateParts(effectiveEnd);
+    const currentMonthIndex = periodParts.year * 12 + periodParts.month - 1;
+    const trendMonths = Array.from({ length: 12 }, (_, index) => {
+      const monthIndex = currentMonthIndex - 11 + index;
+      const year = Math.floor(monthIndex / 12);
+      const month = (monthIndex % 12) + 1;
+      const labelDate = new Date(Date.UTC(year, month - 1, 1));
+      return {
+        key: `${year}-${String(month).padStart(2, '0')}`,
+        label: labelDate.toLocaleDateString('es-MX', { month: 'short', timeZone: 'UTC' }),
+        created: 0,
+        completed: 0,
+        responseTotalMs: 0,
+        responseSample: 0,
+        repairTotalMs: 0,
+        repairSample: 0,
+      };
+    });
+    const trendStart = plantWallClockToDate(
+      Number(trendMonths[0].key.slice(0, 4)),
+      Number(trendMonths[0].key.slice(5, 7)),
+      1,
+    ) ?? start;
+
+    const [workOrders, trendOrders, goals, rankingTechnicians, rankingOrders] = await Promise.all([
+      prisma.workOrder.findMany({
+        where: {
+          assigned_technicians: { some: { id: technician.id } },
+          OR: [
+            { created_at: { gte: start, lte: effectiveEnd } },
+            { completed_at: { gte: start, lte: effectiveEnd } },
+            { status: { in: ['PENDIENTE', 'EN_PROCESO', 'EN_ESPERA'] } },
+          ],
+        },
+        orderBy: [{ created_at: 'desc' }, { folio: 'desc' }],
+        select: {
+          id: true,
+          folio: true,
+          title: true,
+          status: true,
+          priority: true,
+          maintenance_type: true,
+          machine_stopped: true,
+          created_at: true,
+          started_at: true,
+          completed_at: true,
+          due_date: true,
+          accumulated_time_ms: true,
+          assigned_technicians: { select: { id: true, name: true } },
+          asset: { select: { id: true, name: true } },
+          zone: { select: { id: true, name: true } },
+        },
+      }),
+      prisma.workOrder.findMany({
+        where: {
+          assigned_technicians: { some: { id: technician.id } },
+          status: { not: 'ANULADO' },
+          OR: [
+            { created_at: { gte: trendStart, lte: effectiveEnd } },
+            { started_at: { gte: trendStart, lte: effectiveEnd } },
+            { completed_at: { gte: trendStart, lte: effectiveEnd } },
+          ],
+        },
+        select: {
+          created_at: true,
+          started_at: true,
+          completed_at: true,
+          status: true,
+          accumulated_time_ms: true,
+        },
+      }),
+      prisma.kPIGoal.findMany({
+        where: { metricKey: { in: ['RESPONSE_TIME', 'MTTR'] } },
+        select: { metricKey: true, targetValue: true, unit: true },
+      }),
+      prisma.user.findMany({
+        where: { is_active: true, role: { in: ['TECNICO', 'GESTIONADOR'] } },
+        select: { id: true },
+      }),
+      prisma.workOrder.findMany({
+        where: {
+          status: 'FINALIZADO',
+          completed_at: { gte: start, lte: effectiveEnd },
+        },
+        select: { assigned_technicians: { select: { id: true } } },
+      }),
+    ]);
+
+    const inPeriod = workOrders.filter((wo) =>
+      (wo.created_at >= start && wo.created_at <= effectiveEnd) ||
+      (wo.completed_at !== null && wo.completed_at >= start && wo.completed_at <= effectiveEnd) ||
+      ['PENDIENTE', 'EN_PROCESO', 'EN_ESPERA'].includes(wo.status),
+    );
+    const completed = inPeriod.filter((wo) =>
+      wo.status === 'FINALIZADO' && wo.completed_at && wo.completed_at >= start && wo.completed_at <= effectiveEnd,
+    );
+    const completedCorrective = completed.filter((wo) => wo.maintenance_type === 'CORRECTIVO');
+    const started = inPeriod.filter((wo) => wo.started_at && wo.started_at >= start && wo.started_at <= effectiveEnd);
+    const avg = (values: number[]) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+    const responseTimes = started.map((wo) => Math.max(0, wo.started_at!.getTime() - wo.created_at.getTime()));
+    const repairTimes = completed.map((wo) => Number(wo.accumulated_time_ms || 0));
+    const cycleTimes = completed.map((wo) => Math.max(0, wo.completed_at!.getTime() - wo.created_at.getTime()));
+    const responseGoal = goals.find((goal) => goal.metricKey === 'RESPONSE_TIME');
+    const repairGoal = goals.find((goal) => goal.metricKey === 'MTTR');
+    const responseTargetHours = responseGoal
+      ? normalizeGoal('RESPONSE_TIME', responseGoal.targetValue, responseGoal.unit).targetValue
+      : DEFAULT_GOALS.RESPONSE_TIME.targetValue;
+    const repairTargetHours = repairGoal
+      ? normalizeGoal('MTTR', repairGoal.targetValue, repairGoal.unit).targetValue
+      : DEFAULT_GOALS.MTTR.targetValue;
+    const overdueOpen = inPeriod.filter((wo) =>
+      ['PENDIENTE', 'EN_PROCESO', 'EN_ESPERA'].includes(wo.status) && wo.due_date && wo.due_date < new Date(),
+    );
+    const monthBuckets = new Map(trendMonths.map((month) => [month.key, month]));
+    const completedByTechnician = new Map(rankingTechnicians.map(({ id }) => [id, 0]));
+    // Keep the selected person in the comparison even if their account became inactive.
+    if (!completedByTechnician.has(technician.id)) completedByTechnician.set(technician.id, 0);
+    for (const order of rankingOrders) {
+      for (const assigned of order.assigned_technicians) {
+        if (completedByTechnician.has(assigned.id)) {
+          completedByTechnician.set(assigned.id, completedByTechnician.get(assigned.id)! + 1);
+        }
+      }
+    }
+    const technicianCompleted = completedByTechnician.get(technician.id) ?? 0;
+    const completedCounts = [...completedByTechnician.values()];
+    const higherCounts = completedCounts.filter((count) => count > technicianCompleted);
+    const rankingPlace = completedCounts.some((count) => count > 0) ? higherCounts.length + 1 : null;
+    const rankingTieCount = completedCounts.filter((count) => count === technicianCompleted).length;
+    const nextPlaceCompleted = higherCounts.length ? Math.min(...higherCounts) : null;
+    const monthKeyFor = (date: Date) => {
+      const parts = plantDateParts(date);
+      return `${parts.year}-${String(parts.month).padStart(2, '0')}`;
+    };
+    for (const wo of trendOrders) {
+      if (wo.created_at >= trendStart && wo.created_at <= effectiveEnd) {
+        const bucket = monthBuckets.get(monthKeyFor(wo.created_at));
+        if (bucket) bucket.created += 1;
+      }
+      if (wo.started_at && wo.started_at >= trendStart && wo.started_at <= effectiveEnd) {
+        const bucket = monthBuckets.get(monthKeyFor(wo.started_at));
+        if (bucket) {
+          bucket.responseTotalMs += Math.max(0, wo.started_at.getTime() - wo.created_at.getTime());
+          bucket.responseSample += 1;
+        }
+      }
+      if (wo.status === 'FINALIZADO' && wo.completed_at && wo.completed_at >= trendStart && wo.completed_at <= effectiveEnd) {
+        const bucket = monthBuckets.get(monthKeyFor(wo.completed_at));
+        if (bucket) {
+          bucket.completed += 1;
+          bucket.repairTotalMs += Number(wo.accumulated_time_ms || 0);
+          bucket.repairSample += 1;
+        }
+      }
+    }
+
+    res.json({
+      technician,
+      period: { start: start.toISOString(), end: effectiveEnd.toISOString() },
+      ranking: {
+        place: rankingPlace,
+        totalPeers: completedByTechnician.size,
+        completed: technicianCompleted,
+        tiedCount: rankingTieCount,
+        nextPlaceCompleted,
+      },
+      metrics: {
+        assigned: inPeriod.filter((wo) => wo.status !== 'ANULADO').length,
+        completed: completed.length,
+        open: inPeriod.filter((wo) => ['PENDIENTE', 'EN_PROCESO', 'EN_ESPERA'].includes(wo.status)).length,
+        cancelled: inPeriod.filter((wo) => wo.status === 'ANULADO').length,
+        responseAverageMs: avg(responseTimes),
+        repairAverageMs: avg(repairTimes),
+        cycleAverageMs: avg(cycleTimes),
+        totalLaborMs: repairTimes.reduce((sum, value) => sum + value, 0),
+        overdueOpen: overdueOpen.length,
+        responseWithinGoalPercent: responseTimes.length
+          ? (responseTimes.filter((value) => value <= responseTargetHours * MS_PER_HOUR).length / responseTimes.length) * 100
+          : null,
+        repairWithinGoalPercent: completedCorrective.length
+          ? (completedCorrective.filter((wo) => Number(wo.accumulated_time_ms || 0) <= repairTargetHours * MS_PER_HOUR).length / completedCorrective.length) * 100
+          : null,
+        responseTargetHours,
+        repairTargetHours,
+        responseSample: responseTimes.length,
+        repairSample: repairTimes.length,
+        repairGoalSample: completedCorrective.length,
+      },
+      trend: trendMonths.map((month) => ({
+        month: month.key,
+        label: month.label,
+        created: month.created,
+        completed: month.completed,
+        responseAverageMs: month.responseSample ? month.responseTotalMs / month.responseSample : null,
+        repairAverageMs: month.repairSample ? month.repairTotalMs / month.repairSample : null,
+        responseSample: month.responseSample,
+        repairSample: month.repairSample,
+      })),
+      orders: inPeriod.map((wo) => ({ ...wo, accumulated_time_ms: Number(wo.accumulated_time_ms || 0) })),
+    });
+  } catch (error) {
+    console.error('Error fetching technician performance detail:', error);
+    res.status(500).json({ error: 'Error al calcular el expediente del técnico' });
+  }
+};
+
 /**
  * MTTR/MTBF por línea de producción (L1–L5), para el periodo seleccionado.
  *

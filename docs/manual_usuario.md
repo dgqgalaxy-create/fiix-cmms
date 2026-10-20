@@ -95,7 +95,8 @@ Se han mejorado las reglas del almacén para prevenir errores y mejorar la fluid
 Pantalla de resumen operativo (antes mezclada con el listado de órdenes). Es la pantalla de entrada al abrir el sistema en una sesión nueva.
 - **Líneas paradas:** Chips L1–L5 y detalle de OT correctivas o preventivas abiertas con **¿Paró máquina?** = Sí (`machine_stopped`). Si no hay ninguna, el panel lo indica en verde. Toca una OT para abrirla en Órdenes.
 - **Racha sin paro:** Días naturales sin un evento de paro correctivo en L1–L5 (preventivos no cuentan). Al reportar un nuevo paro correctivo en esas líneas, la racha vuelve a 0. El panel muestra también el **récord** (mayor racha histórica entre eventos de paro) y mensajes breves de ánimo; si la racha actual iguala o supera el récord, el texto es de celebración. Las fechas y horas que llegan por importación CSV/Sheets se interpretan siempre en **hora de planta (México)**, así que la racha y el récord son los mismos en el servidor y en cualquier equipo local.
-- **Sala de control (Administrador / Gestionador):** Franja superior con conteos de **Urgentes abiertas**, **Sin asignar**, **SLA en riesgo** y **SLA vencido**. Cada tarjeta abre **Órdenes de Trabajo** ya filtrada. El título de la pestaña del navegador muestra `(N) GTZ CMMS` cuando hay críticas, y puedes activar/desactivar **Sonido al llegar OT críticas** (por defecto encendido; se guarda en el navegador).
+- **Sala de control (Administrador / Gestionador):** Franja superior con conteos de **Urgentes abiertas**, **Sin asignar**, **SLA en riesgo** y **SLA vencido**. Urgentes y Sin asignar abren una ventana con la lista correspondiente; al tocar una OT, su detalle aparece encima y al cerrarlo regresas al listado. SLA en riesgo y vencido abren Órdenes de Trabajo con el filtro aplicado. El título de la pestaña del navegador muestra `(N) GTZ CMMS` cuando hay críticas, y puedes activar/desactivar **Sonido al llegar OT críticas** (por defecto encendido; se guarda en el navegador).
+- **Personal en turno ahora:** Tarjeta al extremo derecho de Sala de Control. El número y la lista consideran técnicos y gestionadores activos que están dentro de su horario actual según Horarios y la hora de planta. Tócala para consultar sus nombres y turno.
 - **Escáner QR:** Al leer un código suena un bip corto. Las etiquetas nuevas usan prefijo `GTZ-ASSET` / `GTZ-ITEM` / `GTZ-LOCATION`; las antiguas `FIIX-*` siguen funcionando.
 - **Turno actual:** Debajo de Sala de control (o al inicio del resumen), lista compacta por técnico con pendientes / en proceso / en espera y avisos SLA. Toca una fila para ir a Órdenes.
 - **Pulso al actualizar cifras:** Cuando cambia un número de las tarjetas del resumen o de Sala de control (p. ej. por una OT nueva en tiempo real), la cifra late una vez de forma suave; no anima toda la tarjeta.
@@ -160,6 +161,7 @@ La sección de "Usuarios" se dividió para mayor control:
 **Nuevas características:**
 - **Buscador rápido:** Escribe un nombre y la lista se reducirá automáticamente.
 - **Ocultar/Ver inactivos:** Por defecto, los usuarios dados de baja no estorbarán en la lista. Puedes revelarlos con el botón de "Ver Inactivos" (icono de ojo).
+- **Ver desempeño:** Las tarjetas de técnicos y gestionadores tienen un enlace para abrir su desempeño individual. Al volver, regresas a Personal y se conservan la pestaña, búsqueda, vista y filtro de inactivos.
 - **Protección de datos:** Ya no es posible eliminar a técnicos o personal si ya tienen órdenes de trabajo o salidas de inventario a su nombre. Para quitarles acceso, solo dales clic y desmarca la casilla "Usuario Activo".
 
 ## 7. Configuración de Roles y Permisos
@@ -202,6 +204,7 @@ Panel de indicadores de mantenimiento:
   - **OTs pausadas** y **tiempo en espera** acumulado (reloj desde que se pausó la orden).
   - **Productividad semanal** (lunes–domingo): órdenes finalizadas y horas de labor registradas al cerrar.
   - Tabla por técnico (incluye también Fin./Proc./Pend. del periodo seleccionado) y gráfica top 8 de la semana.
+- **Desempeño individual:** Abre el detalle desde el nombre del técnico en KPIs y Metas, o desde **Personal → Ver desempeño**. Incluye indicadores del periodo, tendencias mensuales, ranking del grupo e historial de OT. Puedes filtrar por varias zonas, activo, tipo y estado; ordenar el historial por tiempo de respuesta o reparación, en ambos sentidos; seleccionar una OT para abrir su detalle y descargar un informe PDF. El ranking considera técnicos y gestionadores activos, excluye administradores y cuenta una orden compartida para cada persona asignada. Al volver, regresa al módulo desde el que se abrió.
 - **Calendario (pendientes):** la lista lateral de OT pendientes sin programar requiere el permiso **Administrar Calendario**. En **escritorio** arrastra con el ratón sobre el día/franja; en **tablet/celular** desliza la lista con normalidad, y para agendar arrastra desde el icono **≡** de la tarjeta hacia el día (o franja) y suelta. Toca el texto de la tarjeta para abrirla. En móvil la lista está debajo del calendario. El módulo usa la misma URL del API que el resto del sistema (host del servidor), no `localhost`.
 - **Usuarios en línea:** en la barra lateral, el indicador muestra quién está activo y en qué módulo se encuentra (Inicio, Órdenes de Trabajo, Inventario, etc.).
 - **Nota:** el gráfico de costos representa **refacciones consumidas**, no el costo total de mantenimiento.
@@ -354,9 +357,19 @@ En Horarios, los selectores para asignar patrones e incidencias muestran solo pe
 En Personal → Catálogo de solicitantes, utiliza «Buscar solicitante por nombre». Puedes escribir parte del nombre sin distinguir mayúsculas ni acentos. El contador muestra las coincidencias sobre el total del catálogo; limpiar el cuadro vuelve a mostrar todos los solicitantes.
 
 
-## Inicio: consultar solicitudes por tarjeta — v1.68.0 (1 de octubre de 2026)
+## Inicio: consultar solicitudes por tarjeta — v1.68.0 y v1.69.0 (1 y 20 de octubre de 2026)
 Selecciona Desde y Hasta en Resumen por periodo y pulsa Total recibidas, Pendientes, En proceso, Pausadas, Finalizadas o Invalidadas. Una ventana muestra las solicitudes de ese estado cuya fecha de creación está dentro del periodo, incluyendo ambos días completos en hora de Ciudad de México. Total recibidas excluye invalidadas; las vencidas ya están incluidas en su estado y no se suman de nuevo.
-Pulsa una solicitud para abrir su detalle sin salir de Inicio. Al cerrar el detalle vuelves a la lista; sus permisos y restricciones siguen vigentes. Usa Anterior/Siguiente si hay más de 20 resultados. Actualizar consulta los datos recientes: si alguien cambia un estado, los recuentos pueden variar. Puedes filtrar con solo una fecha o limpiar ambas para consultar todo el historial.
+
+En Sala de Control, **Urgentes abiertas** y **Sin asignar** muestran todas las OT abiertas que coinciden con el conteo, sin limitarse al periodo del resumen. Pulsa una solicitud para superponer el detalle; usa la X para volver a la lista y otra X para cerrarla. En cualquier listado, usa Anterior/Siguiente si hay más de 20 resultados. Actualizar consulta los datos recientes. En Resumen por periodo, puedes filtrar con solo una fecha o limpiar ambas para consultar todo el historial.
+
+La tarjeta **Personal en turno ahora** abre los nombres de técnicos y gestionadores activos cuyo horario está vigente en este momento. Usa las horas que marca Horarios en hora de planta.
+
+## Desempeño individual — v1.69.0 (20 de octubre de 2026)
+La página de desempeño presenta OT asignadas y finalizadas, tiempos medios de respuesta, reparación y ciclo, horas de labor y vencidas, además de gráficas de actividad y tendencia. El filtro de periodo afecta las métricas y el ranking. En el historial puedes combinar zonas, activo, tipo y estado; seleccionar tiempo de respuesta o reparación y ordenar de mayor a menor o de menor a mayor. Los tiempos no registrados aparecen al final. Al tocar una OT, consulta su detalle en una ventana; **Descargar PDF** genera un informe visual del periodo, filtros, orden y órdenes mostradas.
+
+El puesto compara técnicos y gestionadores activos por OT finalizadas en el periodo. Los administradores no participan; si varias personas están asignadas a una misma orden, cuenta para cada una. El podio destaca los primeros tres puestos con colores y números de posición.
+
+Desde **Personal**, abre una tarjeta de técnico o gestionador y pulsa **Ver desempeño**. El botón de regreso conserva el módulo de origen; desde Personal restaura también pestaña, búsqueda, tipo de vista y visibilidad de inactivos.
 
 ### Informes semanales y mensuales
 

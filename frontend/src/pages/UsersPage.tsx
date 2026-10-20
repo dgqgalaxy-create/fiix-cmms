@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, RefreshCw, Users, Search, Eye, EyeOff, LayoutGrid, Table2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getUsers, createUser, updateUser, deleteUser, getOnlineUsers } from '../api/users';
@@ -19,25 +20,36 @@ import { PageLoadError, PageLoadingState, isLikelyServerUnreachable } from '../c
 import { usePersonnelRoster } from '../hooks/usePersonnelRoster';
 import { personnelCurrentStatus } from '../utils/personnelRoster';
 
+type PersonnelReturnState = {
+  activeTab?: 'users' | 'requesters';
+  searchTerm?: string;
+  showInactive?: boolean;
+  viewMode?: 'cards' | 'table';
+};
+
 export const UsersPage = () => {
-  const { roster, today, now, failed: rosterFailed, refresh: refreshRoster } = usePersonnelRoster();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const restorePersonnel = (location.state as { restorePersonnel?: PersonnelReturnState } | null)?.restorePersonnel;
+  const { roster, now, failed: rosterFailed, refresh: refreshRoster } = usePersonnelRoster();
   const rosterStatuses = useMemo(() => new Map((roster?.technicians ?? []).map(person => [person.id, personnelCurrentStatus(roster!, person.id, new Date(now))])), [roster, now]);
   const { hasPermission, user } = useAuth();
   
-  const [activeTab, setActiveTab] = useState<'users' | 'requesters'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'requesters'>(() => restorePersonnel?.activeTab ?? 'users');
   
   const [users, setUsers] = useState<User[]>([]);
   const [requesters, setRequesters] = useState<Requester[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   
-  const [showInactive, setShowInactive] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [showInactive, setShowInactive] = useState(() => restorePersonnel?.showInactive ?? false);
+  const [searchTerm, setSearchTerm] = useState(() => restorePersonnel?.searchTerm ?? '');
   const [requesterSearch, setRequesterSearch] = useState('');
 
   // Vista del Directorio: tarjetas (default) o tabla; se guarda por usuario.
   const viewKey = `fiix_users_view_v1_${user?.userId ?? user?.id ?? 'anon'}`;
   const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
+    if (restorePersonnel?.viewMode) return restorePersonnel.viewMode;
     try {
       const saved = localStorage.getItem(viewKey);
       if (saved === 'table' || saved === 'cards') return saved;
@@ -192,7 +204,6 @@ export const UsersPage = () => {
     setIsRequesterModalOpen(true);
   };
 
-  const onDutyCount = users.filter(person => person.is_active && rosterStatuses.get(person.id)?.onDuty).length;
   const normalizeName = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   const filteredRequesters = requesters.filter(person => normalizeName(person.name).includes(normalizeName(requesterSearch)));
   let filteredUsers = [...users];
@@ -221,11 +232,6 @@ export const UsersPage = () => {
         </div>
         
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-          {activeTab === 'users' && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 dark:border-emerald-900 dark:bg-emerald-950/40" aria-live="polite">
-            <p className="text-xs font-bold uppercase text-emerald-700 dark:text-emerald-300">Personal en turno ahora</p>
-            <p className="text-2xl font-extrabold text-emerald-800 dark:text-emerald-200">{roster && !isLoading && !loadError ? onDutyCount : '—'}</p>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400">{rosterFailed ? 'Horario no disponible' : !roster ? 'Consultando horarios…' : `${today} · ${new Date(now).toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' })} · Hora de planta`}</p>
-          </div>}
           <button 
             onClick={activeTab === 'users' ? () => { void fetchUsers(true); void refreshRoster(); } : () => void fetchRequesters(true)}
             className="p-2.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors shadow-sm"
@@ -337,6 +343,16 @@ export const UsersPage = () => {
               openByUser={openOrdersByUser}
               completedByUser={completedByUser}
               canManage={hasPermission('MANAGE_USERS')}
+              onViewPerformance={(person) => navigate(`/kpis/technicians/${person.id}`, {
+                state: {
+                  returnTo: {
+                    pathname: location.pathname,
+                    search: location.search,
+                    hash: location.hash,
+                    restorePersonnel: { activeTab, searchTerm, showInactive, viewMode },
+                  },
+                },
+              })}
               onUserClick={(u) => {
                 setSelectedUser(u);
                 setIsUserModalOpen(true);

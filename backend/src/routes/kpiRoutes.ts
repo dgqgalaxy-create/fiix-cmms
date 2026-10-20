@@ -7,6 +7,7 @@ import {
   getTopFailingAssets,
   getAssetFailureOrders,
   getTechnicianPerformance,
+  getTechnicianPerformanceDetail,
   getMttrMtbfByLine,
   getLineAssetsMttrMtbf,
   getResponseTimeZones,
@@ -24,6 +25,7 @@ router.get('/costs-by-asset', getCostsByAsset);
 router.get('/top-failures', getTopFailingAssets);
 router.get('/top-failures/:assetId/orders', getAssetFailureOrders);
 router.get('/technician-performance', getTechnicianPerformance);
+router.get('/technician-performance/:technicianId', getTechnicianPerformanceDetail);
 router.get('/by-line', getMttrMtbfByLine);
 router.get('/by-line/:line/assets', getLineAssetsMttrMtbf);
 router.get('/response-time-zones', getResponseTimeZones);
