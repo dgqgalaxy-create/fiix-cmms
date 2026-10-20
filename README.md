@@ -1,6 +1,6 @@
 # GTZ CMMS
 
-**Versión actual: v1.69.2 · 20 de octubre de 2026.** [Corrección de PM2 en actualizaciones](docs/releases/v1.69.2.md).
+**Versión actual: v1.69.3 · 20 de octubre de 2026.** [Corrección de instrucciones Docker](docs/releases/v1.69.3.md).
 
 **Versión estable: v1.66.0 · 29 de septiembre de 2026.** [Mejoras y alcance de la entrega](docs/releases/v1.66.0.md).
 

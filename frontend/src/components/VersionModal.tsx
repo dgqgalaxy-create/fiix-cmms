@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.69.2";
+export const APP_VERSION = "1.69.3";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: el aviso de actualización proporciona el comando Docker con git pull explícito desde origin/main.",
     "Corrección: el actualizador instala PM2 en el Node activo cuando no está disponible tras cambiar a Node 22.",
     "Corrección: las actualizaciones del servidor apuntan explícitamente a origin/main; evita el error de Git «Cannot fast-forward to multiple branches» cuando la rama local tiene varios upstreams configurados.",
     "Nuevo: KPIs y Metas — desempeño individual de cada técnico o gestionador con métricas, gráficas, ranking, historial filtrable y exportación PDF.",
