@@ -1,6 +1,6 @@
 # GTZ CMMS
 
-**Versión actual: v1.69.1 · 20 de octubre de 2026.** [Corrección del actualizador Git](docs/releases/v1.69.1.md).
+**Versión actual: v1.69.2 · 20 de octubre de 2026.** [Corrección de PM2 en actualizaciones](docs/releases/v1.69.2.md).
 
 **Versión estable: v1.66.0 · 29 de septiembre de 2026.** [Mejoras y alcance de la entrega](docs/releases/v1.66.0.md).
 
@@ -298,6 +298,8 @@ git config --replace-all branch.main.merge refs/heads/main
 git pull --ff-only origin main
 ./update.sh
 ```
+
+Si la actualización se detiene con `Faltan comandos ... pm2` después de activar Node 22, la instalación global de PM2 puede estar asociada a Node 20. `update.sh` ahora instala PM2 para el Node activo si hace falta; actualiza el código con Git y vuelve a ejecutarlo.
 
 ### Respaldos
 

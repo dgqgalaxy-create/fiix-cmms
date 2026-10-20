@@ -26,11 +26,22 @@ need_cmd() {
 }
 
 MISSING_CMDS=()
-for cmd in git node npm npx pm2; do
+for cmd in git node npm npx; do
   if ! need_cmd "$cmd"; then
     MISSING_CMDS+=("$cmd")
   fi
 done
+
+if need_cmd npm && ! need_cmd pm2; then
+  info "PM2 no está disponible para Node $(node -v); instalándolo en el entorno activo..."
+  if ! npm install --global pm2; then
+    die "No se pudo instalar PM2. Activa Node $(node -v) y ejecuta: npm install -g pm2"
+  fi
+  hash -r 2>/dev/null || true
+fi
+if ! need_cmd pm2; then
+  MISSING_CMDS+=("pm2")
+fi
 
 if [ "${#MISSING_CMDS[@]}" -gt 0 ]; then
   echo "  [ERROR] Faltan comandos tras intentar cargar Node: ${MISSING_CMDS[*]}" >&2
