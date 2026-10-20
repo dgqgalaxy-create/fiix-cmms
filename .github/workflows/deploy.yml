@@ -25,7 +25,7 @@ jobs:
           # npm install puede ensuciar package-lock.json en el servidor;
           # sin restore, git pull aborta y el auto-deploy queda parado.
           git restore .
-          git pull --ff-only
+          git pull --ff-only origin main
           chmod +x ./scripts/ci-typecheck.sh ./update.sh ./scripts/gha-runner-watchdog.sh 2>/dev/null || true
           bash ./scripts/ci-typecheck.sh
           bash ./update.sh

@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.69.0";
+export const APP_VERSION = "1.69.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: las actualizaciones del servidor apuntan explícitamente a origin/main; evita el error de Git «Cannot fast-forward to multiple branches» cuando la rama local tiene varios upstreams configurados.",
     "Nuevo: KPIs y Metas — desempeño individual de cada técnico o gestionador con métricas, gráficas, ranking, historial filtrable y exportación PDF.",
     "Mejora: ranking de desempeño con podio por colores; compara al personal activo que atiende OT y excluye administradores.",
     "Nuevo: Personal — botón «Ver desempeño» en tarjetas de técnicos y gestionadores; al volver conserva el módulo de origen y el estado de Personal.",

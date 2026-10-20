@@ -1,6 +1,6 @@
 # GTZ CMMS
 
-**Versión actual: v1.69.0 · 20 de octubre de 2026.** [Desempeño individual y Sala de Control](docs/releases/v1.69.0.md).
+**Versión actual: v1.69.1 · 20 de octubre de 2026.** [Corrección del actualizador Git](docs/releases/v1.69.1.md).
 
 **Versión estable: v1.66.0 · 29 de septiembre de 2026.** [Mejoras y alcance de la entrega](docs/releases/v1.66.0.md).
 
@@ -250,7 +250,7 @@ Internet
 # Actualiza código y reconstruye la imagen
 cd ~/fiix-cmms
 git restore .          # descarta cambios locales en ARCHIVOS VERSIONADOS (evita conflictos con pull)
-git pull
+git pull --ff-only origin main
 sudo docker compose up -d --build   # (sin sudo si tu usuario está en el grupo docker)
 ```
 
@@ -276,7 +276,7 @@ sudo docker compose restart app
 > **Ya no hace falta editar `docker-compose.yml` para Cloudflare.** El compose pasa
 > `CORS_ORIGINS` al contenedor desde el `.env` (ver la sección
 > [Publicar en Internet con un dominio propio](#publicar-en-internet-con-un-dominio-propio-cloudflare-tunnel)),
-> así que `git restore . && git pull && sudo docker compose up -d --build` es seguro:
+> así que `git restore . && git pull --ff-only origin main && sudo docker compose up -d --build` es seguro:
 > el dominio público sigue funcionando sin volver a tocar archivos versionados.
 
 > ⚠️ **Nunca uses `docker compose down -v`** en producción: `-v` borra los volúmenes
@@ -287,6 +287,16 @@ sudo docker compose restart app
 ```bash
 cd ~/fiix-cmms
 ./update.sh  # actualiza código, PM2, base de datos
+```
+
+**Si aparece `fatal: Cannot fast-forward to multiple branches`:** la configuración local de Git tiene más de una rama de seguimiento. En `~/fiix-cmms`, confirma que estás en `main`, fija su rama de seguimiento y vuelve a ejecutar la actualización:
+
+```bash
+cd ~/fiix-cmms
+git branch --show-current  # debe mostrar main
+git config --replace-all branch.main.merge refs/heads/main
+git pull --ff-only origin main
+./update.sh
 ```
 
 ### Respaldos

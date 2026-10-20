@@ -132,7 +132,7 @@ git status --short || true
 BEFORE_SHA="$(git rev-parse --short HEAD)"
 info "Commit actual: ${BEFORE_SHA}"
 
-if ! git pull --ff-only; then
+if ! git pull --ff-only origin main; then
   die "git pull falló (¿conflictos, divergencia o red?). Revisa el repo a mano."
 fi
 

@@ -257,7 +257,7 @@ Procedimiento oficial:
 ```bash
 cd ~/fiix-cmms
 git restore .          # revierte solo archivos VERSIONADOS (evita conflictos con el pull)
-git pull
+git pull --ff-only origin main
 sudo docker compose up -d --build
 ```
 
