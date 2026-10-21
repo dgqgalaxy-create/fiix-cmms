@@ -2,6 +2,7 @@ import { LayoutDashboard, Database, LogOut, Users, Activity, X, Package, Calenda
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { VersionModal, APP_VERSION } from './VersionModal';
+import { PlantClock } from './PlantClock';
 import { OnlineUsersBadge } from './common/OnlineUsersBadge';
 import { updateMyPreferences } from '../api/users';
 import { canUseTechnicianMobileUi, isTechnicianMobileUiPrefOn, useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
@@ -364,6 +365,10 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
             </button>
           </div>
           
+          <div className="mb-2 flex items-center justify-center rounded-lg border border-slate-800 bg-slate-900/60 px-2 py-1.5 text-[11px] font-semibold text-emerald-200/90">
+            <PlantClock />
+          </div>
+
           <button
             type="button"
             onClick={() => setIsVersionModalOpen(true)}

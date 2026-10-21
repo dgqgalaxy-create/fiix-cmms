@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar';
 import { sendHeartbeat, getUsers } from '../api/users';
 import { Menu, Wifi, WifiOff, Info, Search, Wrench } from 'lucide-react';
 import { NotificationsBell } from './NotificationsBell';
+import { PlantClock } from './PlantClock';
 import { VersionModal, APP_VERSION } from './VersionModal';
 import { OfflineBanner } from './OfflineBanner';
 import { GlobalSearchModal, GlobalSearchTrigger } from './GlobalSearchModal';
@@ -85,6 +86,10 @@ export const Layout = ({ children }: { children: ReactNode }) => {
           </span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          <PlantClock
+            className="rounded-full bg-slate-800/80 px-2 py-1 text-[11px] font-semibold text-emerald-200"
+            hideLabel
+          />
           <button
             type="button"
             onClick={() => window.dispatchEvent(new Event('open-global-search'))}
