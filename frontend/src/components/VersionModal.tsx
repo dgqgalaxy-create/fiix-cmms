@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.70.2";
+export const APP_VERSION = "1.71.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Nuevo: Horarios — «Resumen semanal» (solo lectura). Elige la semana (lunes a domingo) y consulta por persona: días y horas programadas, horas extra, tiempo por tiempo tomado, faltas, vacaciones/permisos y deuda pendiente; detalle día a día con incidencias y exportación a PDF y Excel.",
     "Corrección: Sala de Control — «Personal en turno ahora» y su ventana ya no filtran por rol ni por activo: cuentan exactamente a quien muestra el calendario de Horarios. La ventana refresca el horario al abrirse y muestra a todos los programados hoy con su estado calculado (En turno ahora / Fuera de turno y el motivo), para detectar de inmediato cualquier diferencia con Horarios.",
     "Nuevo: reloj de «Hora de planta» (America/Mexico_City) siempre visible en la cabecera móvil y en el menú lateral. Muestra la hora exacta con la que la app calcula turnos, KPIs y periodos; al pasar el cursor se ve la fecha y la zona horaria.",
     "Nuevo: Horarios — Editar patrón de turno completo. Al elegir a la persona se precarga su patrón actual (tipo y día 1) para corregirlo de una sola vez, sin tocar día por día; también puedes «Quitar patrón» (los turnos explícitos y las incidencias se conservan).",

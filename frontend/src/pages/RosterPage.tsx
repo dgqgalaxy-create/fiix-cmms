@@ -11,9 +11,10 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useAuth } from '../context/AuthContext';
 import { getRoster, assignPattern, removePattern, addException, removeException, importRosterCalendar } from '../api/roster';
+import { RosterWeeklySummaryModal } from '../components/RosterWeeklySummaryModal';
 import type { TechnicianPattern, TechnicianException, TechnicianShift, RosterResponse, RosterImportSummary } from '../api/roster';
 import { startOfMonth, endOfMonth, differenceInDays, addDays } from 'date-fns';
-import { Trash2, UserPlus, Calendar as CalendarIcon, Clock, AlertCircle, X, Printer, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { Trash2, UserPlus, BarChart3, Calendar as CalendarIcon, Clock, AlertCircle, X, Printer, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 
@@ -77,6 +78,7 @@ export const RosterPage = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
   const [showPatternModal, setShowPatternModal] = useState(false);
+  const [showWeeklySummary, setShowWeeklySummary] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [personFilter, setPersonFilter] = useState('ALL');
   
@@ -417,6 +419,17 @@ export const RosterPage = () => {
           <p className="text-slate-500 dark:text-slate-400 text-sm">Gestiona los patrones 4x4 y mixtos, y asigna excepciones arrastrando los bloques.</p>
         </div>
         <div className="flex items-center gap-3">
+          {canManageShifts && (
+            <button
+              onClick={() => setShowWeeklySummary(true)}
+              className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-colors shadow-sm"
+              title="Resumen de horas extra, faltas, tiempos y deudas de la semana"
+            >
+              <BarChart3 size={18} />
+              <span className="hidden sm:inline">Resumen semanal</span>
+            </button>
+          )}
+
           <button
             onClick={() => window.print()}
             className="bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 px-4 py-2 rounded-xl flex items-center gap-2 transition-colors shadow-sm"
@@ -568,6 +581,11 @@ export const RosterPage = () => {
           )}
         </div>
       </div>
+
+      <RosterWeeklySummaryModal
+        isOpen={showWeeklySummary}
+        onClose={() => setShowWeeklySummary(false)}
+      />
 
       {hoursAssignment && <RosterHoursModal key={`${hoursAssignment.user_id}-${hoursAssignment.date}-${hoursAssignment.exception_type}`} assignment={hoursAssignment} name={data?.technicians.find(t => t.id === hoursAssignment.user_id)?.name || ''} onClose={() => setHoursAssignment(null)} onSaved={() => void fetchData(true)} />}
 
