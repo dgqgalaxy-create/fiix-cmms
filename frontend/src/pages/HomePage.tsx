@@ -115,23 +115,31 @@ export const HomePage = () => {
   }, [personnelRoster, rosterToday]);
 
   /**
-   * Personal de mantenimiento PROGRAMADO HOY según el calendario de Horarios
-   * (turno explícito, patrón 4x4/mixto o excepción). Este es el número que muestra
-   * la tarjeta: no depende de la hora exacta (un turno mixto que terminó a las 16:00
-   * sigue contando como personal del día), y coincide con lo que se ve en Horarios.
+   * Personal que está EN TURNO EN ESTE MOMENTO (ventanas reales, hora de planta):
+   * turno día 07:00–19:00, noche 19:00–07:00, mixto 07:00–16:00 (sábado hasta 12:00)
+   * y tiempos extra solo con horas registradas. A las 16:01 el mixto sale del conteo.
    */
-  const scheduledTodayPersonnel = useMemo(() => {
+  const onDutyPersonnel = useMemo(() => {
     if (!personnelRoster) return [];
     return personnelRoster.technicians
       .filter((person) => person.is_active && ['TECNICO', 'GESTIONADOR'].includes(person.role))
       .map((person) => ({
         ...person,
-        status: personnelDayStatus(personnelRoster, person.id, rosterToday),
-        current: personnelCurrentStatus(personnelRoster, person.id, new Date(rosterNow)),
+        status: personnelCurrentStatus(personnelRoster, person.id, new Date(rosterNow)),
       }))
-      .filter((person) => person.status.scheduled && person.status.kind === 'work')
+      .filter((person) => person.status.onDuty)
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
-  }, [personnelRoster, rosterToday, rosterNow]);
+  }, [personnelRoster, rosterNow]);
+
+  /** Total programado hoy según el calendario (referencia adicional en la tarjeta). */
+  const scheduledTodayCount = useMemo(() => {
+    if (!personnelRoster) return 0;
+    return personnelRoster.technicians.filter((person) => {
+      if (!person.is_active || !['TECNICO', 'GESTIONADOR'].includes(person.role)) return false;
+      const status = personnelDayStatus(personnelRoster, person.id, rosterToday);
+      return status.scheduled && status.kind === 'work';
+    }).length;
+  }, [personnelRoster, rosterToday]);
 
   const isControlRoomRole =
     user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR';
@@ -860,14 +868,14 @@ export const HomePage = () => {
               type="button"
               onClick={() => setIsOnDutyModalOpen(true)}
               className="rounded-xl border border-emerald-200 bg-white p-3 text-left shadow-sm transition hover:border-emerald-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-emerald-900 dark:bg-slate-900"
-              aria-label="Ver personal de mantenimiento programado hoy"
+              aria-label="Ver personal de mantenimiento en turno ahora"
             >
-              <p className="text-[11px] font-semibold uppercase text-emerald-700 dark:text-emerald-300">Personal en turno hoy</p>
+              <p className="text-[11px] font-semibold uppercase text-emerald-700 dark:text-emerald-300">Personal en turno ahora</p>
               {personnelRoster
-                ? <PulsingValue value={scheduledTodayPersonnel.length} className="mt-1 text-2xl font-black text-slate-900 dark:text-white" />
+                ? <PulsingValue value={onDutyPersonnel.length} className="mt-1 text-2xl font-black text-slate-900 dark:text-white" />
                 : <span className="mt-1 text-2xl font-black text-slate-900 dark:text-white">—</span>}
               <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
-                {rosterFailed ? 'Horario no disponible' : !personnelRoster ? 'Consultando horarios…' : `${new Date(`${rosterToday}T12:00:00Z`).toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', year: 'numeric' })} · ${new Date(rosterNow).toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' })} · Hora de planta`}
+                {rosterFailed ? 'Horario no disponible' : !personnelRoster ? 'Consultando horarios…' : `${new Date(`${rosterToday}T12:00:00Z`).toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', year: 'numeric' })} · ${new Date(rosterNow).toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' })} · ${scheduledTodayCount} programado${scheduledTodayCount === 1 ? '' : 's'} hoy`}
               </p>
             </button>
           </div>
@@ -877,7 +885,7 @@ export const HomePage = () => {
       <Modal
         isOpen={isOnDutyModalOpen}
         onClose={() => setIsOnDutyModalOpen(false)}
-        title="Personal de mantenimiento en turno (hoy)"
+        title="Personal de mantenimiento en turno ahora"
         description={`${new Date(`${rosterToday}T12:00:00Z`).toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · Hora de planta`}
         size="md"
         icon={<Users size={20} className="mt-0.5 text-emerald-600 dark:text-emerald-400" />}
@@ -887,21 +895,24 @@ export const HomePage = () => {
             <p>{rosterFailed ? 'No se pudo consultar el horario del personal.' : 'Consultando el horario del personal…'}</p>
             {rosterFailed && <button type="button" onClick={() => void refreshRoster()} className="mt-3 font-bold underline">Reintentar</button>}
           </div>
-        ) : scheduledTodayPersonnel.length === 0 ? (
+        ) : onDutyPersonnel.length === 0 ? (
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-            No hay técnicos ni gestionadores programados para hoy en el calendario de Horarios.
+            Nadie está en turno en este momento.
+            {scheduledTodayCount > 0 && (
+              <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
+                Hoy hay {scheduledTodayCount} programado{scheduledTodayCount === 1 ? '' : 's'} en Horarios, pero fuera de su horario actual.
+              </span>
+            )}
           </div>
         ) : (
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-            {scheduledTodayPersonnel.map((person) => (
+            {onDutyPersonnel.map((person) => (
               <li key={person.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-slate-800 dark:text-slate-100">{person.name}</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">{person.role === 'GESTIONADOR' ? 'Gestionador' : 'Técnico'} · {person.status.label}</p>
                 </div>
-                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${person.current.onDuty ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
-                  {person.current.onDuty ? 'En turno ahora' : 'Programado hoy'}
-                </span>
+                <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">En turno ahora</span>
               </li>
             ))}
           </ul>
