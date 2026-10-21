@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.70.1";
+export const APP_VERSION = "1.70.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Opciones de Desarrollador"
   ];
   const changelog = [
+    "Corrección: Sala de Control — «Personal en turno ahora» y su ventana ya no filtran por rol ni por activo: cuentan exactamente a quien muestra el calendario de Horarios. La ventana refresca el horario al abrirse y muestra a todos los programados hoy con su estado calculado (En turno ahora / Fuera de turno y el motivo), para detectar de inmediato cualquier diferencia con Horarios.",
     "Nuevo: reloj de «Hora de planta» (America/Mexico_City) siempre visible en la cabecera móvil y en el menú lateral. Muestra la hora exacta con la que la app calcula turnos, KPIs y periodos; al pasar el cursor se ve la fecha y la zona horaria.",
     "Nuevo: Horarios — Editar patrón de turno completo. Al elegir a la persona se precarga su patrón actual (tipo y día 1) para corregirlo de una sola vez, sin tocar día por día; también puedes «Quitar patrón» (los turnos explícitos y las incidencias se conservan).",
     "Corrección: Sala de Control — «Personal en turno ahora» vuelve a ser un conteo por hora con las ventanas reales: día 07:00–19:00, noche 19:00–07:00, mixto 07:00–16:00 (sábado 12:00). A las 16:01 el turno mixto deja de contar (3 → 2) y a las 19:00 entra la noche. La tarjeta muestra además cuántos hay programados hoy, y la ventana lista solo a quienes están en turno en ese momento.",
