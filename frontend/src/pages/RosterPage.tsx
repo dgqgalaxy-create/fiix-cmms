@@ -10,7 +10,7 @@ import { es } from 'date-fns/locale/es';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useAuth } from '../context/AuthContext';
-import { getRoster, assignPattern, addException, removeException, importRosterCalendar } from '../api/roster';
+import { getRoster, assignPattern, removePattern, addException, removeException, importRosterCalendar } from '../api/roster';
 import type { TechnicianPattern, TechnicianException, TechnicianShift, RosterResponse, RosterImportSummary } from '../api/roster';
 import { startOfMonth, endOfMonth, differenceInDays, addDays } from 'date-fns';
 import { Trash2, UserPlus, Calendar as CalendarIcon, Clock, AlertCircle, X, Printer, FileSpreadsheet, Loader2 } from 'lucide-react';
@@ -84,6 +84,22 @@ export const RosterPage = () => {
   const [selectedPattern, setSelectedPattern] = useState('4X4_ROTATORIO');
   const [patternStartDate, setPatternStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
+  /** Patrón que ya tiene la persona seleccionada (si lo hay). */
+  const selectedPersonPattern = data?.patterns.find((item) => item.user_id === selectedUser) ?? null;
+
+  /** Al elegir la persona, precarga su patrón actual para poder editarlo desde aquí. */
+  const handleSelectPatternUser = (userId: string) => {
+    setSelectedUser(userId);
+    const existing = data?.patterns.find((item) => item.user_id === userId);
+    if (existing) {
+      setSelectedPattern(existing.pattern_type);
+      setPatternStartDate(existing.start_date.slice(0, 10));
+    } else {
+      setSelectedPattern('4X4_ROTATORIO');
+      setPatternStartDate(format(new Date(), 'yyyy-MM-dd'));
+    }
+  };
+
   const [draggedException, setDraggedException] = useState<{ type: string, user_id: string } | null>(null);
 
   const [showImportModal, setShowImportModal] = useState(false);
@@ -127,6 +143,20 @@ export const RosterPage = () => {
     
     setShowPatternModal(false);
     fetchData();
+  };
+
+  /** Quita el patrón del todo (los turnos explícitos e incidencias se conservan). */
+  const handleRemovePattern = async () => {
+    if (!selectedUser) return;
+    if (!window.confirm('¿Quitar el patrón de turno de esta persona? Los turnos explícitos e incidencias se conservan.')) return;
+    try {
+      await removePattern(selectedUser);
+      setShowPatternModal(false);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      window.alert('No se pudo quitar el patrón. Intenta de nuevo.');
+    }
   };
 
   const handleImport = async () => {
@@ -430,7 +460,7 @@ export const RosterPage = () => {
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-colors shadow-sm"
             >
               <UserPlus size={18} />
-              <span className="hidden sm:inline">Asignar Patrón</span>
+              <span className="hidden sm:inline">Asignar / Editar Patrón</span>
             </button>
           )}
         </div>
@@ -545,7 +575,7 @@ export const RosterPage = () => {
       {showPatternModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Asignar Patrón de Turno</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">{selectedPersonPattern ? 'Editar Patrón de Turno' : 'Asignar Patrón de Turno'}</h2>
             
             <form onSubmit={handleAssignPattern} className="space-y-4">
               <div>
@@ -553,11 +583,16 @@ export const RosterPage = () => {
                 <SearchableSelect
                   required
                   value={selectedUser}
-                  onChange={setSelectedUser}
+                  onChange={handleSelectPatternUser}
                   options={activeTechnicians.map((t) => ({ value: t.id, label: t.name }))}
                   placeholder="Seleccionar técnico"
                   inputClassName="w-full px-4 py-2 pr-8 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                 />
+                <p className="text-xs text-slate-500 mt-1">
+                  {selectedPersonPattern
+                    ? `Ya tiene patrón: ${selectedPersonPattern.pattern_type === 'MIXTO' ? 'Mixto' : selectedPersonPattern.pattern_type === '4X4_FIJO' ? '4x4 Fijo' : '4x4 Rotatorio'} desde ${selectedPersonPattern.start_date.slice(0, 10)}. Puedes cambiarlo o quitarlo.`
+                    : 'Si la persona ya tuviera un patrón, aquí se precarga para editarlo.'}
+                </p>
               </div>
 
               <div>
@@ -588,7 +623,7 @@ export const RosterPage = () => {
                 <p className="text-xs text-slate-500 mt-1">Este será el día donde empieza a correr su ciclo.</p>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-wrap gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setShowPatternModal(false)}
@@ -596,11 +631,20 @@ export const RosterPage = () => {
                 >
                   Cancelar
                 </button>
+                {selectedPersonPattern && (
+                  <button
+                    type="button"
+                    onClick={() => void handleRemovePattern()}
+                    className="px-4 py-2 border border-rose-300 text-rose-700 rounded-xl hover:bg-rose-50 transition-colors font-medium dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                  >
+                    Quitar patrón
+                  </button>
+                )}
                 <button
                   type="submit"
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium shadow-sm"
                 >
-                  Guardar Patrón
+                  {selectedPersonPattern ? 'Guardar cambios' : 'Guardar patrón'}
                 </button>
               </div>
             </form>

@@ -96,6 +96,11 @@ export const assignPattern = async (req: Request, res: Response) => {
     const { user_id, pattern_type, start_date } = req.body;
     
     if (!uuid(user_id)) { res.status(400).json({ error: 'Selecciona una persona válida.' }); return; }
+    const allowedPatterns = ['MIXTO', '4X4_FIJO', '4X4_ROTATORIO'];
+    if (typeof pattern_type !== 'string' || !allowedPatterns.includes(pattern_type)) {
+      res.status(400).json({ error: 'Patrón de turno inválido.' });
+      return;
+    }
     const person = await prisma.user.findUnique({ where: { id: user_id } });
     if (!person?.is_active) { res.status(400).json({ error: 'No se puede asignar un turno a personal inactivo.' }); return; }
     const start = parseDateInput(start_date);
@@ -115,6 +120,22 @@ export const assignPattern = async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
+  }
+};
+
+/** Quita el patrón de una persona (los turnos explícitos e incidencias no se tocan). */
+export const removePattern = async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.userId;
+    if (!uuid(userId)) { res.status(400).json({ error: 'Persona inválida.' }); return; }
+    const existing = await prisma.technicianPattern.findUnique({ where: { user_id: userId } });
+    if (!existing) { res.status(404).json({ error: 'Esa persona no tiene un patrón asignado.' }); return; }
+    await prisma.technicianPattern.delete({ where: { user_id: userId } });
+    emitRefresh('refresh_roster');
+    res.json({ ok: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'No se pudo quitar el patrón.' });
   }
 };
 

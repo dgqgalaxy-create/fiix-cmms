@@ -71,6 +71,11 @@ export const getRoster = async (start: string, end: string): Promise<RosterRespo
   return response.data;
 };
 
+export const removePattern = async (userId: string) => {
+  const response = await api.delete(`/roster/pattern/${userId}`);
+  return response.data;
+};
+
 export const assignPattern = async (data: { user_id: string; pattern_type: string; start_date: string }) => {
   const response = await api.post('/roster/pattern', data);
   return response.data;
