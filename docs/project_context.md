@@ -1,8 +1,8 @@
 # Contexto Global del Proyecto (CMMS)
 
-## Versión actual
+## Versión actual (preview)
 
-v1.67.0, 30 de septiembre de 2026: Personal en turno según hora de planta, tiempo extra con horario, deudas y abonos de tiempo por tiempo, exclusión de inactivos y búsqueda de solicitantes. [Alcance y despliegue](releases/v1.67.0.md).
+v1.72.0-preview.1, 27 de octubre de 2026: Asistente GTZ AI Nivel 2 con datos reales de PostgreSQL, herramientas de solo lectura, permisos por rol, panel flotante y diagnóstico en Opciones de Desarrollador. [Alcance y despliegue](releases/v1.72.0-preview.1.md). **Canal preview: no estable.**
 
 ## Versión estable vigente
 
@@ -32,7 +32,8 @@ Un Sistema Computarizado de Gestión de Mantenimiento (CMMS / GMAO) self-hosted 
 13. **Manual de Usuario:** Integrado en la app + `docs/manual_usuario.md` de referencia.
 14. **SLA y notificaciones:** Umbrales por prioridad; Telegram + in-app; campana.
 15. **Capa móvil técnico:** Barra Mis OT / Escanear / Inventario / Inicio.
-16. **Despliegue:** `install.sh` (Ubuntu limpio) y `update.sh` (pull + builds + PM2 `node dist/index.js`); producción UI+API en `:3000`, nginx opcional `:80`.
+16. **Despliegue:** `install.sh` y `update.sh` (Docker Compose `docker-compose.yml`); producción UI+API en `:3000`, nginx o Cloudflare Tunnel opcional.
+17. **Asistente GTZ AI (preview):** chat flotante de solo lectura sobre PostgreSQL con 7 herramientas, permisos por rol, rate limit, fallback de modelo y diagnóstico desde Opciones de Desarrollador.
 
 ## Datos y documentación
 - Seeds/importadores históricos: `backend/src/seed_*.ts`, herramientas en Opciones de desarrollador.
@@ -45,4 +46,4 @@ Un Sistema Computarizado de Gestión de Mantenimiento (CMMS / GMAO) self-hosted 
 ## Tecnologías
 - **Frontend:** React, TypeScript, Tailwind CSS v4, Vite, Lucide, Socket.IO client, PWA (parcial).
 - **Backend:** Node.js 22+, Express, TypeScript, Prisma, PostgreSQL, Socket.IO, node-cron, Multer (`uploads/`).
-- **Ops:** nvm, PM2, `install.sh` / `update.sh`; producción `:3000` (UI+API); desarrollo UI Vite `:5173`.
+- **Ops:** Docker, Docker Compose, `install.sh` / `update.sh`; producción `:3000` (UI+API); desarrollo UI Vite `:5173`.

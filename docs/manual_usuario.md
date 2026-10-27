@@ -1,5 +1,5 @@
 # Manual de Usuario - GTZ CMMS
-*(Versión 1.56.53 - 13 de Agosto, 2026)*
+*(Versión 1.72.0-preview.1 - 27 de Octubre, 2026)*
 
 Este manual se mantiene alineado con cada release de la app (misma versión que `package.json` y el modal de novedades).
 
@@ -137,8 +137,8 @@ Gestión de solicitudes (listado), sin el resumen gráfico:
 - **Interfaz móvil:** Preferencia de cada usuario (Técnico, Gestionador o Administrador) en el menú lateral → **Interfaz móvil**. En celular activa barra inferior (Mis OT, Escanear, Inventario, Inicio) y botones grandes en órdenes. En técnicos está on por defecto; en admin/gestionador hay que activarla.
 - **Funciona sin conexión:** Aceptar, pausar, finalizar o reanudar una orden se guarda en el dispositivo aunque no haya señal (Wi-Fi/datos) y se sincroniza solo en cuanto vuelve la conexión. También puedes **editar y enviar el checklist diario** sin señal (crear el checklist del día sí requiere conexión la primera vez). En Inventario, las **salidas (OUT)** se encolan sin señal; las **entradas (IN)** requieren conexión. Al sincronizar bien verás un aviso verde breve («Sincronización completa (N cambios)»); si algo falla, el aviso indica cuántos fallaron y un motivo corto (p. ej. 401, 409, red) con **Reintentar** o **Descartar**. Si el aviso se queda atascado, usa **Descartar** en el propio aviso o **Configuración → Opciones de Desarrollador → Descartar cola offline** (también limpia fotos pendientes en el dispositivo). Las listas (GET) siguen cargando aunque haya cola pendiente. Si finalizas subiendo fotos sin conexión, el estado, las notas y las **fotos** se guardan en el dispositivo y se suben solas al recuperar la señal.
 - **Escanear QR en celular:** si entras por `http://IP` (sin HTTPS), el navegador bloquea la cámara en vivo; usa **Elegir foto / galería**. Con HTTPS o localhost la cámara en vivo sí funciona. Al escanear una **ubicación** (p. ej. `E2-0`) o un repuesto, la app abre el detalle correspondiente en Inventario (con los repuestos de esa ubicación). En desarrollo, Vite admite el hostname local `lpet-cmms` y nombres Tailscale `*.ts.net`.
-- **Servidor Ubuntu:** checklist en el README («Servidor nuevo»). Primero SSH + `git clone`; luego `./install.sh` (recomienda **S** a PM2 al reiniciar y **nginx + healthcheck**; ufw/Telegram/Tailscale opcionales; genera **VAPID** para notificaciones del dispositivo si faltan). En producción UI+API en **:3000** (`node dist/index.js` vía PM2); con nginx, **puerto 80**. Actualizaciones: `./update.sh` (conserva `.env` y `uploads/`; completa VAPID si faltaba; pregunta nginx solo en modo interactivo). Si Git informa `Cannot fast-forward to multiple branches`, fija `branch.main.merge` a `refs/heads/main` y repite `git pull --ff-only origin main`; detalle en el README.
-- **Alertas si el servidor cae:** Con Telegram configurado, un cron externo y una comprobación interna avisan al grupo si la API (PM2) o Postgres no responden (sin spamear: solo al caer y un recordatorio cada varias horas). Detalle en el README.
+- **Servidor Ubuntu:** checklist en el README («Servidor nuevo»). Primero SSH + `git clone`; luego `./install.sh` (recomienda **S** a PM2 al reiniciar y **nginx + healthcheck**; ufw/Telegram/Tailscale opcionales; genera **VAPID** para notificaciones del dispositivo si faltan). En producción UI+API en **:3000** (contenedor Docker `app`); con nginx o Cloudflare Tunnel, **puerto 80/443**. Actualizaciones: `./update.sh` (conserva `.env` y `uploads/`; completa VAPID si faltaba; pregunta nginx solo en modo interactivo). Si Git informa `Cannot fast-forward to multiple branches`, fija `branch.main.merge` a `refs/heads/main` y repite `git pull --ff-only origin main`; detalle en el README.
+- **Alertas si el servidor cae:** Con Telegram configurado, un cron externo y una comprobación interna avisan al grupo si la API (contenedor Docker) o Postgres no responden (sin spamear: solo al caer y un recordatorio cada varias horas). Detalle en el README.
 - **Notificaciones Telegram:** Tanto las órdenes creadas desde **+ Nueva Orden** como las del **Portal de Solicitudes** (`/request`) disparan alerta a Telegram cuando la opción está activada en Configuración. Las alertas de caída del servidor usan el mismo bot/grupo.
 - **Opciones de Ordenamiento:**
   En los filtros superiores, puedes elegir cómo organizar tus OTs:
@@ -247,7 +247,7 @@ Panel de indicadores de mantenimiento:
 ## 10. Importación masiva por CSV (Opciones de Desarrollador)
 
 - **Acceso:** la contraseña maestra de esta pantalla puede definirse en `backend/.env` (`DEV_MENU_PASSWORD`) **o cambiarse desde la propia interfaz** en la tarjeta **Cambiar contraseña maestra** (pide la contraseña actual, la nueva y su confirmación). Al guardarla queda protegida como hash en la base de datos y tiene prioridad sobre el `.env`; si la base de datos llegara a vaciarse, el `.env` sigue funcionando como respaldo de emergencia. Si fallas la contraseña, **no** se cierra tu sesión de la app: verás un mensaje de error y los intentos restantes (máximo 3). Tras 3 fallos consecutivos el acceso a esta pantalla se bloquea **1 hora** (el bloqueo queda guardado en tu cuenta; un reinicio del servidor no lo borra).
-- **Respaldo del servidor (único método):** El botón **Crear respaldo** genera en el servidor un dump comprimido de PostgreSQL (`pg_dump` → `fiix_….sql.gz`) y una copia de `uploads/` (fotos de OT, inventario, activos, **logos de proveedores** en `uploads/vendors/`, etc. → `uploads_….tar.gz`). Mientras corre, muestra una **barra de progreso** con el paso actual (preparar → BD → fotos → limpieza). Ya **no** existe exportación/importación JSON. El mismo proceso corre automáticamente todos los días a las 2:15 AM y conserva los respaldos de los últimos 14 días. Por defecto guarda en `~/fiix-backups` del usuario del proceso (con PM2 puede no ser tu home: la pantalla muestra la **carpeta actual**). Fija la ruta con `BACKUP_DIR=/home/usuario/fiix-backups` en `backend/.env` si quieres forzarla. Si hay muchas fotos, el empaquetado puede tardar varios minutos. En Windows local necesitas las herramientas de cliente de PostgreSQL (`pg_dump`/`psql`) y `tar`.
+- **Respaldo del servidor (único método):** El botón **Crear respaldo** genera en el servidor un dump comprimido de PostgreSQL (`pg_dump` → `fiix_….sql.gz`) y una copia de `uploads/` (fotos de OT, inventario, activos, **logos de proveedores** en `uploads/vendors/`, etc. → `uploads_….tar.gz`). Mientras corre, muestra una **barra de progreso** con el paso actual (preparar → BD → fotos → limpieza). Ya **no** existe exportación/importación JSON. El mismo proceso corre automáticamente todos los días a las 2:15 AM y conserva los respaldos de los últimos 14 días. Por defecto guarda en `~/fiix-backups` del usuario del proceso (en Docker usa el volumen persistente `backups:/backups`). Fija la ruta con `BACKUP_DIR` en `.env` si quieres forzarla. Si hay muchas fotos, el empaquetado puede tardar varios minutos. En Windows local necesitas las herramientas de cliente de PostgreSQL (`pg_dump`/`psql`) y `tar`.
 - **Restaurar respaldo:** El botón **Restaurar respaldo** lista los `fiix_*.sql.gz` del servidor, pide escribir **RESTAURAR** (esto borra los datos actuales) y vuelve a cargar la BD; opcionalmente restaura también `uploads_*.tar.gz`. Los archivos vacíos o inválidos aparecen marcados como `[VACÍO]` y no se pueden restaurar (hay que crear un respaldo nuevo). Si la restauración falla, el error se muestra en el mismo diálogo y **no** se cierra la sesión; solo tras un éxito confirmado se cierra la sesión y el login muestra un aviso (los usuarios pueden haber cambiado). En Ubuntu también puedes usar `./scripts/restore.sh fiix_YYYYMMDD_HHMM.sql.gz`.
 - **Vaciar base de datos:** Tras confirmar con **ELIMINAR**, se vacía la BD, se recrea el admin de emergencia y la app cierra la sesión; en el login verás un aviso con `admin@fiix.com` / `password123` (deberás cambiar la contraseña al entrar). Por defecto también vacía la carpeta `uploads/` (fotos y evidencias); puedes desmarcar «También borrar carpeta uploads (fotos)» si solo quieres borrar registros.
 - **Limpiar fotos huérfanas:** En *Herramientas locales*, el botón **Limpiar fotos huérfanas** compara los archivos en `uploads/` con las rutas guardadas en la BD (activos, OT, ítems, etc.) y muestra cuántos no están referenciados. Confirmas escribiendo **LIMPIAR**; solo se borran esos archivos huérfanos (no toca firmas en base64 ni URLs externas de Fiix).
@@ -290,6 +290,20 @@ Las alertas de nuevas solicitudes usan un **Bot Token** y un **Chat ID** de grup
 - **Token:** @BotFather → `/mybots` → tu bot → *API Token* → *Show token* (o *Revoke* si se filtró, y actualiza CMMS).
 - **Chat ID:** no recrees el grupo; con el bot dentro, usa de nuevo el bot de info o `getUpdates`. El ID del grupo no cambia.
 - Si el bot salió del grupo, vuelve a agregarlo y consulta el Chat ID otra vez.
+
+## 12. Asistente GTZ AI (Preview)
+
+El botón flotante **Asistente IA**, en la esquina inferior derecha, abre un panel de chat con respuestas en Markdown, tablas y sugerencias rápidas.
+
+- Consulta datos reales de la app: órdenes de trabajo, detalle de una OT, inventario, activos, resumen de planta, personal en turno y guías de uso.
+- Es de **solo lectura**: no crea, edita, cierra ni borra registros. Si le pides una acción, te explica los pasos para hacerla en el módulo correspondiente.
+- Respeta los permisos: los técnicos solo ven sus órdenes asignadas y los costos de inventario se ocultan a quien no tiene permiso de administrarlo.
+- Tiene un límite de **20 solicitudes cada 5 minutos por usuario**. Si se alcanza, espera unos minutos y vuelve a intentar.
+- Si el proveedor de IA devuelve un error, el panel muestra un mensaje genérico; el detalle queda en los logs del servidor.
+- La conexión se configura en el `.env` del servidor (`AI_ENABLED`, `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, `AI_FALLBACK_MODEL`). Un administrador puede probar el estado y la conexión desde **Opciones de Desarrollador**.
+- Esta función está en **preview**: puede cambiar antes de la versión estable. No compartas API Keys en capturas, chats ni reportes.
+
+Guía técnica, proveedores gratuitos y diagnóstico: [`docs/AI_ASSISTANT.md`](AI_ASSISTANT.md).
 
 ---
 *Para soporte técnico adicional, revisa la sección de ayuda dentro del sistema.*
@@ -388,3 +402,11 @@ La tarjeta y la gráfica MTBF respetan las zonas guardadas en **Zonas de respues
 El valor es una estimación en horas: duración transcurrida del periodo en días × 24 h/día × número de zonas seleccionadas en «Zonas de respuesta» (todas las zonas si no hay selección) / OT correctivas levantadas (creadas) de esas zonas en el periodo, excluidas las anuladas. No representa horas históricas medidas. En Histórico, la observación comienza en la primera OT no anulada.
 
 Un valor mayor es mejor. Sin correctivas levantadas o sin horas operativas calculables se muestra **—**. La meta se configura en horas; un valor de **0** deja la tarjeta **Sin meta**, sin calificarla como cumplida. MTBF también se incluye en la exportación de indicadores.
+
+## Novedades v1.72.0-preview.1 — 27 de octubre de 2026
+
+- **Nuevo:** Asistente GTZ AI (Nivel 2) con panel flotante, respuestas en Markdown y herramientas de solo lectura sobre órdenes, inventario, activos, turnos y guías.
+- **Seguridad:** permisos por rol, técnicos limitados a sus órdenes, costos ocultos sin `MANAGE_INVENTORY` y rate limit de 20 solicitudes cada 5 minutos por usuario.
+- **Configuración:** proveedor compatible con OpenAI, fallback de modelo y modo gratuito con modelos `:free` de OpenRouter. Detalle en [`AI_ASSISTANT.md`](AI_ASSISTANT.md).
+- **Diagnóstico:** estado del asistente y prueba de conexión en Opciones de Desarrollador.
+- **Canal:** preview, no estable. La versión estable vigente sigue siendo v1.66.0.

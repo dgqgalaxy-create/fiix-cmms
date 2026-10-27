@@ -99,6 +99,7 @@ import auditRoutes from './routes/auditRoutes';
 import versionRoutes from './routes/versionRoutes';
 import notesRoutes from './routes/notesRoutes';
 import chatRoutes from './routes/chatRoutes';
+import aiRoutes from './routes/aiRoutes';
 import { initCronJobs } from './utils/cronJobs';
 import { loadDriveDbSettings } from './utils/googleDriveImport';
 import { pingDatabase } from './utils/dbHealthCheck';
@@ -147,6 +148,7 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/version', versionRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/ai', aiRoutes);
 
 /** Errores de multer (tamaño / tipo) → 400 JSON legible */
 app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {

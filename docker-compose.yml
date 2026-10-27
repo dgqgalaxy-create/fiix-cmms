@@ -59,6 +59,17 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:mantenimiento@localhost}
+      # Asistente de IA (compatible con OpenAI; por defecto DeepSeek en OpenRouter)
+      AI_ENABLED: ${AI_ENABLED:-true}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_BASE_URL: ${AI_BASE_URL:-https://openrouter.ai/api/v1}
+      AI_MODEL: ${AI_MODEL:-deepseek/deepseek-v4.1-flash}
+      AI_FALLBACK_MODEL: ${AI_FALLBACK_MODEL:-}
+      AI_MAX_TOKENS: ${AI_MAX_TOKENS:-1400}
+      AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-45000}
+      AI_MAX_TOOL_ROUNDS: ${AI_MAX_TOOL_ROUNDS:-4}
+      AI_TIMEZONE: ${AI_TIMEZONE:-America/Mexico_City}
+      AI_APP_URL: ${AI_APP_URL:-}
     ports:
       # Se publica solo en la LAN/Tailscale y para que Cloudflare Tunnel (systemd en el
       # host) pueda alcanzar http://localhost:3000. NO hace falta abrir el puerto en el

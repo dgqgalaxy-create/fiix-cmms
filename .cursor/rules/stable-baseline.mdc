@@ -7,6 +7,8 @@ alwaysApply: true
 
 Hasta que el usuario diga lo contrario, **v1.66.0** es el punto de restauración permanente.
 
+- **Preview actual:** `v1.72.0-preview.1` (Asistente GTZ AI). Es un canal de pruebas: no reemplaza el baseline ni debe promoverse a estable sin validación y aprobación explícita.
+
 - **Referencia exacta:** commit al que apunta `v1.66.0-stable` — Release v1.66.0 (29 de septiembre de 2026)
 - **Tag:** `v1.66.0-stable`
 - **Rama de respaldo:** `backup/v1.66.0-stable` (no desarrollar encima; solo restaurar)
@@ -21,9 +23,9 @@ Hasta que el usuario diga lo contrario, **v1.66.0** es el punto de restauración
 
 ## Entorno de producción
 
-- **Ubuntu Server** directo (`~/fiix-cmms`, PM2 `fiix-backend`, nginx opcional, Tailscale HTTPS `*.ts.net`). No CasaOS.
+- **Ubuntu Server** (`~/fiix-cmms`, Docker Compose `app` + `db`, nginx opcional, Tailscale HTTPS `*.ts.net`). No CasaOS.
 - Tras «actualiza repositorios»: deploy por GitHub Actions self-hosted o `./update.sh`.
-- Diagnósticos: `pm2`, `/tmp/fiix-*`, `backend/.env` en `~/fiix-cmms/backend/.env`.
+- Diagnósticos: `docker compose logs -f app`, `/tmp/fiix-*`, `.env` en la raíz.
 
 ## Contexto activo
 

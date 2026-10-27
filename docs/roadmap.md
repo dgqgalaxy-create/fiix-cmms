@@ -1,7 +1,18 @@
 # Hoja de Ruta y Tareas Pendientes (Living Checklist)
 
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
-*(Última actualización: Septiembre de 2026)*
+*(Última actualización: Octubre de 2026)*
+
+### Novedades en v1.72.0-preview.1 (27 de octubre de 2026) — Preview
+
+- Asistente GTZ AI Nivel 2: botón flotante y panel lateral con respuestas en Markdown, tablas y sugerencias.
+- Herramientas de solo lectura para órdenes, detalle de OT, inventario, activos, resumen de planta, personal en turno y guías de uso.
+- Permisos por rol: técnicos solo ven sus órdenes asignadas y los costos de inventario se ocultan sin `MANAGE_INVENTORY`.
+- Rate limit de 20 solicitudes cada 5 minutos por usuario; errores del proveedor sanitizados.
+- Proveedor compatible con OpenAI configurable por `.env`, con fallback automático y modo gratuito en OpenRouter.
+- Diagnóstico y prueba de conexión en Opciones de Desarrollador.
+
+[Detalle, configuración y validación](releases/v1.72.0-preview.1.md).
 
 ### Novedades en v1.67.0 (30 de septiembre de 2026)
 

@@ -6,7 +6,8 @@ alwaysApply: true
 # Versionado y documentación
 
 - Al corregir bugs o agregar mejoras, incrementar la versión semántica según corresponda.
-- Mantener sincronizadas las versiones visibles de la aplicación y las de `frontend/package.json` y `backend/package.json`.
+- Para versiones no estables usa el sufijo `-preview.N` y marca el canal como **PREVIEW** en el modal de versión y en la documentación. No muevas los tags estables (`*-stable`) sin aprobación explícita.
+- Mantener sincronizadas las versiones visibles de la aplicación y las de `frontend/package.json`, `backend/package.json` y sus `package-lock.json`.
 - Actualizar la fecha y las novedades en `frontend/src/components/VersionModal.tsx`.
 - Documentar nuevas funciones y cambios de uso en `docs/manual_usuario.md`.
 - Actualizar documentación adicional relevante, como README o roadmap, cuando corresponda.
@@ -16,4 +17,4 @@ alwaysApply: true
 
 - Este es un sistema CMMS para gestión de mantenimiento de planta.
 - Mantén el código modular, fácil de leer y enfocado en la estabilidad del sistema.
-- **Producción:** Ubuntu Server (no CasaOS), app en `~/fiix-cmms`, proceso PM2.
+- **Producción:** Ubuntu Server, app en `~/fiix-cmms`, contenedores Docker Compose (`docker-compose.yml`).

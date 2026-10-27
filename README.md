@@ -1,12 +1,12 @@
 # GTZ CMMS
 
-**Versión actual: v1.69.3 · 20 de octubre de 2026.** [Corrección de instrucciones Docker](docs/releases/v1.69.3.md).
+**Versión actual: v1.72.0-preview.1 · 27 de octubre de 2026.** [Preview del Asistente GTZ AI](docs/releases/v1.72.0-preview.1.md). **Canal preview: no estable.**
 
 **Versión estable: v1.66.0 · 29 de septiembre de 2026.** [Mejoras y alcance de la entrega](docs/releases/v1.66.0.md).
 
 Sistema de Gestión de Mantenimiento (CMMS) self-hosted: órdenes de trabajo, activos, inventario, preventivos, checklist, KPIs, compras, RCA, roster y notificaciones (Telegram + Web Push PWA).
 
-**Stack:** PostgreSQL · Prisma · Node.js 22+ / Express · React/Vite · Tailwind v4 · Socket.IO · PM2 o Docker (servidor)
+**Stack:** PostgreSQL · Prisma · Node.js 22+ / Express · React/Vite · Tailwind v4 · Socket.IO · Docker Compose (servidor)
 
 ---
 
@@ -54,19 +54,17 @@ sudo docker compose up -d --build
 > DB_PASSWORD=... JWT_SECRET=... sudo -E docker compose up -d --build
 > ```
 
-### Ubuntu nativo (sin Docker)
+### Instalación automatizada (Ubuntu / Debian)
 
 ```bash
-# Requisitos previos: Git, Node.js 22+, PostgreSQL
-
 git clone git@github.com:dgqgalaxy-create/fiix-cmms.git ~/fiix-cmms
 cd ~/fiix-cmms
 
-# Dar permisos y ejecutar instalación
+# Dar permisos y ejecutar instalador guiado
 chmod +x install.sh update.sh
 ./install.sh
 
-# Sigue los pasos interactivos (PostgreSQL, JWT, opcionales: PM2, nginx, Telegram, etc.)
+# El script verifica/instala Docker y Compose, configura el .env y levanta los contenedores.
 ```
 
 ---
@@ -83,21 +81,21 @@ chmod +x install.sh update.sh
 
 ### Variables de entorno esenciales
 
-En Docker, todas se definen en el archivo **`.env` de la raíz del proyecto** (docker compose lo lee y las pasa al contenedor). En Ubuntu nativo, van en `backend/.env`.
+Todas las variables se definen en el archivo **`.env` en la raíz del proyecto** (`docker compose` lo lee automáticamente y lo inyecta a los contenedores).
 
-| Variable | Docker | Ubuntu | Notas |
-|---|---|---|---|
-| `DB_PASSWORD` | `.env` raíz | — | Contraseña del PostgreSQL interno del compose |
-| `DATABASE_URL` | automática (usa `db:5432`) | `.env` | En Docker no la cambies salvo que uses una BD externa |
-| `JWT_SECRET` | `.env` raíz | `.env` | Secreto de sesiones (genera uno fuerte) |
-| `PORT` | `.env` raíz | — | Puerto del host (por defecto 3000) |
-| `SKIP_DB_PUSH` | `.env` raíz | — | `1` = no sincronizar esquema al arrancar (restaurar backups) |
-| `CORS_ORIGINS` | `.env` raíz | `.env` | Orígenes extra para CORS y Socket.IO, separados por comas. **Necesario si entras por un dominio público** (Cloudflare Tunnel, nginx, Tailscale Funnel). Ej.: `CORS_ORIGINS="https://cmms.ejemplo.com"` |
-| `ALLOWED_ORIGINS` | `.env` raíz | `.env` | Alias de `CORS_ORIGINS` (si defines las dos, gana `CORS_ORIGINS`) |
-| `ALLOW_DB_PUSH_DATA_LOSS` | `.env` raíz | — | Déjalo sin definir. `1` permite que `prisma db push` borre datos para cuadrar el esquema; con el valor por defecto (`0`) el arranque falla y los datos se conservan |
-| `GOOGLE_DRIVE_*` | **desde la app** | **desde la app** | Configurar en Opciones de Desarrollador → Integraciones → Google Drive (enmascaradas, guardadas en BD); el `.env` solo es respaldo opcional |
-| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | **desde la app** | **desde la app** | Configurar en Opciones de Desarrollador → Integraciones → Telegram; el `.env` solo es respaldo (p. ej. para el healthcheck externo en Ubuntu) |
-| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | `.env` raíz | `.env` | Opcional: notificaciones Web Push (ver abajo cómo generarlas; la instalación nativa las auto-genera) |
+| Variable | Ubicación | Descripción |
+|---|---|---|
+| `DB_PASSWORD` | `.env` raíz | Contraseña del PostgreSQL interno del compose (`postgres:17-alpine`) |
+| `JWT_SECRET` | `.env` raíz | Secreto criptográfico para firma de tokens JWT (genera uno seguro) |
+| `PORT` | `.env` raíz | Puerto publicado en el host (por defecto `3000`) |
+| `SKIP_DB_PUSH` | `.env` raíz | `1` = no sincronizar esquema al arrancar (útil si vas a restaurar un backup) |
+| `CORS_ORIGINS` | `.env` raíz | Orígenes autorizados para CORS y Socket.IO. **Necesario al usar un dominio público** (Cloudflare Tunnel, Nginx). Ej.: `CORS_ORIGINS="https://cmms.ejemplo.com"` |
+| `ALLOWED_ORIGINS` | `.env` raíz | Alias de `CORS_ORIGINS` (si defines las dos, gana `CORS_ORIGINS`) |
+| `ALLOW_DB_PUSH_DATA_LOSS` | `.env` raíz | Déjalo sin definir o en `0`. Con `1` permite que `prisma db push` borre columnas/datos |
+| `GOOGLE_DRIVE_*` | **desde la app** | Configurar en Opciones de Desarrollador → Integraciones → Google Drive |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | **desde la app** | Configurar en Opciones de Desarrollador → Integraciones → Telegram |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | `.env` raíz | Opcional: notificaciones Web Push PWA (ver abajo cómo generarlas) |
+| `AI_ENABLED`, `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, `AI_FALLBACK_MODEL` | `.env` raíz | Asistente GTZ AI (solo lectura, preview). Ver [docs/AI_ASSISTANT.md](docs/AI_ASSISTANT.md) |
 
 ### Web Push (VAPID)
 
@@ -119,6 +117,25 @@ VAPID_SUBJECT=mailto:mantenimiento@tuempresa.com
 
 - La instalación nativa (`install.sh`) las genera sola si faltan.
 - **Migración importante:** si tus técnicos ya tenían notificaciones activadas en otro servidor, **copia las mismas claves** de ese `.env` (no generes unas nuevas), o cada usuario tendrá que volver a activar las notificaciones en su celular.
+
+### Asistente GTZ AI
+
+Chat flotante de **solo lectura** que consulta órdenes, inventario, activos, turnos y guías en tiempo real. Está en **preview** dentro de la versión `v1.72.0-preview.1`. Requiere una API Key de un proveedor compatible con OpenAI:
+
+```env
+AI_ENABLED=true
+AI_API_KEY="tu_clave"
+AI_BASE_URL="https://openrouter.ai/api/v1"
+AI_MODEL="deepseek/deepseek-v4.1-flash"
+AI_FALLBACK_MODEL="nvidia/nemotron-3.5-lightning:free"
+```
+
+- **Modo 100% gratis:** usa `AI_MODEL="nvidia/nemotron-3.5-lightning:free"` o `AI_MODEL="openrouter/free"`. OpenRouter limita los modelos free a 20 solicitudes/minuto y 50/día si compraste menos de $10 en créditos; con al menos $10 comprados el límite sube a 1,000/día.
+- OpenRouter no ofrece una variante gratuita de DeepSeek V4.1 Flash; el modelo indicado es de pago (costo muy bajo).
+- Para DeepSeek free con OpenCode Zen: `AI_BASE_URL="https://opencode.ai/inference/openai/v1"` y `AI_MODEL="deepseek-v4.1-flash-free"` (requiere API key de OpenCode; revisa las limitaciones en la guía).
+- Si el modelo principal se queda sin crédito/cuota, `AI_FALLBACK_MODEL` reintenta con un modelo gratuito compatible con herramientas.
+- Los técnicos solo ven sus órdenes asignadas; el asistente nunca modifica la base de datos.
+- Guía completa, herramientas, proveedores gratuitos y diagnóstico: [docs/AI_ASSISTANT.md](docs/AI_ASSISTANT.md).
 
 ### Google Drive (fotos en importación)
 
@@ -282,14 +299,16 @@ sudo docker compose restart app
 > ⚠️ **Nunca uses `docker compose down -v`** en producción: `-v` borra los volúmenes
 > (`pgdata17`, `uploads`, `data`, `backups`) y con ellos la base de datos entera.
 
-### Ubuntu nativo
+### Actualización mediante script unificado
+
+También puedes ejecutar el script de actualización automatizado, que gestiona el pull de Git, reconstruye los contenedores en Docker y valida la salud de la API:
 
 ```bash
 cd ~/fiix-cmms
-./update.sh  # actualiza código, PM2, base de datos
+./update.sh
 ```
 
-**Si aparece `fatal: Cannot fast-forward to multiple branches`:** la configuración local de Git tiene más de una rama de seguimiento. En `~/fiix-cmms`, confirma que estás en `main`, fija su rama de seguimiento y vuelve a ejecutar la actualización:
+**Si aparece `fatal: Cannot fast-forward to multiple branches`:** la configuración local de Git tiene más de una rama de seguimiento. En `~/fiix-cmms`, confirma que estás en `main`, fija su rama de seguimiento y vuelve a ejecutar:
 
 ```bash
 cd ~/fiix-cmms
@@ -298,8 +317,6 @@ git config --replace-all branch.main.merge refs/heads/main
 git pull --ff-only origin main
 ./update.sh
 ```
-
-Si la actualización se detiene con `Faltan comandos ... pm2` después de activar Node 22, la instalación global de PM2 puede estar asociada a Node 20. `update.sh` ahora instala PM2 para el Node activo si hace falta; actualiza el código con Git y vuelve a ejecutarlo.
 
 ### Respaldos
 
@@ -364,6 +381,7 @@ La vista autenticada `/weekly-report` se abre desde el menú **Informe semanal**
 - **Reportes & KPIs:** dashboards de disponibilidad, eficiencia, costos; informe MTTR/MTBF por línea (L1–L5) con periodo seleccionable y desglose por equipo.
 - **RCA:** análisis de causa raíz con evidencias (fotos/PDFs).
 - **Notificaciones:** Telegram + Web Push PWA.
+- **Asistente GTZ AI (preview):** chat flotante de solo lectura con herramientas reales sobre PostgreSQL, permisos por rol y respuestas en Markdown.
 - **Tiempo real:** Socket.IO para actualizaciones en vivo.
 
 ---
@@ -374,6 +392,7 @@ La vista autenticada `/weekly-report` se abre desde el menú **Informe semanal**
 - **Manual de usuario:** [`docs/manual_usuario.md`](docs/manual_usuario.md)
 - **Respaldos y recuperación:** [`docs/backup-strategy.md`](docs/backup-strategy.md)
 - **Plan de pruebas:** [`docs/plan_pruebas.md`](docs/plan_pruebas.md)
+- **Asistente GTZ AI (preview):** [`docs/AI_ASSISTANT.md`](docs/AI_ASSISTANT.md)
 - **Contexto del proyecto:** [`docs/project_context.md`](docs/project_context.md)
 - **Scripts legados:** [`docs/legacy-scripts.md`](docs/legacy-scripts.md)
 - **Histórico y roadmap:** [`docs/roadmap.md`](docs/roadmap.md)

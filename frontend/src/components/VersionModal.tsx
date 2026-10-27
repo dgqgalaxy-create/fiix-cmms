@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.71.0";
+export const APP_VERSION = "1.72.0-preview.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -12,7 +12,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   if (!isOpen) return null;
 
   const version = APP_VERSION;
-  const updateDate = "20 de Octubre, 2026";
+  const isPreview = /-preview/i.test(version);
+  const updateDate = "27 de Octubre, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -28,9 +29,14 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Checklist Diario",
     "Notas y pendientes",
     "Calendario de Horarios y Turnos (Roster)",
-    "Opciones de Desarrollador"
+    "Opciones de Desarrollador",
+    "Asistente GTZ AI (solo lectura, preview)"
   ];
   const changelog = [
+    "Preview: Asistente GTZ AI (Nivel 2) con botón flotante y panel lateral; consulta datos reales de PostgreSQL con herramientas de solo lectura y responde en Markdown, tablas y listas.",
+    "Nuevo: Asistente IA — consulta órdenes, detalle de OT, inventario, activos, resumen de planta, personal en turno y guías de uso de la app.",
+    "Seguridad: el asistente nunca crea, edita ni borra registros; respeta permisos, limita a los técnicos a sus órdenes y oculta costos de inventario sin permiso. Rate limit de 20 solicitudes cada 5 minutos por usuario.",
+    "Nuevo: Opciones de Desarrollador — tarjeta de estado del asistente, prueba de conexión, diagnóstico de proveedor/modelo y guía de variables AI_*.",
     "Nuevo: Horarios — «Resumen semanal» (solo lectura). Elige la semana (lunes a domingo) y consulta por persona: días y horas programadas, horas extra, tiempo por tiempo tomado, faltas, vacaciones/permisos y deuda pendiente; detalle día a día con incidencias y exportación a PDF y Excel.",
     "Corrección: Sala de Control — «Personal en turno ahora» y su ventana ya no filtran por rol ni por activo: cuentan exactamente a quien muestra el calendario de Horarios. La ventana refresca el horario al abrirse y muestra a todos los programados hoy con su estado calculado (En turno ahora / Fuera de turno y el motivo), para detectar de inmediato cualquier diferencia con Horarios.",
     "Nuevo: reloj de «Hora de planta» (America/Mexico_City) siempre visible en la cabecera móvil y en el menú lateral. Muestra la hora exacta con la que la app calcula turnos, KPIs y periodos; al pasar el cursor se ve la fecha y la zona horaria.",
@@ -510,6 +516,11 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
             <Rocket size={14} />
             Versión {version}
           </span>
+          {isPreview && (
+            <span className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-black tracking-widest border border-amber-500/40">
+              PREVIEW · NO ESTABLE
+            </span>
+          )}
         </div>
 
         {/* Body */}

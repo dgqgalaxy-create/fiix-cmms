@@ -13,6 +13,7 @@ import { TechnicianBottomNav } from './TechnicianBottomNav';
 import { useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
 import { UpdateBanner } from './UpdateBanner';
 import { ChatMessageToast } from './ChatMessageToast';
+import { AIAssistantDrawer } from './AIAssistantDrawer';
 import { useChatDeliveryAck } from '../hooks/useChatDeliveryAck';
 import { useMaintenance } from '../context/MaintenanceContext';
 
@@ -163,6 +164,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       {isTechMobileShell && <TechnicianBottomNav />}
 
       <ChatMessageToast />
+      <AIAssistantDrawer />
       <UpdateBanner />
       <GlobalSearchModal />
       <VersionModal

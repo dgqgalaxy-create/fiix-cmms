@@ -152,6 +152,16 @@ export const DeveloperOptions = () => {
     vendorsFolderConfigured?: boolean;
     woFolderConfigured: boolean;
   } | null>(null);
+  const [aiStatus, setAiStatus] = useState<{
+    enabled: boolean;
+    hasKey: boolean;
+    model: string;
+    fallbackModel?: string | null;
+    provider: string;
+  } | null>(null);
+  const [aiTestLoading, setAiTestLoading] = useState(false);
+  const [aiTestResult, setAiTestResult] = useState<string | null>(null);
+  const [aiTestError, setAiTestError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [importLiveProgress, setImportLiveProgress] = useState<{
     percent: number;
@@ -462,6 +472,44 @@ export const DeveloperOptions = () => {
     }
   };
 
+  const fetchAIStatus = async () => {
+    try {
+      const aiRes = await axios.get('/ai/status');
+      setAiStatus({
+        enabled: Boolean(aiRes.data?.enabled),
+        hasKey: Boolean(aiRes.data?.hasKey),
+        model: String(aiRes.data?.model || ''),
+        fallbackModel: aiRes.data?.fallbackModel ? String(aiRes.data.fallbackModel) : null,
+        provider: String(aiRes.data?.provider || 'OpenAI compatible'),
+      });
+    } catch {
+      setAiStatus(null);
+    }
+  };
+
+  const handleTestAI = async () => {
+    setAiTestLoading(true);
+    setAiTestResult(null);
+    setAiTestError(null);
+    try {
+      const response = await axios.post(
+        '/ai/chat',
+        { messages: [{ role: 'user', content: 'Responde únicamente: conexión OK' }] },
+        { timeout: 65000 }
+      );
+      setAiTestResult(String(response.data?.reply || 'El asistente respondió sin texto.'));
+    } catch (err) {
+      const message = isAxiosError(err)
+        ? (err.response?.data as { error?: string } | undefined)?.error ||
+          err.message ||
+          'No se pudo probar la conexión.'
+        : 'No se pudo probar la conexión.';
+      setAiTestError(message);
+    } finally {
+      setAiTestLoading(false);
+    }
+  };
+
   useEffect(() => {
     const session = getValidDevOptionsSession();
     if (!session) return;
@@ -486,6 +534,7 @@ export const DeveloperOptions = () => {
       }
       if (!cancelled) {
         await fetchDriveStatus();
+        await fetchAIStatus();
       }
     })();
 
@@ -747,7 +796,7 @@ export const DeveloperOptions = () => {
     } catch (err: unknown) {
       const detail = isAxiosError(err)
         ? (err.code === 'ECONNABORTED'
-          ? 'Tiempo de espera agotado (el tar de fotos puede tardar mucho). Revisa en el servidor: pm2 logs fiix-backend --lines 50 y la carpeta de respaldos.'
+          ? 'Tiempo de espera agotado (el tar de fotos puede tardar mucho). Revisa en el servidor: docker compose logs app --tail 50 y la carpeta de respaldos.'
           : err.response?.data?.message || err.message)
         : err instanceof Error ? err.message : 'Error desconocido';
       setError(`Fallo al crear el respaldo: ${detail}`);
@@ -2129,6 +2178,78 @@ export const DeveloperOptions = () => {
                 <Cloud size={17} /> {isSavingDrive ? 'Guardando...' : 'Guardar Google Drive'}
               </button>
             </div>
+          </article>
+
+          <article className="rounded-3xl border border-slate-200 bg-slate-50 p-6 dark:border-slate-800 dark:bg-slate-900/60">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300">
+                <Bot size={22} />
+              </div>
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Integración IA</p>
+                <h2 className="mt-1 text-xl font-black text-slate-900 dark:text-white">Asistente GTZ AI</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                  Chat de solo lectura con acceso a órdenes, inventario, activos y turnos. La clave se configura únicamente en el servidor.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Estado</p>
+                <p className={`mt-1 text-sm font-black ${aiStatus?.enabled && aiStatus?.hasKey ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                  {!aiStatus ? 'Sin consultar' : aiStatus.enabled ? (aiStatus.hasKey ? 'Listo para usar' : 'Falta API Key') : 'Desactivado'}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Modelo</p>
+                <p className="mt-1 truncate font-mono text-xs font-bold text-slate-700 dark:text-slate-200" title={aiStatus?.model || ''}>
+                  {aiStatus?.model || 'No configurado'}
+                </p>
+                <p className="mt-0.5 text-[11px] text-slate-400">{aiStatus?.provider || 'Proveedor no consultado'}</p>
+                {aiStatus?.fallbackModel && (
+                  <p className="mt-0.5 truncate text-[11px] text-violet-500 dark:text-violet-300" title={aiStatus.fallbackModel}>
+                    Respaldo: {aiStatus.fallbackModel}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => void fetchAIStatus()}
+                className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                <RefreshCw size={16} /> Actualizar estado
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleTestAI()}
+                disabled={aiTestLoading || !aiStatus?.enabled || !aiStatus?.hasKey}
+                className="flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {aiTestLoading ? <RefreshCw size={16} className="animate-spin" /> : <Bot size={16} />}
+                {aiTestLoading ? 'Probando...' : 'Probar conexión'}
+              </button>
+            </div>
+
+            {aiTestResult && (
+              <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">
+                <CheckCircle2 size={15} className="mt-0.5 shrink-0" />
+                <span>{aiTestResult}</span>
+              </div>
+            )}
+            {aiTestError && (
+              <div className="mt-3 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300">
+                <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+                <span>{aiTestError}</span>
+              </div>
+            )}
+
+            <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+              La API Key vive solo en <code className="rounded bg-slate-200 px-1 py-0.5 font-mono text-[11px] dark:bg-slate-800">AI_API_KEY</code> del archivo <code className="rounded bg-slate-200 px-1 py-0.5 font-mono text-[11px] dark:bg-slate-800">.env</code> del servidor. Para cambiar de proveedor usa <code className="rounded bg-slate-200 px-1 py-0.5 font-mono text-[11px] dark:bg-slate-800">AI_BASE_URL</code> y <code className="rounded bg-slate-200 px-1 py-0.5 font-mono text-[11px] dark:bg-slate-800">AI_MODEL</code>.
+            </p>
           </article>
 
           <article className="rounded-3xl border border-slate-200 bg-slate-50 p-6 dark:border-slate-800 dark:bg-slate-900/60">
