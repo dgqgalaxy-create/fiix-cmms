@@ -1,45 +1,19 @@
 #!/bin/bash
-# Instalación inicial de GTZ CMMS en Ubuntu.
-# Requiere el repo YA clonado (ver README §1.1 SSH). Este script NO hace git clone.
-# No sustituye update.sh: este es SOLO la primera configuración del servidor.
+# ============================================================
+# GTZ CMMS — Instalación inicial con Docker Compose
+# ============================================================
+# Prepara el entorno Docker, configura credenciales en .env,
+# construye y levanta los contenedores en Ubuntu / Debian.
+# ============================================================
 set -euo pipefail
 
-# Directorio del repo = carpeta donde está este script
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NODE_MAJOR="${NODE_MAJOR:-22}"
+cd "${APP_DIR}"
 
-echo "=== Instalación GTZ CMMS ==="
-echo "Directorio del proyecto: ${APP_DIR}"
-echo
-
-# --- helpers ---
-load_nvm() {
-  # Intentar varias ubicaciones (HOME del runner, NVM_DIR, usuario típico del servidor).
-  local candidates=()
-  if [ -n "${NVM_DIR:-}" ]; then
-    candidates+=("${NVM_DIR}/nvm.sh")
-  fi
-  candidates+=("${HOME}/.nvm/nvm.sh" "/home/usuario/.nvm/nvm.sh")
-  local cand
-  for cand in "${candidates[@]}"; do
-    if [ -s "$cand" ]; then
-      export NVM_DIR="$(cd "$(dirname "$cand")" && pwd)"
-      # shellcheck disable=SC1090
-      . "$cand"
-      return 0
-    fi
-  done
-  return 1
-}
-
-need_cmd() {
-  command -v "$1" >/dev/null 2>&1
-}
-
-die() {
-  echo "  [ERROR] $*" >&2
-  exit 1
-}
+ok()   { echo "  [OK] $*"; }
+info() { echo "  --> $*"; }
+warn() { echo "  [AVISO] $*" >&2; }
+die()  { echo "  [ERROR] $*" >&2; exit 1; }
 
 ask() {
   local prompt="$1"
@@ -62,358 +36,133 @@ ask_secret() {
   echo "$reply"
 }
 
-# --- 0. Verificar que el código ya está aquí ---
-echo ">>> [0/8] Verificar repositorio local..."
-[ -f "${APP_DIR}/install.sh" ] || die "No se encontró install.sh. Ejecuta este script desde dentro del repo clonado."
-[ -d "${APP_DIR}/backend" ] && [ -d "${APP_DIR}/frontend" ] || die "Faltan carpetas backend/ o frontend/. ¿Clonaste el repo completo?"
-[ -f "${APP_DIR}/backend/package.json" ] || die "Falta backend/package.json."
-chmod +x "${APP_DIR}/update.sh" "${APP_DIR}/install.sh" "${APP_DIR}/scripts/backup.sh" "${APP_DIR}/scripts/healthcheck.sh" "${APP_DIR}/scripts/ensure-vapid-env.sh" "${APP_DIR}/scripts/gha-runner-watchdog.sh" "${APP_DIR}/scripts/install-gha-runner-watchdog.sh" 2>/dev/null || true
-echo "  [OK] Código local listo (clone/SSH se hace ANTES, ver README)."
-
-# --- 1. Paquetes del sistema ---
-echo ">>> [1/8] Paquetes base (git, curl, build-essential, postgresql + cliente)..."
-if need_cmd apt-get; then
-  sudo apt-get update -y
-  # postgresql = servidor; postgresql-client = pg_dump/psql (respaldos/restore).
-  # En CasaOS a veces solo hay Postgres por Docker: el cliente en el host sigue haciendo falta.
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    git curl ca-certificates build-essential unzip \
-    postgresql postgresql-contrib postgresql-client
-  sudo systemctl enable --now postgresql
-  if command -v pg_dump >/dev/null 2>&1; then
-    echo "  [OK] pg_dump: $(pg_dump --version | head -n1)"
-  else
-    echo "  [AVISO] postgresql-client instalado pero pg_dump no está en PATH; revisa el PATH del usuario."
-  fi
-else
-  die "Este script está pensado para Ubuntu/Debian (apt)."
-fi
-
-# --- 2. Node via NVM ---
-echo ">>> [2/8] Node.js ${NODE_MAJOR} (nvm)..."
-if [ ! -s "${HOME}/.nvm/nvm.sh" ]; then
-  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
-fi
-load_nvm || die "nvm no se pudo cargar tras la instalación. Reabre la sesión SSH y vuelve a correr ./install.sh"
-nvm install "$NODE_MAJOR"
-nvm use "$NODE_MAJOR"
-nvm alias default "$NODE_MAJOR" >/dev/null 2>&1 || true
-npm install -g pm2
-echo "  [OK] Node $(node -v) · npm $(npm -v) · pm2 $(pm2 -v 2>/dev/null || echo '?')"
-
-# --- 3. Credenciales ---
+echo "=== Instalación GTZ CMMS (Docker Compose) ==="
+echo "Directorio del proyecto: ${APP_DIR}"
 echo
-echo ">>> [3/8] Credenciales (se guardan SOLO en backend/.env, no en Git)..."
-DB_PASS="$(ask_secret "Contraseña para el usuario PostgreSQL 'postgres'")"
-if [ -z "$DB_PASS" ]; then
-  die "La contraseña de PostgreSQL no puede estar vacía."
+
+# --- 1. Verificar archivos base ---
+echo ">>> [1/5] Verificando archivos del repositorio..."
+[ -f "${APP_DIR}/docker-compose.yml" ] || die "No se encontró docker-compose.yml en ${APP_DIR}."
+[ -f "${APP_DIR}/Dockerfile" ] || die "No se encontró Dockerfile en ${APP_DIR}."
+chmod +x "${APP_DIR}/update.sh" "${APP_DIR}/install.sh" "${APP_DIR}/scripts/"*.sh 2>/dev/null || true
+ok "Estructura del proyecto verificada."
+
+# --- 2. Instalar y verificar Docker ---
+echo ">>> [2/5] Verificando Docker y Docker Compose..."
+if ! command -v docker >/dev/null 2>&1; then
+  info "Docker no está instalado. Instalando paquetes Docker..."
+  if command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-v2 curl ca-certificates
+    sudo systemctl enable --now docker
+  else
+    die "Instala Docker manualmente antes de continuar (https://docs.docker.com/engine/install/)."
+  fi
 fi
-JWT_SECRET="$(ask "JWT_SECRET (sesiones)" "$(openssl rand -hex 24 2>/dev/null || echo 'cambia_este_secreto_jwt')")"
-DEV_PASS="$(ask "Contraseña menú desarrollador" "cambiar-dev-pass")"
-HOSTNAME_HINT="$(ask "Hostname local opcional (ej. lpet-cmms, Enter para omitir)" "")"
 
-if [ -n "$HOSTNAME_HINT" ]; then
-  echo "Puedes fijar el hostname del sistema con: sudo hostnamectl set-hostname ${HOSTNAME_HINT}"
+# Asegurar que el usuario pertenezca al grupo docker
+if ! groups "$USER" 2>/dev/null | grep -qw docker; then
+  info "Añadiendo el usuario '$USER' al grupo 'docker'..."
+  sudo usermod -aG docker "$USER" || true
+  warn "Para usar docker sin 'sudo' en nuevas sesiones, deberás cerrar y reabrir tu sesión SSH."
 fi
 
-# --- 4. PostgreSQL ---
-echo ">>> [4/8] Base de datos fiix_cmms..."
-SQL_PASS="${DB_PASS//\'/\'\'}"
-sudo -u postgres psql -v ON_ERROR_STOP=1 -c "ALTER USER postgres WITH PASSWORD '${SQL_PASS}';"
-if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='fiix_cmms'" | grep -q 1; then
-  sudo -u postgres createdb fiix_cmms
+# Detectar comando de Compose
+COMPOSE_CMD=""
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE_CMD="docker compose"
+elif command -v docker-compose >/dev/null 2>&1 && docker-compose version >/dev/null 2>&1; then
+  COMPOSE_CMD="docker-compose"
+elif sudo docker compose version >/dev/null 2>&1; then
+  COMPOSE_CMD="sudo docker compose"
+elif sudo docker-compose version >/dev/null 2>&1; then
+  COMPOSE_CMD="sudo docker-compose"
+else
+  die "No se encontró Docker Compose v2. Instálalo con: sudo apt install docker-compose-v2"
 fi
 
-# --- 5. .env + npm + Prisma ---
-echo ">>> [5/8] backend/.env, npm install y Prisma..."
-mkdir -p "${APP_DIR}/backend/uploads"
+ok "Docker Compose disponible (${COMPOSE_CMD})"
 
-ENV_FILE="${APP_DIR}/backend/.env"
+# --- 3. Retirar PM2 legado si estuviera presente ---
+if command -v pm2 >/dev/null 2>&1; then
+  if pm2 describe fiix-backend >/dev/null 2>&1 || pm2 describe fiix-frontend >/dev/null 2>&1; then
+    info "Retirando servicios previos de PM2 para evitar colisión de puertos..."
+    pm2 delete fiix-backend >/dev/null 2>&1 || true
+    pm2 delete fiix-frontend >/dev/null 2>&1 || true
+    pm2 save >/dev/null 2>&1 || true
+    ok "PM2 desactivado."
+  fi
+fi
+
+# --- 4. Configurar variables de entorno (.env) ---
+echo ">>> [3/5] Configuración de credenciales (.env)..."
+ENV_FILE="${APP_DIR}/.env"
+
 if [ -f "$ENV_FILE" ]; then
-  echo "Ya existe backend/.env — se conserva (no se sobrescribe)."
-  echo "Si necesitas regenerarlo, bórralo y vuelve a ejecutar install.sh."
+  info "Ya existe el archivo .env en la raíz. Se conservará la configuración existente."
 else
-  cat > "$ENV_FILE" <<EOF
-DATABASE_URL="postgresql://postgres:${DB_PASS}@localhost:5432/fiix_cmms?schema=public"
-PORT=3000
-JWT_SECRET="${JWT_SECRET}"
-DEV_MENU_PASSWORD="${DEV_PASS}"
-EOF
+  DEFAULT_DB_PASS="$(openssl rand -hex 12 2>/dev/null || echo "cmms_pass_$(date +%s)")"
+  DB_PASS="$(ask "Contraseña para PostgreSQL (interna del contenedor)" "$DEFAULT_DB_PASS")"
+
+  DEFAULT_JWT="$(openssl rand -hex 24 2>/dev/null || echo "fiix_jwt_$(date +%s)_secret")"
+  JWT_SECRET="$(ask "JWT_SECRET (firma de sesiones)" "$DEFAULT_JWT")"
+
+  PORT_CHOICE="$(ask "Puerto HTTP a publicar" "3000")"
+  CORS_ORIGIN="$(ask "Dominio público opcional para CORS (ej. https://cmms.tuempresa.com, vacío si solo LAN)" "")"
+
+  cp "${APP_DIR}/.env.example" "$ENV_FILE"
+
+  sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=\"${DB_PASS}\"|" "$ENV_FILE"
+  sed -i "s|^JWT_SECRET=.*|JWT_SECRET=\"${JWT_SECRET}\"|" "$ENV_FILE"
+  sed -i "s|^PORT=.*|PORT=${PORT_CHOICE}|" "$ENV_FILE"
+  if [ -n "$CORS_ORIGIN" ]; then
+    sed -i "s|^CORS_ORIGINS=.*|CORS_ORIGINS=\"${CORS_ORIGIN}\"|" "$ENV_FILE"
+  fi
+
   chmod 600 "$ENV_FILE"
-  echo "Creado ${ENV_FILE}"
+  ok "Archivo .env creado exitosamente con permisos restringidos."
 fi
 
-cd "${APP_DIR}/backend"
-unset NODE_ENV || true
-npm install --include=dev
-# Web Push: generar VAPID si faltan (también si .env ya existía sin ellas)
-chmod +x "${APP_DIR}/scripts/ensure-vapid-env.sh" 2>/dev/null || true
-"${APP_DIR}/scripts/ensure-vapid-env.sh" "${ENV_FILE}" || true
-npx prisma generate
-npx prisma db push --accept-data-loss
-echo "  --> Compilando backend (dist/)..."
-npm run build
-if [ ! -f "${APP_DIR}/backend/dist/index.js" ]; then
-  die "No existe backend/dist/index.js tras tsc. Revisa tsconfig (rootDir=src)."
-fi
+# --- 5. Despliegue con Docker Compose ---
+echo ">>> [4/5] Levantando servicios con Docker Compose..."
+${COMPOSE_CMD} up -d --build
 
-SEED_NOW="$(ask "¿Cargar datos iniciales (admin@fiix.com / password123)? [s/N]" "N")"
-if [[ "${SEED_NOW}" =~ ^[sS]$ ]]; then
-  npx prisma db seed || echo "Aviso: seed falló o ya había datos; continúa."
-fi
+# --- 6. Verificación de salud ---
+echo ">>> [5/5] Comprobando disponibilidad del servicio..."
+PORT="$(grep -E '^PORT=' "${ENV_FILE}" 2>/dev/null | tail -n1 | cut -d'=' -f2- | tr -d ' "' || echo '3000')"
+PORT="${PORT:-3000}"
+HEALTH_URL="http://127.0.0.1:${PORT}/api/health"
 
-cd "${APP_DIR}/frontend"
-unset NODE_ENV || true
-npm install
-echo "  --> Compilando frontend (frontend/dist)..."
-npm run build:app
-if [ ! -f "${APP_DIR}/frontend/dist/index.html" ]; then
-  die "No existe frontend/dist/index.html tras el build."
-fi
+ATTEMPTS=30
+SUCCESS=0
+for i in $(seq 1 $ATTEMPTS); do
+  STATUS="$(curl -s -o /dev/null -w "%{http_code}" "${HEALTH_URL}" 2>/dev/null || echo "000")"
+  if [ "$STATUS" = "200" ]; then
+    SUCCESS=1
+    break
+  fi
+  sleep 2
+done
 
-# --- 6. PM2 (un solo proceso: el backend sirve la API y el frontend ya compilado) ---
-echo ">>> [6/8] Servicio PM2 (fiix-backend)..."
-load_nvm
-cd "${APP_DIR}/backend"
-pm2 delete fiix-backend >/dev/null 2>&1 || true
-pm2 delete fiix-frontend >/dev/null 2>&1 || true
-# Arranque directo con node (sin npm/nodemon): estable en producción.
-pm2 start "${APP_DIR}/backend/dist/index.js" \
-  --name fiix-backend \
-  --cwd "${APP_DIR}/backend"
+IP_LAN="$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")"
 
-pm2 save
-echo "  [OK] Producción: Express en :${PORT:-3000} sirve API + UI (frontend/dist)."
-echo "  Desarrollo con recarga: cd frontend && npm run dev -- --host 0.0.0.0 --port 5173"
-
-# --- 7. Opcionales (preguntas) ---
 echo
-echo ">>> [7/8] Configuración opcional (puedes responder N y hacerlo después)..."
-
-# 7a. PM2 al reiniciar
-DO_PM2_STARTUP="$(ask "¿Registrar PM2 para que FIIX arranque al reiniciar el PC? (requiere sudo) [S/n]" "S")"
-if [[ "${DO_PM2_STARTUP}" =~ ^[sS]$ ]]; then
-  load_nvm
-  STARTUP_LINE="$(pm2 startup systemd -u "${USER}" --hp "${HOME}" 2>/dev/null | grep -E '^sudo ' | tail -n 1 || true)"
-  if [ -z "${STARTUP_LINE}" ]; then
-    # Algunas versiones de PM2 imprimen el comando en otra línea
-    STARTUP_LINE="$(pm2 startup systemd -u "${USER}" --hp "${HOME}" 2>&1 | grep -E 'sudo env' | tail -n 1 || true)"
-  fi
-  if [ -n "${STARTUP_LINE}" ]; then
-    echo "  Ejecutando (sudo puede pedir tu contraseña):"
-    echo "  ${STARTUP_LINE}"
-    # shellcheck disable=SC2086
-    eval "${STARTUP_LINE}" && echo "  [OK] PM2 startup registrado." || echo "  [AVISO] No se pudo registrar PM2 startup; ejecútalo a mano más tarde."
-    pm2 save || true
-  else
-    echo "  [AVISO] No se detectó el comando de startup. Ejecuta: pm2 startup"
-  fi
+echo "============================================================"
+if [ "$SUCCESS" -eq 1 ]; then
+  ok "¡GTZ CMMS instalado y funcionando correctamente!"
 else
-  echo "  Omitido. Más tarde: pm2 startup  (y el comando sudo que imprima)."
+  warn "Los contenedores están iniciando pero /api/health aún no responde 200."
+  echo "  Revisa el avance con: ${COMPOSE_CMD} logs -f app"
 fi
-
-# 7b. Firewall ufw
+echo "============================================================"
+echo "Acceso web local:  http://${IP_LAN}:${PORT}"
+echo "Usuarios iniciales de prueba:"
+echo "  - Administrador: admin@fiix.com / password123"
+echo "  - Gestionador:   gestionador@fiix.com / password123"
+echo "  - Técnico:       tecnico@fiix.com / password123"
 echo
-echo "  Firewall (ufw): abre SSH + puerto 3000 (UI + API en un solo proceso)."
-echo "  El puerto 5173 solo hace falta si vas a desarrollar con 'npm run dev' en el frontend."
-echo "  Si usas solo Tailscale y no quieres exponer la LAN, responde N."
-DO_UFW="$(ask "¿Configurar y activar ufw ahora? [s/N]" "N")"
-if [[ "${DO_UFW}" =~ ^[sS]$ ]]; then
-  CONFIRM_UFW="$(ask "CONFIRMA: ¿activar ufw? (si SSH no queda permitido, puedes perder acceso remoto) [s/N]" "N")"
-  if [[ "${CONFIRM_UFW}" =~ ^[sS]$ ]]; then
-    if need_cmd ufw || sudo apt-get install -y ufw; then
-      sudo ufw allow OpenSSH
-      sudo ufw allow 22/tcp
-      sudo ufw allow 3000/tcp comment 'FIIX UI + API'
-      sudo ufw allow 80/tcp comment 'FIIX nginx (opcional)'
-      sudo ufw --force enable
-      sudo ufw status || true
-      echo "  [OK] ufw activo (22, 80, 3000)."
-    else
-      echo "  [AVISO] No se pudo instalar/usar ufw."
-    fi
-  else
-    echo "  Omitido (no confirmaste)."
-  fi
-else
-  echo "  Omitido."
-fi
-
-# 7c. Telegram
-echo
-DO_TG="$(ask "¿Guardar Telegram (Bot Token + Chat ID) en backend/.env ahora? [s/N]" "N")"
-if [[ "${DO_TG}" =~ ^[sS]$ ]]; then
-  TG_TOKEN="$(ask "TELEGRAM_BOT_TOKEN (Enter para saltar)" "")"
-  TG_CHAT="$(ask "TELEGRAM_CHAT_ID (Enter para saltar)" "")"
-  ENV_FILE="${APP_DIR}/backend/.env"
-  touch "${ENV_FILE}"
-  if [ -n "${TG_TOKEN}" ]; then
-    if grep -q '^TELEGRAM_BOT_TOKEN=' "${ENV_FILE}" 2>/dev/null; then
-      sed -i "s|^TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=\"${TG_TOKEN}\"|" "${ENV_FILE}"
-    else
-      echo "TELEGRAM_BOT_TOKEN=\"${TG_TOKEN}\"" >> "${ENV_FILE}"
-    fi
-  fi
-  if [ -n "${TG_CHAT}" ]; then
-    if grep -q '^TELEGRAM_CHAT_ID=' "${ENV_FILE}" 2>/dev/null; then
-      sed -i "s|^TELEGRAM_CHAT_ID=.*|TELEGRAM_CHAT_ID=\"${TG_CHAT}\"|" "${ENV_FILE}"
-    else
-      echo "TELEGRAM_CHAT_ID=\"${TG_CHAT}\"" >> "${ENV_FILE}"
-    fi
-  fi
-  echo "  [OK] Telegram en .env (también puedes editarlo luego en Opciones de desarrollador)."
-  echo "  Reiniciando backend para cargar variables..."
-  load_nvm
-  pm2 restart fiix-backend --update-env || true
-else
-  echo "  Omitido. Puedes configurarlo después en la app o en backend/.env."
-fi
-
-# 7d. nginx (puerto 80) + healthcheck cron
-echo
-echo "  Acceso sin :3000 (nginx → Express) y vigilancia Telegram si PM2/Postgres caen."
-echo "  Requiere Telegram configurado (pregunta anterior o Opciones de Desarrollador) para las alertas."
-DO_NGINX_HEALTH="$(ask "¿Instalar nginx (:80) + healthcheck cron? Recomendado en servidor de planta [S/n]" "S")"
-if [[ "${DO_NGINX_HEALTH}" =~ ^[sS]$ ]] || [[ -z "${DO_NGINX_HEALTH}" ]]; then
-  # --- nginx ---
-  echo "  --> nginx..."
-  if ! need_cmd nginx; then
-    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nginx || echo "  [AVISO] No se pudo instalar nginx."
-  fi
-  if need_cmd nginx; then
-    NGINX_SRC="${APP_DIR}/deploy/nginx-fiix.conf"
-    if [ -f "$NGINX_SRC" ]; then
-      sudo cp "$NGINX_SRC" /etc/nginx/sites-available/fiix
-      sudo ln -sf /etc/nginx/sites-available/fiix /etc/nginx/sites-enabled/fiix
-      # Evitar conflicto con el default que también escucha :80
-      if [ -L /etc/nginx/sites-enabled/default ] || [ -f /etc/nginx/sites-enabled/default ]; then
-        sudo rm -f /etc/nginx/sites-enabled/default
-      fi
-      if sudo nginx -t; then
-        sudo systemctl enable --now nginx
-        sudo systemctl reload nginx
-        echo "  [OK] nginx activo: http://lpet-cmms (o IP) → :3000"
-      else
-        echo "  [AVISO] nginx -t falló; revisa /etc/nginx/sites-available/fiix"
-      fi
-    else
-      echo "  [AVISO] No está ${NGINX_SRC}; omite nginx."
-    fi
-    # Abrir 80 si ufw ya está activo (p. ej. abrieron 3000/5173 antes)
-    if need_cmd ufw && sudo ufw status 2>/dev/null | grep -qi 'Status: active'; then
-      sudo ufw allow 80/tcp comment 'FIIX nginx' || true
-      echo "  [OK] ufw: permitido 80/tcp"
-    fi
-  fi
-
-  # --- healthcheck cron ---
-  echo "  --> healthcheck cron (cada 5 min)..."
-  chmod +x "${APP_DIR}/scripts/healthcheck.sh" 2>/dev/null || true
-  CRON_LINE="*/5 * * * * ${APP_DIR}/scripts/healthcheck.sh >> /tmp/fiix-healthcheck.log 2>&1"
-  EXISTING_CRON="$(crontab -l 2>/dev/null || true)"
-  FILTERED="$(echo "${EXISTING_CRON}" | grep -v 'scripts/healthcheck.sh' || true)"
-  {
-    echo "${FILTERED}"
-    echo "${CRON_LINE}"
-  } | grep -v '^$' | crontab - || echo "  [AVISO] No se pudo escribir crontab."
-  echo "  [OK] Cron: ${CRON_LINE}"
-  echo "  Prueba manual: ${APP_DIR}/scripts/healthcheck.sh"
-else
-  echo "  Omitido. Manual: README § nginx / healthcheck."
-fi
-
-# 7e. Tailscale
-echo
-echo "  Tailscale: VPN + MagicDNS/HTTPS (cámara QR en vivo en celular)."
-DO_TS="$(ask "¿Instalar Tailscale en este servidor ahora? [s/N]" "N")"
-if [[ "${DO_TS}" =~ ^[sS]$ ]]; then
-  curl -fsSL https://tailscale.com/install.sh | sh
-  TS_KEY="$(ask "Auth key de Tailscale (consola → Settings → Keys). Enter = solo 'tailscale up' interactivo" "")"
-  if [ -n "${TS_KEY}" ]; then
-    sudo tailscale up --auth-key="${TS_KEY}" || echo "  [AVISO] tailscale up con auth key falló."
-  else
-    echo "  Ejecuta cuando puedas:  sudo tailscale up"
-    echo "  Luego en https://login.tailscale.com activa MagicDNS / HTTPS certificados."
-  fi
-  echo "  [OK] Cliente Tailscale instalado (revisa estado: tailscale status)."
-else
-  echo "  Omitido. Guía: https://tailscale.com/download/linux"
-fi
-
-# 7f. Watchdog GitHub Actions self-hosted runner
-echo
-echo "  Auto-deploy (Actions): el runner a veces queda 'active' en systemd pero sin escuchar jobs"
-echo "  (Waiting for a runner…). Este watchdog reinicia la sesión cada 15 min si hace falta,"
-echo "  y activa NTP (evita fallos SSL NotTimeValid)."
-if systemctl list-unit-files --type=service --no-legend 'actions.runner.*' 2>/dev/null | grep -q .; then
-  DO_GHA_WD_DEFAULT="S"
-  echo "  Se detectó al menos un unit actions.runner.* en este host."
-else
-  DO_GHA_WD_DEFAULT="N"
-  echo "  No se detectó runner todavía (puedes instalar el watchdog igual y registrar el runner después)."
-fi
-DO_GHA_WD="$(ask "¿Instalar watchdog del GitHub Actions runner (cron cada 15 min)?" "${DO_GHA_WD_DEFAULT}")"
-if [[ "${DO_GHA_WD}" =~ ^[sS]$ ]]; then
-  chmod +x "${APP_DIR}/scripts/gha-runner-watchdog.sh" "${APP_DIR}/scripts/install-gha-runner-watchdog.sh" 2>/dev/null || true
-  if sudo bash "${APP_DIR}/scripts/install-gha-runner-watchdog.sh"; then
-    echo "  [OK] Watchdog GHA instalado. Prueba: sudo ${APP_DIR}/scripts/gha-runner-watchdog.sh"
-  else
-    echo "  [AVISO] No se pudo instalar el watchdog. Manual: sudo bash ${APP_DIR}/scripts/install-gha-runner-watchdog.sh"
-  fi
-else
-  echo "  Omitido. Luego: sudo bash ${APP_DIR}/scripts/install-gha-runner-watchdog.sh  (ver README § Actions runner)."
-fi
-
-# --- 8. Smoke test + resumen ---
-echo
-echo ">>> [8/8] Comprobación y resumen..."
-chmod +x \
-  "${APP_DIR}/update.sh" \
-  "${APP_DIR}/install.sh" \
-  "${APP_DIR}/scripts/backup.sh" \
-  "${APP_DIR}/scripts/restore.sh" \
-  "${APP_DIR}/scripts/healthcheck.sh" \
-  "${APP_DIR}/scripts/ensure-vapid-env.sh" \
-  "${APP_DIR}/scripts/gha-runner-watchdog.sh" \
-  "${APP_DIR}/scripts/install-gha-runner-watchdog.sh" \
-  2>/dev/null || true
-
-http_code() {
-  local code
-  code="$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 "$1" 2>/dev/null || true)"
-  if [ -z "$code" ] || [[ "$code" == 000* ]]; then
-    echo "000"
-  else
-    echo "$code"
-  fi
-}
-
-if need_cmd curl; then
-  HEALTH_OK=0
-  for i in $(seq 1 15); do
-    CODE="$(http_code 'http://127.0.0.1:3000/api/health')"
-    if [[ "$CODE" =~ ^[23][0-9][0-9]$ ]]; then
-      echo "  [OK] API /api/health → HTTP ${CODE}"
-      HEALTH_OK=1
-      break
-    fi
-    sleep 2
-  done
-  if [ "$HEALTH_OK" -ne 1 ]; then
-    echo "  [AVISO] /api/health no respondió a tiempo. Revisa: pm2 logs fiix-backend --lines 80"
-  fi
-else
-  echo "  [AVISO] curl no está instalado; se omite el smoke test."
-fi
-
-IP_LAN="$(hostname -I 2>/dev/null | awk '{print $1}')"
-echo
-echo "=== Instalación completada ==="
-echo "UI + API (Express/PM2): http://${IP_LAN:-IP}:3000"
-echo "Con nginx (si lo activaste): http://${IP_LAN:-IP}/  o  http://lpet-cmms/"
-echo "Login seed (si lo corriste): admin@fiix.com / password123  → cámbialo"
-echo
-echo "Actualizaciones futuras (conserva .env y uploads/; no vacía la BD):"
-echo "  cd ${APP_DIR} && ./update.sh"
-echo "Si algo falla: pm2 logs fiix-backend --lines 80"
-echo "=== Listo ==="
+echo "Comandos útiles de mantenimiento:"
+echo "  - Ver logs en vivo:        ${COMPOSE_CMD} logs -f app"
+echo "  - Reiniciar aplicación:    ${COMPOSE_CMD} restart app"
+echo "  - Actualizar el sistema:   ./update.sh"
+echo "============================================================"

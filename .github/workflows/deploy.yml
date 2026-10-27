@@ -1,4 +1,4 @@
-name: Despliegue a Ubuntu Server (Tailscale)
+name: Despliegue a Ubuntu Server (Docker Compose)
 
 on:
   push:
@@ -15,17 +15,11 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 45
     steps:
-      - name: Pull, typecheck and update
+      - name: Actualizar y desplegar con Docker Compose
         run: |
           set -euo pipefail
           cd ~/fiix-cmms
-          # No sourcer nvm aquí: con set -e el nvm.sh del runner a menudo aborta el job (exit 3).
-          # Node 22 lo resuelven ci-typecheck.sh / update.sh (tarball oficial si hace falta).
-          echo "Runner shell node (informativo): $(command -v node 2>/dev/null || echo none) $(node -v 2>/dev/null || true)"
-          # npm install puede ensuciar package-lock.json en el servidor;
-          # sin restore, git pull aborta y el auto-deploy queda parado.
           git restore .
           git pull --ff-only origin main
-          chmod +x ./scripts/ci-typecheck.sh ./update.sh ./scripts/gha-runner-watchdog.sh 2>/dev/null || true
-          bash ./scripts/ci-typecheck.sh
+          chmod +x ./update.sh ./install.sh ./scripts/*.sh 2>/dev/null || true
           bash ./update.sh

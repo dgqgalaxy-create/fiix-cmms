@@ -441,7 +441,7 @@ router.get('/backup/progress', verifyDevPassword, (_req: Request, res: Response)
 router.get('/backups', verifyDevPassword, async (_req: Request, res: Response): Promise<void> => {
   try {
     const backups = listBackups();
-    // Siempre devolver la ruta real (puede no ser ~/usuario si PM2 usa otro home).
+    // Siempre devolver la ruta real (configurada vía BACKUP_DIR).
     res.json({ backups, backupDir: BACKUP_DIR });
   } catch (error: any) {
     console.error('Error listing backups:', error);

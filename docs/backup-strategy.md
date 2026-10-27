@@ -143,13 +143,13 @@ gsutil cp "$BACKUP_DIR/db_$TIMESTAMP.sql.gz" "gs://mi-bucket-backups/fiix-cmms/"
 
 ```bash
 # 1. Detener la app
-pm2 stop fiix-backend
+docker compose stop app
 
 # 2. Descomprimir y restaurar
 gunzip < /backups/fiix-cmms/db_20260826_020000.sql.gz | psql -U postgres -d fiix_cmms
 
 # 3. Reiniciar
-pm2 start fiix-backend
+docker compose start app
 ```
 
 ### Restaurar Uploads
@@ -173,7 +173,7 @@ cp /backups/fiix-cmms/.env_20260826_020000 ~/fiix-cmms/backend/.env
 Después de restaurar, verifica:
 
 - [ ] **BD accesible:** `psql -U postgres -d fiix_cmms -c "SELECT COUNT(*) FROM usuarios;"`
-- [ ] **App inicia:** `pm2 start fiix-backend && pm2 logs fiix-backend`
+- [ ] **App inicia:** `docker compose start app && docker compose logs -f app`
 - [ ] **Web accessible:** `curl http://localhost:3000`
 - [ ] **Socket.IO conecta:** Abre navegador → DevTools → Network → chequea conexión WebSocket
 - [ ] **Datos correctos:** Login y verifica últimas OTs, activos, etc.

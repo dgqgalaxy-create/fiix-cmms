@@ -1,22 +1,31 @@
 #!/bin/bash
-# Vigilancia externa de FIIX: API (:3000) + PostgreSQL.
-# Pensado para cron cada 5 min (no depende de que Node esté vivo).
+# ============================================================
+# GTZ CMMS — Vigilancia externa (API :3000 + PostgreSQL)
+# ============================================================
+# Pensado para cron cada 5 min (funciona con Docker o nativo).
 #
 # Uso:
 #   ./scripts/healthcheck.sh
 #   HEALTHCHECK_REMINDER_HOURS=6 ./scripts/healthcheck.sh
 #
-# Estado: /tmp/fiix-health-state (debounce: solo avisa al pasar a unhealthy
-# y recordatorios cada N horas mientras siga caído).
-# Telegram: respeta SystemSettings.telegram_enabled. Credenciales en BD o TELEGRAM_* del .env.
-# Si el interruptor está en false → no envía, aunque exista .env.
+# Estado: /tmp/fiix-health-state (solo avisa al pasar a unhealthy
+# y envía recordatorios cada N horas mientras siga caído).
+# ============================================================
 set -uo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STATE_FILE="${HEALTHCHECK_STATE_FILE:-/tmp/fiix-health-state}"
-HEALTH_URL="${HEALTHCHECK_URL:-http://127.0.0.1:3000/api/health}"
 REMINDER_HOURS="${HEALTHCHECK_REMINDER_HOURS:-6}"
-ENV_FILE="${APP_DIR}/backend/.env"
+
+if [ -f "${APP_DIR}/.env" ]; then
+  ENV_FILE="${APP_DIR}/.env"
+else
+  ENV_FILE="${APP_DIR}/backend/.env"
+fi
+
+PORT="$(grep -E '^PORT=' "${ENV_FILE}" 2>/dev/null | tail -n1 | cut -d'=' -f2- | tr -d ' "' || echo '3000')"
+PORT="${PORT:-3000}"
+HEALTH_URL="${HEALTHCHECK_URL:-http://127.0.0.1:${PORT}/api/health}"
 
 now_epoch() { date +%s; }
 
@@ -29,15 +38,19 @@ read_env_var() {
 
 # 0 = habilitado (o BD inaccesible), 1 = desactivado en app, 2 = sin psql/db_url
 telegram_enabled_in_db() {
-  local db_url
-  db_url="$(read_env_var DATABASE_URL)"
-  if [ -z "$db_url" ] || ! command -v psql >/dev/null 2>&1; then
-    return 2
+  local flag=""
+  if command -v docker >/dev/null 2>&1 && (cd "$APP_DIR" && docker compose ps --services 2>/dev/null | grep -qw "db"); then
+    flag="$( (cd "$APP_DIR" && docker compose exec -T db psql -U postgres -d fiix_cmms -At -c \
+      "SELECT telegram_enabled::text FROM \"SystemSettings\" ORDER BY id ASC LIMIT 1;" 2>/dev/null) || true)"
+  elif command -v psql >/dev/null 2>&1; then
+    local db_url
+    db_url="$(read_env_var DATABASE_URL)"
+    if [ -n "$db_url" ]; then
+      flag="$(psql "$db_url" -At -c \
+        "SELECT telegram_enabled::text FROM \"SystemSettings\" ORDER BY id ASC LIMIT 1;" \
+        2>/dev/null || true)"
+    fi
   fi
-  local flag
-  flag="$(psql "$db_url" -At -c \
-    "SELECT telegram_enabled::text FROM \"SystemSettings\" ORDER BY id ASC LIMIT 1;" \
-    2>/dev/null || true)"
   if [ -z "$flag" ]; then
     return 2
   fi
@@ -61,22 +74,28 @@ load_telegram_creds() {
     return 1
   fi
 
-  local db_url
-  db_url="$(read_env_var DATABASE_URL)"
-
-  # Preferir credenciales de BD cuando el toggle está activo.
-  if [ "$enabled_rc" -eq 0 ] && [ -n "$db_url" ] && command -v psql >/dev/null 2>&1; then
-    local row
-    row="$(psql "$db_url" -At -c \
-      "SELECT COALESCE(telegram_bot_token,''), COALESCE(telegram_chat_id,'') FROM \"SystemSettings\" WHERE telegram_enabled = true LIMIT 1;" \
-      2>/dev/null || true)"
+  local row=""
+  if [ "$enabled_rc" -eq 0 ]; then
+    if command -v docker >/dev/null 2>&1 && (cd "$APP_DIR" && docker compose ps --services 2>/dev/null | grep -qw "db"); then
+      row="$( (cd "$APP_DIR" && docker compose exec -T db psql -U postgres -d fiix_cmms -At -c \
+        "SELECT COALESCE(telegram_bot_token,''), COALESCE(telegram_chat_id,'') FROM \"SystemSettings\" WHERE telegram_enabled = true LIMIT 1;" \
+        2>/dev/null) || true)"
+    elif command -v psql >/dev/null 2>&1; then
+      local db_url
+      db_url="$(read_env_var DATABASE_URL)"
+      if [ -n "$db_url" ]; then
+        row="$(psql "$db_url" -At -c \
+          "SELECT COALESCE(telegram_bot_token,''), COALESCE(telegram_chat_id,'') FROM \"SystemSettings\" WHERE telegram_enabled = true LIMIT 1;" \
+          2>/dev/null || true)"
+      fi
+    fi
     if [ -n "$row" ]; then
       TG_TOKEN="$(echo "$row" | cut -d '|' -f1)"
       TG_CHAT="$(echo "$row" | cut -d '|' -f2)"
     fi
   fi
 
-  # Completar con .env si faltan (toggle activo o BD inaccesible).
+  # Completar con .env si faltan
   if [ -z "${TG_TOKEN:-}" ]; then
     TG_TOKEN="$(read_env_var TELEGRAM_BOT_TOKEN)"
   fi
@@ -166,12 +185,10 @@ maybe_notify() {
 }
 
 http_get() {
-  # stdout: body; exit via echoed code on fd3 pattern — returns "CODE|BODY"
   local url="$1"
   local tmp code
   tmp="$(mktemp)"
   code="$(curl -sS -o "$tmp" -w '%{http_code}' --connect-timeout 5 "$url" 2>/dev/null || echo '000')"
-  # Si curl falló tras escribir código parcial, normalizar
   if ! echo "$code" | grep -Eq '^[0-9]{3}$'; then
     code="000"
   fi
@@ -190,7 +207,6 @@ check_api() {
     echo "unhealthy"
     return 0
   fi
-  # Conexión OK: la API (proceso Node) está viva aunque DB falle (503)
   if [ "$code" = "200" ] || [ "$code" = "503" ]; then
     echo "healthy"
     return 0
@@ -199,7 +215,6 @@ check_api() {
     echo "unhealthy"
     return 0
   fi
-  # Cualquier otra respuesta con cuerpo de health conocido
   if echo "$body" | grep -qi '"status"'; then
     echo "healthy"
     return 0
@@ -219,6 +234,15 @@ check_db() {
   fi
   if [ "$code" != "000" ] && echo "$body" | grep -qi '"db"[[:space:]]*:[[:space:]]*"ok"'; then
     echo "healthy"
+    return 0
+  fi
+
+  if command -v docker >/dev/null 2>&1 && (cd "$APP_DIR" && docker compose ps --services 2>/dev/null | grep -qw "db"); then
+    if (cd "$APP_DIR" && docker compose exec -T db pg_isready -U postgres -d fiix_cmms -q 2>/dev/null); then
+      echo "healthy"
+      return 0
+    fi
+    echo "unhealthy"
     return 0
   fi
 
@@ -245,7 +269,7 @@ check_db() {
   echo "healthy"
 }
 
-echo "=== FIIX healthcheck $(date -Iseconds 2>/dev/null || date) ==="
+echo "=== GTZ CMMS healthcheck $(date -Iseconds 2>/dev/null || date) ==="
 load_state
 
 API_NOW="$(check_api)"

@@ -1,14 +1,11 @@
 #!/bin/bash
-# Respaldo manual de FIIX CMMS (Ubuntu/Linux con bash): dump de PostgreSQL + carpeta backend/uploads.
-# El backend ya programa este mismo respaldo automáticamente todos los días a las 2:15 AM
-# (backend/src/utils/backupService.ts, multiplataforma: no usa /bin/bash) y también lo puede
-# disparar el botón "Crear respaldo" en Opciones de Desarrollador.
-# En Windows local no uses este script; usa el botón de la app (requiere pg_dump + tar).
-# Este script es útil para correrlo a mano o desde un cron externo en el servidor Ubuntu.
-#
-# Uso:
-#   ./scripts/backup.sh
-#   BACKUP_DIR=/otra/ruta ./scripts/backup.sh
+# ============================================================
+# GTZ CMMS — Respaldo manual (compatible con Docker)
+# ============================================================
+# Dump de PostgreSQL + compresión de uploads.
+# Nota: La aplicación también realiza este respaldo automáticamente
+# todos los días a las 2:15 AM y mediante el botón en Opciones de Desarrollador.
+# ============================================================
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -18,42 +15,73 @@ TIMESTAMP="$(date +%Y%m%d_%H%M)"
 
 mkdir -p "${BACKUP_DIR}"
 
-echo "=== Respaldo FIIX CMMS (${TIMESTAMP}) ==="
+echo "=== Respaldo GTZ CMMS (${TIMESTAMP}) ==="
 echo "Directorio de respaldos: ${BACKUP_DIR}"
 
-# --- Cargar DATABASE_URL desde backend/.env si no viene ya en el entorno ---
-if [ -z "${DATABASE_URL:-}" ] && [ -f "${APP_DIR}/backend/.env" ]; then
-  DATABASE_URL="$(grep -E '^DATABASE_URL=' "${APP_DIR}/backend/.env" | tail -n 1 | cut -d '=' -f2- | sed -e 's/^"//' -e 's/"$//')"
-fi
-DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/fiix_cmms?schema=public}"
-# Prisma añade ?schema=public; pg_dump (libpq) lo rechaza en PostgreSQL 15+.
-DATABASE_URL="$(printf '%s' "${DATABASE_URL}" | sed -E 's/([?&])schema=[^&]*//g; s/\?&/?/g; s/[?&]$//')"
-
-# --- Dump de la base de datos (pg_dump completo: incluye ZoneSection y columnas nuevas) ---
 DUMP_FILE="${BACKUP_DIR}/fiix_${TIMESTAMP}.sql.gz"
-if command -v pg_dump >/dev/null 2>&1; then
-  pg_dump --no-owner --no-acl "${DATABASE_URL}" | gzip > "${DUMP_FILE}"
-  if [ ! -s "${DUMP_FILE}" ] || [ "$(wc -c < "${DUMP_FILE}")" -lt 64 ]; then
-    rm -f "${DUMP_FILE}"
-    echo "  [ERROR] El dump quedó vacío. Revisa DATABASE_URL / pg_dump." >&2
-    exit 1
+UPLOADS_FILE="${BACKUP_DIR}/uploads_${TIMESTAMP}.tar.gz"
+
+# Detectar Docker Compose
+COMPOSE_CMD=""
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE_CMD="docker compose"
+elif sudo docker compose version >/dev/null 2>&1; then
+  COMPOSE_CMD="sudo docker compose"
+fi
+
+IS_DOCKER_RUNNING=0
+if [ -n "$COMPOSE_CMD" ]; then
+  if (cd "$APP_DIR" && $COMPOSE_CMD ps --services 2>/dev/null | grep -qw "db"); then
+    IS_DOCKER_RUNNING=1
   fi
-  echo "  [OK] Base de datos: ${DUMP_FILE}"
-else
-  echo "  [AVISO] pg_dump no está instalado; se omite el respaldo de base de datos."
 fi
 
-# --- Carpeta de uploads (evidencias, fotos, firmas) ---
-UPLOADS_DIR="${APP_DIR}/backend/uploads"
-if [ -d "${UPLOADS_DIR}" ]; then
-  UPLOADS_FILE="${BACKUP_DIR}/uploads_${TIMESTAMP}.tar.gz"
+# --- 1. Respaldo de Base de Datos ---
+if [ "$IS_DOCKER_RUNNING" -eq 1 ]; then
+  echo "  --> Generando dump de PostgreSQL desde el contenedor Docker 'db'..."
+  (cd "$APP_DIR" && $COMPOSE_CMD exec -T db pg_dump -U postgres -d fiix_cmms --no-owner --no-acl) | gzip > "${DUMP_FILE}"
+else
+  # Cargar variables locales
+  if [ -z "${DATABASE_URL:-}" ]; then
+    if [ -f "${APP_DIR}/.env" ]; then
+      DB_PASS="$(grep -E '^DB_PASSWORD=' "${APP_DIR}/.env" | tail -n1 | cut -d'=' -f2- | tr -d ' "' || echo 'postgres')"
+      DATABASE_URL="postgresql://postgres:${DB_PASS}@localhost:5432/fiix_cmms?schema=public"
+    elif [ -f "${APP_DIR}/backend/.env" ]; then
+      DATABASE_URL="$(grep -E '^DATABASE_URL=' "${APP_DIR}/backend/.env" | tail -n1 | cut -d'=' -f2- | tr -d '"')"
+    fi
+  fi
+  DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/fiix_cmms?schema=public}"
+  DATABASE_URL="$(printf '%s' "${DATABASE_URL}" | sed -E 's/([?&])schema=[^&]*//g; s/\?&/?/g; s/[?&]$//')"
+
+  if command -v pg_dump >/dev/null 2>&1; then
+    echo "  --> Generando dump usando pg_dump del host..."
+    pg_dump --no-owner --no-acl "${DATABASE_URL}" | gzip > "${DUMP_FILE}"
+  else
+    echo "  [AVISO] Ni el contenedor Docker ni pg_dump en host están disponibles; se omite respaldo de BD."
+  fi
+fi
+
+if [ -s "${DUMP_FILE}" ] && [ "$(wc -c < "${DUMP_FILE}")" -ge 64 ]; then
+  echo "  [OK] Base de datos guardada en: ${DUMP_FILE}"
+else
+  rm -f "${DUMP_FILE}"
+  echo "  [ERROR] El archivo de dump no se generó correctamente." >&2
+fi
+
+# --- 2. Respaldo de Archivos Subidos (Uploads) ---
+if [ "$IS_DOCKER_RUNNING" -eq 1 ]; then
+  echo "  --> Empaquetando uploads desde el contenedor 'app'..."
+  (cd "$APP_DIR" && $COMPOSE_CMD exec -T app tar -czf - -C /app/backend uploads 2>/dev/null) > "${UPLOADS_FILE}" || true
+elif [ -d "${APP_DIR}/backend/uploads" ]; then
+  echo "  --> Empaquetando uploads desde el directorio local..."
   tar -czf "${UPLOADS_FILE}" -C "${APP_DIR}/backend" uploads
-  echo "  [OK] Uploads: ${UPLOADS_FILE}"
-else
-  echo "  [AVISO] No existe ${UPLOADS_DIR}; se omite el respaldo de uploads."
 fi
 
-# --- Retención: conserva solo los respaldos de los últimos KEEP_DAYS días ---
+if [ -s "${UPLOADS_FILE}" ]; then
+  echo "  [OK] Uploads guardados en: ${UPLOADS_FILE}"
+fi
+
+# --- 3. Retención ---
 find "${BACKUP_DIR}" -maxdepth 1 -type f \( -name 'fiix_*.sql.gz' -o -name 'uploads_*.tar.gz' \) -mtime "+${KEEP_DAYS}" -delete
 
-echo "=== Respaldo completado ==="
+echo "=== Respaldo completado con éxito ==="

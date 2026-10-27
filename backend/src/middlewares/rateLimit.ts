@@ -3,7 +3,7 @@ import type { Request, Response, NextFunction, RequestHandler } from 'express';
 type Bucket = { count: number; resetAt: number };
 
 /**
- * Rate limit en memoria (por proceso). Suficiente para un solo PM2 fiix-backend.
+ * Rate limit en memoria (por proceso). Suficiente para el contenedor único de la aplicación.
  * Clave por IP (+ opcional sufijo, p. ej. email en login).
  */
 export function createRateLimiter(options: {

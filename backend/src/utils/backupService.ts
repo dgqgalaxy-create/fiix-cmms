@@ -7,7 +7,7 @@ import { pipeline } from 'stream/promises';
 import zlib from 'zlib';
 
 // Carpeta de respaldos: BACKUP_DIR del .env, o ~/fiix-backups del usuario del proceso
-// (con PM2 suele ser el home de quien arrancó el proceso — no siempre /home/usuario).
+// (en Docker configurado como /backups mediante volumen persistente).
 export const BACKUP_DIR = path.resolve(
   process.env.BACKUP_DIR || path.join(os.homedir(), 'fiix-backups')
 );

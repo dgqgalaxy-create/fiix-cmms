@@ -1,14 +1,10 @@
 #!/bin/bash
-# Restaura un respaldo de FIIX CMMS (Ubuntu/Linux con bash): dump PostgreSQL + opcional uploads.
-# El backend también expone esto desde Opciones de Desarrollador (POST /api/dev/restore).
-# En Windows local usa el botón «Restaurar respaldo» de la app (requiere psql + tar).
-#
-# Uso:
-#   ./scripts/restore.sh fiix_20260720_0215.sql.gz
-#   ./scripts/restore.sh fiix_20260720_0215.sql.gz --no-uploads
-#   BACKUP_DIR=/otra/ruta ./scripts/restore.sh fiix_20260720_0215.sql.gz
-#
-# ADVERTENCIA: sobrescribe la base de datos actual. Confirma antes de continuar.
+# ============================================================
+# GTZ CMMS — Restaurar un respaldo (compatible con Docker)
+# ============================================================
+# Restaura un dump de PostgreSQL y opcionalmente los archivos subidos (uploads).
+# ADVERTENCIA: Sobrescribe la base de datos actual.
+# ============================================================
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -47,7 +43,6 @@ fi
 
 SQL_PATH="${BACKUP_DIR}/${BASE}"
 if [ ! -f "$SQL_PATH" ]; then
-  # Permitir ruta absoluta si el usuario pasó una ruta completa
   if [ -f "$FILE" ]; then
     SQL_PATH="$FILE"
   else
@@ -56,42 +51,64 @@ if [ ! -f "$SQL_PATH" ]; then
   fi
 fi
 
-if [ -z "${DATABASE_URL:-}" ] && [ -f "${APP_DIR}/backend/.env" ]; then
-  DATABASE_URL="$(grep -E '^DATABASE_URL=' "${APP_DIR}/backend/.env" | tail -n 1 | cut -d '=' -f2- | sed -e 's/^"//' -e 's/"$//')"
+# Detectar Docker Compose
+COMPOSE_CMD=""
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE_CMD="docker compose"
+elif sudo docker compose version >/dev/null 2>&1; then
+  COMPOSE_CMD="sudo docker compose"
 fi
-DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/fiix_cmms?schema=public}"
-# Prisma añade ?schema=public; psql (libpq) lo rechaza en PostgreSQL 15+.
-DATABASE_URL="$(printf '%s' "${DATABASE_URL}" | sed -E 's/([?&])schema=[^&]*//g; s/\?&/?/g; s/[?&]$//')"
 
-echo "=== Restaurar FIIX CMMS ==="
+IS_DOCKER_RUNNING=0
+if [ -n "$COMPOSE_CMD" ]; then
+  if (cd "$APP_DIR" && $COMPOSE_CMD ps --services 2>/dev/null | grep -qw "db"); then
+    IS_DOCKER_RUNNING=1
+  fi
+fi
+
+echo "=== Restaurar GTZ CMMS ==="
 echo "Archivo: ${SQL_PATH}"
-echo "Base:    ${DATABASE_URL%%@*}@…"
+echo "Modo:    $([ "$IS_DOCKER_RUNNING" -eq 1 ] && echo "Contenedor Docker (servicio db)" || echo "Local / Host")"
 echo ""
-echo "ADVERTENCIA: Esto sobrescribe los datos actuales de la base de datos."
+echo "ADVERTENCIA: Esto sobrescribirá completamente los datos actuales de la base de datos."
 read -r -p "Escribe RESTAURAR para continuar: " CONFIRM
 if [ "$CONFIRM" != "RESTAURAR" ]; then
-  echo "Cancelado."
-  exit 1
-fi
-
-if ! command -v psql >/dev/null 2>&1; then
-  echo "psql no está instalado. Instala postgresql-client." >&2
+  echo "Operación cancelada."
   exit 1
 fi
 
 echo "Restaurando base de datos..."
 GZ_SIZE="$(wc -c < "${SQL_PATH}")"
 if [ "${GZ_SIZE}" -lt 64 ]; then
-  echo "El archivo está vacío (${GZ_SIZE} bytes); no se restauró nada. Genera un respaldo nuevo." >&2
+  echo "El archivo está vacío (${GZ_SIZE} bytes); no se restauró nada." >&2
   exit 1
 fi
-# Recrear public evita conflictos con tablas ya existentes (p. ej. tras wipe).
-# -q silencia los NOTICE de "drop cascades to table ..." (no son errores).
-# Se filtra SET transaction_timeout (GUC nuevo en PG 17) para restaurar en PG 16 o menor.
-{
-  printf '%s\n' 'DROP SCHEMA IF EXISTS public CASCADE;' 'CREATE SCHEMA public;' 'GRANT ALL ON SCHEMA public TO public;' 'GRANT ALL ON SCHEMA public TO CURRENT_USER;'
-  gunzip -c "${SQL_PATH}" | sed '/^SET transaction_timeout = 0;$/d'
-} | psql -q "${DATABASE_URL}" -v ON_ERROR_STOP=1
+
+SQL_PREPARE="DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO public; GRANT ALL ON SCHEMA public TO CURRENT_USER;"
+
+if [ "$IS_DOCKER_RUNNING" -eq 1 ]; then
+  {
+    echo "$SQL_PREPARE"
+    gunzip -c "${SQL_PATH}" | sed '/^SET transaction_timeout = 0;$/d'
+  } | (cd "$APP_DIR" && $COMPOSE_CMD exec -T db psql -U postgres -d fiix_cmms -q -v ON_ERROR_STOP=1)
+else
+  if ! command -v psql >/dev/null 2>&1; then
+    echo "psql no está instalado en el host ni hay contenedor Docker activo." >&2
+    exit 1
+  fi
+  if [ -z "${DATABASE_URL:-}" ]; then
+    if [ -f "${APP_DIR}/backend/.env" ]; then
+      DATABASE_URL="$(grep -E '^DATABASE_URL=' "${APP_DIR}/backend/.env" | tail -n 1 | cut -d '=' -f2- | tr -d '"')"
+    fi
+  fi
+  DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/fiix_cmms?schema=public}"
+  DATABASE_URL="$(printf '%s' "${DATABASE_URL}" | sed -E 's/([?&])schema=[^&]*//g; s/\?&/?/g; s/[?&]$//')"
+
+  {
+    echo "$SQL_PREPARE"
+    gunzip -c "${SQL_PATH}" | sed '/^SET transaction_timeout = 0;$/d'
+  } | psql -q "${DATABASE_URL}" -v ON_ERROR_STOP=1
+fi
 echo "  [OK] Base de datos restaurada."
 
 if [ "$RESTORE_UPLOADS" -eq 1 ]; then
@@ -100,11 +117,15 @@ if [ "$RESTORE_UPLOADS" -eq 1 ]; then
   UPLOADS_FILE="${BACKUP_DIR}/uploads_${STAMP}.tar.gz"
   if [ -f "$UPLOADS_FILE" ]; then
     echo "Restaurando uploads..."
-    tar -xzf "${UPLOADS_FILE}" -C "${APP_DIR}/backend"
-    echo "  [OK] Uploads: ${UPLOADS_FILE}"
+    if [ "$IS_DOCKER_RUNNING" -eq 1 ]; then
+      (cd "$APP_DIR" && $COMPOSE_CMD exec -T app tar -xzf - -C /app/backend) < "$UPLOADS_FILE"
+    else
+      tar -xzf "${UPLOADS_FILE}" -C "${APP_DIR}/backend"
+    fi
+    echo "  [OK] Uploads restaurados: ${UPLOADS_FILE}"
   else
     echo "  [AVISO] No existe ${UPLOADS_FILE}; se omitió uploads."
   fi
 fi
 
-echo "=== Restauración completada. Recarga la aplicación. ==="
+echo "=== Restauración completada con éxito ==="
