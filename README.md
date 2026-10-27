@@ -126,14 +126,14 @@ Chat flotante de **solo lectura** que consulta órdenes, inventario, activos, tu
 AI_ENABLED=true
 AI_API_KEY="tu_clave"
 AI_BASE_URL="https://openrouter.ai/api/v1"
-AI_MODEL="deepseek/deepseek-v4.1-flash"
-AI_FALLBACK_MODEL="nvidia/nemotron-3.5-lightning:free"
+AI_MODEL="nvidia/nemotron-3.5-lightning:free"
+AI_FALLBACK_MODEL="nvidia/nemotron-3-ultra-550b-a55b:free"
 ```
 
-- **Modo 100% gratis:** usa `AI_MODEL="nvidia/nemotron-3.5-lightning:free"` o `AI_MODEL="openrouter/free"`. OpenRouter limita los modelos free a 20 solicitudes/minuto y 50/día si compraste menos de $10 en créditos; con al menos $10 comprados el límite sube a 1,000/día.
-- OpenRouter no ofrece una variante gratuita de DeepSeek V4.1 Flash; el modelo indicado es de pago (costo muy bajo).
+- **Configuración por defecto (100% gratis):** `nvidia/nemotron-3.5-lightning:free` como principal y `nvidia/nemotron-3-ultra-550b-a55b:free` como respaldo. OpenRouter limita los modelos free a 20 solicitudes/minuto y 50/día si compraste menos de $10 en créditos; con al menos $10 comprados el límite sube a 1,000/día.
+- OpenRouter no ofrece una variante gratuita de DeepSeek V4.1 Flash; si eliges `deepseek/deepseek-v4.1-flash`, es de pago (costo muy bajo).
 - Para DeepSeek free con OpenCode Zen: `AI_BASE_URL="https://opencode.ai/inference/openai/v1"` y `AI_MODEL="deepseek-v4.1-flash-free"` (requiere API key de OpenCode; revisa las limitaciones en la guía).
-- Si el modelo principal se queda sin crédito/cuota, `AI_FALLBACK_MODEL` reintenta con un modelo gratuito compatible con herramientas.
+- Si el modelo principal se queda sin crédito/cuota, `AI_FALLBACK_MODEL` reintenta con el respaldo gratuito compatible con herramientas.
 - Los técnicos solo ven sus órdenes asignadas; el asistente nunca modifica la base de datos.
 - Guía completa, herramientas, proveedores gratuitos y diagnóstico: [docs/AI_ASSISTANT.md](docs/AI_ASSISTANT.md).
 

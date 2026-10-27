@@ -36,13 +36,13 @@ Variables principales en el `.env` de la raíz (Docker) o en `backend/.env` (des
 AI_ENABLED=true
 AI_API_KEY="tu_clave"
 AI_BASE_URL="https://openrouter.ai/api/v1"
-AI_MODEL="deepseek/deepseek-v4.1-flash"
+AI_MODEL="nvidia/nemotron-3.5-lightning:free"
+AI_FALLBACK_MODEL="nvidia/nemotron-3-ultra-550b-a55b:free"
 ```
 
 Opcionales:
 
 ```env
-AI_FALLBACK_MODEL="nvidia/nemotron-3.5-lightning:free"
 AI_MAX_TOKENS=1400
 AI_TIMEOUT_MS=45000
 AI_MAX_TOOL_ROUNDS=4
@@ -51,7 +51,7 @@ AI_APP_URL="https://cmms.ejemplo.com"
 AI_DEBUG=false
 ```
 
-`AI_FALLBACK_MODEL` es opcional. Si el modelo principal devuelve falta de crédito, cuota, 429 o un modelo no disponible, el backend reintenta una vez con el respaldo y conserva el mismo flujo de herramientas. El respaldo debe usar el mismo `AI_BASE_URL` y soportar `tools`.
+`AI_FALLBACK_MODEL` es opcional, pero la configuración recomendada ya incluye un respaldo gratuito. Si el modelo principal devuelve falta de crédito, cuota, 429 o un modelo no disponible, el backend reintenta una vez con el respaldo y conserva el mismo flujo de herramientas. El respaldo debe usar el mismo `AI_BASE_URL` y soportar `tools`.
 
 Después de cambiar variables en Docker:
 
@@ -63,18 +63,7 @@ No hace falta reconstruir la imagen si solo se reinicia el contenedor, pero `--b
 
 ## Proveedores
 
-### OpenRouter (configuración actual)
-
-```env
-AI_BASE_URL="https://openrouter.ai/api/v1"
-AI_MODEL="deepseek/deepseek-v4.1-flash"
-```
-
-- OpenRouter **no tiene** una variante `:free` de DeepSeek V4.1 Flash. El modelo indicado es de pago, con un costo muy bajo por consulta.
-- Una alternativa gratuita con soporte de herramientas es `nvidia/nemotron-3.5-lightning:free`.
-- La clave de OpenRouter se crea en <https://openrouter.ai/keys>.
-
-### Modo 100% gratuito con OpenRouter
+### OpenRouter (configuración recomendada, gratis)
 
 ```env
 AI_BASE_URL="https://openrouter.ai/api/v1"
@@ -83,11 +72,22 @@ AI_FALLBACK_MODEL="nvidia/nemotron-3-ultra-550b-a55b:free"
 ```
 
 - `nvidia/nemotron-3.5-lightning:free` es la opción más equilibrada y ya fue probada como respaldo.
+- `nvidia/nemotron-3-ultra-550b-a55b:free` es el respaldo gratuito recomendado.
 - `openrouter/free` enruta automáticamente a un modelo gratuito; es cómodo, pero la calidad y la latencia varían.
 - `google/gemma-4-31b-it:free` es otra alternativa con tool calling.
 - Límites de OpenRouter para modelos free: **20 solicitudes/minuto** y **50/día** si has comprado menos de $10 en créditos; **1,000/día** si has comprado al menos $10. Los modelos `:free` siguen costando $0.
 - El límite es de la cuenta: crear más API keys no lo evita. El fallback no evita el tope diario.
 - No todos los modelos gratuitos soportan tools; verifica que declaren `tools` antes de usarlos.
+- La clave de OpenRouter se crea en <https://openrouter.ai/keys>.
+
+### DeepSeek V4.1 Flash (de pago)
+
+```env
+AI_BASE_URL="https://openrouter.ai/api/v1"
+AI_MODEL="deepseek/deepseek-v4.1-flash"
+```
+
+OpenRouter **no tiene** una variante `:free` de DeepSeek V4.1 Flash. Ese modelo es de pago, con un costo muy bajo por consulta; úsalo solo si aceptas ese costo.
 
 ### Alternativas gratuitas
 

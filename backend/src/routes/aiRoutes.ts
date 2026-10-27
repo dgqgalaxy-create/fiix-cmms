@@ -50,7 +50,7 @@ function hasAPIKey(): boolean {
 }
 
 function modelName(): string {
-  return process.env.AI_MODEL || 'deepseek/deepseek-v4.1-flash';
+  return process.env.AI_MODEL || 'nvidia/nemotron-3.5-lightning:free';
 }
 
 function providerName(): string {

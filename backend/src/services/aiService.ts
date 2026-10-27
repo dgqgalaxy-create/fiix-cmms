@@ -27,7 +27,7 @@ export interface AIContext {
   permissions: Record<string, boolean>;
 }
 
-const DEFAULT_MODEL = 'deepseek/deepseek-v4.1-flash';
+const DEFAULT_MODEL = 'nvidia/nemotron-3.5-lightning:free';
 const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
 const DEFAULT_TIMEZONE = 'America/Mexico_City';
 
