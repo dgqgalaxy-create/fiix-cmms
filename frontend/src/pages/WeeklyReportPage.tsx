@@ -137,6 +137,15 @@ export default function WeeklyReportPage() {
     {error && <div role="alert" className="rounded-xl bg-red-50 p-4 text-red-800 dark:bg-red-950 dark:text-red-200">{error}{data && ' Se muestran los últimos datos recibidos.'}</div>}
     {!data && loading && <p role="status">Cargando informe…</p>}
     {data && <>
+      <section className={`${panel} p-4`}>
+        <h2 className="mb-3 text-lg font-bold">{monthly ? 'Totales mensuales' : 'Totales semanales'}</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><p className="text-sm">Total levantadas</p><strong className="text-2xl">{report.total}</strong></div>
+          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><p className="text-sm">Solicitudes válidas · base del 100 %</p><strong className="text-2xl">{report.valid}</strong></div>
+          {REPORT_STATUSES.map(status => <div key={status} className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><p className={`text-sm ${statusColor[status]}`}>{REPORT_LABELS[status]}</p><strong className="text-2xl">{report.totals[status]}</strong><span className="ml-3 text-sm text-slate-500 dark:text-slate-400">{status === 'ANULADO' ? 'Fuera del porcentaje' : report.valid ? `${(report.totals[status] / report.valid * 100).toFixed(1)} %` : '—'}</span></div>)}
+        </div>
+        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Las invalidadas se muestran para seguimiento y se excluyen del cálculo de porcentajes. Una OT finalizada después conserva su día original de levantamiento.</p>
+      </section>
       <section className={`${panel} w-full p-4 sm:p-5`} aria-labelledby="weekly-completions-title">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -203,15 +212,6 @@ export default function WeeklyReportPage() {
         </div>
         </>}
         <p className="p-4 text-xs text-slate-500 dark:text-slate-400">Backlog: OT levantadas ese día que siguen pendientes, en proceso o pausadas. No incluye solicitudes de otros días. OT levantadas: total de solicitudes creadas ese día, incluidas las invalidadas. Los días futuros se muestran con —.</p>
-      </section>
-      <section className={`${panel} p-4`}>
-        <h2 className="mb-3 text-lg font-bold">{monthly ? 'Totales mensuales' : 'Totales semanales'}</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><p className="text-sm">Total levantadas</p><strong className="text-2xl">{report.total}</strong></div>
-          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><p className="text-sm">Solicitudes válidas · base del 100 %</p><strong className="text-2xl">{report.valid}</strong></div>
-          {REPORT_STATUSES.map(status => <div key={status} className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><p className={`text-sm ${statusColor[status]}`}>{REPORT_LABELS[status]}</p><strong className="text-2xl">{report.totals[status]}</strong><span className="ml-3 text-sm text-slate-500 dark:text-slate-400">{status === 'ANULADO' ? 'Fuera del porcentaje' : report.valid ? `${(report.totals[status] / report.valid * 100).toFixed(1)} %` : '—'}</span></div>)}
-        </div>
-        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Las invalidadas se muestran para seguimiento y se excluyen del cálculo de porcentajes. Una OT finalizada después conserva su día original de levantamiento.</p>
       </section>
       <section className="space-y-4"><h2 className="text-xl font-bold">Resumen de solicitudes por día</h2>
         {report.days.map(day => <section key={day.date} className={panel}>
