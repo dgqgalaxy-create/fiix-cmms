@@ -11,8 +11,10 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock,
+  Download,
   Flame,
   LayoutDashboard,
+  Loader2,
   RefreshCw,
   ShieldAlert,
   Siren,
@@ -45,6 +47,7 @@ import { getLineStoppageStatus, getWorkOrders, getWorkOrdersSummary } from '../a
 import type { LineStoppageStatus, ProductionLine, WorkOrder } from '../api/workOrders';
 import { getMaintenancePlans, type MaintenancePlan } from '../api/maintenance';
 import { formatWorkOrderFolio } from '../utils/folio';
+import { exportPeriodSummaryExcel } from '../utils/periodSummaryExcel';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { useAuth } from '../context/AuthContext';
 import { useControlRoomAlerts } from '../hooks/useControlRoomAlerts';
@@ -99,6 +102,7 @@ export const HomePage = () => {
   const [summaryEndDate, setSummaryEndDate] = useState(todayYmd());
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [summaryExporting, setSummaryExporting] = useState(false);
   const [streakMsgSeed, setStreakMsgSeed] = useState(() => Date.now());
   const [isOnDutyModalOpen, setIsOnDutyModalOpen] = useState(false);
   const { roster: personnelRoster, today: rosterToday, now: rosterNow, failed: rosterFailed, refresh: refreshRoster } = usePersonnelRoster();
@@ -288,6 +292,38 @@ export const HomePage = () => {
   const activeTechsText = getTechsTextByStatus('EN_PROCESO');
   const pausedTechsText = getTechsTextByStatus('EN_ESPERA');
 
+  const handleExportPeriodSummaryExcel = () => {
+    if (summaryExporting) return;
+    const periodOrders = workOrders.filter(isInSummaryRange);
+    if (periodOrders.length === 0) {
+      alert('No hay órdenes en el periodo seleccionado.');
+      return;
+    }
+    setSummaryExporting(true);
+    // Permite que el botón muestre «Exportando…» antes de generar el libro.
+    window.setTimeout(() => {
+      try {
+        const maintenance = ['Preventivo', 'Correctivo', 'Servicio'].map((name) => ({
+          name,
+          value: pieData.find((item) => item.name === name)?.value ?? 0,
+        }));
+        exportPeriodSummaryExcel({
+          startDate: summaryStartDate,
+          endDate: summaryEndDate,
+          totalRecibidas,
+          summary,
+          pending: { urgent: urgentCount, normal: normalCount, low: lowCount },
+          maintenance,
+          orders: periodOrders,
+        });
+      } catch (error) {
+        console.error('Error exporting period summary', error);
+        alert('No se pudo exportar el resumen por periodo.');
+      } finally {
+        setSummaryExporting(false);
+      }
+    }, 0);
+  };
 
   const goControlRoom = (query: string) => navigate(`/dashboard?${query}`);
 
@@ -476,6 +512,16 @@ export const HomePage = () => {
                 <Activity size={14} /> Modo Histórico (Viendo Todo)
               </span>
             )}
+            <button
+              type="button"
+              onClick={handleExportPeriodSummaryExcel}
+              disabled={isLoading || summaryExporting}
+              title="Exporta a Excel el resumen y todas las órdenes del periodo filtrado, no solo lo visible."
+              className="ml-auto inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-300"
+            >
+              {summaryExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+              <span>{summaryExporting ? 'Exportando…' : 'Excel'}</span>
+            </button>
           </>
         }
       >

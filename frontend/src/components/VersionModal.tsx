@@ -33,6 +33,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura, preview)"
   ];
   const changelog = [
+    "Nuevo: Inicio — «Resumen por periodo» incluye un botón «Excel» que descarga las cifras filtradas y todas las órdenes del periodo seleccionado (sin fechas, el histórico completo).",
     "Nuevo: Portal de solicitudes — cada resultado de la consulta incluye «Ver detalles», que abre una ventana con fechas, solicitante, zona, activo, prioridad, descripción, técnicos asignados, trabajo realizado, diagnóstico y evidencias fotográficas.",
     "Corrección: al pulsar «Registrar movimiento» desde el detalle de un repuesto, la ventana de movimiento ahora aparece encima del detalle y ya no queda oculta detrás.",
     "Nuevo: Inventario → Movimientos — botón Excel descarga todo el historial que coincide con la búsqueda, el tipo y las fechas seleccionadas, no solo la página visible; sin fechas incluye el historial completo.",

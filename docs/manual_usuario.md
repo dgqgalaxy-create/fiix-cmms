@@ -103,6 +103,7 @@ Pantalla de resumen operativo (antes mezclada con el listado de órdenes). Es la
 - **Pulso al actualizar cifras:** Cuando cambia un número de las tarjetas del resumen o de Sala de control (p. ej. por una OT nueva en tiempo real), la cifra late una vez de forma suave; no anima toda la tarjeta.
 - **Pareto de problemas frecuentes** (correctivo) y distribución visual de mantenimiento. La gráfica de dona muestra el total en el centro y desglosa cada tipo con cantidad, porcentaje y barra comparativa; al pasar el cursor, la etiqueta del segmento se muestra al frente sin encimarse con el total central.
 - **Filtro de fechas** para el resumen superior (o modo histórico si no hay rango). El selector, las tarjetas y la distribución de mantenimiento están dentro del marco **Resumen por periodo**, indicando claramente qué elementos afecta.
+- **Excel del periodo:** el marco **Resumen por periodo** incluye un botón **Excel** que descarga un archivo `.xlsx` con las cifras del rango seleccionado (tarjetas, pendientes por prioridad y distribución de mantenimiento) y una hoja con todas las órdenes creadas en ese periodo. Sin fechas incluye el histórico completo; el archivo respeta el filtro y no se limita a lo visible en pantalla.
 - **Tarjetas de estado:** **Total recibidas** es únicamente informativa y muestra la cifra general con mayor énfasis (no incluye órdenes invalidadas; la tarjeta lo indica con la leyenda «Sin contar invalidadas»). Pendientes, En Proceso, Pausadas, Finalizadas e Invalidadas sí abren **Órdenes de Trabajo** con el filtro correspondiente.
 - **Órdenes finalizadas esta semana:** Debajo del resumen, un bloque visible para todos los roles con el total de la semana actual (Lunes a Domingo), gráfica por día y listado de las OT cerradas. Al hacer clic en una fila se abre su detalle.
 
@@ -407,6 +408,7 @@ Un valor mayor es mejor. Sin correctivas levantadas o sin horas operativas calcu
 ## Novedades v1.72.0-preview.1 — 27 de octubre de 2026
 
 - **Nuevo:** Asistente GTZ AI (Nivel 2) con panel flotante, respuestas en Markdown y herramientas de solo lectura sobre órdenes, inventario, activos, turnos y guías.
+- **Inicio:** botón **Excel** en **Resumen por periodo** para descargar las cifras y todas las órdenes del rango filtrado, con el histórico completo cuando no hay fechas.
 - **Seguridad:** permisos por rol, técnicos limitados a sus órdenes, costos ocultos sin `MANAGE_INVENTORY` y rate limit de 20 solicitudes cada 5 minutos por usuario.
 - **Configuración:** proveedor compatible con OpenAI, fallback de modelo y modo gratuito con modelos `:free` de OpenRouter. Detalle en [`AI_ASSISTANT.md`](AI_ASSISTANT.md).
 - **Diagnóstico:** estado del asistente y prueba de conexión en Opciones de Desarrollador.

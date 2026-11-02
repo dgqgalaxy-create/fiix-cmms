@@ -4,6 +4,8 @@ export type ExcelSheet = {
   name: string;
   /** Filas como objetos; las claves son los encabezados de columna. */
   rows: Record<string, string | number | boolean | null | undefined>[];
+  /** Anchos de columna en caracteres, en el orden de las claves de cada fila. */
+  columnWidths?: number[];
 };
 
 /** Fecha local YYYY-MM-DD para nombres de archivo. */
@@ -23,7 +25,7 @@ export function downloadWorkbook(filename: string, sheets: ExcelSheet[]): void {
   const usedNames = new Set<string>();
 
   for (const sheet of sheets) {
-    let name = (sheet.name || 'Hoja').replace(/[:\\/?*\[\]]/g, ' ').trim().slice(0, 31) || 'Hoja';
+    let name = (sheet.name || 'Hoja').replace(/[:\\/?*[\]]/g, ' ').trim().slice(0, 31) || 'Hoja';
     let n = 1;
     while (usedNames.has(name)) {
       const suffix = `_${n++}`;
@@ -35,6 +37,9 @@ export function downloadWorkbook(filename: string, sheets: ExcelSheet[]): void {
       ? sheet.rows
       : [{ '(sin datos)': '' }];
     const ws = XLSX.utils.json_to_sheet(rows);
+    if (sheet.columnWidths?.length) {
+      ws['!cols'] = sheet.columnWidths.map((width) => ({ wch: width }));
+    }
     XLSX.utils.book_append_sheet(wb, ws, name);
   }
 

@@ -101,6 +101,7 @@ Marca cada casilla al completar. Anota folio, código o captura si falla un **P0
 ### Inicio / sala de control
 
 - [ ] **P0** `/home` carga tarjetas de estado + bloque «finalizadas esta semana».
+- [ ] **P1** **Resumen por periodo → Excel** descarga `.xlsx` con las cifras del rango filtrado y todas las órdenes del periodo; sin fechas incluye el histórico completo.
 - [ ] **P0** (Admin/Gest) Sala de control visible; clic Urgentes / Sin asignar / SLA → `/dashboard` filtrado.
 - [ ] **P1** Campana: abrir notificación de solicitud → detalle de la OT.
 
