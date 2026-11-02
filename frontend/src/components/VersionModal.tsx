@@ -33,6 +33,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura, preview)"
   ];
   const changelog = [
+    "Corrección: al pulsar «Registrar movimiento» desde el detalle de un repuesto, la ventana de movimiento ahora aparece encima del detalle y ya no queda oculta detrás.",
     "Nuevo: Inventario → Movimientos — botón Excel descarga todo el historial que coincide con la búsqueda, el tipo y las fechas seleccionadas, no solo la página visible; sin fechas incluye el historial completo.",
     "Preview: Asistente GTZ AI (Nivel 2) con botón flotante y panel lateral; consulta datos reales de PostgreSQL con herramientas de solo lectura y responde en Markdown, tablas y listas.",
     "Nuevo: Asistente IA — consulta órdenes, detalle de OT, inventario, activos, resumen de planta, personal en turno y guías de uso de la app.",
