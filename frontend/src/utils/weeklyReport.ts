@@ -97,3 +97,91 @@ export function monthDays(day: string): number {
   return Math.round((Date.parse(`${shiftMonth(day, 1)}T12:00:00Z`) - Date.parse(`${day.slice(0, 7)}-01T12:00:00Z`)) / 86400000);
 }
 export const monthLabel = (day: string) => new Date(`${day.slice(0, 7)}-01T12:00:00Z`).toLocaleDateString('es-MX', { timeZone: 'UTC', month: 'long', year: 'numeric' });
+
+export interface HistoryKpi { valueMs: number | null; sample: number; }
+export interface HistoryReport {
+  total: number;
+  valid: number;
+  totals: Record<WorkOrder['status'], number>;
+  byType: Record<(typeof REPORT_TYPES)[number], number>;
+  statusByType: { status: WorkOrder['status']; counts: Record<(typeof REPORT_TYPES)[number], number> }[];
+  kpis: { response: HistoryKpi; repair: HistoryKpi; cycle: HistoryKpi };
+  monthly: { month: string; label: string; created: number; completed: number }[];
+}
+
+const monthKey = (iso: string): string => plantDay(iso).slice(0, 7);
+const monthShort = (month: string): string =>
+  new Date(`${month}-01T12:00:00Z`).toLocaleDateString('es-MX', { timeZone: 'UTC', month: 'short', year: '2-digit' });
+
+/** Promedio (ms) de una lista de duraciones positivas. */
+function averageMs(values: number[]): { valueMs: number | null; sample: number } {
+  const positives = values.filter((value) => Number.isFinite(value) && value > 0);
+  if (positives.length === 0) return { valueMs: null, sample: 0 };
+  return { valueMs: positives.reduce((sum, value) => sum + value, 0) / positives.length, sample: positives.length };
+}
+
+/**
+ * Totales acumulados de TODO el historial de OT: matriz estado × tipo, KPIs de
+ * tiempos (respuesta, reparación y ciclo) y evolución mensual (levantadas vs
+ * finalizadas).
+ */
+export function historyReport(orders: WorkOrder[], now: number): HistoryReport {
+  const totals = Object.fromEntries(REPORT_STATUSES.map((status) => [status, 0])) as Record<WorkOrder['status'], number>;
+  const byType = Object.fromEntries(REPORT_TYPES.map((type) => [type, 0])) as Record<(typeof REPORT_TYPES)[number], number>;
+  const statusByType = REPORT_STATUSES.map((status) => ({
+    status,
+    counts: Object.fromEntries(REPORT_TYPES.map((type) => [type, 0])) as Record<(typeof REPORT_TYPES)[number], number>,
+  }));
+  const byMonth = new Map<string, { created: number; completed: number }>();
+  const responseTimes: number[] = [];
+  const repairTimes: number[] = [];
+  const cycleTimes: number[] = [];
+
+  for (const order of orders) {
+    totals[order.status] += 1;
+    byType[order.maintenance_type] += 1;
+    const row = statusByType.find((item) => item.status === order.status)!;
+    row.counts[order.maintenance_type] += 1;
+
+    const createdMonth = monthKey(order.created_at);
+    const month = byMonth.get(createdMonth) ?? { created: 0, completed: 0 };
+    month.created += 1;
+    byMonth.set(createdMonth, month);
+
+    if (order.completed_at) {
+      const completedMonth = monthKey(order.completed_at);
+      const m = byMonth.get(completedMonth) ?? { created: 0, completed: 0 };
+      m.completed += 1;
+      byMonth.set(completedMonth, m);
+    }
+
+    if (order.created_at && order.started_at) {
+      responseTimes.push(Date.parse(order.started_at) - Date.parse(order.created_at));
+    }
+    if (order.status === 'FINALIZADO') {
+      const repair = repairMs(order, now);
+      if (repair !== null) repairTimes.push(repair);
+      if (order.completed_at && order.created_at) {
+        cycleTimes.push(Date.parse(order.completed_at) - Date.parse(order.created_at));
+      }
+    }
+  }
+
+  const monthly = [...byMonth.entries()]
+    .map(([month, counts]) => ({ month, label: monthShort(month), ...counts }))
+    .sort((a, b) => a.month.localeCompare(b.month));
+
+  return {
+    total: orders.length,
+    valid: totals.PENDIENTE + totals.EN_PROCESO + totals.EN_ESPERA + totals.FINALIZADO,
+    totals,
+    byType,
+    statusByType,
+    kpis: {
+      response: averageMs(responseTimes),
+      repair: averageMs(repairTimes),
+      cycle: averageMs(cycleTimes),
+    },
+    monthly,
+  };
+}

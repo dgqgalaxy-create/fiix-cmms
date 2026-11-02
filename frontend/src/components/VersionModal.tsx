@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.72.0-preview.1";
+export const APP_VERSION = "1.72.0-preview.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura, preview)"
   ];
   const changelog = [
+    "Nuevo: Informes — botón «Histórico» con el resumen acumulado de todas las OT (totales por estado y tipo, KPIs de tiempos de respuesta/reparación/ciclo y evolución mensual de levantadas vs finalizadas).",
     "Nuevo: Inicio — «Resumen por periodo» incluye un botón «Excel» que descarga las cifras filtradas y todas las órdenes del periodo seleccionado (sin fechas, el histórico completo).",
     "Nuevo: Portal de solicitudes — cada resultado de la consulta incluye «Ver detalles», que abre una ventana con fechas, solicitante, zona, activo, prioridad, descripción, técnicos asignados, trabajo realizado, diagnóstico y evidencias fotográficas.",
     "Corrección: al pulsar «Registrar movimiento» desde el detalle de un repuesto, la ventana de movimiento ahora aparece encima del detalle y ya no queda oculta detrás.",

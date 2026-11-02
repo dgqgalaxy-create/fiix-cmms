@@ -7,10 +7,20 @@ import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatWorkOrderFolio } from '../utils/folio';
-import { monthDays, monthLabel, shiftMonth, addDays, plantDay, weekStart, weekNumber, weekQuery, weeklyReport, weeklyCompletions, repairMs, REPORT_TZ, REPORT_STATUSES, REPORT_TYPES, REPORT_LABELS, TYPE_LABELS } from '../utils/weeklyReport';
+import { monthDays, monthLabel, shiftMonth, addDays, plantDay, weekStart, weekNumber, weekQuery, weeklyReport, weeklyCompletions, repairMs, historyReport, REPORT_TZ, REPORT_STATUSES, REPORT_TYPES, REPORT_LABELS, TYPE_LABELS } from '../utils/weeklyReport';
 
 const dayLabel = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString('es-MX', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'short' });
 const timestamp = (value?: string) => value ? new Date(value).toLocaleString('es-MX', { timeZone: REPORT_TZ, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+const durationLabel = (ms: number): string => {
+  const total = Math.round(ms / 60000);
+  if (total < 60) return `${total} min`;
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h < 24) return m ? `${h} h ${m} min` : `${h} h`;
+  const d = Math.floor(h / 24);
+  const hh = h % 24;
+  return hh ? `${d} d ${hh} h` : `${d} d`;
+};
 const button = 'rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-800';
 const dayDivider = 'border-l-2 border-slate-300 dark:border-slate-600';
 const panel = 'overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900';
@@ -19,6 +29,7 @@ const statusColor = { PENDIENTE: 'text-amber-700 dark:text-amber-300', EN_PROCES
 export default function WeeklyReportPage() {
   const [params, setParams] = useSearchParams();
   const monthly = params.get('period') === 'month';
+  const history = params.get('period') === 'history';
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<WorkOrder | null>(null);
   const [now, setNow] = useState(Date.now);
@@ -28,7 +39,7 @@ export default function WeeklyReportPage() {
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const monday = (monthly ? selectedMonth : selectedWeek) ?? currentWeek;
   const dayCount = monthly ? monthDays(monday) : 7;
-  const periodKey = `${monthly ? 'month' : 'week'}:${monday}`;
+  const periodKey = history ? 'history' : `${monthly ? 'month' : 'week'}:${monday}`;
   const sunday = addDays(monday, dayCount - 1);
   const [loaded, setLoaded] = useState<{ week: string; orders: WorkOrder[]; completed: WorkOrder[]; at: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,12 +55,17 @@ export default function WeeklyReportPage() {
     setLoading(true);
     setError('');
     try {
-      const range = weekQuery(monday, dayCount);
-      const [orders, completed] = await Promise.all([
-        getWorkOrders({ ...range, sort: 'oldest' }, request.signal),
-        getWorkOrders({ status: 'FINALIZADO', completedFrom: range.startDate, completedTo: range.endDate }, request.signal),
-      ]);
-      if (!request.signal.aborted) setLoaded({ week: periodKey, orders, completed, at: new Date().toISOString() });
+      if (history) {
+        const orders = await getWorkOrders({ sort: 'oldest' }, request.signal);
+        if (!request.signal.aborted) setLoaded({ week: 'history', orders, completed: [], at: new Date().toISOString() });
+      } else {
+        const range = weekQuery(monday, dayCount);
+        const [orders, completed] = await Promise.all([
+          getWorkOrders({ ...range, sort: 'oldest' }, request.signal),
+          getWorkOrders({ status: 'FINALIZADO', completedFrom: range.startDate, completedTo: range.endDate }, request.signal),
+        ]);
+        if (!request.signal.aborted) setLoaded({ week: periodKey, orders, completed, at: new Date().toISOString() });
+      }
     } catch {
       if (!request.signal.aborted) setError('No se pudo actualizar el informe. Verifica la conexión e intenta nuevamente.');
     } finally {
@@ -69,8 +85,9 @@ export default function WeeklyReportPage() {
   }, [load]);
   useSocketRefresh(['refresh_work_orders', 'work_order_updated', 'connect'], load);
   const data = loaded?.week === periodKey ? loaded : null;
-  const report = useMemo(() => weeklyReport(data?.orders ?? [], monday, today, dayCount), [data, monday, today, dayCount]);
-  const completionData = useMemo(() => weeklyCompletions(data?.completed ?? [], monday, today, dayCount), [data, monday, today, dayCount]);
+  const report = useMemo(() => weeklyReport(history ? [] : (data?.orders ?? []), monday, today, dayCount), [history, data, monday, today, dayCount]);
+  const completionData = useMemo(() => weeklyCompletions(history ? [] : (data?.completed ?? []), monday, today, dayCount), [history, data, monday, today, dayCount]);
+  const historyData = useMemo(() => (history && data ? historyReport(data.orders, now) : null), [history, data, now]);
   const completedTotal = completionData.reduce((sum, day) => sum + day.PREVENTIVO + day.CORRECTIVO + day.SERVICIO, 0);
   const selectWeek = (day: string) => {
     if (!day) return;
@@ -96,16 +113,19 @@ export default function WeeklyReportPage() {
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div><h1 className="text-2xl font-bold sm:text-3xl">Informes</h1><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">OT agrupadas por fecha de levantamiento, con su estado actualizado.</p></div>
       <div className="flex flex-wrap gap-2">
-        <button type="button" className={`${button} inline-flex items-center gap-2`} onClick={() => void downloadPdf()} disabled={!data || loading || exporting || !!error}>
+        {!history && <button type="button" className={`${button} inline-flex items-center gap-2`} onClick={() => void downloadPdf()} disabled={!data || loading || exporting || !!error}>
           <Download size={16} />{exporting ? 'Generando PDF…' : 'Descargar PDF'}
-        </button>
+        </button>}
         <Link to="/dashboard" className={button}>Órdenes de Trabajo</Link>
       </div>
     </div>
     <div className="flex gap-2" aria-label="Tipo de informe">
-      {(['week', 'month'] as const).map(period => <button key={period} type="button" aria-pressed={(period === 'month') === monthly} onClick={() => { setParams(period === 'month' ? { period } : {}); setExportError(''); }} className={`${button} ${(period === 'month') === monthly ? 'bg-emerald-600 text-white hover:bg-emerald-700' : ''}`}>{period === 'month' ? 'Mensual' : 'Semanal'}</button>)}
+      {([['week', 'Semanal'], ['month', 'Mensual'], ['history', 'Histórico']] as const).map(([period, label]) => {
+        const active = period === 'week' ? !monthly && !history : period === 'month' ? monthly : history;
+        return <button key={period} type="button" aria-pressed={active} onClick={() => { setParams(period === 'week' ? {} : { period }); setExportError(''); }} className={`${button} ${active ? 'bg-emerald-600 text-white hover:bg-emerald-700' : ''}`}>{label}</button>;
+      })}
     </div>
-    <section className={`${panel} grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-center`}>
+    {!history && <section className={`${panel} grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-center`}>
       <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-3">
         <button className={button} onClick={() => selectWeek(monthly ? shiftMonth(monday, -1) : addDays(monday, -7))} aria-label={monthly ? 'Mes anterior' : 'Semana anterior'}><ChevronLeft size={18} /></button>
@@ -132,11 +152,91 @@ export default function WeeklyReportPage() {
         </p>
         </div>
       </div>
-    </section>
+    </section>}
     {exportError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{exportError}</p>}
     {error && <div role="alert" className="rounded-xl bg-red-50 p-4 text-red-800 dark:bg-red-950 dark:text-red-200">{error}{data && ' Se muestran los últimos datos recibidos.'}</div>}
     {!data && loading && <p role="status">Cargando informe…</p>}
-    {data && <>
+    {history ? (
+      <section className="space-y-6">
+        <section className={`${panel} p-4`}>
+          <h2 className="text-lg font-bold">Histórico completo</h2>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Todas las OT registradas desde el inicio · Hora de planta (Ciudad de México). {data ? `Última actualización: ${timestamp(data.at)}` : 'Consultando datos…'}</p>
+          {historyData ? (
+            <>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><p className="text-sm">Total levantadas</p><strong className="text-2xl">{historyData.total}</strong></div>
+                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><p className="text-sm">Solicitudes válidas · base del 100 %</p><strong className="text-2xl">{historyData.valid}</strong></div>
+                {REPORT_STATUSES.map(status => (
+                  <div key={status} className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800">
+                    <p className={`text-sm ${statusColor[status]}`}>{REPORT_LABELS[status]}</p>
+                    <strong className="text-2xl">{historyData.totals[status]}</strong>
+                    <span className="ml-3 text-sm text-slate-500 dark:text-slate-400">{status === 'ANULADO' ? 'Fuera del porcentaje' : historyData.valid ? `${(historyData.totals[status] / historyData.valid * 100).toFixed(1)} %` : '—'}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                {([['Respuesta promedio', historyData.kpis.response], ['Reparación promedio', historyData.kpis.repair], ['Ciclo promedio', historyData.kpis.cycle]] as [string, { valueMs: number | null; sample: number }][]).map(([label, kpi]) => (
+                  <div key={label} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{label}</p>
+                    <strong className="text-xl">{kpi.valueMs == null ? '—' : durationLabel(kpi.valueMs)}</strong>
+                    <p className="text-xs text-slate-400">{kpi.sample ? `${kpi.sample} OT` : 'sin datos'}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : loading ? <p className="py-4 text-slate-500 dark:text-slate-400">Cargando historial…</p> : <p className="py-4 text-slate-500 dark:text-slate-400">Sin datos disponibles.</p>}
+        </section>
+
+        {historyData && (
+          <>
+            <section className={`${panel} p-4`}>
+              <h2 className="mb-3 text-lg font-bold">Matriz estado × tipo</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-center text-sm border-collapse">
+                  <thead className="bg-slate-100 dark:bg-slate-800">
+                    <tr><th className="p-2 text-left">Estado</th>{REPORT_TYPES.map(type => <th key={type} className="p-2">{TYPE_LABELS[type]}</th>)}<th className="p-2 font-bold">Total</th></tr>
+                  </thead>
+                  <tbody>
+                    {historyData.statusByType.map(row => (
+                      <tr key={row.status} className="border-t border-slate-200 dark:border-slate-700">
+                        <th className={`p-2 text-left ${statusColor[row.status]}`}>{REPORT_LABELS[row.status]}</th>
+                        {REPORT_TYPES.map(type => <td key={type} className="p-2 tabular-nums">{row.counts[type]}</td>)}
+                        <td className="p-2 font-bold tabular-nums">{historyData.totals[row.status]}</td>
+                      </tr>
+                    ))}
+                    <tr className="border-t border-slate-200 bg-slate-50 font-bold dark:border-slate-700 dark:bg-slate-800">
+                      <th className="p-2 text-left">Total</th>
+                      {REPORT_TYPES.map(type => <td key={type} className="p-2 tabular-nums">{historyData.byType[type]}</td>)}
+                      <td className="p-2 tabular-nums">{historyData.total}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section className={`${panel} p-4 sm:p-5`}>
+              <h2 className="text-lg font-bold">Evolución mensual</h2>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Órdenes levantadas vs finalizadas por mes.</p>
+              <div className="mt-4 h-80 w-full min-w-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={historyData.monthly} accessibilityLayer margin={{ top: 10, right: 8, bottom: 8, left: 0 }} barGap={2} barCategoryGap="20%">
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
+                    <XAxis dataKey="label" interval="preserveStartEnd" tick={{ fill: 'var(--color-fg-muted)', fontSize: 11 }} tickLine={false} axisLine={false} />
+                    <YAxis width={40} allowDecimals={false} domain={[0, 'auto']} tick={{ fill: 'var(--color-fg-muted)', fontSize: 11 }} tickLine={false} axisLine={false} label={{ value: 'OT', position: 'insideTopLeft', fill: 'var(--color-fg-muted)', fontSize: 10 }} />
+                    <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-fg)' }} />
+                    <Legend wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
+                    <Bar dataKey="created" name="Levantadas" fill="#3b82f6" radius={[3, 3, 0, 0]} maxBarSize={32} />
+                    <Bar dataKey="completed" name="Finalizadas" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={32} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </section>
+          </>
+        )}
+      </section>
+    ) : data && (
+      <>
+
       <section className={`${panel} p-4`}>
         <h2 className="mb-3 text-lg font-bold">{monthly ? 'Totales mensuales' : 'Totales semanales'}</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -238,7 +338,8 @@ export default function WeeklyReportPage() {
         </section>)}
         <p className="text-xs text-slate-500 dark:text-slate-400">Tiempo de reparación: trabajo acumulado, excluyendo pausas; incluye el tramo activo de las OT en proceso.</p>
       </section>
-    </>}
+      </>
+    )}
     {selectedOrder && <ErrorBoundary>
       <WorkOrderDetailModal
         key={selectedOrder.id}
