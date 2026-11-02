@@ -1,5 +1,9 @@
 import { Router } from 'express';
-import { getRequestTracking } from '../controllers/requestTrackingController';
+import {
+  getRequestTracking,
+  getRequestTrackingDetail,
+  getRequestTrackingEvidence,
+} from '../controllers/requestTrackingController';
 import { createPublicWorkOrder } from '../controllers/workOrderController';
 import { upload } from '../middlewares/upload';
 import { createRateLimiter } from '../middlewares/rateLimit';
@@ -29,6 +33,8 @@ router.post(
 );
 
 router.get('/requests', publicGetLimiter, getRequestTracking);
+router.get('/requests/:folio', publicGetLimiter, getRequestTrackingDetail);
+router.get('/requests/:folio/evidence/:kind', publicGetLimiter, getRequestTrackingEvidence);
 
 // Endpoints to populate the public form dropdowns without auth
 router.get('/locations', publicGetLimiter, async (_req, res) => {

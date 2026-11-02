@@ -2,20 +2,15 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, CheckCircle2, Clock, Loader2, Search } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Clock, Eye, Loader2, Search } from 'lucide-react';
 import { BACKEND_URL } from '../api/axios';
 import { formatWorkOrderFolio } from '../utils/folio';
+import { getPublicRequestStatus } from '../utils/publicRequestStatus';
+import { RequestTrackingDetailModal } from '../components/RequestTrackingDetailModal';
 
 const PUBLIC_API = `${BACKEND_URL}/api/public`;
 interface Result { folio: number; status: string }
 interface SearchResult { requests: Result[]; total: number; page: number; pageSize: number }
-const states: Record<string, { label: string; detail: string; color: string }> = {
-  PENDIENTE: { label: 'Pendiente', detail: 'La solicitud está registrada y pendiente de atención.', color: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200' },
-  EN_PROCESO: { label: 'En proceso', detail: 'El equipo de mantenimiento está trabajando en la solicitud.', color: 'bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-200' },
-  EN_ESPERA: { label: 'En espera', detail: 'La atención está en pausa, pendiente de continuar.', color: 'bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-200' },
-  FINALIZADO: { label: 'Realizada', detail: 'El trabajo se realizó y la orden fue finalizada.', color: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200' },
-  ANULADO: { label: 'Anulada', detail: 'La orden fue anulada. Este estado no indica que el trabajo se haya realizado.', color: 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200' },
-};
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:ring-2 focus:ring-emerald-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100';
 
 export default function RequestTrackingPortal() {
@@ -31,6 +26,7 @@ export default function RequestTrackingPortal() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [refresh, setRefresh] = useState(0);
+  const [detailFolio, setDetailFolio] = useState<number | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -120,10 +116,17 @@ export default function RequestTrackingPortal() {
             <div className="flex items-center justify-between gap-3"><h2 className="font-bold">{result.total} {result.total === 1 ? 'solicitud encontrada' : 'solicitudes encontradas'}</h2><button onClick={() => setRefresh(value => value + 1)} className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Actualizar estado</button></div>
             {result.requests.length === 0 && <p className="rounded-2xl border border-slate-200 bg-white p-6 text-sm dark:border-slate-800 dark:bg-slate-900">No hay solicitudes para esta búsqueda. Revisa el folio o prueba con menos filtros.</p>}
             {result.requests.map(item => {
-              const state = states[item.status] || { label: 'Estado no disponible', detail: 'Consulta nuevamente más tarde.', color: 'bg-slate-100 text-slate-700' };
+              const state = getPublicRequestStatus(item.status);
               return <article key={item.folio} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-mono text-lg font-bold">{formatWorkOrderFolio(item.folio)}</h3><span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${state.color}`}>{item.status === 'FINALIZADO' ? <CheckCircle2 size={16} /> : <Clock size={16} />}{state.label}</span></div>
                 <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">{state.detail}</p>
+                <button
+                  type="button"
+                  onClick={() => setDetailFolio(item.folio)}
+                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
+                >
+                  <Eye size={16} /> Ver detalles
+                </button>
               </article>;
             })}
             {result.total > result.pageSize && <nav aria-label="Páginas de solicitudes" className="flex items-center justify-between gap-2 text-sm">
@@ -134,6 +137,13 @@ export default function RequestTrackingPortal() {
           </>}
         </div>
       </main>
+      {detailFolio != null && (
+        <RequestTrackingDetailModal
+          key={detailFolio}
+          folio={detailFolio}
+          onClose={() => setDetailFolio(null)}
+        />
+      )}
     </div>
   );
 }

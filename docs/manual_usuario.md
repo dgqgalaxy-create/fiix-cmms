@@ -338,7 +338,7 @@ Selecciona Informe semanal y una fecha de la semana a consultar. El encabezado m
 El resumen agrupa por fecha de levantamiento y muestra el estado actual. El cumplimiento divide las finalizadas entre las órdenes válidas de esa semana, excluyendo anuladas. La gráfica de finalizadas usa fecha de cierre y puede incluir solicitudes levantadas antes. Al consultar semanas anteriores verás los estados actuales, no una fotografía histórica.
 
 ### Consulta pública de solicitudes
-Desde el portal de solicitudes abre la consulta de estado. Busca por folio o utiliza zona y nombre del solicitante. La vista pública devuelve únicamente folio y estado; no permite editar ni muestra el detalle interno de la orden.
+Desde el portal de solicitudes abre la consulta de estado. Busca por folio o utiliza zona y nombre del solicitante. Cada resultado muestra el estado y el enlace **Ver detalles**, que abre una ventana con la información de la solicitud: fechas, solicitante, zona, activo, prioridad, tipo, descripción, técnicos asignados, trabajo realizado, diagnóstico y evidencias fotográficas. La vista pública es de solo lectura y no muestra comentarios internos, costos, refacciones ni firmas.
 
 ### Inventario, notas y preventivos
 El inventario presenta una tabla compacta y navegación plegable. Las notas personales se editan como notas adhesivas de texto libre, sin recordatorios; los pendientes operativos conservan su flujo independiente. En los planes preventivos puedes elegir zona y fecha programada inicial. En el detalle de las órdenes utiliza Asignar técnicos para modificar la asignación cuando tus permisos y el estado lo permitan.
