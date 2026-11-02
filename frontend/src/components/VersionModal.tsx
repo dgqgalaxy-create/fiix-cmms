@@ -33,6 +33,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura, preview)"
   ];
   const changelog = [
+    "Nuevo: Inventario → Movimientos — botón Excel descarga todo el historial que coincide con la búsqueda, el tipo y las fechas seleccionadas, no solo la página visible; sin fechas incluye el historial completo.",
     "Preview: Asistente GTZ AI (Nivel 2) con botón flotante y panel lateral; consulta datos reales de PostgreSQL con herramientas de solo lectura y responde en Markdown, tablas y listas.",
     "Nuevo: Asistente IA — consulta órdenes, detalle de OT, inventario, activos, resumen de planta, personal en turno y guías de uso de la app.",
     "Seguridad: el asistente nunca crea, edita ni borra registros; respeta permisos, limita a los técnicos a sus órdenes y oculta costos de inventario sin permiso. Rate limit de 20 solicitudes cada 5 minutos por usuario.",

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, AlertTriangle, Ban, ShoppingCart, PanelLeftClose, PanelLeftOpen, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter, DollarSign, Trash2 } from 'lucide-react';
 import { 
-  getItems, getItemsPage, getItemById, getTransactionsPage, getTransactionsSummary, getCategories, getLocations, getVendors, getInventorySummary, deleteItem, deleteTransaction
+  getItems, getItemsPage, getItemById, getTransactions, getTransactionsPage, getTransactionsSummary, getCategories, getLocations, getVendors, getInventorySummary, deleteItem, deleteTransaction
 } from '../api/inventory';
 import type { Item, InventoryTransaction, ItemCategory, ItemLocation, Vendor, InventorySummary, TransactionsSummary } from '../api/inventory';
 import { formatCurrency } from '../utils/currency';
@@ -24,6 +24,36 @@ import { InfoTip } from '../components/common/InfoTip';
 import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
 import { mediaUrl } from '../utils/mediaUrl';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+
+type TransactionSortKey = 'date' | 'item' | 'user' | 'amount' | 'reason';
+
+function sortTransactions(
+  list: InventoryTransaction[],
+  sortBy: TransactionSortKey,
+  sortDirection: 'asc' | 'desc'
+): InventoryTransaction[] {
+  return [...list].sort((a, b) => {
+    let cmp = 0;
+    switch (sortBy) {
+      case 'date':
+        cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        break;
+      case 'item':
+        cmp = (a.item?.name || '').localeCompare(b.item?.name || '');
+        break;
+      case 'user':
+        cmp = (a.user?.name || '').localeCompare(b.user?.name || '');
+        break;
+      case 'amount':
+        cmp = a.amount - b.amount;
+        break;
+      case 'reason':
+        cmp = (a.reason || '').localeCompare(b.reason || '');
+        break;
+    }
+    return sortDirection === 'asc' ? cmp : -cmp;
+  });
+}
 
 export const InventoryPage = () => {
   const navigate = useNavigate();
@@ -62,6 +92,7 @@ export const InventoryPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [itemsLoading, setItemsLoading] = useState(false);
   const [txLoading, setTxLoading] = useState(false);
+  const [txExporting, setTxExporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [itemsSearchQ, setItemsSearchQ] = useState('');
   const [txSearchQ, setTxSearchQ] = useState('');
@@ -78,7 +109,7 @@ export const InventoryPage = () => {
   const [sortBy, setSortBy] = useState<'name' | 'code' | 'category' | 'stock'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  const [txSortBy, setTxSortBy] = useState<'date' | 'item' | 'user' | 'amount' | 'reason'>('date');
+  const [txSortBy, setTxSortBy] = useState<TransactionSortKey>('date');
   const [txSortDirection, setTxSortDirection] = useState<'asc' | 'desc'>('desc');
   
   // Pagination (repuestos y movimientos por separado)
@@ -517,7 +548,7 @@ export const InventoryPage = () => {
 
   useEffect(() => {
     setTxCurrentPage(1);
-  }, [searchTerm, movementTypeFilter, activeTab]);
+  }, [searchTerm, movementTypeFilter, activeTab, txStartDate, txEndDate]);
 
   // Página del servidor; orden de columnas solo sobre la página actual
   const paginatedItems = useMemo(() => {
@@ -543,29 +574,10 @@ export const InventoryPage = () => {
     });
   }, [items, sortBy, sortDirection]);
 
-  const paginatedTransactions = useMemo(() => {
-    return [...serverTransactions].sort((a, b) => {
-      let cmp = 0;
-      switch (txSortBy) {
-        case 'date':
-          cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          break;
-        case 'item':
-          cmp = (a.item?.name || '').localeCompare(b.item?.name || '');
-          break;
-        case 'user':
-          cmp = (a.user?.name || '').localeCompare(b.user?.name || '');
-          break;
-        case 'amount':
-          cmp = a.amount - b.amount;
-          break;
-        case 'reason':
-          cmp = (a.reason || '').localeCompare(b.reason || '');
-          break;
-      }
-      return txSortDirection === 'asc' ? cmp : -cmp;
-    });
-  }, [serverTransactions, txSortBy, txSortDirection]);
+  const paginatedTransactions = useMemo(
+    () => sortTransactions(serverTransactions, txSortBy, txSortDirection),
+    [serverTransactions, txSortBy, txSortDirection]
+  );
 
   const filterCriticalStock = () => {
     setShowNoVendorOnly(false);
@@ -662,6 +674,45 @@ export const InventoryPage = () => {
     } catch (error) {
       console.error('Error exporting items', error);
       alert('No se pudo exportar el inventario.');
+    }
+  };
+
+  const handleExportTransactionsExcel = async () => {
+    if (txExporting) return;
+    setTxExporting(true);
+    try {
+      // Sin page/limit: el backend devuelve todo el historial que coincide con los filtros.
+      const list = await getTransactions({
+        movement: movementTypeFilter,
+        q: searchTerm.trim() || undefined,
+        startDate: txStartDate || undefined,
+        endDate: txEndDate || undefined,
+      });
+      if (list.length === 0) {
+        alert('No hay movimientos que coincidan con los filtros actuales.');
+        return;
+      }
+      const rows = sortTransactions(list, txSortBy, txSortDirection).map((tx) => ({
+        Fecha: formatDateTime(tx.created_at),
+        Tipo: tx.amount > 0 ? 'Entrada' : 'Salida',
+        Código: tx.item?.internal_code || '',
+        Repuesto: tx.item?.name || '',
+        UOM: tx.item?.uom || '',
+        Cantidad: tx.amount,
+        'Costo unitario': tx.unit_cost ?? '',
+        Valor: tx.unit_cost != null ? Math.abs(tx.amount) * tx.unit_cost : '',
+        Usuario: tx.user?.name || '',
+        Motivo: tx.reason || '',
+      }));
+      const rangeTag = txStartDate || txEndDate
+        ? `${txStartDate || 'inicio'}_${txEndDate || 'fin'}`
+        : excelDateStamp();
+      downloadWorkbook(`movimientos_${rangeTag}.xlsx`, [{ name: 'Movimientos', rows }]);
+    } catch (error) {
+      console.error('Error exporting transactions', error);
+      alert('No se pudo exportar el historial de movimientos.');
+    } finally {
+      setTxExporting(false);
     }
   };
 
@@ -1264,7 +1315,7 @@ export const InventoryPage = () => {
             icon={Filter}
             tone="blue"
             className="mb-0"
-            hint="La búsqueda y el tipo (entradas / bajas) aplican a la tabla dentro de este marco."
+            hint="La búsqueda, el tipo y las fechas aplican a la tabla y al Excel. El Excel incluye todos los movimientos filtrados, no solo la página visible."
             toolbar={
               <>
                 <div className="flex-1 min-w-[200px] bg-slate-50 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center">
@@ -1305,6 +1356,16 @@ export const InventoryPage = () => {
                   title="Hasta"
                   className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
+                <button
+                  type="button"
+                  onClick={handleExportTransactionsExcel}
+                  disabled={txExporting}
+                  title="Exporta a Excel todos los movimientos que coinciden con los filtros actuales, no solo la página visible."
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-300"
+                >
+                  {txExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                  <span>{txExporting ? 'Exportando…' : 'Excel'}</span>
+                </button>
               </>
             }
           >
