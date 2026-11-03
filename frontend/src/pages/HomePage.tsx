@@ -66,6 +66,7 @@ type SummaryOrdersFilter = {
   openOnly?: boolean;
   startDate?: string;
   endDate?: string;
+  maintenanceType?: 'PREVENTIVO' | 'CORRECTIVO' | 'SERVICIO';
 };
 
 /** Plant-friendly nudges when the current streak is still below the record. */
@@ -276,9 +277,9 @@ export const HomePage = () => {
         if (wo.maintenance_type in counts) counts[wo.maintenance_type as keyof typeof counts]++;
       });
     return [
-      { name: 'Preventivo', value: counts.PREVENTIVO, color: '#10b981' },
-      { name: 'Correctivo', value: counts.CORRECTIVO, color: '#f59e0b' },
-      { name: 'Servicio', value: counts.SERVICIO, color: '#3b82f6' },
+      { name: 'Preventivo', type: 'PREVENTIVO' as const, value: counts.PREVENTIVO, color: '#10b981' },
+      { name: 'Correctivo', type: 'CORRECTIVO' as const, value: counts.CORRECTIVO, color: '#f59e0b' },
+      { name: 'Servicio', type: 'SERVICIO' as const, value: counts.SERVICIO, color: '#3b82f6' },
     ].filter(item => item.value > 0);
   };
 
@@ -323,6 +324,10 @@ export const HomePage = () => {
         setSummaryExporting(false);
       }
     }, 0);
+  };
+
+  const openMaintenanceOrders = (entry: { name: string; type: 'PREVENTIVO' | 'CORRECTIVO' | 'SERVICIO' }) => {
+    setSummaryFilter({ status: 'TOTAL', title: entry.name, maintenanceType: entry.type, startDate: summaryStartDate, endDate: summaryEndDate });
   };
 
   const goControlRoom = (query: string) => navigate(`/dashboard?${query}`);
@@ -441,6 +446,7 @@ export const HomePage = () => {
         priority={summaryFilter.priority}
         unassigned={summaryFilter.unassigned}
         openOnly={summaryFilter.openOnly}
+        maintenanceType={summaryFilter.maintenanceType}
         startDate={summaryFilter.startDate ?? summaryStartDate}
         endDate={summaryFilter.endDate ?? summaryEndDate}
         onClose={() => setSummaryFilter(null)}
@@ -547,7 +553,7 @@ export const HomePage = () => {
           <div className="relative">
             <div className="mb-2">
               <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Distribución de mantenimiento</h3>
-              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">Proporción por tipo de orden</p>
+              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">Proporción por tipo de orden · toca un segmento o etiqueta para ver sus órdenes</p>
             </div>
           {pieData.length > 0 ? (
             <div className="relative mx-auto h-32 w-full">
@@ -563,6 +569,8 @@ export const HomePage = () => {
                     cornerRadius={6}
                     dataKey="value"
                     stroke="none"
+                    onClick={(entry: any) => entry?.type && openMaintenanceOrders(entry)}
+                    className="cursor-pointer"
                   >
                     {pieData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
                   </Pie>
@@ -589,7 +597,12 @@ export const HomePage = () => {
               const percentage = maintenanceTotal ? Math.round((entry.value / maintenanceTotal) * 100) : 0;
               return (
               <div key={entry.name}>
-                <div className="mb-1 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => openMaintenanceOrders(entry)}
+                  className="mb-1 flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-1 py-0.5 text-left hover:bg-slate-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:hover:bg-slate-700/50"
+                  title={`Ver órdenes ${entry.name.toLowerCase()}s`}
+                >
                   <div className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full shadow-sm" style={{ backgroundColor: entry.color }} />
                     <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{entry.name}</span>
@@ -597,7 +610,7 @@ export const HomePage = () => {
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
                     {entry.value} <span className="font-medium text-slate-400">· {percentage}%</span>
                   </span>
-                </div>
+                </button>
                 <div className="h-1 overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-700">
                   <div
                     className="h-full rounded-full transition-all duration-500"

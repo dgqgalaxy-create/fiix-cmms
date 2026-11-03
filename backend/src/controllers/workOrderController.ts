@@ -259,6 +259,7 @@ function buildWorkOrderWhere(req: AuthRequest): Record<string, unknown> {
     tab,
     status,
     priority,
+    maintenanceType,
     unassigned,
     q,
     requester,
@@ -301,6 +302,7 @@ function buildWorkOrderWhere(req: AuthRequest): Record<string, unknown> {
   if (status) and.push({ status: String(status) });
   if (req.query.excludeCancelled === 'true') and.push({ status: { not: 'ANULADO' } });
   if (priority) and.push({ priority: String(priority) });
+  if (maintenanceType) and.push({ maintenance_type: String(maintenanceType) });
   if (unassigned === '1' || unassigned === 'true') {
     and.push({ assigned_technicians: { none: {} } });
   }

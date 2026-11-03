@@ -4,7 +4,7 @@ import { getWorkOrdersPage, updateWorkOrder, type WorkOrder, type Paginated } fr
 import { WorkOrderDetailModal } from './WorkOrderDetailModal';
 import { formatWorkOrderFolio } from '../utils/folio';
 const labels: Record<string, string> = { PENDIENTE: 'Pendientes', EN_PROCESO: 'En proceso', EN_ESPERA: 'Pausadas', FINALIZADO: 'Finalizadas', ANULADO: 'Invalidadas', TOTAL: 'Total recibidas' };
-export function SummaryOrdersModal({ status, startDate, endDate, title, priority, unassigned, openOnly, onClose, onChanged }: {
+export function SummaryOrdersModal({ status, startDate, endDate, title, priority, unassigned, openOnly, maintenanceType, onClose, onChanged }: {
   status: string;
   startDate: string;
   endDate: string;
@@ -12,6 +12,7 @@ export function SummaryOrdersModal({ status, startDate, endDate, title, priority
   priority?: string;
   unassigned?: boolean;
   openOnly?: boolean;
+  maintenanceType?: 'PREVENTIVO' | 'CORRECTIVO' | 'SERVICIO';
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -33,12 +34,12 @@ export function SummaryOrdersModal({ status, startDate, endDate, title, priority
     const controller = new AbortController();
     setLoading(true); setError(false);
     getWorkOrdersPage({ page, limit: 20, sort: 'newest', startDate: startDate || undefined, endDate: endDate || undefined,
-      status: status === 'TOTAL' ? undefined : status, excludeCancelled: status === 'TOTAL', priority, unassigned, openOnly }, controller.signal)
+      status: status === 'TOTAL' ? undefined : status, excludeCancelled: status === 'TOTAL', priority, unassigned, openOnly, maintenanceType }, controller.signal)
       .then(data => { if (!controller.signal.aborted) { setResult(data); if (page > data.totalPages) setPage(data.totalPages); } })
       .catch(() => { if (!controller.signal.aborted) setError(true); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [status, startDate, endDate, priority, unassigned, openOnly, page, revision]);
+  }, [status, startDate, endDate, priority, unassigned, openOnly, maintenanceType, page, revision]);
   return <>
     <div className={`fixed inset-0 ${selected ? 'z-40' : 'z-50'} flex items-center justify-center bg-black/50 p-2 sm:p-4`} onClick={onClose}>
       <section role="dialog" aria-modal="true" aria-labelledby="summary-orders-title" className="flex max-h-[90dvh] w-full max-w-3xl flex-col rounded-2xl bg-white text-slate-900 shadow-xl dark:bg-slate-900 dark:text-slate-100" onClick={e => e.stopPropagation()}
