@@ -1,6 +1,6 @@
 # GTZ CMMS
 
-**Versión actual: v1.72.0-preview.1 · 27 de octubre de 2026.** [Preview del Asistente GTZ AI](docs/releases/v1.72.0-preview.1.md). **Canal preview: no estable.**
+**Versión actual: v1.72.0 · 2 de noviembre de 2026.** [Notas de la versión](docs/releases/v1.72.0.md). **Canal estable.**
 
 **Versión estable: v1.66.0 · 29 de septiembre de 2026.** [Mejoras y alcance de la entrega](docs/releases/v1.66.0.md).
 
@@ -95,7 +95,7 @@ Todas las variables se definen en el archivo **`.env` en la raíz del proyecto**
 | `GOOGLE_DRIVE_*` | **desde la app** | Configurar en Opciones de Desarrollador → Integraciones → Google Drive |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | **desde la app** | Configurar en Opciones de Desarrollador → Integraciones → Telegram |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | `.env` raíz | Opcional: notificaciones Web Push PWA (ver abajo cómo generarlas) |
-| `AI_ENABLED`, `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, `AI_FALLBACK_MODEL` | `.env` raíz | Asistente GTZ AI (solo lectura, preview). Ver [docs/AI_ASSISTANT.md](docs/AI_ASSISTANT.md) |
+| `AI_ENABLED`, `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, `AI_FALLBACK_MODEL` | `.env` raíz | Asistente GTZ AI (solo lectura). Ver [docs/AI_ASSISTANT.md](docs/AI_ASSISTANT.md) |
 
 ### Web Push (VAPID)
 
@@ -120,7 +120,7 @@ VAPID_SUBJECT=mailto:mantenimiento@tuempresa.com
 
 ### Asistente GTZ AI
 
-Chat flotante de **solo lectura** que consulta órdenes, inventario, activos, turnos y guías en tiempo real. Está en **preview** dentro de la versión `v1.72.0-preview.1`. Requiere una API Key de un proveedor compatible con OpenAI:
+Chat flotante de **solo lectura** que consulta órdenes, inventario, activos, turnos y guías en tiempo real. Disponible desde la versión estable `v1.72.0`. Requiere una API Key de un proveedor compatible con OpenAI:
 
 ```env
 AI_ENABLED=true
@@ -381,7 +381,7 @@ La vista autenticada `/weekly-report` se abre desde el menú **Informe semanal**
 - **Reportes & KPIs:** dashboards de disponibilidad, eficiencia, costos; informe MTTR/MTBF por línea (L1–L5) con periodo seleccionable y desglose por equipo.
 - **RCA:** análisis de causa raíz con evidencias (fotos/PDFs).
 - **Notificaciones:** Telegram + Web Push PWA.
-- **Asistente GTZ AI (preview):** chat flotante de solo lectura con herramientas reales sobre PostgreSQL, permisos por rol y respuestas en Markdown.
+- **Asistente GTZ AI:** chat flotante de solo lectura con herramientas reales sobre PostgreSQL, permisos por rol y respuestas en Markdown.
 - **Tiempo real:** Socket.IO para actualizaciones en vivo.
 
 ---
@@ -392,7 +392,7 @@ La vista autenticada `/weekly-report` se abre desde el menú **Informe semanal**
 - **Manual de usuario:** [`docs/manual_usuario.md`](docs/manual_usuario.md)
 - **Respaldos y recuperación:** [`docs/backup-strategy.md`](docs/backup-strategy.md)
 - **Plan de pruebas:** [`docs/plan_pruebas.md`](docs/plan_pruebas.md)
-- **Asistente GTZ AI (preview):** [`docs/AI_ASSISTANT.md`](docs/AI_ASSISTANT.md)
+- **Asistente GTZ AI:** [`docs/AI_ASSISTANT.md`](docs/AI_ASSISTANT.md)
 - **Contexto del proyecto:** [`docs/project_context.md`](docs/project_context.md)
 - **Scripts legados:** [`docs/legacy-scripts.md`](docs/legacy-scripts.md)
 - **Histórico y roadmap:** [`docs/roadmap.md`](docs/roadmap.md)

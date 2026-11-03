@@ -1,8 +1,8 @@
 # Contexto Global del Proyecto (CMMS)
 
-## Versión actual (preview)
+## Versión actual (estable)
 
-v1.72.0-preview.1, 27 de octubre de 2026: Asistente GTZ AI Nivel 2 con datos reales de PostgreSQL, herramientas de solo lectura, permisos por rol, panel flotante y diagnóstico en Opciones de Desarrollador. [Alcance y despliegue](releases/v1.72.0-preview.1.md). **Canal preview: no estable.**
+v1.72.0, 2 de noviembre de 2026: Asistente GTZ AI Nivel 2 (solo lectura), resumen histórico en Informes, gráfica de distribución de mantenimiento interactiva y exportaciones a Excel. [Alcance y despliegue](releases/v1.72.0.md). **Canal estable.**
 
 ## Versión estable vigente
 
@@ -33,7 +33,7 @@ Un Sistema Computarizado de Gestión de Mantenimiento (CMMS / GMAO) self-hosted 
 14. **SLA y notificaciones:** Umbrales por prioridad; Telegram + in-app; campana.
 15. **Capa móvil técnico:** Barra Mis OT / Escanear / Inventario / Inicio.
 16. **Despliegue:** `install.sh` y `update.sh` (Docker Compose `docker-compose.yml`); producción UI+API en `:3000`, nginx o Cloudflare Tunnel opcional.
-17. **Asistente GTZ AI (preview):** chat flotante de solo lectura sobre PostgreSQL con 7 herramientas, permisos por rol, rate limit, fallback de modelo y diagnóstico desde Opciones de Desarrollador.
+17. **Asistente GTZ AI:** chat flotante de solo lectura sobre PostgreSQL con 7 herramientas, permisos por rol, rate limit, fallback de modelo y diagnóstico desde Opciones de Desarrollador.
 
 ## Datos y documentación
 - Seeds/importadores históricos: `backend/src/seed_*.ts`, herramientas en Opciones de desarrollador.

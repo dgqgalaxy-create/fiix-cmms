@@ -3,7 +3,7 @@
 Este documento contiene la lista de módulos y características pendientes de desarrollar. **Se debe actualizar eliminando las tareas al completarlas** para mantenerlo siempre limpio y relevante.
 *(Última actualización: Octubre de 2026)*
 
-### Novedades en v1.72.0-preview.1 (27 de octubre de 2026) — Preview
+### Novedades en v1.72.0 (2 de noviembre de 2026) — Estable
 
 - Asistente GTZ AI Nivel 2: botón flotante y panel lateral con respuestas en Markdown, tablas y sugerencias.
 - Herramientas de solo lectura para órdenes, detalle de OT, inventario, activos, resumen de planta, personal en turno y guías de uso.
@@ -12,7 +12,7 @@ Este documento contiene la lista de módulos y características pendientes de de
 - Proveedor compatible con OpenAI configurable por `.env`, con fallback automático y modo gratuito en OpenRouter.
 - Diagnóstico y prueba de conexión en Opciones de Desarrollador.
 
-[Detalle, configuración y validación](releases/v1.72.0-preview.1.md).
+[Detalle, configuración y validación](releases/v1.72.0.md).
 
 ### Novedades en v1.67.0 (30 de septiembre de 2026)
 

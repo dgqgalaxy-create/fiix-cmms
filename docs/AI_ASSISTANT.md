@@ -1,6 +1,6 @@
 # Asistente GTZ AI (Nivel 2) — Preview
 
-> **Estado:** preview en `v1.72.0-preview.1` (27 de octubre de 2026). No es una versión estable; la configuración, los modelos y la interfaz pueden cambiar antes del release definitivo.
+> **Estado:** estable en `v1.72.0` (2 de noviembre de 2026).
 
 Asistente de chat disponible en la esquina inferior derecha de la appweb. Consulta datos reales de PostgreSQL mediante **herramientas de solo lectura** y responde en español con Markdown, tablas, listas y sugerencias.
 
@@ -135,7 +135,7 @@ En la interfaz, el botón **Asistente IA** abre el panel. Las respuestas muestra
 
 > **Rotación de claves:** si una API Key se comparte en un chat, en un ticket o en un repositorio, rótala en el proveedor y actualiza solo el `.env` del servidor. Nunca la subas a Git.
 
-## Limitaciones de la preview
+## Limitaciones conocidas
 
 - El asistente es de **solo lectura**: no reemplaza los flujos de creación, edición o cierre de la app.
 - La calidad de las respuestas depende del modelo; los modelos gratuitos pueden ser más lentos, tener menos contexto útil o cambiar de disponibilidad.

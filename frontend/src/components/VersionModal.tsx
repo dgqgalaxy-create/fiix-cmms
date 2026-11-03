@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.72.0-preview.3";
+export const APP_VERSION = "1.72.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -13,7 +13,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
 
   const version = APP_VERSION;
   const isPreview = /-preview/i.test(version);
-  const updateDate = "27 de Octubre, 2026";
+  const updateDate = "2 de Noviembre, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -30,7 +30,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Notas y pendientes",
     "Calendario de Horarios y Turnos (Roster)",
     "Opciones de Desarrollador",
-    "Asistente GTZ AI (solo lectura, preview)"
+    "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
     "Nuevo: Inicio — la gráfica «Distribución de mantenimiento» es interactiva: toca un segmento o su etiqueta (Preventivo, Correctivo o Servicio) para abrir la lista de órdenes de ese tipo en una ventana, respetando el periodo seleccionado.",

@@ -1,5 +1,5 @@
 # Manual de Usuario - GTZ CMMS
-*(Versión 1.72.0-preview.1 - 27 de Octubre, 2026)*
+*(Versión 1.72.0 - 2 de Noviembre, 2026)*
 
 Este manual se mantiene alineado con cada release de la app (misma versión que `package.json` y el modal de novedades).
 
@@ -303,7 +303,7 @@ El botón flotante **Asistente IA**, en la esquina inferior derecha, abre un pan
 - Tiene un límite de **20 solicitudes cada 5 minutos por usuario**. Si se alcanza, espera unos minutos y vuelve a intentar.
 - Si el proveedor de IA devuelve un error, el panel muestra un mensaje genérico; el detalle queda en los logs del servidor.
 - La conexión se configura en el `.env` del servidor (`AI_ENABLED`, `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, `AI_FALLBACK_MODEL`). Un administrador puede probar el estado y la conexión desde **Opciones de Desarrollador**.
-- Esta función está en **preview**: puede cambiar antes de la versión estable. No compartas API Keys en capturas, chats ni reportes.
+- Esta función usa una API Key del servidor; no compartas las claves en capturas, chats ni reportes.
 
 Guía técnica, proveedores gratuitos y diagnóstico: [`docs/AI_ASSISTANT.md`](AI_ASSISTANT.md).
 
@@ -405,11 +405,11 @@ El valor es una estimación en horas: duración transcurrida del periodo en día
 
 Un valor mayor es mejor. Sin correctivas levantadas o sin horas operativas calculables se muestra **—**. La meta se configura en horas; un valor de **0** deja la tarjeta **Sin meta**, sin calificarla como cumplida. MTBF también se incluye en la exportación de indicadores.
 
-## Novedades v1.72.0-preview.1 — 27 de octubre de 2026
+## Novedades v1.72.0 — 2 de noviembre de 2026
 
 - **Nuevo:** Asistente GTZ AI (Nivel 2) con panel flotante, respuestas en Markdown y herramientas de solo lectura sobre órdenes, inventario, activos, turnos y guías.
 - **Inicio:** botón **Excel** en **Resumen por periodo** para descargar las cifras y todas las órdenes del rango filtrado, con el histórico completo cuando no hay fechas.
 - **Seguridad:** permisos por rol, técnicos limitados a sus órdenes, costos ocultos sin `MANAGE_INVENTORY` y rate limit de 20 solicitudes cada 5 minutos por usuario.
 - **Configuración:** proveedor compatible con OpenAI, fallback de modelo y modo gratuito con modelos `:free` de OpenRouter. Detalle en [`AI_ASSISTANT.md`](AI_ASSISTANT.md).
 - **Diagnóstico:** estado del asistente y prueba de conexión en Opciones de Desarrollador.
-- **Canal:** preview, no estable. La versión estable vigente sigue siendo v1.66.0.
+- **Canal:** estable.
