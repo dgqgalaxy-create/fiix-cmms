@@ -1,6 +1,6 @@
 # GTZ CMMS
 
-**Versión actual: v1.72.0 · 2 de noviembre de 2026.** [Notas de la versión](docs/releases/v1.72.0.md). **Canal estable.**
+**Versión actual: v1.73.0 · 2 de noviembre de 2026.** [Notas de la versión](docs/releases/v1.72.0.md). **Canal estable.**
 
 **Versión estable: v1.66.0 · 29 de septiembre de 2026.** [Mejoras y alcance de la entrega](docs/releases/v1.66.0.md).
 

@@ -2,7 +2,7 @@
 
 ## Versión actual (estable)
 
-v1.72.0, 2 de noviembre de 2026: Asistente GTZ AI Nivel 2 (solo lectura), resumen histórico en Informes, gráfica de distribución de mantenimiento interactiva y exportaciones a Excel. [Alcance y despliegue](releases/v1.72.0.md). **Canal estable.**
+v1.73.0, 2 de noviembre de 2026: Asistente GTZ AI Nivel 2 (solo lectura), resumen histórico en Informes, gráfica de distribución de mantenimiento interactiva y exportaciones a Excel. [Alcance y despliegue](releases/v1.72.0.md). **Canal estable.**
 
 ## Versión estable vigente
 
