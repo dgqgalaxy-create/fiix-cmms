@@ -66,6 +66,7 @@ export const DeveloperOptions = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
+  const [cancellingImport, setCancellingImport] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteUploads, setDeleteUploads] = useState(true);
@@ -1145,6 +1146,13 @@ export const DeveloperOptions = () => {
         },
       });
       setUploadProgress(100);
+      // Cancelación pedida por el usuario: no es un fallo, se informa y se sale.
+      if ((res.data as { cancelled?: boolean } | undefined)?.cancelled) {
+        setError(null);
+        setSuccessMsg(String((res.data as { message?: string }).message || 'Importación cancelada.'));
+        setTimeout(() => setSuccessMsg(null), 12000);
+        return;
+      }
       const results = res.data.results;
       setSuccessMsg(
         formatImportResultsMessage(
@@ -1348,6 +1356,29 @@ export const DeveloperOptions = () => {
     return msg;
   };
 
+  /** Pide cancelar la importación en curso (CSV o Sheets/Drive) sin reiniciar el servidor. */
+  const handleCancelImport = async () => {
+    setCancellingImport(true);
+    try {
+      await axios.post(
+        '/dev/import-cancel',
+        {},
+        { headers: { 'x-dev-password': password }, timeout: 15_000 }
+      );
+    } catch (err: unknown) {
+      // 409 = ya no hay importación (terminó sola) o ya se estaba cancelando.
+      const status = isAxiosError(err) ? err.response?.status : undefined;
+      if (status !== 409) {
+        const detail = isAxiosError(err)
+          ? (err.response?.data as { message?: string } | undefined)?.message || err.message
+          : 'error desconocido';
+        setError(`No se pudo cancelar la importación: ${detail}`);
+      }
+    } finally {
+      setTimeout(() => setCancellingImport(false), 5000);
+    }
+  };
+
   const handleImportSheets = async () => {
     setIsLoading(true);
     setLoadingMessage(
@@ -1396,7 +1427,15 @@ export const DeveloperOptions = () => {
           setLoadingMessage(null);
           setImportLiveProgress(null);
           setIsLoading(false);
-          setError(`Fallo al importar desde Google Sheets: ${d.message || 'Error desconocido'}`);
+          const msg = String(d.message || '');
+          // Cancelación (usuario o tope de tiempo): informar, no como fallo rojo.
+          if (/cancelad|tiempo máximo/i.test(msg)) {
+            setError(null);
+            setSuccessMsg(msg || 'Importación cancelada.');
+            setTimeout(() => setSuccessMsg(null), 12000);
+          } else {
+            setError(`Fallo al importar desde Google Sheets: ${msg || 'Error desconocido'}`);
+          }
         }
       } catch {
         // El poll reintenta en el siguiente tick.
@@ -3260,7 +3299,18 @@ export const DeveloperOptions = () => {
             )}
             <button
               type="button"
-              className="mt-5 text-sm font-semibold text-slate-500 underline hover:text-slate-800 dark:hover:text-slate-200"
+              className="mt-5 w-full rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-60"
+              disabled={cancellingImport}
+              onClick={() => void handleCancelImport()}
+            >
+              {cancellingImport ? 'Cancelando…' : 'Cancelar importación'}
+            </button>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              Se detiene entre archivos. Los datos ya confirmados se conservan.
+            </p>
+            <button
+              type="button"
+              className="mt-3 text-sm font-semibold text-slate-500 underline hover:text-slate-800 dark:hover:text-slate-200"
               onClick={() => {
                 setLoadingMessage(null);
                 setImportLiveProgress(null);

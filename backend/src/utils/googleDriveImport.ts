@@ -368,10 +368,19 @@ export async function downloadPublicDriveFolderToTemp(
   folderId: string,
   apiKey: string,
   label = 'drive',
-  onProgress?: (p: DriveDownloadProgress) => void
+  onProgress?: (p: DriveDownloadProgress) => void,
+  opts?: { signal?: AbortSignal }
 ): Promise<DriveDownloadResult> {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), `fiix-${label}-`));
   const errors: string[] = [];
+  const signal = opts?.signal;
+  /** Corta entre archivos: latencia máxima = una descarga (60 s). */
+  const checkAbort = (): void => {
+    if (signal?.aborted) {
+      const reason = signal.reason;
+      throw reason instanceof Error ? reason : new Error('Importación cancelada.');
+    }
+  };
   let filesDownloaded = 0;
   let skipped = 0;
   let consecutiveFailures = 0;
@@ -406,9 +415,11 @@ export async function downloadPublicDriveFolderToTemp(
   };
 
   emit('list', 0, 0, 0, true);
+  checkAbort();
   const listed = await listPublicDriveFolderFiles(folderId, apiKey, (n) => {
     emit('list', n, 0, 0);
   });
+  checkAbort();
   const imageLike = listed.filter((f) => {
     const n = normalizeDriveImageFilename(f.name);
     return /\.(jpe?g|png|webp|gif)$/i.test(n);
@@ -451,6 +462,7 @@ export async function downloadPublicDriveFolderToTemp(
 
   await mapPool(rest, DOWNLOAD_CONCURRENCY, async (file) => {
     if (abortAll) return;
+    checkAbort();
     const safeName = normalizeDriveImageFilename(file.name).replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
     if (!safeName) {
       skipped++;
@@ -484,6 +496,7 @@ export async function downloadPublicDriveFolderToTemp(
   if (abortAll) {
     throw abortAll;
   }
+  checkAbort();
 
   emit('download', listed.length, filesDownloaded, imageLike.length, true);
   console.log(

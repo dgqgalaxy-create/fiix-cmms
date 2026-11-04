@@ -42,6 +42,7 @@ import {
   type DriveDownloadProgress,
 } from './googleDriveImport';
 import { setImportProgress } from './importProgress';
+import { ImportCancelledError, isImportCancelled, throwIfCancelled } from './importCancel';
 import { importInventoryTransactionsFile } from './inventoryCsvImport';
 
 export class CsvImportError extends Error {
@@ -213,6 +214,12 @@ export type ProcessCsvImportOptions = {
    * exportes reales contienen filas incompletas y no deben tumbar la importación.
    */
   strictRows?: boolean;
+  /**
+   * Señal de cancelación del trabajo (ver utils/importCancel).
+   * Se consulta entre etapas y cada 256 filas; al abortarse, la transacción de
+   * datos se revierte y las fotos pendientes quedan para el siguiente import.
+   */
+  signal?: AbortSignal;
 };
 
 function readImportFileUtf8(file: ImportFileLike): string {
@@ -270,6 +277,11 @@ export async function processCsvImportFiles(
   const includeLocalPhotoFolders = options.includeLocalPhotoFolders !== false;
   const useGoogleDrive = Boolean(options.useGoogleDrive);
   const skipAssets = Boolean(options.skipAssets);
+  /** Punto seguro de cancelación: entre etapas y cada 256 filas. */
+  const guard = (): void => throwIfCancelled(options.signal);
+  const guardEvery = (i: number): void => {
+    if ((i & 255) === 0) guard();
+  };
   const zipFile = options.zipFile ?? null;
   const vendorZipFile = options.vendorZipFile ?? null;
   const woZipFile = options.woZipFile ?? null;
@@ -302,6 +314,7 @@ const parseNumber = (val: any): number => {
 if (!files || files.length === 0) {
   throw new CsvImportError('No se subieron archivos CSV.', 400);
 }
+guard();
 
 const catFile = files.find(f => f.originalname.includes('Categories'));
 const locFile = files.find(f => f.originalname.includes('Location'));
@@ -334,12 +347,15 @@ const pushImportRowWarning = (kind: string, line: number, error: unknown): never
 
 const woPhotoMappings: WorkOrderPhotoMapping[] = [];
 
+guard();
 await prisma.$transaction(async (prisma) => {
   // Protege también invocaciones del motor fuera de las rutas HTTP.
   await prisma.$executeRaw`SELECT pg_advisory_xact_lock(16310, 2)`;
+  guard();
 if (catFile) {
   const data = parse(readImportFileUtf8(catFile), { columns: true, skip_empty_lines: true });
   for (let _i = 0; _i < data.length; _i++) {
+    guardEvery(_i);
     const row = data[_i] as any;
     const csvLine = _i + 2; // la fila 1 es el encabezado
     try {
@@ -361,6 +377,7 @@ if (catFile) {
 if (locFile) {
   const data = parse(readImportFileUtf8(locFile), { columns: true, skip_empty_lines: true });
   for (let _i = 0; _i < data.length; _i++) {
+    guardEvery(_i);
     const row = data[_i] as any;
     const csvLine = _i + 2; // la fila 1 es el encabezado
     try {
@@ -382,6 +399,7 @@ if (locFile) {
 if (venFile) {
   const data = parse(readImportFileUtf8(venFile), { columns: true, skip_empty_lines: true });
   for (let _i = 0; _i < data.length; _i++) {
+    guardEvery(_i);
     const row = data[_i] as any;
     const csvLine = _i + 2; // la fila 1 es el encabezado
     try {
@@ -452,6 +470,7 @@ if (itemFile) {
   }
 
   for (let _i = 0; _i < data.length; _i++) {
+    guardEvery(_i);
     const row = data[_i] as any;
     const csvLine = _i + 2; // la fila 1 es el encabezado
     try {
@@ -550,6 +569,7 @@ if (userFile) {
   }
 
   for (let _i = 0; _i < data.length; _i++) {
+    guardEvery(_i);
     const row = data[_i] as any;
     const csvLine = _i + 2; // la fila 1 es el encabezado
     try {
@@ -617,6 +637,7 @@ if (userFile) {
 }
 
 if (invFile) {
+  guard();
   // Importe seguro de movimientos: SIN truncar el historial. Solo crea filas que
   // no existan (dedupe por Inventory ID / tupla) y reporta filas ignoradas.
   const inv = await importInventoryTransactionsFile(invFile, {
@@ -644,6 +665,7 @@ if (woFile) {
     let csvRowNum = 1; // la fila 1 es el encabezado
     for (const row of data as any[]) {
       csvRowNum++;
+      guardEvery(csvRowNum);
       try {
         const folioCsv = parseWorkOrderFolio(row['FOLIO']);
         if (!folioCsv) continue;
@@ -811,10 +833,12 @@ if (woFile) {
 
 }, { maxWait: 10000, timeout: 600000 });
 // Las fotos son un paso independiente y recuperable; no bloquean la transacción de datos.
+guard();
 
 // Fotos de repuestos: zip > Google Drive (carpeta pública) > data/Items_Images/
 try {
 if (zipFile?.path) {
+  guard();
   try {
     const photoResult = await assignItemImagesFromZip(zipFile.path);
     results.itemImages = {
@@ -844,7 +868,8 @@ if (zipFile?.path) {
       itemsFolderId,
       driveApiKey,
       'items',
-      (p) => reportDriveProgress(p, 55, 18)
+      (p) => reportDriveProgress(p, 55, 18),
+      { signal: options.signal }
     );
     driveItemsTemp = dl.dir;
     setImportProgress('assign_photos', 74, 'Asignando fotos de inventario…', {
@@ -867,6 +892,7 @@ if (zipFile?.path) {
       driveErrors: dl.errors,
     };
   } catch (photoErr: any) {
+    if (isImportCancelled(photoErr)) throw photoErr;
     console.error('Item images Drive import error:', photoErr);
     results.itemImages = {
       matched: 0,
@@ -900,7 +926,9 @@ if (zipFile?.path) {
 
 // Logos de proveedores: zip > Google Drive > data/Vendors_Images/
 try {
+guard();
 if (vendorZipFile?.path) {
+  guard();
   try {
     const logoResult = await assignVendorLogosFromZip(vendorZipFile.path);
     results.vendorImages = {
@@ -928,7 +956,8 @@ if (vendorZipFile?.path) {
       vendorsFolderId,
       driveApiKey,
       'vendors',
-      (p) => reportDriveProgress(p, 72, 6)
+      (p) => reportDriveProgress(p, 72, 6),
+      { signal: options.signal }
     );
     driveVendorsTemp = dl.dir;
     setImportProgress('assign_photos', 78, 'Asignando logos de proveedores…', {
@@ -950,6 +979,7 @@ if (vendorZipFile?.path) {
       driveErrors: dl.errors,
     };
   } catch (logoErr: any) {
+    if (isImportCancelled(logoErr)) throw logoErr;
     console.error('Vendor logos Drive import error:', logoErr);
     results.vendorImages = {
       matched: 0,
@@ -1010,12 +1040,14 @@ if (woZipFile?.path && woPhotoMappings.length > 0) {
     };
   }
 } else if (woPhotoMappings.length > 0 && !woZipFile && useGoogleDrive && driveApiKey && woFolderId) {
+  guard();
   try {
     const dl = await downloadPublicDriveFolderToTemp(
       woFolderId,
       driveApiKey,
       'wo',
-      (p) => reportDriveProgress(p, 76, 18)
+      (p) => reportDriveProgress(p, 76, 18),
+      { signal: options.signal }
     );
     driveWoTemp = dl.dir;
     setImportProgress('assign_photos', 95, 'Asignando fotos de órdenes…', {
@@ -1039,6 +1071,7 @@ if (woZipFile?.path && woPhotoMappings.length > 0) {
       driveErrors: dl.errors,
     };
   } catch (woPhotoErr: any) {
+    if (isImportCancelled(woPhotoErr)) throw woPhotoErr;
     console.error('Work order images Drive import error:', woPhotoErr);
     results.workOrderImages = {
       matched: 0,

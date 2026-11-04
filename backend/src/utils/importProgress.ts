@@ -30,6 +30,8 @@ export type ImportProgress = {
   result?: unknown;
   /** ISO timestamp de cuándo terminó (done/error). */
   finishedAt?: string;
+  /** true mientras el usuario pidió cancelar y el motor va a detenerse. */
+  cancelling?: boolean;
 };
 
 let importProgress: ImportProgress = {
@@ -59,6 +61,7 @@ export function setImportProgress(
   extra?: Partial<Pick<ImportProgress, 'downloaded' | 'total' | 'listed' | 'label' | 'active' | 'result' | 'finishedAt'>>
 ): void {
   const active = extra?.active ?? (phase !== 'done' && phase !== 'error' && phase !== 'idle');
+  const finishing = phase === 'done' || phase === 'error' || phase === 'idle';
   importProgress = {
     active,
     phase,
@@ -70,5 +73,16 @@ export function setImportProgress(
     label: extra?.label,
     result: extra?.result,
     finishedAt: extra?.finishedAt,
+    // La bandera de cancelación solo vive mientras el trabajo sigue en curso.
+    cancelling: finishing ? false : importProgress.cancelling,
+  };
+}
+
+/** Marca la cancelación pedida por el usuario para que la UI lo muestre al instante. */
+export function markImportCancelling(): void {
+  importProgress = {
+    ...importProgress,
+    cancelling: true,
+    message: 'Cancelando importación…',
   };
 }

@@ -60,10 +60,16 @@ app.use(
 // Lecturas (GET/HEAD) siguen disponibles; el import en sí ya pasó este middleware
 // antes de activar el modo, así que no se bloquea a sí mismo.
 app.get('/api/maintenance-state', authenticate, async (_req, res) => { res.json(await getSharedMaintenanceState()); });
+/**
+ * Rutas exentas del bloqueo de escrituras durante mantenimiento:
+ * login/refresh y el control del propio import (cancelar debe funcionar
+ * justo cuando el servidor está en solo lectura por una importación).
+ */
+const MAINTENANCE_BYPASS = [/^\/api\/auth\//, /^\/api\/dev\/import-cancel$/];
 app.use(async (req: Request, res: Response, next: NextFunction) => {
   if (
-    !req.path.startsWith('/api/auth/') &&
     ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method.toUpperCase()) &&
+    !MAINTENANCE_BYPASS.some((re) => re.test(req.path)) &&
     (await getSharedMaintenanceState()).active
   ) {
     res.status(503).json({

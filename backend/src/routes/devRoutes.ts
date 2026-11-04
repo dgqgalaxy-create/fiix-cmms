@@ -30,7 +30,15 @@ import {
   getDriveVendorsFolderId,
   setDriveDbSettings,
 } from '../utils/googleDriveImport';
-import { getImportProgress, setImportProgress, resetImportProgress } from '../utils/importProgress';
+import { getImportProgress, setImportProgress, resetImportProgress, markImportCancelling } from '../utils/importProgress';
+import {
+  startImportGuard,
+  endImportGuard,
+  requestImportCancel,
+  isImportCancelled,
+  throwIfCancelled,
+  ImportCancelledError,
+} from '../utils/importCancel';
 import {
   enterMaintenance,
   exitMaintenance,
@@ -767,6 +775,7 @@ router.post(
   }
 
   try {
+    const signal = startImportGuard();
     const useGoogleDrive =
       String((req.body as any)?.useGoogleDrive || '').toLowerCase() === 'true' ||
       String((req.body as any)?.useGoogleDrive || '') === '1';
@@ -780,6 +789,7 @@ router.post(
       woZipFile,
       useGoogleDrive,
       skipAssets,
+      signal,
     });
     await logImportAudit({
       source: 'csv',
@@ -793,6 +803,27 @@ router.post(
     res.json({ success: true, message: 'Archivos CSV importados con éxito.', results });
   } catch (error: any) {
     const authReq = req as AuthRequest;
+    // Cancelación pedida desde la UI: no es un fallo, se responde 200 para que el
+    // cliente muestre "cancelada" sin un error rojo.
+    if (isImportCancelled(error)) {
+      await logImportAudit({
+        source: 'csv',
+        userId: authReq.user?.userId,
+        errorMessage: error.message,
+        useGoogleDrive:
+          String((req.body as any)?.useGoogleDrive || '').toLowerCase() === 'true' ||
+          String((req.body as any)?.useGoogleDrive || '') === '1',
+      });
+      res.json({
+        success: false,
+        cancelled: true,
+        message:
+          error.reason === 'timeout'
+            ? error.message
+            : 'Importación cancelada. Los datos ya confirmados se conservan y puedes reimportar cuando quieras.',
+      });
+      return;
+    }
     await logImportAudit({
       source: 'csv',
       userId: authReq.user?.userId,
@@ -809,6 +840,10 @@ router.post(
     res.status(500).json({ message: 'Error procesando archivos CSV.', error: error.message });
   } finally {
     await endImportJob();
+    endImportGuard();
+    // El flujo CSV no usa el sondeo de progreso; se limpia para no dejar
+    // "Cancelando importación…" colgado si el usuario canceló.
+    resetImportProgress();
     for (const f of uploadedTemps) {
       unlinkUploadedSafe(f);
     }
@@ -935,13 +970,16 @@ async function runSheetsImportJob(opts: {
   userId: string | null;
   useGoogleDrive: boolean;
   skipAssets: boolean;
+  signal: AbortSignal;
 }): Promise<void> {
   const tempPaths: string[] = [];
   try {
     resetImportProgress();
     setImportProgress('sheets', 5, 'Leyendo pestañas de Google Sheets…');
+    throwIfCancelled(opts.signal);
     fs.mkdirSync(importTmpDir, { recursive: true });
     const tabs = await fetchAllImportTabs();
+    throwIfCancelled(opts.signal);
     const nonEmpty = tabs.filter((t) => t.records.length > 0);
     if (nonEmpty.length === 0) {
       setImportProgress('error', 0, 'Hojas vacías o sin filas', { active: false, finishedAt: new Date().toISOString() });
@@ -970,6 +1008,7 @@ async function runSheetsImportJob(opts: {
       includeLocalPhotoFolders: true,
       useGoogleDrive: opts.useGoogleDrive,
       skipAssets: opts.skipAssets,
+      signal: opts.signal,
     });
 
     const sheetsMeta = tabs.map((t) => ({
@@ -990,6 +1029,7 @@ async function runSheetsImportJob(opts: {
       finishedAt: new Date().toISOString(),
     });
   } catch (error: any) {
+    const cancelled = isImportCancelled(error);
     const msg = String(error?.message || error);
     setImportProgress('error', 0, msg || 'Error en importación', {
       active: false,
@@ -1001,9 +1041,14 @@ async function runSheetsImportJob(opts: {
       errorMessage: msg,
       useGoogleDrive: opts.useGoogleDrive,
     });
-    console.error('Sheets import error:', error);
+    if (cancelled) {
+      console.log(`[Import] Sheets detenida (${(error as ImportCancelledError).reason}): ${msg}`);
+    } else {
+      console.error('Sheets import error:', error);
+    }
   } finally {
     await endImportJob();
+    endImportGuard();
     for (const p of tempPaths) {
       try {
         fs.unlinkSync(p);
@@ -1029,13 +1074,35 @@ router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Respo
     String((req.body as any)?.skipAssets || '') === '1';
 
   // Trabajo en segundo plano: el cliente sondea GET /import-progress hasta done/error.
-  void runSheetsImportJob({ userId: authReq.user?.userId ?? null, useGoogleDrive, skipAssets });
+  const signal = startImportGuard();
+  void runSheetsImportJob({ userId: authReq.user?.userId ?? null, useGoogleDrive, skipAssets, signal });
   res.json({ started: true, message: 'Importación iniciada en segundo plano.' });
 });
 
 /** Progreso de import CSV/Sheets/Drive (poll mientras corre el POST). */
 router.get('/import-progress', verifyDevPassword, (_req: Request, res: Response): void => {
   res.json(getImportProgress());
+});
+
+/**
+ * Cancela la importación en curso (CSV o Sheets/Drive).
+ * El motor se detiene en el siguiente punto seguro: entre archivos o entre etapas.
+ * La transacción de datos se revierte completa, así que no quedan datos a medias.
+ */
+router.post('/import-cancel', verifyDevPassword, (_req: Request, res: Response): void => {
+  if (!isImportJobActive()) {
+    res.status(409).json({ message: 'No hay ninguna importación en curso.' });
+    return;
+  }
+  if (!requestImportCancel()) {
+    res.status(409).json({ message: 'La importación ya se está cancelando.' });
+    return;
+  }
+  markImportCancelling();
+  res.status(202).json({
+    cancelling: true,
+    message: 'Cancelación solicitada. La importación se detendrá en el siguiente punto seguro.',
+  });
 });
 
 /** Estado de Google Drive (nunca expone la API key). */
