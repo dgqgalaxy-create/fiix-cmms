@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.73.1";
+export const APP_VERSION = "1.73.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -13,7 +13,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
 
   const version = APP_VERSION;
   const isPreview = /-preview/i.test(version);
-  const updateDate = "3 de Noviembre, 2026";
+  const updateDate = "5 de Noviembre, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -33,6 +33,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Mejora: Personal — las tarjetas muestran el nombre completo (varias líneas si hace falta) en lugar de recortarlo con puntos suspensivos.",
+    "Nuevo: Personal — cada tarjeta indica la última conexión de la persona, en letra pequeña bajo el turno actual; al pasar el cursor se ve la fecha y hora exactas.",
     "Nuevo: Opciones de Desarrollador — botón «Cancelar importación» mientras corre una importación de CSV o de Google Sheets/Drive. Se detiene en el siguiente punto seguro (entre archivos), libera el modo solo lectura sin reiniciar el servidor y no deja datos a medias: la transacción se revierte completa.",
     "Mejora: la importación tiene un tope de tiempo configurable (IMPORT_MAX_MS, 45 minutos por defecto); si Drive se atasca, el trabajo se detiene solo y el candado de importación se libera.",
     "Nuevo: Inicio — la gráfica «Distribución de mantenimiento» es interactiva: toca un segmento o su etiqueta (Preventivo, Correctivo o Servicio) para abrir la lista de órdenes de ese tipo en una ventana, respetando el periodo seleccionado.",

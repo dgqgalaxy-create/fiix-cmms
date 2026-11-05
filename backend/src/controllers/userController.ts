@@ -24,7 +24,9 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
         email: true,
         role: true,
         is_active: true,
-        created_at: true
+        created_at: true,
+        // Última conexión (heartbeat cada 30 s): la muestran las tarjetas de Personal.
+        last_active: true,
       }
     });
 

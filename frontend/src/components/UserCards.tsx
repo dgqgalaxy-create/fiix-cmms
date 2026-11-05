@@ -1,5 +1,6 @@
 import { Mail, ClipboardList, CheckCircle2, Activity } from 'lucide-react';
 import type { PersonnelRosterStatus } from '../utils/personnelRoster';
+import { formatLastSeen, formatLastSeenExact } from '../utils/lastSeen';
 import type { User } from '../api/users';
 import type { WorkOrder } from '../api/workOrders';
 
@@ -105,7 +106,7 @@ export const UserCards = ({
           <div
             key={u.id}
             onClick={() => (canManage && onUserClick ? onUserClick(u) : undefined)}
-            className={`bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 transition-all ${
+            className={`bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 transition-all min-w-0 ${
               canManage && onUserClick
                 ? 'hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-700 cursor-pointer'
                 : ''
@@ -118,11 +119,13 @@ export const UserCards = ({
                 {initials(u.name) || '?'}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-semibold text-slate-800 dark:text-slate-100 truncate" title={u.name}>
+                <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+                  {/* Nombre completo: envuelve en varias líneas en lugar de recortarse.
+                      Si el nombre no cabe junto a las etiquetas, baja a su propia línea. */}
+                  <h3 className="min-w-0 flex-1 basis-40 font-semibold leading-snug text-slate-800 break-words dark:text-slate-100">
                     {u.name}
                   </h3>
-                  <div className="flex max-w-[55%] flex-col items-end gap-1">
+                  <div className="ml-auto flex max-w-[60%] shrink-0 flex-col items-end gap-1">
                   <span
                     className={`inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-full border shrink-0 ${
                       ROLE_CHIP[u.role] || ROLE_CHIP.OBSERVADOR
@@ -132,6 +135,12 @@ export const UserCards = ({
                   </span>
                   <span title={`Horario de hoy: ${scheduleLabel}`} className={`rounded-md px-2 py-0.5 text-right text-[10px] font-medium ${!rosterUnavailable && u.is_active && rosterStatus?.kind === 'work' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : !rosterUnavailable && rosterStatus?.kind === 'absence' ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
                     {scheduleLabel}
+                  </span>
+                  <span
+                    className="max-w-full text-right text-[10px] leading-tight text-slate-400 dark:text-slate-500"
+                    title={formatLastSeenExact(u.last_active)}
+                  >
+                    {formatLastSeen(u.last_active)}
                   </span>
                   </div>
                 </div>
@@ -155,7 +164,7 @@ export const UserCards = ({
                   )}
                 </p>
                 {u.email && (
-                  <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                     <Mail className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate" title={u.email}>
                       {u.email}
