@@ -566,7 +566,34 @@ export const RosterPage = () => {
               </div>
               
               <div className="mt-8 border-t border-slate-200 dark:border-slate-700 pt-4">
-                <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Índice de Incidencias:</h4>
+                <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Índice de colores:</h4>
+
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Turnos del calendario
+                </p>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-3 text-xs">
+                  {[
+                    { color: SHIFT_TYPES.find((t) => t.code === 'D')?.color ?? '#3b82f6', label: 'Turno día', hint: '4x4 fijo (4 días) y los días de día del 4x4 rotatorio' },
+                    { color: SHIFT_TYPES.find((t) => t.code === 'N')?.color ?? '#1e3a8a', label: 'Turno noche', hint: 'Noches del 4x4 rotatorio (2 noches)' },
+                    { color: SHIFT_TYPES.find((t) => t.code === 'M')?.color ?? '#0284c7', label: 'Turno mixto', hint: 'Patrón mixto: L-V día y sábado medio' },
+                    { color: '#cbd5e1', label: 'Descanso', hint: 'Día libre del ciclo' },
+                  ].map((t) => (
+                    <div key={t.label} className="flex items-start gap-2 text-slate-600 dark:text-slate-400">
+                      <span
+                        className="mt-0.5 h-3 w-3 shrink-0 rounded-sm ring-1 ring-black/10 dark:ring-white/20"
+                        style={{ backgroundColor: t.color }}
+                      />
+                      <span>
+                        <span className="font-medium text-slate-700 dark:text-slate-300">{t.label}</span>
+                        <span className="block text-[10px] leading-tight text-slate-400 dark:text-slate-500">{t.hint}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <p className="mb-2 mt-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Incidencias
+                </p>
                 <div className="grid grid-cols-2 gap-x-2 gap-y-3 text-xs">
                   {EXCEPTION_TYPES.map(t => (
                     <div key={t.type} className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
@@ -575,6 +602,24 @@ export const RosterPage = () => {
                     </div>
                   ))}
                 </div>
+
+                <p className="mb-2 mt-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Turnos importados del Excel
+                </p>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-3 text-xs">
+                  {SHIFT_TYPES.filter((t) => ['D_TE', 'N_TE', 'I', 'X', 'CURSO'].includes(t.code)).map(t => (
+                    <div key={t.code} className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                      <span
+                        className="font-bold text-white px-2 py-0.5 rounded"
+                        style={{ backgroundColor: t.color }}
+                      >[{t.short}]</span>
+                      <span>= {t.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 text-[10px] leading-snug text-slate-400 dark:text-slate-500">
+                  D, N, M, TE, TxT, V, F y PSG se describen arriba (turnos del calendario o incidencias).
+                </p>
               </div>
 
             </div>
