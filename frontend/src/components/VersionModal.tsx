@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.73.2";
+export const APP_VERSION = "1.74.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,9 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: Horarios — vista «Semana» (matriz Personal × Días) como vista predeterminada: una fila por persona y una columna por día, con todos los turnos a la vista (se acaba el «+N más»), columna del día actual resaltada y fila de cobertura diaria con el conteo por turno. Puedes arrastrar incidencias a cualquier celda y abrir el detalle del día con un clic.",
+    "Nuevo: Horarios — botón «Semana / Mes» en la parte superior para alternar entre la matriz semanal y el calendario de mes completo de siempre. Atajos de teclado: S (semana), M (mes), H (hoy) y ← → para cambiar de semana.",
+    "Nuevo: Horarios — índice de colores ampliado: ahora explica también Turno día, Turno noche, Turno mixto y Descanso (antes solo se describían las incidencias), además de los turnos importados del Excel (D+TE, N+TE, I, X, CURSO).",
     "Mejora: Personal — las tarjetas muestran el nombre completo (varias líneas si hace falta) en lugar de recortarlo con puntos suspensivos.",
     "Nuevo: Personal — cada tarjeta indica la última conexión de la persona, en letra pequeña bajo el turno actual; al pasar el cursor se ve la fecha y hora exactas.",
     "Nuevo: Opciones de Desarrollador — botón «Cancelar importación» mientras corre una importación de CSV o de Google Sheets/Drive. Se detiene en el siguiente punto seguro (entre archivos), libera el modo solo lectura sin reiniciar el servidor y no deja datos a medias: la transacción se revierte completa.",

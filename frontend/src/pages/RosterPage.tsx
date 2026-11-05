@@ -12,6 +12,8 @@ import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useAuth } from '../context/AuthContext';
 import { getRoster, assignPattern, removePattern, addException, removeException, importRosterCalendar } from '../api/roster';
 import { RosterWeeklySummaryModal } from '../components/RosterWeeklySummaryModal';
+import { RosterMatrix, type RosterMatrixDay } from '../components/RosterMatrix';
+import { rosterEventColor } from '../utils/rosterVisuals';
 import type { TechnicianPattern, TechnicianException, TechnicianShift, RosterResponse, RosterImportSummary } from '../api/roster';
 import { startOfMonth, endOfMonth, differenceInDays, addDays } from 'date-fns';
 import { Trash2, UserPlus, BarChart3, Calendar as CalendarIcon, Clock, AlertCircle, X, Printer, FileSpreadsheet, Loader2 } from 'lucide-react';
@@ -81,6 +83,8 @@ export const RosterPage = () => {
   const [showWeeklySummary, setShowWeeklySummary] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [personFilter, setPersonFilter] = useState('ALL');
+  /** Vista por defecto: semana (matriz). Mes = calendario clásico completo. */
+  const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   
   const [selectedUser, setSelectedUser] = useState('');
   const [selectedPattern, setSelectedPattern] = useState('4X4_ROTATORIO');
@@ -373,27 +377,9 @@ export const RosterPage = () => {
   }, [data?.holidays]);
 
   const eventPropGetter = useCallback((event: RosterEvent) => {
-    let bgColor = '#cbd5e1'; // default slate-300 for Descanso
-    
-    if (event.isException) {
-      const typeInfo = EXCEPTION_TYPES.find(t => t.type === event.shiftTitle);
-      if (typeInfo) {
-        if (typeInfo.type === 'FALTA') bgColor = '#ef4444';
-        else if (typeInfo.type === 'VACACIONES') bgColor = '#10b981';
-        else if (typeInfo.type === 'PERMISO_SG') bgColor = '#f59e0b';
-        else if (typeInfo.type === 'PERMISO_CG') bgColor = '#6366f1';
-        else if (typeInfo.type === 'TIEMPO_EXTRA') bgColor = '#06b6d4';
-        else if (typeInfo.type === 'TIEMPO_POR_TIEMPO') bgColor = '#14b8a6';
-        else bgColor = '#d946ef';
-      }
-    } else if (event.shiftCode) {
-      const typeInfo = SHIFT_TYPES.find(t => t.code === event.shiftCode);
-      bgColor = typeInfo ? typeInfo.color : '#cbd5e1';
-    } else {
-      if (event.shiftTitle === 'Día') bgColor = '#3b82f6';
-      else if (event.shiftTitle === 'Noche') bgColor = '#1e3a8a';
-      else if (event.shiftTitle.includes('Mixto')) bgColor = '#0284c7';
-    }
+    // Un solo lugar define los colores (utils/rosterVisuals) para que el
+    // calendario, la matriz y el índice de colores no se desincronicen.
+    const bgColor = rosterEventColor(event);
 
     return {
       style: {
@@ -408,6 +394,82 @@ export const RosterPage = () => {
     };
   }, []);
 
+  // --- Matriz Personal × Días -------------------------------------------------
+  const matrixWeekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
+
+  const matrixDays = useMemo<RosterMatrixDay[]>(() => {
+    const todayIso = format(new Date(), 'yyyy-MM-dd');
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = addDays(matrixWeekStart, index);
+      const iso = format(date, 'yyyy-MM-dd');
+      const holiday = data?.holidays?.find((h) => h.date.split('T')[0] === iso)?.name;
+      const weekday = format(date, 'EEE', { locale: es });
+      return {
+        iso,
+        weekday: weekday.charAt(0).toUpperCase() + weekday.slice(1),
+        dayNumber: format(date, 'd'),
+        isWeekend: getDay(date) === 0 || getDay(date) === 6,
+        isToday: iso === todayIso,
+        holiday,
+      };
+    });
+  }, [matrixWeekStart, data?.holidays]);
+
+  const matrixWeekLabel = useMemo(() => {
+    const end = addDays(matrixWeekStart, 6);
+    return `${format(matrixWeekStart, 'd MMM', { locale: es })} – ${format(end, 'd MMM yyyy', { locale: es })}`;
+  }, [matrixWeekStart]);
+
+  /** Mismas reglas de visibilidad que el calendario (técnico ve solo lo suyo). */
+  const matrixPeople = useMemo(() => {
+    const myId = user?.userId || user?.id || '';
+    const myName = (user?.name || '').trim().toLowerCase();
+    let list = activeTechnicians;
+    if (isTecnico) {
+      list = list.filter((person) => person.id === myId || (myName && (person.name || '').toLowerCase() === myName));
+    } else if (personFilter !== 'ALL') {
+      list = list.filter((person) => person.id === personFilter);
+    }
+    return list.map((person) => ({ id: person.id, name: person.name, is_active: person.is_active }));
+  }, [activeTechnicians, isTecnico, user, personFilter]);
+
+  const handleMatrixDrop = useCallback((personId: string, iso: string) => {
+    if (!draggedException) return;
+    addException({ user_id: personId, date: iso, exception_type: draggedException.type })
+      .then(() => fetchData())
+      .catch(console.error);
+    setDraggedException(null);
+  }, [draggedException, fetchData]);
+
+  /**
+   * Atajos del módulo: S = semana, M = mes, H = hoy, ←/→ = semana anterior/siguiente.
+   * Se ignoran al escribir en un campo o con un modal abierto.
+   */
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName ?? '';
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || target?.isContentEditable) return;
+      if (showPatternModal || showImportModal || selectedDay || hoursAssignment || showWeeklySummary) return;
+
+      const key = event.key.toLowerCase();
+      if (key === 's') {
+        setViewMode('week');
+      } else if (key === 'm') {
+        setViewMode('month');
+      } else if (key === 'h') {
+        setCurrentDate(new Date());
+      } else if (key === 'arrowleft' || key === 'arrowright') {
+        if (viewMode !== 'week') return;
+        event.preventDefault();
+        setCurrentDate(addDays(matrixWeekStart, key === 'arrowleft' ? -7 : 7));
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [viewMode, matrixWeekStart, showPatternModal, showImportModal, selectedDay, hoursAssignment, showWeeklySummary]);
+
   return (
     <div className="h-full flex flex-col space-y-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
@@ -419,6 +481,36 @@ export const RosterPage = () => {
           <p className="text-slate-500 dark:text-slate-400 text-sm">Gestiona los patrones 4x4 y mixtos, y asigna excepciones arrastrando los bloques.</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Selector de vista: Semana (matriz, por defecto) o Mes (calendario clásico) */}
+          <div className="flex overflow-hidden rounded-xl border border-slate-300 text-sm dark:border-slate-600 print:hidden">
+            <button
+              type="button"
+              onClick={() => setViewMode('week')}
+              aria-pressed={viewMode === 'week'}
+              title="Vista de semana: matriz con todas las personas (atajo: S)"
+              className={`px-3 py-2 font-medium transition-colors ${
+                viewMode === 'week'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600'
+              }`}
+            >
+              Semana
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('month')}
+              aria-pressed={viewMode === 'month'}
+              title="Vista de mes: calendario completo (atajo: M)"
+              className={`px-3 py-2 font-medium transition-colors ${
+                viewMode === 'month'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600'
+              }`}
+            >
+              Mes
+            </button>
+          </div>
+
           {canManageShifts && (
             <button
               onClick={() => setShowWeeklySummary(true)}
@@ -486,6 +578,54 @@ export const RosterPage = () => {
             <div className="flex-1 flex items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
+          ) : viewMode === 'week' ? (
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1 print:hidden">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentDate(addDays(matrixWeekStart, -7))}
+                    aria-label="Semana anterior"
+                    className="rounded-lg border border-slate-300 px-2 py-1 text-sm leading-none text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentDate(new Date())}
+                    className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                  >
+                    Hoy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentDate(addDays(matrixWeekStart, 7))}
+                    aria-label="Semana siguiente"
+                    className="rounded-lg border border-slate-300 px-2 py-1 text-sm leading-none text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                  >
+                    ›
+                  </button>
+                  <span className="ml-2 text-sm font-bold text-slate-700 dark:text-slate-200">{matrixWeekLabel}</span>
+                </div>
+                <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                  {matrixPeople.length} persona{matrixPeople.length === 1 ? '' : 's'}
+                  {canManageShifts ? ' · arrastra una incidencia sobre una celda' : ''}
+                  <span className="hidden sm:inline"> · atajos: S semana · M mes · ← → cambiar semana</span>
+                </span>
+              </div>
+              <div className="min-h-0 flex-1">
+                <RosterMatrix
+                  days={matrixDays}
+                  people={matrixPeople}
+                  events={events}
+                  canManageShifts={canManageShifts}
+                  draggingException={Boolean(draggedException)}
+                  onSelectDay={(iso) => setSelectedDay(parse(iso, 'yyyy-MM-dd', new Date()))}
+                  onSelectEvent={handleSelectEvent}
+                  onDropOnCell={handleMatrixDrop}
+                />
+              </div>
+            </div>
           ) : (
             <DnDCalendar
               localizer={localizer}
@@ -494,7 +634,7 @@ export const RosterPage = () => {
               endAccessor="end"
               onNavigate={(date: Date) => setCurrentDate(date)}
               date={currentDate}
-              views={['month', 'week']}
+              views={['month']}
               defaultView="month"
               culture="es"
               style={{ height: '100%', minHeight: 400 }}
