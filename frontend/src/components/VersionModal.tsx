@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.78.0";
+export const APP_VERSION = "1.79.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,9 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: Repuestos — tabla con columnas de ancho ajustable (arrastra el borde del encabezado), menú ⋮ en cada columna para ordenar u ocultarla, y botón «Columnas» para mostrar/ocultar y restablecer. El tamaño se recuerda en el navegador.",
+    "Mejora: Repuestos — el panel lateral titula con el nombre del artículo y su código, y agrupa a la derecha los botones Registrar movimiento, Editar y Eliminar.",
+    "Nuevo: Repuestos — pestaña «Archivos»: sube PDF, Word, Excel, CSV, TXT o imágenes (máx. 20 MB), consulta quién y cuándo los subió, ábrelos o elimínalos desde ahí.",
     "Nuevo: Repuestos — selector «Tabla / Tarjetas» en la barra (recuerda tu elección). La tabla mantiene orden por columna y la vista de tarjetas ahora también funciona en escritorio.",
     "Nuevo: Repuestos — el detalle se abre como panel lateral deslizante, con el repuesto a la vista y tres pestañas: Detalle, Movimientos y Equipos que lo usan.",
     "Nuevo: Repuestos — pestaña «Equipos»: muestra en qué activos está asignado el repuesto, con zona, cantidad y si el equipo es crítico.",

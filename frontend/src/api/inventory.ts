@@ -239,6 +239,33 @@ export const getItemAssets = async (id: string): Promise<ItemAssetUsage[]> => {
   return response.data;
 };
 
+export interface ItemFile {
+  id: string;
+  item_id: string;
+  file_url: string;
+  file_name: string;
+  mime_type?: string | null;
+  size?: number | null;
+  uploaded_by?: { id: string; name: string } | null;
+  created_at: string;
+}
+
+export const getItemFiles = async (id: string): Promise<ItemFile[]> => {
+  const response = await axiosInstance.get<ItemFile[]>(`/inventory/items/${id}/files`);
+  return response.data;
+};
+
+export const uploadItemFile = async (id: string, file: File): Promise<ItemFile> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await axiosInstance.post<ItemFile>(`/inventory/items/${id}/files`, formData);
+  return response.data;
+};
+
+export const deleteItemFile = async (id: string, fileId: string): Promise<void> => {
+  await axiosInstance.delete(`/inventory/items/${id}/files/${fileId}`);
+};
+
 export const createItem = async (formData: FormData) => {
   const response = await axiosInstance.post<Item>('/inventory/items', formData);
   return response.data;

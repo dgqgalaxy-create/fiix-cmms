@@ -4,12 +4,13 @@ import {
   getLocations, createLocation, updateLocation, deleteLocation,
   getVendors, createVendor, updateVendor, deleteVendor,
   getItems, getItemById, getItemAssets, createItem, updateItem, deleteItem,
+  getItemFiles, uploadItemFile, deleteItemFile,
   getTransactions, createTransaction, deleteTransaction, getTransactionsSummary,
   getInventorySummary,
   searchImages, proxyImage
 } from '../controllers/inventoryController';
 import { authenticate, requirePermission, requireWritable } from '../middlewares/authMiddleware';
-import { createDiskUploader } from '../middlewares/upload';
+import { createDiskUploader, createDocumentUploader } from '../middlewares/upload';
 import path from 'path';
 
 const router = Router();
@@ -18,6 +19,8 @@ const uploadDir = path.join(__dirname, '../../uploads/inventory');
 const upload = createDiskUploader(uploadDir, { maxFiles: 2 });
 const vendorsUploadDir = path.join(__dirname, '../../uploads/vendors');
 const vendorsUpload = createDiskUploader(vendorsUploadDir, { maxFiles: 1 });
+const itemFilesUploadDir = path.join(__dirname, '../../uploads/inventory-files');
+const itemFilesUpload = createDocumentUploader(itemFilesUploadDir);
 
 router.use(authenticate);
 
@@ -52,6 +55,9 @@ router.delete('/vendors/:id', requireWritable, requirePermission('MANAGE_INVENTO
 router.get('/items', getItems);
 router.get('/items/:id', getItemById);
 router.get('/items/:id/assets', getItemAssets);
+router.get('/items/:id/files', getItemFiles);
+router.post('/items/:id/files', requireWritable, requirePermission('MANAGE_INVENTORY'), itemFilesUpload.single('file'), uploadItemFile);
+router.delete('/items/:id/files/:fileId', requireWritable, requirePermission('MANAGE_INVENTORY'), deleteItemFile);
 router.post('/items', requireWritable, requirePermission('MANAGE_INVENTORY'), upload.fields([{ name: 'image', maxCount: 1 }]), createItem);
 router.patch('/items/:id', requireWritable, requirePermission('MANAGE_INVENTORY'), upload.fields([{ name: 'image', maxCount: 1 }]), updateItem);
 router.delete('/items/:id', requireWritable, requirePermission('DELETE_ITEMS'), deleteItem);

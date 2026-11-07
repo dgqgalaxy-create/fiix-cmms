@@ -1,5 +1,7 @@
 import http from 'http';
 import https from 'https';
+import fs from 'fs';
+import path from 'path';
 import { Request, Response } from 'express';
 import type { Prisma } from '@prisma/client';
 import prisma from '../config/prisma';
@@ -334,6 +336,86 @@ export const getItemById = async (req: Request, res: Response): Promise<void> =>
 };
 
 const INITIAL_STOCK_REASON = 'Levantamiento de inventario (stock inicial)';
+
+/* -------------------------------------------------------------------------- */
+/* Archivos del repuesto (fichas técnicas, manuales, cotizaciones…)           */
+/* -------------------------------------------------------------------------- */
+
+/** GET /api/inventory/items/:id/files */
+export const getItemFiles = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const files = await prisma.itemFile.findMany({
+      where: { item_id: id },
+      include: { uploaded_by: { select: { id: true, name: true } } },
+      orderBy: { created_at: 'desc' },
+    });
+    res.json(files);
+  } catch (error) {
+    console.error('Error listando archivos del repuesto:', error);
+    res.status(500).json({ error: 'Error al obtener los archivos del repuesto' });
+  }
+};
+
+/** POST /api/inventory/items/:id/files (multipart, campo `file`) */
+export const uploadItemFile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ error: 'Adjunta un archivo.' });
+      return;
+    }
+    const item = await prisma.item.findUnique({ where: { id }, select: { id: true } });
+    if (!item) {
+      res.status(404).json({ error: 'Repuesto no encontrado' });
+      return;
+    }
+    const created = await prisma.itemFile.create({
+      data: {
+        item_id: id,
+        file_url: `/uploads/inventory-files/${file.filename}`,
+        file_name: file.originalname || file.filename,
+        mime_type: file.mimetype || null,
+        size: file.size ?? null,
+        uploaded_by_id: (req as any).user?.userId ?? null,
+      },
+      include: { uploaded_by: { select: { id: true, name: true } } },
+    });
+    res.status(201).json(created);
+  } catch (error) {
+    console.error('Error subiendo archivo del repuesto:', error);
+    res.status(500).json({ error: 'No se pudo subir el archivo' });
+  }
+};
+
+/** DELETE /api/inventory/items/:id/files/:fileId */
+export const deleteItemFile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const fileId = req.params.fileId as string;
+    const existing = await prisma.itemFile.findFirst({ where: { id: fileId, item_id: id } });
+    if (!existing) {
+      res.status(404).json({ error: 'Archivo no encontrado' });
+      return;
+    }
+    await prisma.itemFile.delete({ where: { id: fileId } });
+
+    // Borra el binario del disco sin tumbar la operación si ya no existe.
+    try {
+      const relative = existing.file_url.replace(/^\/uploads\//, '');
+      const diskPath = path.join(__dirname, '../../uploads', relative);
+      if (fs.existsSync(diskPath)) fs.unlinkSync(diskPath);
+    } catch (diskError) {
+      console.error('No se pudo borrar el archivo del disco:', diskError);
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error eliminando archivo del repuesto:', error);
+    res.status(500).json({ error: 'No se pudo eliminar el archivo' });
+  }
+};
 
 /** GET /api/inventory/items/:id/assets — equipos que tienen asignado este repuesto. */
 export const getItemAssets = async (req: Request, res: Response): Promise<void> => {

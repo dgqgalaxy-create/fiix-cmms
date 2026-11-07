@@ -127,6 +127,7 @@ model User {
   time_debts           TechnicianTimeDebt[]
   shifts               TechnicianShift[]
   meter_readings       MeterReading[]
+  item_files           ItemFile[]
   preferences          Json?       @default("{}")
 }
 
@@ -413,6 +414,7 @@ model Item {
   maintenance_plans      PlanItem[]
   purchase_order_items   PurchaseOrderItem[]
   asset_parts            AssetPart[]
+  files                  ItemFile[]
 
   @@index([category_id])
   @@index([location_id])
@@ -1063,4 +1065,23 @@ model MeterTrigger {
 enum MeterTriggerCondition {
   GTE
   LTE
+}
+
+// ---------------------------------------------------------------------------
+// Archivos del repuesto: fichas técnicas, manuales, cotizaciones…
+// ---------------------------------------------------------------------------
+
+model ItemFile {
+  id             String   @id @default(uuid()) @db.Uuid
+  item_id        String   @db.Uuid
+  item           Item     @relation(fields: [item_id], references: [id], onDelete: Cascade)
+  file_url       String
+  file_name      String
+  mime_type      String?
+  size           Int?
+  uploaded_by_id String?  @db.Uuid
+  uploaded_by    User?    @relation(fields: [uploaded_by_id], references: [id], onDelete: SetNull)
+  created_at     DateTime @default(now())
+
+  @@index([item_id])
 }

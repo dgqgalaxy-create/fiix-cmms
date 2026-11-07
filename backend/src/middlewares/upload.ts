@@ -71,3 +71,35 @@ export function createDiskUploader(
     fileFilter: opts?.allowPdf ? assetFileFilter : imageFileFilter,
   });
 }
+
+/** Documentos de repuesto: PDF, Word, Excel, CSV, texto e imagenes. */
+export const DOCUMENT_MIME =
+  /^(application\/pdf|application\/msword|application\/vnd\.openxmlformats-officedocument\.(wordprocessingml\.document|spreadsheetml\.sheet)|application\/vnd\.ms-excel|text\/plain|text\/csv|image\/(jpeg|jpg|png|webp))$/i;
+
+export const DOCUMENT_FILE_SIZE = 20 * 1024 * 1024;
+
+/** Multer para documentos de repuesto (hasta 20 MB, varios tipos). */
+export function createDocumentUploader(destDir: string, maxFiles = 5) {
+  if (!fs.existsSync(destDir)) {
+    fs.mkdirSync(destDir, { recursive: true });
+  }
+  const disk = multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, destDir),
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const ext = path.extname(file.originalname).toLowerCase() || '.bin';
+      cb(null, `doc-${uniqueSuffix}${ext}`);
+    },
+  });
+  return multer({
+    storage: disk,
+    limits: { fileSize: DOCUMENT_FILE_SIZE, files: maxFiles },
+    fileFilter: (_req, file, cb) => {
+      if (DOCUMENT_MIME.test(file.mimetype)) {
+        cb(null, true);
+        return;
+      }
+      cb(new Error('Formato no permitido: usa PDF, Word, Excel, CSV, TXT o imagen.'));
+    },
+  });
+}

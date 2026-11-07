@@ -5,6 +5,7 @@ import { getUoms } from '../../api/settings';
 import type { UnitOfMeasure } from '../../api/settings';
 import { ImageSearchModal } from '../inventory/ImageSearchModal';
 import { ItemAssetsTab } from '../inventory/ItemAssetsTab';
+import { ItemFilesTab } from '../inventory/ItemFilesTab';
 import type { Item, ItemCategory, ItemLocation, Vendor, InventoryTransaction } from '../../api/inventory';
 import { formatDateTime } from '../../utils/dateUtils';
 import { qtyStep, isInvalidQty, type QtyMode } from '../../utils/qtyMode';
@@ -84,7 +85,7 @@ export const ItemModal = ({
 }: Props) => {
   const { hasPermission } = useAuth();
   const isDrawer = variant === 'drawer';
-  const [tab, setTab] = useState<'detalle' | 'movimientos' | 'equipos'>('detalle');
+  const [tab, setTab] = useState<'detalle' | 'movimientos' | 'equipos' | 'archivos'>('detalle');
   const canDeleteItems = hasPermission('DELETE_ITEMS');
   const [isDeleting, setIsDeleting] = useState(false);
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
@@ -372,14 +373,21 @@ export const ItemModal = ({
       >
         <div className={`px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex gap-3 bg-slate-50/50 dark:bg-slate-900/50 shrink-0 ${isDrawer ? 'flex-wrap items-start' : 'justify-between items-center'}`}>
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 truncate">
-              {readOnly ? 'Detalles del Repuesto' : item ? 'Editar Repuesto' : 'Nuevo Repuesto'}
+            <h2 className="truncate text-xl font-bold text-slate-900 dark:text-slate-100">
+              {item ? item.name : 'Nuevo Repuesto'}
             </h2>
+            {item && (
+              <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                {item.internal_code}
+              </span>
+            )}
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
             {item && onQuickTransaction && (
               <button
                 type="button"
                 onClick={() => onQuickTransaction(item.id)}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 active:bg-orange-700 rounded-xl shadow-sm shadow-orange-500/30 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-1 dark:focus:ring-offset-slate-900"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm shadow-orange-500/30 transition-colors hover:bg-orange-600 active:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-1 sm:text-sm dark:focus:ring-offset-slate-900"
                 title="Registrar entrada o salida de inventario"
               >
                 <ArrowRightLeft size={16} className="shrink-0" />
@@ -390,7 +398,7 @@ export const ItemModal = ({
               <button
                 type="button"
                 onClick={onRequestEdit}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 dark:text-blue-200 dark:bg-blue-950/40 dark:border-blue-800 dark:hover:bg-blue-900/50 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 dark:focus:ring-offset-slate-900"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 sm:text-sm dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-200 dark:hover:bg-blue-900/50 dark:focus:ring-offset-slate-900"
                 title="Editar ficha del repuesto"
               >
                 <Edit2 size={16} className="shrink-0" />
@@ -402,7 +410,7 @@ export const ItemModal = ({
                 type="button"
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 dark:text-red-300 dark:bg-red-950/40 dark:border-red-800 dark:hover:bg-red-900/50 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-1 dark:focus:ring-offset-slate-900 disabled:opacity-50"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-1 disabled:opacity-50 sm:text-sm dark:border-red-800 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/50 dark:focus:ring-offset-slate-900"
                 title="Eliminar repuesto permanentemente"
               >
                 {isDeleting ? (
@@ -413,8 +421,7 @@ export const ItemModal = ({
                 <span>Eliminar</span>
               </button>
             )}
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="ml-1 flex items-center gap-1">
             {canNavigate && (
               <>
                 <button
@@ -446,6 +453,7 @@ export const ItemModal = ({
               <X size={20} />
             </button>
           </div>
+          </div>
         </div>
 
         {isDrawer && item && (
@@ -454,6 +462,7 @@ export const ItemModal = ({
               ['detalle', 'Detalle'],
               ['movimientos', 'Movimientos'],
               ['equipos', 'Equipos'],
+              ['archivos', 'Archivos'],
             ] as const).map(([id, label]) => (
               <button
                 key={id}
@@ -820,6 +829,12 @@ export const ItemModal = ({
           {isDrawer && item && tab === 'equipos' && (
             <div className="p-1">
               <ItemAssetsTab itemId={item.id} />
+            </div>
+          )}
+
+          {isDrawer && item && tab === 'archivos' && (
+            <div className="p-1">
+              <ItemFilesTab itemId={item.id} canManage={hasPermission('MANAGE_INVENTORY')} />
             </div>
           )}
 

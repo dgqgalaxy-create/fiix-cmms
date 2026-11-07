@@ -9,6 +9,7 @@ import { formatCurrency } from '../utils/currency';
 import { createDraftsFromLowStock } from '../api/purchaseOrders';
 import { useAuth } from '../context/AuthContext';
 import { ItemModal } from '../components/inventory/ItemModal';
+import { ItemsTable } from '../components/inventory/ItemsTable';
 import { ContextMenu } from '../components/common/ContextMenu';
 import { TransactionModal } from '../components/inventory/TransactionModal';
 import { TransactionDetailModal } from '../components/inventory/TransactionDetailModal';
@@ -1143,148 +1144,45 @@ export const InventoryPage = () => {
               )}
             </div>
 
-            {/* Vista de tabla */}
-            <div className={`${itemsView === 'cards' ? 'hidden' : 'hidden sm:block'} bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden`}>
-              <div className="overflow-x-auto">
-                <table className="w-full table-fixed text-left text-xs leading-snug text-slate-600">
-                  <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-bold  relative z-10">
-                    <tr>
-                      <th className="w-24 px-2 py-1.5 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortBy('code'); setSortDirection(sortBy === 'code' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                        <div className="flex items-center gap-1.5">Código {sortBy === 'code' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
-                      </th>
-                      <th className="px-2 py-1.5 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortBy('name'); setSortDirection(sortBy === 'name' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                        <div className="flex items-center gap-1.5">Repuesto {sortBy === 'name' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
-                      </th>
-                      <th className="w-24 px-2 py-1.5 text-center cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortBy('stock'); setSortDirection(sortBy === 'stock' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                        <div className="flex items-center justify-center gap-1.5">Stock Actual {sortBy === 'stock' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
-                      </th>
-                      <th className="w-32 xl:w-40 px-2 py-1.5 hidden md:table-cell cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setSortBy('category'); setSortDirection(sortBy === 'category' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                        <div className="flex items-center gap-1.5">Categoría / Ubic. {sortBy === 'category' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
-                      </th>
-                      <th className="w-28 px-2 py-1.5 text-right whitespace-nowrap text-[10px] font-bold">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {itemsLoading && (
-                      <tr>
-                        <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                          <div className="inline-flex items-center gap-2">
-                            <Loader2 size={15} className="animate-spin text-emerald-600" />
-                            Cargando repuestos…
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                    {!itemsLoading && paginatedItems.map((item) => (
-                      <tr 
-                        key={item.id} 
-                        className={`hover:bg-slate-50/50 transition-colors cursor-pointer ${
-                          itemSelectionMode && selectedItemIds.has(item.id) ? 'bg-emerald-50/70' : ''
-                        }`}
-                        onClick={() => itemSelectionMode ? toggleItemSelection(item.id) : handleOpenItemModal(item)}
-                        onContextMenu={(e) => { if (!itemSelectionMode) { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, item }); } }}
-                      >
-                        <td className="px-2 py-1.5 font-mono text-[10px] text-slate-500 font-medium [overflow-wrap:anywhere]">
-                          <div className="flex items-center gap-2">
-                            {itemSelectionMode && (
-                              <input
-                                type="checkbox"
-                                checked={selectedItemIds.has(item.id)}
-                                onChange={() => toggleItemSelection(item.id)}
-                                onClick={(event) => event.stopPropagation()}
-                                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                              />
-                            )}
-                            {item.internal_code}
-                          </div>
-                        </td>
-                        <td className="px-2 py-1.5">
-                          <div className="flex items-center gap-2">
-                            <div className="flex-shrink-0">
-                              {item.image_url ? (
-                                <img src={mediaUrl(item.image_url)} alt={item.name} className="w-7 h-7 object-cover rounded border border-slate-200" />
-                              ) : (
-                                <div className="w-7 h-7 bg-slate-100 rounded flex items-center justify-center text-slate-400">
-                                  <Package size={16} />
-                                </div>
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate font-semibold text-slate-900" title={item.name}>{item.name}</div>
-                              <div className="flex flex-wrap items-center gap-1">
-                                {!item.is_active && (
-                                  <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700">Descontinuado</span>
-                                )}
-                                {!item.vendor_id && item.stock <= item.minimum_inventory && (
-                                  <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-                                    Sin proveedor
-                                  </span>
-                                )}
-                              </div>
-                              <div className="truncate text-[10px] text-slate-500" title={item.description || undefined}>{item.description}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-2 py-1.5 text-center">
-                          <div className="inline-flex items-center justify-center gap-1.5 bg-slate-50 px-1.5 py-0.5 rounded-lg border border-slate-200">
-                            <span className={`font-bold text-sm ${item.stock <= item.minimum_inventory ? 'text-rose-600' : 'text-emerald-600'}`}>
-                              {item.stock}
-                            </span>
-                            <span className="text-xs text-slate-400 font-medium">{item.uom}</span>
-                          </div>
-                        </td>
-                        <td className="px-2 py-1.5 hidden md:table-cell">
-                          <div className="flex min-w-0 flex-col gap-0.5">
-                            <span className="inline-flex max-w-full items-center px-1 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                              <span className="truncate" title={item.category?.name || 'Sin Cat.'}>{item.category?.name || 'Sin Cat.'}</span>
-                            </span>
-                            <span className="text-xs text-slate-500 flex items-center gap-1">
-                              <MapPin size={11} className="shrink-0" /> <span className="truncate" title={item.location?.name || 'N/A'}>{item.location?.name || 'N/A'}</span>
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-2 py-1.5 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleOpenTransactionModal(item.id); }}
-                              className="inline-flex min-h-8 min-w-8 items-center justify-center p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-100"
-                              title="Realizar Movimiento"
-                            >
-                              <ArrowRightLeft size={15} />
-                            </button>
-                            {canManage && (
-                              <>
-                                <button 
-                                  onClick={() => setQrItem(item)}
-                                  className="inline-flex min-h-8 min-w-8 items-center justify-center p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-100"
-                                  title="Imprimir QR"
-                                >
-                                  <QrCode size={15} />
-                                </button>
-                                <button 
-                                  onClick={() => handleOpenItemModal(item, { edit: true })}
-                                  className="inline-flex min-h-8 min-w-8 items-center justify-center p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
-                                  title="Editar"
-                                >
-                                  <Edit2 size={15} />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {!itemsLoading && itemsTotal === 0 && (
-                      <tr>
-                        <td colSpan={canManage ? 5 : 4} className="px-6 py-8 text-center text-slate-500">
-                          No se encontraron repuestos.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                        {/* Vista de tabla */}
+            {itemsView === 'table' && (
+              <div className="hidden sm:block">
+                <ItemsTable
+                  items={paginatedItems}
+                  isLoading={itemsLoading}
+                  sortBy={sortBy}
+                  sortDirection={sortDirection}
+                  onSort={(key, direction) => {
+                    if (direction) {
+                      setSortBy(key);
+                      setSortDirection(direction);
+                      return;
+                    }
+                    if (sortBy === key) {
+                      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortBy(key);
+                      setSortDirection('asc');
+                    }
+                  }}
+                  onOpen={(item) => handleOpenItemModal(item)}
+                  onTransaction={(id) => handleOpenTransactionModal(id)}
+                  onQr={(item) => setQrItem(item)}
+                  onEdit={(item) => handleOpenItemModal(item, { edit: true })}
+                  onContextMenu={(event, item) => {
+                    if (!itemSelectionMode) {
+                      event.preventDefault();
+                      setCtxMenu({ x: event.clientX, y: event.clientY, item });
+                    }
+                  }}
+                  selectionMode={itemSelectionMode}
+                  selectedIds={selectedItemIds}
+                  onToggleSelect={toggleItemSelection}
+                  canManage={canManage}
+                  emptyMessage="No se encontraron repuestos."
+                />
               </div>
-            </div>
+            )}
 
             {/* Pagination Controls */}
             {itemsTotal > ITEMS_PER_PAGE && (
