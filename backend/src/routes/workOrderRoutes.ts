@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { getWorkOrderTimeline } from '../controllers/woTimelineController';
 import {
   getWorkOrders,
   getWorkOrdersSummary,
@@ -28,6 +29,7 @@ router.get('/mine-open-count', authenticate, getMineOpenCount);
 
 router.get('/summary', authenticate, getWorkOrdersSummary);
 router.get('/line-stoppage', authenticate, getLineStoppageStatus);
+router.get('/:id/timeline', authenticate, getWorkOrderTimeline);
 router.get('/:id/comments', authenticate, listWorkOrderComments);
 router.post(
   '/:id/comments',

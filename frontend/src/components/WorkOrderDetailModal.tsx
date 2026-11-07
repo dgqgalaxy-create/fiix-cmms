@@ -25,6 +25,7 @@ import { resolvePartsUnitCost } from '../utils/resolvePartsUnitCost';
 import { InfoTip } from './common/InfoTip';
 import { qtyStep, isInvalidQty } from '../utils/qtyMode';
 import { WorkOrderCommentsPanel } from './WorkOrderCommentsPanel';
+import { WorkOrderTimeline } from './workorders/WorkOrderTimeline';
 import { mediaUrl } from '../utils/mediaUrl';
 import { SearchableSelect } from './ui/SearchableSelect';
 
@@ -1450,6 +1451,14 @@ export const WorkOrderDetailModal = ({
                     )}
                   </div>
                 )}
+              </div>
+
+              <div className="mt-4">
+                <WorkOrderTimeline
+                  workOrderId={workOrder.id}
+                  isOpen={isOpen}
+                  onZoomImage={(src) => setZoomSrc(src)}
+                />
               </div>
 
               <div className="mt-4">

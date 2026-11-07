@@ -225,7 +225,7 @@ export const MetersPage = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => navigate(`/assets?asset=${meter.asset_id}`)}
+                    onClick={() => navigate(`/assets?asset=${meter.asset_id}&from=${encodeURIComponent('/meters')}`)}
                     className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                   >
                     <ExternalLink size={15} /> Ir al activo

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Plus, RefreshCw, Search, QrCode, Printer, MapPin, Filter } from 'lucide-react';
 import { AssetsTable } from '../components/AssetsTable';
@@ -48,6 +48,9 @@ export const AssetsPage = () => {
   const [showObsolete, setShowObsolete] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [detailAsset, setDetailAsset] = useState<Asset | null>(null);
+  /** Ruta a la que volver al cerrar el detalle (p. ej. /meters al venir de Medidores). */
+  const [detailReturnTo, setDetailReturnTo] = useState<string | null>(null);
+  const navigate = useNavigate();
   const [qrAsset, setQrAsset] = useState<Asset | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'lines'>('table');
@@ -131,6 +134,9 @@ export const AssetsPage = () => {
     const assetId = searchParams.get('asset');
     if (!assetId || isLoading) return;
 
+    const from = searchParams.get('from');
+    if (from) setDetailReturnTo(from);
+
     const found = assets.find(
       (a) =>
         a.id === assetId ||
@@ -138,6 +144,7 @@ export const AssetsPage = () => {
     );
     const next = new URLSearchParams(searchParams);
     next.delete('asset');
+    next.delete('from');
     setSearchParams(next, { replace: true });
 
     if (found) {
@@ -489,7 +496,15 @@ export const AssetsPage = () => {
       <AssetDetailModal
         asset={detailAsset}
         isOpen={!!detailAsset}
-        onClose={() => setDetailAsset(null)}
+        onClose={() => {
+          setDetailAsset(null);
+          // Si llegamos desde otra pantalla (p. ej. Medidores), volvemos ahí.
+          if (detailReturnTo) {
+            const back = detailReturnTo;
+            setDetailReturnTo(null);
+            navigate(back, { replace: true });
+          }
+        }}
         canEdit={canManage}
         onEdit={(asset) => {
           setDetailAsset(null);
