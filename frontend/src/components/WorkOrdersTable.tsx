@@ -1,10 +1,14 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import type { WorkOrder } from '../api/workOrders';
-import { Clock, CheckCircle2, AlertCircle, Wrench, Calendar, MapPin, Tag, User, ChevronUp, ChevronDown, Camera, MessageSquare, Eye, Trash2 } from 'lucide-react';
+import { Clock, CheckCircle2, AlertCircle, Wrench, Calendar, MapPin, Tag, User, ChevronUp, ChevronDown, Camera, MessageSquare, Eye, Trash2, MoreVertical, EyeOff, GripVertical, Columns3, Table2, LayoutGrid } from 'lucide-react';
 import { SlaBadge } from './SlaBadge';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { mediaUrl } from '../utils/mediaUrl';
 import { ContextMenu } from './common/ContextMenu';
+
+/** Preferencias de la tabla de OT (anchos, columnas ocultas y vista). */
+const WO_TABLE_KEY = 'fiix-wo-table-v1';
+type WoCol = 'folio' | 'asset' | 'techs' | 'date' | 'status';
 
 interface Props {
   workOrders: WorkOrder[];
@@ -80,6 +84,105 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
   const [sortField, setSortField] = useState<'folio' | 'asset' | 'date' | 'status'>('folio');
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; wo: WorkOrder } | null>(null);
+
+  /* ---- Preferencias de tabla: anchos, columnas ocultas y vista ---- */
+  const WO_COLUMNS: { key: WoCol; label: string; defaultWidth: number; sort?: 'folio' | 'asset' | 'date' | 'status'; align?: 'left' | 'right' }[] = [
+    { key: 'folio', label: 'Orden', defaultWidth: 90, sort: 'folio' },
+    { key: 'asset', label: 'Equipo / Tarea', defaultWidth: 380, sort: 'asset' },
+    { key: 'techs', label: 'Técnicos', defaultWidth: 150 },
+    { key: 'date', label: 'Fecha', defaultWidth: 130, sort: 'date' },
+    { key: 'status', label: 'Estado', defaultWidth: 140, sort: 'status', align: 'right' },
+  ];
+  const [widths, setWidths] = useState<Record<WoCol, number>>(() => {
+    const base = Object.fromEntries(WO_COLUMNS.map((c) => [c.key, c.defaultWidth])) as Record<WoCol, number>;
+    try {
+      const raw = localStorage.getItem(WO_TABLE_KEY);
+      const saved = raw ? (JSON.parse(raw) as { widths?: Partial<Record<WoCol, number>> }) : null;
+      return { ...base, ...(saved?.widths ?? {}) };
+    } catch {
+      return base;
+    }
+  });
+  const [hiddenCols, setHiddenCols] = useState<WoCol[]>(() => {
+    try {
+      const raw = localStorage.getItem(WO_TABLE_KEY);
+      const saved = raw ? (JSON.parse(raw) as { hidden?: WoCol[] }) : null;
+      return Array.isArray(saved?.hidden) ? saved!.hidden! : [];
+    } catch {
+      return [];
+    }
+  });
+  const [view, setView] = useState<'table' | 'cards'>(() => {
+    try {
+      const raw = localStorage.getItem(WO_TABLE_KEY);
+      const saved = raw ? (JSON.parse(raw) as { view?: 'table' | 'cards' }) : null;
+      return saved?.view === 'cards' ? 'cards' : 'table';
+    } catch {
+      return 'table';
+    }
+  });
+  const [openMenu, setOpenMenu] = useState<WoCol | 'columns' | null>(null);
+  const resizing = React.useRef<{ key: WoCol; startX: number; startWidth: number } | null>(null);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(WO_TABLE_KEY, JSON.stringify({ widths, hidden: hiddenCols, view }));
+    } catch {
+      /* preferencia opcional */
+    }
+  }, [widths, hiddenCols, view]);
+
+  React.useEffect(() => {
+    if (!openMenu) return;
+    const close = () => setOpenMenu(null);
+    window.addEventListener('pointerdown', close);
+    return () => window.removeEventListener('pointerdown', close);
+  }, [openMenu]);
+
+  React.useEffect(() => {
+    const onMove = (event: PointerEvent) => {
+      const current = resizing.current;
+      if (!current) return;
+      event.preventDefault();
+      setWidths((prev) => ({
+        ...prev,
+        [current.key]: Math.max(70, current.startWidth + (event.clientX - current.startX)),
+      }));
+    };
+    const onUp = () => {
+      if (!resizing.current) return;
+      resizing.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, []);
+
+  const startResize = (event: React.PointerEvent, key: WoCol) => {
+    event.preventDefault();
+    event.stopPropagation();
+    resizing.current = { key, startX: event.clientX, startWidth: widths[key] ?? 120 };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  const visibleColumns = WO_COLUMNS.filter((column) => !hiddenCols.includes(column.key));
+  const totalWidth = visibleColumns.reduce((sum, column) => sum + (widths[column.key] ?? column.defaultWidth), 0);
+  const applySort = (field: 'folio' | 'asset' | 'date' | 'status', direction?: 'asc' | 'desc') => {
+    if (direction) {
+      setSortField(field);
+      setSortDirection(direction);
+      return;
+    }
+    setSortField(field);
+    setSortDirection(sortField === field && sortDirection === 'asc' ? 'desc' : 'asc');
+  };
+  const colClass = (key: WoCol) => (hiddenCols.includes(key) ? 'hidden' : '');
 
   const sortedWorkOrders = useMemo(() => {
     return [...workOrders].sort((a, b) => {
@@ -168,8 +271,87 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
 
   return (
     <div className="wo-print-list">
+      {/* Barra de la tabla: columnas visibles y vista tabla/tarjetas */}
+      <div className="mb-2 flex flex-wrap items-center justify-end gap-2 print:hidden">
+        <span className="mr-auto text-[11px] text-slate-400 dark:text-slate-500">
+          Arrastra el borde de un encabezado para cambiar el ancho · ⋮ para opciones
+        </span>
+        <div className="flex overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+          <button
+            type="button"
+            onClick={() => setView('table')}
+            aria-pressed={view === 'table'}
+            title="Vista de tabla"
+            className={`px-2 py-1.5 ${view === 'table' ? 'bg-emerald-600 text-white' : 'text-slate-500 dark:text-slate-300'}`}
+          >
+            <Table2 size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setView('cards')}
+            aria-pressed={view === 'cards'}
+            title="Vista de tarjetas"
+            className={`px-2 py-1.5 ${view === 'cards' ? 'bg-emerald-600 text-white' : 'text-slate-500 dark:text-slate-300'}`}
+          >
+            <LayoutGrid size={14} />
+          </button>
+        </div>
+        <div className="relative">
+          <button
+            type="button"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={() => setOpenMenu(openMenu === 'columns' ? null : 'columns')}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            <Columns3 size={14} /> Columnas
+          </button>
+          {openMenu === 'columns' && (
+            <div
+              onPointerDown={(event) => event.stopPropagation()}
+              className="absolute right-0 z-30 mt-1 w-52 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+            >
+              {WO_COLUMNS.map((column) => (
+                <label
+                  key={column.key}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  <input
+                    type="checkbox"
+                    checked={!hiddenCols.includes(column.key)}
+                    onChange={() =>
+                      setHiddenCols((prev) =>
+                        prev.includes(column.key) ? prev.filter((key) => key !== column.key) : [...prev, column.key]
+                      )
+                    }
+                    className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  {column.label}
+                </label>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setHiddenCols([]);
+                  setWidths(Object.fromEntries(WO_COLUMNS.map((c) => [c.key, c.defaultWidth])) as Record<WoCol, number>);
+                  setOpenMenu(null);
+                }}
+                className="mt-1 w-full rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+              >
+                Restablecer columnas
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Vista de Tarjetas para Celulares (oculta al imprimir: las tarjetas gastan ~1/4 de hoja c/u) */}
-      <div className="wo-print-cards block xl:hidden print:hidden flex flex-col gap-3">
+      <div
+        className={
+          view === 'cards'
+            ? 'wo-print-cards grid gap-3 sm:grid-cols-2 xl:grid-cols-3 print:hidden'
+            : 'wo-print-cards block xl:hidden print:hidden flex flex-col gap-3'
+        }
+      >
         {sortedWorkOrders.map((wo) => {
           const cardPhotoUrl = wo.request_image_url || wo.before_image_url;
           const comment = commentPreview(wo);
@@ -377,35 +559,111 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
       </div>
 
       {/* Vista de Tabla para Escritorio (+ impresión: forzar tabla aunque el viewport de print sea < xl) */}
-      <div className="wo-print-table hidden xl:block print:block bg-white dark:bg-slate-900 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden print:rounded-none print:border-0 print:shadow-none">
+      <div className={`wo-print-table print:block bg-white dark:bg-slate-900 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden print:rounded-none print:border-0 print:shadow-none ${view === 'cards' ? 'hidden' : 'hidden xl:block'}`}>
         <div className="overflow-x-auto print:overflow-visible">
-          <table className="w-full text-left border-collapse print:text-[9px] print:leading-tight">
+          <table
+            className="table-fixed w-full text-left border-collapse print:text-[9px] print:leading-tight"
+            style={{ width: view === 'cards' ? undefined : totalWidth, minWidth: '100%' }}
+          >
+            <colgroup>
+              {visibleColumns.map((column) => (
+                <col key={column.key} style={{ width: widths[column.key] }} />
+              ))}
+            </colgroup>
             <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold shadow-md shadow-[#739239]/40 dark:shadow-[#739239]/20 relative z-10 print:bg-slate-100 print:shadow-none print:text-[8px] print:tracking-normal">
               <tr>
-                <th className="wo-print-col-orden px-6 py-4 print:px-0.5 print:py-0.5 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('folio'); setSortDirection(sortField === 'folio' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                  <div className="flex items-center gap-1.5">Orden {sortField === 'folio' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 print:hidden"/> : <ChevronDown size={14} className="text-emerald-500 print:hidden"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity print:hidden" />}</div>
-                </th>
-                <th className="wo-print-col-failure px-6 py-4 print:px-0.5 print:py-0.5 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('asset'); setSortDirection(sortField === 'asset' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                  <div className="flex items-center gap-1.5">
-                    <span className="print:hidden">Equipo / Tarea</span>
-                    <span className="hidden print:inline">Falla / Equipo</span>
-                    {sortField === 'asset' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 print:hidden"/> : <ChevronDown size={14} className="text-emerald-500 print:hidden"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity print:hidden" />}
-                  </div>
-                </th>
-                <th className="px-6 py-4 print:hidden">Técnicos</th>
-                <th className="px-6 py-4 print:hidden cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('date'); setSortDirection(sortField === 'date' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                  <div className="flex items-center gap-1.5">Fecha {sortField === 'date' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500"/> : <ChevronDown size={14} className="text-emerald-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
-                </th>
+                {visibleColumns.map((column) => (
+                  <th
+                    key={column.key}
+                    scope="col"
+                    style={{ width: widths[column.key] }}
+                    className={`group relative px-6 py-4 print:px-0.5 print:py-0.5 ${
+                      column.key === 'folio' ? 'wo-print-col-orden' : ''
+                    } ${column.key === 'asset' ? 'wo-print-col-failure' : ''} ${
+                      column.key === 'status' ? 'wo-print-col-status' : ''
+                    } ${column.key === 'techs' ? 'print:hidden' : ''} ${
+                      column.key === 'date' ? 'print:hidden' : ''
+                    } ${column.align === 'right' ? 'text-right' : ''}`}
+                  >
+                    <div className={`flex items-center gap-1.5 ${column.align === 'right' ? 'justify-end' : ''}`}>
+                      {column.sort ? (
+                        <button
+                          type="button"
+                          onClick={() => applySort(column.sort!)}
+                          className="flex items-center gap-1.5 uppercase tracking-wider transition-colors hover:text-emerald-600 dark:hover:text-emerald-400"
+                        >
+                          <span className="print:hidden">{column.label}</span>
+                          <span className="hidden print:inline">
+                            {column.key === 'asset' ? 'Falla / Equipo' : column.key === 'status' ? 'Est.' : column.label}
+                          </span>
+                          {sortField === column.sort ? (
+                            sortDirection === 'asc'
+                              ? <ChevronUp size={14} className="text-emerald-500 print:hidden" />
+                              : <ChevronDown size={14} className="text-emerald-500 print:hidden" />
+                          ) : (
+                            <ChevronUp size={14} className="opacity-0 transition-opacity group-hover:opacity-40 print:hidden" />
+                          )}
+                        </button>
+                      ) : (
+                        <span>{column.label}</span>
+                      )}
+
+                      <button
+                        type="button"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={() => setOpenMenu(openMenu === column.key ? null : column.key)}
+                        aria-label={`Opciones de ${column.label}`}
+                        className="ml-auto rounded p-0.5 text-slate-400 opacity-0 transition-opacity hover:bg-slate-200 hover:text-slate-700 group-hover:opacity-100 focus:opacity-100 print:hidden dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                      >
+                        <MoreVertical size={13} />
+                      </button>
+                    </div>
+
+                    {openMenu === column.key && (
+                      <div
+                        onPointerDown={(event) => event.stopPropagation()}
+                        className="absolute right-0 z-30 mt-1 w-44 rounded-xl border border-slate-200 bg-white p-1 text-left text-[11px] font-medium normal-case tracking-normal shadow-xl dark:border-slate-700 dark:bg-slate-900"
+                      >
+                        {column.sort && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => { applySort(column.sort!, 'asc'); setOpenMenu(null); }}
+                              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                            >
+                              <ChevronUp size={13} /> Ordenar ascendente
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { applySort(column.sort!, 'desc'); setOpenMenu(null); }}
+                              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                            >
+                              <ChevronDown size={13} /> Ordenar descendente
+                            </button>
+                          </>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => { setHiddenCols((prev) => [...prev, column.key]); setOpenMenu(null); }}
+                          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                        >
+                          <EyeOff size={13} /> Ocultar columna
+                        </button>
+                      </div>
+                    )}
+
+                    <span
+                      onPointerDown={(event) => startResize(event, column.key)}
+                      className="absolute right-0 top-0 z-10 flex h-full w-2 cursor-col-resize items-center justify-center hover:bg-emerald-200/60 print:hidden dark:hover:bg-emerald-800/40"
+                      aria-hidden
+                    >
+                      <GripVertical size={10} className="text-slate-300 opacity-0 group-hover:opacity-100 dark:text-slate-600" />
+                    </span>
+                  </th>
+                ))}
                 <th className="wo-print-col-date hidden print:table-cell print:px-0.5 print:py-0.5">Sol.</th>
                 <th className="wo-print-col-date hidden print:table-cell print:px-0.5 print:py-0.5">Ini.</th>
                 <th className="wo-print-col-date hidden print:table-cell print:px-0.5 print:py-0.5">Fin</th>
-                <th className="wo-print-col-status px-6 py-4 print:px-0.5 print:py-0.5 cursor-pointer hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800/60 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400 transition-colors group" onClick={() => { setSortField('status'); setSortDirection(sortField === 'status' && sortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                  <div className="flex items-center gap-1.5">
-                    <span className="print:hidden">Estado</span>
-                    <span className="hidden print:inline">Est.</span>
-                    {sortField === 'status' ? (sortDirection === 'asc' ? <ChevronUp size={14} className="text-emerald-500 print:hidden"/> : <ChevronDown size={14} className="text-emerald-500 print:hidden"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity print:hidden" />}
-                  </div>
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50 print:divide-slate-300">
@@ -424,7 +682,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                     ? ({ '--wo-photo-url': `url("${mediaUrl(rowPhotoUrl)}")` } as React.CSSProperties)
                     : undefined}
                 >
-                  <td className="wo-print-col-orden px-6 py-4 print:px-0.5 print:py-0.5 align-top print:align-top whitespace-nowrap">
+                  <td className={`${colClass('folio')} wo-print-col-orden px-6 py-4 print:px-0.5 print:py-0.5 align-top print:align-top whitespace-nowrap`}>
                     <div className="flex flex-col gap-1.5 print:gap-0 items-start">
                       <span className="bg-slate-800 dark:bg-slate-700 text-white px-2.5 py-1 print:px-0.5 print:py-0 rounded-md print:rounded-sm text-xs print:text-[7.5px] font-bold tracking-wide print:tracking-normal">
                         {formatWorkOrderFolio(wo.folio)}
@@ -455,7 +713,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                       <span className="print:hidden"><SlaBadge sla={wo.sla} compact /></span>
                     </div>
                   </td>
-                  <td className="wo-print-col-failure px-6 py-4 print:px-0.5 print:py-0.5 align-top">
+                  <td className={`${colClass('asset')} wo-print-col-failure px-6 py-4 print:px-0.5 print:py-0.5 align-top`}>
                     <div className="flex flex-col gap-1 mb-2 print:gap-0 print:mb-0">
                       <div className="font-bold text-slate-900 dark:text-slate-100 text-sm print:text-[8px] print:font-semibold print:leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         <span className="print:hidden">{wo.title}</span>
@@ -487,7 +745,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 align-top print:hidden">
+                  <td className={`${colClass('techs')} px-6 py-4 align-top print:hidden`}>
                     {wo.assigned_technicians && wo.assigned_technicians.length > 0 ? (
                       <div className="flex flex-wrap gap-1.5">
                         {wo.assigned_technicians.map((t) => (
@@ -514,7 +772,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                       <span className="text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400 italic">Sin asignar</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 print:hidden align-top whitespace-nowrap">
+                  <td className={`${colClass('date')} px-6 py-4 print:hidden align-top whitespace-nowrap`}>
                     <div
                       className={`flex flex-col gap-1.5 ${
                         onScheduleClick
@@ -559,7 +817,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                   <td className="wo-print-col-date hidden print:table-cell print:px-0.5 print:py-0.5 align-top whitespace-nowrap print:text-[7.5px]">
                     {formatPrintDate(wo.completed_at)}
                   </td>
-                  <td className="wo-print-col-status px-6 py-4 print:px-0.5 print:py-0.5 align-top text-right print:text-left whitespace-nowrap">
+                  <td className={`${colClass('status')} wo-print-col-status px-6 py-4 print:px-0.5 print:py-0.5 align-top text-right print:text-left whitespace-nowrap`}>
                     {getStatusBadge(wo.status)}
                   </td>
                 </tr>
