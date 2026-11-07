@@ -220,6 +220,25 @@ export const getItemById = async (id: string): Promise<Item | null> => {
   }
 };
 
+export interface ItemAssetUsage {
+  id: string;
+  quantity: number;
+  asset: {
+    id: string;
+    name: string;
+    internal_code: string;
+    status: string;
+    is_critical: boolean;
+    zone?: { id: string; name: string } | null;
+  };
+}
+
+/** Equipos que tienen asignado este repuesto (tabla AssetPart). */
+export const getItemAssets = async (id: string): Promise<ItemAssetUsage[]> => {
+  const response = await axiosInstance.get<ItemAssetUsage[]>(`/inventory/items/${id}/assets`);
+  return response.data;
+};
+
 export const createItem = async (formData: FormData) => {
   const response = await axiosInstance.post<Item>('/inventory/items', formData);
   return response.data;

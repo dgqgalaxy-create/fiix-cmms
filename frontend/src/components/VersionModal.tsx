@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.77.1";
+export const APP_VERSION = "1.78.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,9 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: Repuestos — selector «Tabla / Tarjetas» en la barra (recuerda tu elección). La tabla mantiene orden por columna y la vista de tarjetas ahora también funciona en escritorio.",
+    "Nuevo: Repuestos — el detalle se abre como panel lateral deslizante, con el repuesto a la vista y tres pestañas: Detalle, Movimientos y Equipos que lo usan.",
+    "Nuevo: Repuestos — pestaña «Equipos»: muestra en qué activos está asignado el repuesto, con zona, cantidad y si el equipo es crítico.",
     "Mejora: Medidores — cada fila muestra la zona del activo (las zonas no se repiten, los equipos sí), para ubicar el punto de medición de inmediato.",
     "Mejora: Medidores — acciones claras: «Registrar medición» e «Ir al activo». Se quitó el campo con botón Guardar y el botón «+ Nota», que confundían.",
     "Seguridad: los disparadores de medidores solo los puede crear o modificar el administrador; el resto puede consultarlos y registrar lecturas. Cada lectura guarda quién la capturó y se muestra en el historial.",

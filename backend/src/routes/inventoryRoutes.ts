@@ -3,7 +3,7 @@ import {
   getCategories, createCategory, updateCategory, deleteCategory,
   getLocations, createLocation, updateLocation, deleteLocation,
   getVendors, createVendor, updateVendor, deleteVendor,
-  getItems, getItemById, createItem, updateItem, deleteItem,
+  getItems, getItemById, getItemAssets, createItem, updateItem, deleteItem,
   getTransactions, createTransaction, deleteTransaction, getTransactionsSummary,
   getInventorySummary,
   searchImages, proxyImage
@@ -51,6 +51,7 @@ router.delete('/vendors/:id', requireWritable, requirePermission('MANAGE_INVENTO
 // ==========================================
 router.get('/items', getItems);
 router.get('/items/:id', getItemById);
+router.get('/items/:id/assets', getItemAssets);
 router.post('/items', requireWritable, requirePermission('MANAGE_INVENTORY'), upload.fields([{ name: 'image', maxCount: 1 }]), createItem);
 router.patch('/items/:id', requireWritable, requirePermission('MANAGE_INVENTORY'), upload.fields([{ name: 'image', maxCount: 1 }]), updateItem);
 router.delete('/items/:id', requireWritable, requirePermission('DELETE_ITEMS'), deleteItem);

@@ -335,6 +335,39 @@ export const getItemById = async (req: Request, res: Response): Promise<void> =>
 
 const INITIAL_STOCK_REASON = 'Levantamiento de inventario (stock inicial)';
 
+/** GET /api/inventory/items/:id/assets — equipos que tienen asignado este repuesto. */
+export const getItemAssets = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const rows = await prisma.assetPart.findMany({
+      where: { item_id: id },
+      include: {
+        asset: {
+          select: {
+            id: true,
+            name: true,
+            internal_code: true,
+            status: true,
+            is_critical: true,
+            zone: { select: { id: true, name: true } },
+          },
+        },
+      },
+      orderBy: { created_at: 'asc' },
+    });
+    res.json(
+      rows.map((row) => ({
+        id: row.id,
+        quantity: row.quantity,
+        asset: row.asset,
+      }))
+    );
+  } catch (error) {
+    console.error('Error obteniendo equipos del repuesto:', error);
+    res.status(500).json({ error: 'Error al obtener los equipos del repuesto' });
+  }
+};
+
 export const createItem = async (req: Request, res: Response): Promise<void> => {
   try {
     const { 

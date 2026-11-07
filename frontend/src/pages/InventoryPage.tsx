@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, AlertTriangle, Ban, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter, DollarSign, Trash2 } from 'lucide-react';
+import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, AlertTriangle, Ban, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter, DollarSign, Trash2, Table2, LayoutGrid } from 'lucide-react';
 import { 
   getItems, getItemsPage, getItemById, getTransactions, getTransactionsPage, getTransactionsSummary, getCategories, getLocations, getVendors, getInventorySummary, deleteItem, deleteTransaction
 } from '../api/inventory';
@@ -136,6 +136,15 @@ export const InventoryPage = () => {
   const [itemSelectionMode, setItemSelectionMode] = useState(false);
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [bulkItemPrintOpen, setBulkItemPrintOpen] = useState(false);
+  /** Vista de repuestos: tabla (por defecto) o tarjetas. Se recuerda en el navegador. */
+  const [itemsView, setItemsView] = useState<'table' | 'cards'>(() => {
+    try { return localStorage.getItem('fiix-inventory-view') === 'cards' ? 'cards' : 'table'; }
+    catch { return 'table'; }
+  });
+  const changeItemsView = (mode: 'table' | 'cards') => {
+    setItemsView(mode);
+    try { localStorage.setItem('fiix-inventory-view', mode); } catch { /* preferencia opcional */ }
+  };
   const [locationSearchTerm, setLocationSearchTerm] = useState('');
   const [locationSelectionMode, setLocationSelectionMode] = useState(false);
   const [selectedLocationIds, setSelectedLocationIds] = useState<Set<string>>(new Set());
@@ -954,6 +963,36 @@ export const InventoryPage = () => {
                 <Printer size={16} />
                 {itemSelectionMode ? 'Cancelar selección' : 'QR masivo'}
               </button>
+
+              {/* Selector de vista: tabla o tarjetas */}
+              <div className="ml-auto flex overflow-hidden rounded-xl border border-slate-200 text-sm dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => changeItemsView('table')}
+                  aria-pressed={itemsView === 'table'}
+                  title="Vista de tabla"
+                  className={`flex items-center gap-1.5 px-3 py-2 font-medium transition-colors ${
+                    itemsView === 'table'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <Table2 size={15} /> <span className="hidden sm:inline">Tabla</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => changeItemsView('cards')}
+                  aria-pressed={itemsView === 'cards'}
+                  title="Vista de tarjetas"
+                  className={`flex items-center gap-1.5 px-3 py-2 font-medium transition-colors ${
+                    itemsView === 'cards'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <LayoutGrid size={15} /> <span className="hidden sm:inline">Tarjetas</span>
+                </button>
+              </div>
               {itemSelectionMode && (
                 <>
                   <button
@@ -985,8 +1024,14 @@ export const InventoryPage = () => {
               )}
             </div>
 
-            {/* Mobile View (Cards) */}
-            <div className="block sm:hidden space-y-4">
+            {/* Vista de tarjetas: en móvil siempre; en escritorio si se elige */}
+            <div
+              className={
+                itemsView === 'cards'
+                  ? 'grid gap-3 sm:grid-cols-2 xl:grid-cols-3'
+                  : 'block sm:hidden space-y-4'
+              }
+            >
               {itemsLoading && (
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-500">
                   <div className="inline-flex items-center gap-2">
@@ -1098,8 +1143,8 @@ export const InventoryPage = () => {
               )}
             </div>
 
-            {/* Desktop View (Table) */}
-            <div className="hidden sm:block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            {/* Vista de tabla */}
+            <div className={`${itemsView === 'cards' ? 'hidden' : 'hidden sm:block'} bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden`}>
               <div className="overflow-x-auto">
                 <table className="w-full table-fixed text-left text-xs leading-snug text-slate-600">
                   <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-bold  relative z-10">
@@ -2110,6 +2155,7 @@ export const InventoryPage = () => {
         isOpen={isItemModalOpen} 
         onClose={() => setIsItemModalOpen(false)} 
         onSaved={() => refreshInventory(true)}
+        variant="drawer"
         item={selectedItem}
         categories={categories}
         locations={locations}

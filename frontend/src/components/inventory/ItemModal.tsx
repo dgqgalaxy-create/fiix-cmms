@@ -4,6 +4,7 @@ import { createItem, updateItem, deleteItem, getTransactions } from '../../api/i
 import { getUoms } from '../../api/settings';
 import type { UnitOfMeasure } from '../../api/settings';
 import { ImageSearchModal } from '../inventory/ImageSearchModal';
+import { ItemAssetsTab } from '../inventory/ItemAssetsTab';
 import type { Item, ItemCategory, ItemLocation, Vendor, InventoryTransaction } from '../../api/inventory';
 import { formatDateTime } from '../../utils/dateUtils';
 import { qtyStep, isInvalidQty, type QtyMode } from '../../utils/qtyMode';
@@ -60,6 +61,8 @@ interface Props {
   onNavigateItem?: (item: Item) => void;
   /** Pausa ← → si hay otro modal encima (p. ej. movimiento). */
   navigationPaused?: boolean;
+  /** 'drawer' abre el detalle como panel lateral; 'modal' centrado (por defecto). */
+  variant?: 'modal' | 'drawer';
 }
 
 export const ItemModal = ({
@@ -77,8 +80,11 @@ export const ItemModal = ({
   itemList,
   onNavigateItem,
   navigationPaused = false,
+  variant = 'modal',
 }: Props) => {
   const { hasPermission } = useAuth();
+  const isDrawer = variant === 'drawer';
+  const [tab, setTab] = useState<'detalle' | 'movimientos' | 'equipos'>('detalle');
   const canDeleteItems = hasPermission('DELETE_ITEMS');
   const [isDeleting, setIsDeleting] = useState(false);
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
@@ -109,6 +115,11 @@ export const ItemModal = ({
   useEffect(() => {
     getUoms().then(setUoms).catch(console.error);
   }, []);
+
+  /** Al cambiar de repuesto (o abrir/cerrar) volvemos a la pestaña de detalle. */
+  useEffect(() => {
+    setTab('detalle');
+  }, [item?.id, isOpen]);
 
   const navIndex = useMemo(() => {
     if (!item || !itemList?.length) return -1;
@@ -343,10 +354,24 @@ export const ItemModal = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-4xl max-h-[95vh] flex flex-col overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center gap-3 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
+    <div
+      className={
+        isDrawer
+          ? 'fixed inset-0 z-[60] flex justify-end bg-slate-900/40 backdrop-blur-[2px]'
+          : 'fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-[60] backdrop-blur-sm'
+      }
+      onClick={isDrawer ? onClose : undefined}
+    >
+      <div
+        onClick={isDrawer ? (event) => event.stopPropagation() : undefined}
+        className={
+          isDrawer
+            ? 'flex h-full w-full max-w-2xl flex-col overflow-hidden bg-white shadow-2xl animate-in slide-in-from-right duration-300 dark:bg-slate-900 sm:border-l sm:border-slate-200 sm:rounded-l-2xl dark:sm:border-slate-800'
+            : 'bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-4xl max-h-[95vh] flex flex-col overflow-hidden'
+        }
+      >
+        <div className={`px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex gap-3 bg-slate-50/50 dark:bg-slate-900/50 shrink-0 ${isDrawer ? 'flex-wrap items-start' : 'justify-between items-center'}`}>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 truncate">
               {readOnly ? 'Detalles del Repuesto' : item ? 'Editar Repuesto' : 'Nuevo Repuesto'}
             </h2>
@@ -423,6 +448,33 @@ export const ItemModal = ({
           </div>
         </div>
 
+        {isDrawer && item && (
+          <div className="flex shrink-0 gap-1 border-b border-slate-100 px-3 dark:border-slate-800">
+            {([
+              ['detalle', 'Detalle'],
+              ['movimientos', 'Movimientos'],
+              ['equipos', 'Equipos'],
+            ] as const).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTab(id)}
+                aria-current={tab === id ? 'page' : undefined}
+                className={`relative px-3 py-2.5 text-sm font-medium transition-colors ${
+                  tab === id
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+              >
+                {label}
+                {tab === id && (
+                  <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-t-full bg-emerald-600 dark:bg-emerald-500" />
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="overflow-y-auto flex-1">
           <form onSubmit={handleSubmit} className="p-6">
           {error && (
@@ -431,13 +483,14 @@ export const ItemModal = ({
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {(!isDrawer || tab === 'detalle') && (
+          <div className={isDrawer ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 md:grid-cols-3 gap-8'}>
             {/* Columna Izquierda: Imagen y Estado */}
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Imagen del Repuesto</label>
                 <div 
-                  className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-center hover:bg-slate-50 dark:hover:bg-slate-800 dark:bg-slate-950 transition-colors cursor-pointer relative group overflow-hidden"
+                  className={`border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-center hover:bg-slate-50 dark:hover:bg-slate-800 dark:bg-slate-950 transition-colors cursor-pointer relative group overflow-hidden ${isDrawer ? 'max-w-[240px]' : ''}`}
                   onClick={() => document.getElementById('image-upload')?.click()}
                 >
                   {imagePreview ? (
@@ -667,8 +720,9 @@ export const ItemModal = ({
               </div>
             </div>
           </div>
+          )}
 
-          {item && (
+          {item && (!isDrawer || tab === 'movimientos') && (
             <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
               <div className="flex justify-between items-center mb-4 gap-3 flex-wrap">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Historial de Movimientos</h3>
@@ -763,6 +817,13 @@ export const ItemModal = ({
             </div>
           )}
 
+          {isDrawer && item && tab === 'equipos' && (
+            <div className="p-1">
+              <ItemAssetsTab itemId={item.id} />
+            </div>
+          )}
+
+          {(!isDrawer || tab === 'detalle') && (
           <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
             <button
               type="button"
@@ -782,6 +843,7 @@ export const ItemModal = ({
               </button>
             )}
           </div>
+          )}
           </form>
         </div>
       </div>
