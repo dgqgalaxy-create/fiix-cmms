@@ -1,4 +1,4 @@
-import { LayoutDashboard, Database, LogOut, Users, Activity, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, LogOut, Users, Activity, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote, MessageSquare, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { VersionModal, APP_VERSION } from './VersionModal';
@@ -29,14 +29,35 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+interface NavChild {
+  name: string;
+  to: string;
+}
+
 interface NavItem {
   name: string;
   path: string;
   icon: ReactElement;
   badge?: number;
+  /** Submódulos que se despliegan en la misma barra lateral. */
+  children?: NavChild[];
 }
 
-const SortableNavItem = ({ item, isActive, isEditMode, onClose }: { item: NavItem, isActive: boolean, isEditMode: boolean, onClose: () => void }) => {
+const SortableNavItem = ({
+  item,
+  isActive,
+  isEditMode,
+  onClose,
+  expanded,
+  onToggle,
+}: {
+  item: NavItem;
+  isActive: boolean;
+  isEditMode: boolean;
+  onClose: () => void;
+  expanded?: boolean;
+  onToggle?: () => void;
+}) => {
   const {
     attributes,
     listeners,
@@ -87,6 +108,23 @@ const SortableNavItem = ({ item, isActive, isEditMode, onClose }: { item: NavIte
           {badgeEl}
         </Link>
       )}
+
+      {!isEditMode && onToggle && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onToggle();
+          }}
+          aria-expanded={Boolean(expanded)}
+          aria-label={expanded ? `Contraer ${item.name}` : `Expandir ${item.name}`}
+          title={expanded ? `Contraer ${item.name}` : `Expandir ${item.name}`}
+          className="shrink-0 rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+        >
+          <ChevronDown size={14} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </button>
+      )}
     </div>
   );
 };
@@ -101,6 +139,18 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   const [orderedItems, setOrderedItems] = useState<NavItem[]>([]);
   const [notesBadge, setNotesBadge] = useState(0);
   const [chatBadge, setChatBadge] = useState(0);
+  /** Grupos desplegables de la barra lateral (por ruta del módulo padre). */
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  const toggleGroup = (path: string) =>
+    setExpandedGroups((prev) => ({ ...prev, [path]: !prev[path] }));
+
+  /** Al entrar al módulo, su grupo se abre solo. */
+  useEffect(() => {
+    if (location.pathname.startsWith('/inventory') || location.pathname.startsWith('/assets')) {
+      setExpandedGroups((prev) => (prev['/inventory'] ? prev : { ...prev, '/inventory': true }));
+    }
+  }, [location.pathname]);
 
   const refreshNotesBadge = useCallback(async () => {
     try {
@@ -135,8 +185,19 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
       { name: 'Informes', path: '/weekly-report', icon: <Calendar size={16} /> },
       { name: 'Mensajes', path: '/messages', icon: <MessageSquare size={16} />, badge: chatBadge },
       { name: 'Notas y pendientes', path: '/notes', icon: <StickyNote size={16} />, badge: notesBadge },
-      { name: 'Activos', path: '/assets', icon: <Database size={16} /> },
-      { name: 'Inventario', path: '/inventory', icon: <Package size={16} /> },
+      {
+        name: 'Inventario',
+        path: '/inventory',
+        icon: <Package size={16} />,
+        children: [
+          { name: 'Movimientos', to: '/inventory?tab=transactions' },
+          { name: 'Repuestos', to: '/inventory?tab=items' },
+          { name: 'Categorías', to: '/inventory?tab=categories' },
+          { name: 'Ubicaciones', to: '/inventory?tab=locations' },
+          { name: 'Proveedores', to: '/inventory?tab=vendors' },
+          { name: 'Activos', to: '/assets' },
+        ],
+      },
       { name: 'Checklist Diario', path: '/checklists', icon: <ClipboardCheck size={16} /> },
       { name: 'Horarios', path: '/roster', icon: <Clock size={16} /> },
       { name: 'Calendario', path: '/calendar', icon: <Calendar size={16} /> },
@@ -289,15 +350,53 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
               items={orderedItems.map(i => i.path)}
               strategy={verticalListSortingStrategy}
             >
-              {orderedItems.map((item) => (
-                <SortableNavItem 
-                  key={item.path}
-                  item={item}
-                  isActive={location.pathname === item.path}
-                  isEditMode={isEditMode}
-                  onClose={onClose}
-                />
-              ))}
+              {orderedItems.map((item) => {
+                const hasChildren = Boolean(item.children?.length);
+                const isExpanded = !isEditMode && hasChildren && Boolean(expandedGroups[item.path]);
+                const childPaths = (item.children || []).map((c) => c.to.split('?')[0]);
+                const isActive = location.pathname === item.path || childPaths.includes(location.pathname);
+                const currentTab = new URLSearchParams(location.search).get('tab') || 'items';
+                const isChildActive = (to: string) => {
+                  const [path, query] = to.split('?');
+                  if (path !== location.pathname) return false;
+                  const tab = query ? new URLSearchParams(query).get('tab') : null;
+                  return tab ? tab === currentTab : true;
+                };
+                return (
+                  <div key={item.path}>
+                    <SortableNavItem
+                      item={item}
+                      isActive={isActive}
+                      isEditMode={isEditMode}
+                      onClose={onClose}
+                      expanded={isExpanded}
+                      onToggle={hasChildren && !isEditMode ? () => toggleGroup(item.path) : undefined}
+                    />
+                    {isExpanded && item.children && (
+                      <div className="mt-0.5 space-y-0.5 pb-1 pl-7">
+                        {item.children.map((child) => {
+                          const active = isChildActive(child.to);
+                          return (
+                            <Link
+                              key={child.to}
+                              to={child.to}
+                              onClick={onClose}
+                              aria-current={active ? 'page' : undefined}
+                              className={`block truncate rounded-lg px-2 py-1 text-[12.5px] transition-colors ${
+                                active
+                                  ? 'bg-emerald-600/15 font-medium text-emerald-300'
+                                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                              }`}
+                            >
+                              {child.name}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </SortableContext>
           </DndContext>
         </nav>

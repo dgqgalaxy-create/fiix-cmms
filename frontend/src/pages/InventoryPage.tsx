@@ -66,6 +66,20 @@ export const InventoryPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [activeTab, setActiveTab] = useState<'items' | 'transactions' | 'categories' | 'locations' | 'vendors'>('items');
+  /** Última pestaña aplicada desde la URL (evita reaplicarla en cada render). */
+  const appliedTabRef = useRef<string | null>(null);
+
+  /**
+   * Cambia de pestaña y la deja en la URL (`?tab=...`) para que el menú lateral
+   * resalte el submódulo correspondiente.
+   */
+  const changeTab = (tab: 'items' | 'transactions' | 'categories' | 'locations' | 'vendors') => {
+    appliedTabRef.current = tab;
+    setActiveTab(tab);
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', tab);
+    setSearchParams(next, { replace: true });
+  };
   
   const [catalogNavCollapsed, setCatalogNavCollapsed] = useState(() => {
     try { return localStorage.getItem('fiix-inventory-nav-collapsed') !== 'false'; }
@@ -324,15 +338,21 @@ export const InventoryPage = () => {
     if (filter === 'low_stock') {
       setShowLowStockOnly(true);
       setActiveTab('items');
+      appliedTabRef.current = 'items';
+      next.set('tab', 'items');
       next.delete('filter');
       changed = true;
     }
 
+    // La pestaña se CONSERVA en la URL: la barra lateral la usa para resaltar
+    // el submódulo activo. Solo se aplica al estado cuando cambia el valor.
     const tab = next.get('tab');
-    if (tab === 'locations' || tab === 'items' || tab === 'transactions' || tab === 'categories' || tab === 'vendors') {
+    if (
+      (tab === 'locations' || tab === 'items' || tab === 'transactions' || tab === 'categories' || tab === 'vendors') &&
+      appliedTabRef.current !== tab
+    ) {
+      appliedTabRef.current = tab;
       setActiveTab(tab);
-      next.delete('tab');
-      changed = true;
     }
 
     const matchLocation = (code: string) =>
@@ -351,6 +371,8 @@ export const InventoryPage = () => {
 
     const openLocationDetail = (loc: ItemLocation) => {
       setActiveTab('locations');
+      appliedTabRef.current = 'locations';
+      next.set('tab', 'locations');
       setCatalogType('location');
       setSelectedCatalogItem(loc);
       setIsCatalogReadOnly(true);
@@ -360,6 +382,8 @@ export const InventoryPage = () => {
 
     const openItemDetail = (item: Item) => {
       setActiveTab('items');
+      appliedTabRef.current = 'items';
+      next.set('tab', 'items');
       setSelectedItem(item);
       setIsItemReadOnly(true);
       setIsItemModalOpen(true);
@@ -583,7 +607,7 @@ export const InventoryPage = () => {
     setShowNoVendorOnly(false);
     setShowDiscontinuedOnly(false);
     setShowLowStockOnly(true);
-    setActiveTab('items');
+    changeTab('items');
   };
 
   const filterCriticalWithoutVendor = (event?: MouseEvent) => {
@@ -592,7 +616,7 @@ export const InventoryPage = () => {
     setShowDiscontinuedOnly(false);
     setShowNoVendorOnly(true);
     setShowCriticalAssetOnly(false);
-    setActiveTab('items');
+    changeTab('items');
   };
 
   const filterCriticalAssets = () => {
@@ -600,7 +624,7 @@ export const InventoryPage = () => {
     setShowNoVendorOnly(false);
     setShowDiscontinuedOnly(false);
     setShowCriticalAssetOnly(true);
-    setActiveTab('items');
+    changeTab('items');
   };
 
   const filterDiscontinued = () => {
@@ -608,7 +632,7 @@ export const InventoryPage = () => {
     setShowNoVendorOnly(false);
     setShowCriticalAssetOnly(false);
     setShowDiscontinuedOnly(true);
-    setActiveTab('items');
+    changeTab('items');
   };
 
   const clearStockFilters = () => {
@@ -1933,7 +1957,7 @@ export const InventoryPage = () => {
             {tabs.map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => changeTab(tab.id as 'items' | 'transactions' | 'categories' | 'locations' | 'vendors')}
                 title={tab.label}
                 aria-label={tab.label}
                 aria-current={activeTab === tab.id ? 'page' : undefined}

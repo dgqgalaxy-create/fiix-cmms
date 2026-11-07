@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.74.0";
+export const APP_VERSION = "1.75.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -13,7 +13,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
 
   const version = APP_VERSION;
   const isPreview = /-preview/i.test(version);
-  const updateDate = "5 de Noviembre, 2026";
+  const updateDate = "7 de Noviembre, 2026";
   const modules = [
     "Inicio (Resumen Operativo)",
     "Órdenes de Trabajo",
@@ -33,6 +33,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: menú lateral — «Inventario» ahora es un grupo desplegable que muestra Movimientos, Repuestos, Categorías, Ubicaciones, Proveedores y Activos, sin salir de la barra lateral. El submódulo en el que estás se resalta en verde y el grupo se abre solo al entrar al módulo.",
+    "Cambio: «Activos» deja de ser una entrada suelta del menú y pasa a vivir dentro de Inventario. La página sigue accesible desde ahí y por su dirección directa.",
     "Nuevo: Horarios — vista «Semana» (matriz Personal × Días) como vista predeterminada: una fila por persona y una columna por día, con todos los turnos a la vista (se acaba el «+N más»), columna del día actual resaltada y fila de cobertura diaria con el conteo por turno. Puedes arrastrar incidencias a cualquier celda y abrir el detalle del día con un clic.",
     "Nuevo: Horarios — botón «Semana / Mes» en la parte superior para alternar entre la matriz semanal y el calendario de mes completo de siempre. Atajos de teclado: S (semana), M (mes), H (hoy) y ← → para cambiar de semana.",
     "Nuevo: Horarios — índice de colores ampliado: ahora explica también Turno día, Turno noche, Turno mixto y Descanso (antes solo se describían las incidencias), además de los turnos importados del Excel (D+TE, N+TE, I, X, CURSO).",
