@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.81.0";
+export const APP_VERSION = "1.82.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Mejora: Inventario — los detalles de Movimientos, Categorías, Ubicaciones y Proveedores ahora se abren en un panel lateral derecho, igual que Repuestos, en lugar de una ventana centrada.",
     "Mejora: Inventario — Movimientos, Categorías, Ubicaciones y Proveedores usan la misma tabla que Repuestos: columnas de ancho ajustable, menú ⋮ por encabezado (ordenar u ocultar), selector de columnas y vista de tabla o tarjetas, recordando tus preferencias por vista.",
     "Nuevo: menú lateral — «Archivos»: biblioteca unificada con todos los documentos (los de repuestos y los propios), organizada por carpetas, con buscador, vista de cuadrícula o lista, y subida con título y carpeta.",
     "Mejora: Repuestos — los botones Registrar movimiento, Editar y Eliminar pasan a una fila debajo del título del panel, para que el nombre del artículo no se recorte.",

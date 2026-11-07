@@ -6,22 +6,43 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   transaction: InventoryTransaction | null;
+  /** `drawer` abre el detalle como panel lateral derecho (mismo patrón que Repuestos). */
+  variant?: 'modal' | 'drawer';
 }
 
-export const TransactionDetailModal = ({ isOpen, onClose, transaction }: Props) => {
+export const TransactionDetailModal = ({ isOpen, onClose, transaction, variant = 'modal' }: Props) => {
   if (!isOpen || !transaction) return null;
 
+  const isDrawer = variant === 'drawer';
+
   return (
-    <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+    <div
+      className={`fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm ${isDrawer ? 'flex justify-end' : 'flex items-center justify-center p-4'}`}
+      onClick={isDrawer ? onClose : undefined}
+    >
+      <div
+        onClick={isDrawer ? (event) => event.stopPropagation() : undefined}
+        className={
+          isDrawer
+            ? 'flex h-full w-full max-w-md flex-col overflow-hidden bg-white shadow-2xl animate-in slide-in-from-right duration-300 dark:bg-slate-900 sm:rounded-l-2xl'
+            : 'bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden'
+        }
+      >
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Detalles del Movimiento</h2>
+          <div className="min-w-0">
+            <h2 className="truncate text-xl font-bold text-slate-900 dark:text-slate-100">
+              {transaction.item?.name || 'Detalle del movimiento'}
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {transaction.amount > 0 ? 'Entrada' : 'Salida'} · {formatDateTime(transaction.created_at)}
+            </p>
+          </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
             <X size={20} />
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className={`space-y-4 ${isDrawer ? 'flex-1 overflow-y-auto p-6' : 'p-6'}`}>
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Fecha y Hora</label>
             <input
@@ -71,7 +92,7 @@ export const TransactionDetailModal = ({ isOpen, onClose, transaction }: Props) 
           </div>
         </div>
 
-        <div className="mt-2 pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 p-6">
+        <div className={`border-t border-slate-100 p-6 flex justify-end gap-3 dark:border-slate-800 ${isDrawer ? 'shrink-0' : 'mt-2 pt-6'}`}>
           <button
             type="button"
             onClick={onClose}

@@ -2236,12 +2236,14 @@ export const InventoryPage = () => {
       />
 
       <TransactionDetailModal
+        variant="drawer"
         isOpen={isTransactionDetailModalOpen}
         onClose={() => setIsTransactionDetailModalOpen(false)}
         transaction={selectedTransaction}
       />
 
       <CatalogModal
+        variant="drawer"
         isOpen={isCatalogModalOpen}
         onClose={() => setIsCatalogModalOpen(false)}
         type={catalogType}
