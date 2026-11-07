@@ -28,7 +28,7 @@ export interface Meter {
   last_reading_value?: number | null;
   is_active: boolean;
   notes?: string | null;
-  asset?: { id: string; name: string; internal_code: string };
+  asset?: { id: string; name: string; internal_code: string; zone?: { id: string; name: string } | null };
   triggers: MeterTrigger[];
   created_at: string;
 }

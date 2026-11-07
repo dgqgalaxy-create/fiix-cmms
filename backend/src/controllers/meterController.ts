@@ -49,7 +49,14 @@ export const getMeters = async (req: Request, res: Response): Promise<void> => {
       where: assetId ? { asset_id: assetId } : undefined,
       include: {
         ...meterInclude,
-        asset: { select: { id: true, name: true, internal_code: true } },
+        asset: {
+          select: {
+            id: true,
+            name: true,
+            internal_code: true,
+            zone: { select: { id: true, name: true } },
+          },
+        },
       },
       orderBy: [{ is_active: 'desc' }, { name: 'asc' }],
     });

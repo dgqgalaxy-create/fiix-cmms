@@ -34,7 +34,7 @@ const WO_STATUS_LABELS: Record<string, string> = {
 };
 
 export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Props) => {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const canManageItems = hasPermission('MANAGE_INVENTORY');
   const [activeTab, setActiveTab] = useState<'overview' | 'info' | 'metrics' | 'history' | 'meters'>('info');
   const [metrics, setMetrics] = useState<any>(null);
@@ -568,6 +568,7 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Pr
               assetId={asset.id}
               assetName={asset.name}
               canManage={canEdit ?? hasPermission('MANAGE_ASSETS')}
+              canManageTriggers={user?.role === 'ADMINISTRADOR'}
             />
           )}
 

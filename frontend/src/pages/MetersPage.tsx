@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Gauge, Search, RefreshCw, Loader2, AlertTriangle, CheckCircle2, ArrowDownToLine } from 'lucide-react';
-import { getMeters, addMeterReading, type Meter } from '../api/meters';
+import { useNavigate } from 'react-router-dom';
+import { Gauge, Search, RefreshCw, Loader2, AlertTriangle, CheckCircle2, ArrowDownToLine, ExternalLink } from 'lucide-react';
+import { getMeters, type Meter } from '../api/meters';
 import { ReadingModal } from '../components/meters/ReadingModal';
 import { formatDateTime } from '../utils/dateUtils';
 
@@ -22,18 +23,17 @@ const nextService = (meter: Meter) => {
 };
 
 /**
- * Página global de medidores: todos los puntos de medición en un solo listado
- * para registrar lecturas rápido, sin entrar activo por activo.
+ * Página global de medidores: todos los puntos de medición de la planta, con la
+ * zona para ubicarlos y dos acciones claras: registrar medición o ir al activo.
  */
 export const MetersPage = () => {
+  const navigate = useNavigate();
   const [meters, setMeters] = useState<Meter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [onlyPending, setOnlyPending] = useState(false);
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [savingId, setSavingId] = useState<string | null>(null);
   const [modalMeter, setModalMeter] = useState<Meter | null>(null);
 
   const load = useCallback(async () => {
@@ -61,7 +61,7 @@ export const MetersPage = () => {
     return meters
       .filter((meter) => {
         if (!term) return true;
-        const haystack = `${meter.name} ${meter.asset?.name ?? ''} ${meter.asset?.internal_code ?? ''}`.toLowerCase();
+        const haystack = `${meter.name} ${meter.asset?.name ?? ''} ${meter.asset?.internal_code ?? ''} ${meter.asset?.zone?.name ?? ''}`.toLowerCase();
         return haystack.includes(term);
       })
       .filter((meter) => {
@@ -73,7 +73,7 @@ export const MetersPage = () => {
         const ra = nextService(a)?.remaining ?? Number.POSITIVE_INFINITY;
         const rb = nextService(b)?.remaining ?? Number.POSITIVE_INFINITY;
         if (ra !== rb) return ra - rb;
-        return (a.asset?.name ?? '').localeCompare(b.asset?.name ?? '');
+        return (a.asset?.zone?.name ?? '').localeCompare(b.asset?.zone?.name ?? '');
       });
   }, [meters, search, onlyPending]);
 
@@ -81,34 +81,6 @@ export const MetersPage = () => {
     const next = nextService(meter);
     return Boolean(next && next.remaining <= 0);
   }).length;
-
-  const submitReading = async (meter: Meter) => {
-    const raw = (values[meter.id] ?? '').trim();
-    const parsed = Number(raw);
-    if (!raw || !Number.isFinite(parsed) || parsed < 0) {
-      setError(`Escribe una lectura válida para «${meter.name}».`);
-      return;
-    }
-    setSavingId(meter.id);
-    setError(null);
-    try {
-      const result = await addMeterReading(meter.id, { value: parsed });
-      setValues((prev) => ({ ...prev, [meter.id]: '' }));
-      if (result.fired_work_orders.length > 0) {
-        setBanner(
-          `«${meter.name}» en ${fmt(parsed)} ${unitShort(meter.unit)} · OT generada(s): ` +
-            result.fired_work_orders.map((wo) => wo.trigger_name).join(', ')
-        );
-      } else {
-        setBanner(`Lectura ${fmt(parsed)} ${unitShort(meter.unit)} registrada en «${meter.name}».`);
-      }
-      await load();
-    } catch {
-      setError('No se pudo registrar la lectura.');
-    } finally {
-      setSavingId(null);
-    }
-  };
 
   return (
     <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -149,7 +121,7 @@ export const MetersPage = () => {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por activo o medidor…"
+            placeholder="Buscar por zona, activo o medidor…"
             className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           />
         </div>
@@ -194,26 +166,27 @@ export const MetersPage = () => {
             const next = nextService(meter);
             const overdue = Boolean(next && next.remaining <= 0);
             const unit = unitShort(meter.unit);
-            const inputValue = values[meter.id] ?? '';
-            const saving = savingId === meter.id;
 
             return (
               <div
                 key={meter.id}
-                className={`grid gap-3 rounded-2xl border bg-white p-3 shadow-sm dark:bg-slate-900 sm:grid-cols-[220px_1fr_auto] sm:items-center ${
+                className={`grid gap-3 rounded-2xl border bg-white p-3 shadow-sm dark:bg-slate-900 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_auto] sm:items-center ${
                   overdue ? 'border-rose-300 dark:border-rose-800' : 'border-slate-200 dark:border-slate-700'
                 }`}
               >
                 <div className="min-w-0">
-                  <p className="truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-                    {meter.asset?.name ?? 'Activo'}
-                  </p>
                   <p className="truncate text-sm font-bold text-slate-800 dark:text-slate-100" title={meter.name}>
                     {meter.name}
                   </p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-slate-500 dark:text-slate-400">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                      {meter.asset?.zone?.name ?? 'Sin zona'}
+                    </span>
+                    <span className="truncate" title={meter.asset?.name ?? ''}>{meter.asset?.name ?? 'Activo'}</span>
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
                     {meter.unit}
-                    {meter.last_reading_at ? ` · ${formatDateTime(meter.last_reading_at)}` : ' · sin lecturas'}
+                    {meter.last_reading_at ? ` · última lectura ${formatDateTime(meter.last_reading_at)}` : ' · sin lecturas'}
                   </p>
                 </div>
 
@@ -227,50 +200,37 @@ export const MetersPage = () => {
                   <div className="min-w-0">
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Próximo servicio</p>
                     {next ? (
-                      <p className={`text-sm font-semibold ${overdue ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-200'}`}>
-                        {fmt(next.trigger.threshold)} {unit}
-                        <span className={`ml-1 font-normal ${overdue ? 'text-rose-500' : 'text-slate-500 dark:text-slate-400'}`}>
-                          {overdue ? '· vencido' : `· faltan ${fmt(next.remaining)} ${unit}`}
-                        </span>
-                      </p>
+                      <>
+                        <p className={`text-sm font-semibold ${overdue ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                          {fmt(next.trigger.threshold)} {unit}
+                          <span className={`ml-1 font-normal ${overdue ? 'text-rose-500' : 'text-slate-500 dark:text-slate-400'}`}>
+                            {overdue ? '· vencido' : `· faltan ${fmt(next.remaining)} ${unit}`}
+                          </span>
+                        </p>
+                        <p className="truncate text-[11px] text-slate-400 dark:text-slate-500">{next.trigger.name}</p>
+                      </>
                     ) : (
                       <p className="text-sm text-slate-400">Sin disparador</p>
-                    )}
-                    {next && (
-                      <p className="truncate text-[11px] text-slate-400 dark:text-slate-500">{next.trigger.name}</p>
                     )}
                   </div>
                 </div>
 
-                <form
-                  className="flex items-center gap-1.5"
-                  onSubmit={(event) => { event.preventDefault(); void submitReading(meter); }}
-                >
-                  <input
-                    value={inputValue}
-                    onChange={(e) => setValues((prev) => ({ ...prev, [meter.id]: e.target.value }))}
-                    inputMode="decimal"
-                    placeholder={fmt(meter.current_value)}
-                    aria-label={`Nueva lectura de ${meter.name}`}
-                    className="w-24 rounded-xl border border-slate-300 px-2 py-2 text-sm font-semibold tabular-nums text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
-                  />
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-40"
-                  >
-                    {saving ? <Loader2 size={15} className="animate-spin" /> : <ArrowDownToLine size={15} />}
-                    Guardar
-                  </button>
+                <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
                   <button
                     type="button"
                     onClick={() => setModalMeter(meter)}
-                    className="rounded-xl border border-slate-200 px-2 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                    title="Registrar con nota"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
                   >
-                    + Nota
+                    <ArrowDownToLine size={15} /> Registrar medición
                   </button>
-                </form>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/assets?asset=${meter.asset_id}`)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    <ExternalLink size={15} /> Ir al activo
+                  </button>
+                </div>
               </div>
             );
           })}

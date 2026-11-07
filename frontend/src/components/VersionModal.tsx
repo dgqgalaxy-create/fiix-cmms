@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.77.0";
+export const APP_VERSION = "1.77.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,8 +33,10 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Mejora: Medidores — cada fila muestra la zona del activo (las zonas no se repiten, los equipos sí), para ubicar el punto de medición de inmediato.",
+    "Mejora: Medidores — acciones claras: «Registrar medición» e «Ir al activo». Se quitó el campo con botón Guardar y el botón «+ Nota», que confundían.",
+    "Seguridad: los disparadores de medidores solo los puede crear o modificar el administrador; el resto puede consultarlos y registrar lecturas. Cada lectura guarda quién la capturó y se muestra en el historial.",
     "Nuevo: menú lateral — entrada directa «Medidores» con todos los puntos de medición de la planta en una sola lista, sin tener que entrar activo por activo.",
-    "Nuevo: Medidores — captura rápida: escribes la lectura en la fila y pulsas Guardar. La lista se ordena por urgencia, marca en rojo los servicios vencidos y tiene filtro «Vencidos», buscador por activo o medidor y un botón «+ Nota» para registrar con observación.",
     "Nuevo: Activos — pestaña «Medidores»: horómetro, odómetro o ciclos por equipo, con valor actual, próximo servicio, registro de lecturas e historial. Pensado para mantenimiento por uso, no solo por calendario.",
     "Nuevo: Activos — disparadores por uso: cuando una lectura llega (o baja) al umbral se genera automáticamente una OT preventiva. Puede repetirse cada X horas/km, por ejemplo cada 250 h, o dispararse una sola vez.",
     "Mejora: Inventario — se retiró el menú interno de pestañas (Repuestos, Movimientos, Categorías, Ubicaciones, Proveedores) porque ahora vive en la barra lateral. Todo ese ancho pasa a la tabla y a los formularios, y el título indica la sección en la que estás.",

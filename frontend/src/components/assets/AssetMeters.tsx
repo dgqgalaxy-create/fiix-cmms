@@ -36,13 +36,15 @@ interface Props {
   assetId: string;
   assetName?: string;
   canManage: boolean;
+  /** Configurar disparadores: exclusivo del administrador. */
+  canManageTriggers?: boolean;
 }
 
 /**
  * Medidores de uso del activo: horómetro, odómetro, ciclos…
  * Cada medidor muestra su lectura actual, el próximo servicio y sus disparadores.
  */
-export const AssetMeters = ({ assetId, assetName, canManage }: Props) => {
+export const AssetMeters = ({ assetId, assetName, canManage, canManageTriggers = false }: Props) => {
   const [meters, setMeters] = useState<Meter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -262,7 +264,7 @@ export const AssetMeters = ({ assetId, assetName, canManage }: Props) => {
       {triggersFor && (
         <TriggersModal
           meter={triggersFor}
-          canManage={canManage}
+          canManage={canManageTriggers}
           onClose={() => setTriggersFor(null)}
           onChanged={load}
         />
@@ -481,6 +483,11 @@ const TriggersModal = ({
         </div>
 
         <div className="space-y-2">
+          {!canManage && (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+              Solo el administrador puede crear o modificar disparadores.
+            </p>
+          )}
           {triggers.length === 0 && (
             <p className="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500 dark:border-slate-700">
               Sin disparadores. Añade uno para que se genere la OT automáticamente.
@@ -578,7 +585,7 @@ const TriggersModal = ({
                       </span>
                       <span className="truncate text-slate-500 dark:text-slate-400">
                         {formatDateTime(reading.reading_at)}
-                        {reading.created_by?.name ? ` · ${reading.created_by.name}` : ''}
+                        {reading.created_by?.name ? ` · por ${reading.created_by.name}` : ' · por sistema'}
                       </span>
                       {canManage && (
                         <button
