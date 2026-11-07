@@ -223,13 +223,19 @@ export type ProcessCsvImportOptions = {
 };
 
 function readImportFileUtf8(file: ImportFileLike): string {
-  if (file.buffer && file.buffer.length > 0) {
-    return file.buffer.toString('utf8');
+  const raw = file.buffer && file.buffer.length > 0
+    ? file.buffer.toString('utf8')
+    : file.path && fs.existsSync(file.path)
+      ? fs.readFileSync(file.path, 'utf8')
+      : null;
+
+  if (raw === null) {
+    throw new CsvImportError(`No se pudo leer el archivo: ${file.originalname}`);
   }
-  if (file.path && fs.existsSync(file.path)) {
-    return fs.readFileSync(file.path, 'utf8');
-  }
-  throw new CsvImportError(`No se pudo leer el archivo: ${file.originalname}`);
+
+  // Excel y varios editores guardan el CSV con BOM (U+FEFF). Si no se quita,
+  // el primer encabezado llega como «\uFEFFID» y la fila completa se ignora.
+  return raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
 }
 
 function reportDriveProgress(p: DriveDownloadProgress, basePercent: number, span: number): void {
