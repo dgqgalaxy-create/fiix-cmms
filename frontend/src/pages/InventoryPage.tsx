@@ -949,22 +949,6 @@ export const InventoryPage = () => {
         return (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setItemSelectionMode((value) => !value);
-                  setSelectedItemIds(new Set());
-                }}
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-xl border transition-colors ${
-                  itemSelectionMode
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-white text-slate-600 border-slate-200'
-                }`}
-              >
-                <Printer size={16} />
-                {itemSelectionMode ? 'Cancelar selección' : 'QR masivo'}
-              </button>
-
               {/* Selector de vista: tabla o tarjetas */}
               <div className="ml-auto flex overflow-hidden rounded-xl border border-slate-200 text-sm dark:border-slate-700">
                 <button
@@ -1760,6 +1744,26 @@ export const InventoryPage = () => {
             </span>
             <span>Gestiona repuestos, movimientos y catálogos.</span>
           </p>
+
+          {/* Selector de sección para móvil: la barra lateral está oculta */}
+          <div className="-mx-1 mt-3 flex gap-1 overflow-x-auto px-1 pb-1 md:hidden">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => changeTab(tab.id as 'items' | 'transactions' | 'categories' | 'locations' | 'vendors')}
+                aria-current={activeTab === tab.id ? 'page' : undefined}
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-emerald-600 bg-emerald-600 text-white'
+                    : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div
@@ -1917,6 +1921,22 @@ export const InventoryPage = () => {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setItemSelectionMode((value) => !value);
+                    setSelectedItemIds(new Set());
+                  }}
+                  title="Selecciona repuestos para imprimir sus etiquetas QR"
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    itemSelectionMode
+                      ? 'border-emerald-300 bg-emerald-600 text-white'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                  }`}
+                >
+                  <Printer size={14} />
+                  {itemSelectionMode ? 'Cancelar selección' : 'QR masivo'}
+                </button>
                 <button
                   type="button"
                   onClick={() => (showCriticalAssetOnly ? clearStockFilters() : filterCriticalAssets())}

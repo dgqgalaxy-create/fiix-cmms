@@ -338,14 +338,134 @@ export const getItemById = async (req: Request, res: Response): Promise<void> =>
 const INITIAL_STOCK_REASON = 'Levantamiento de inventario (stock inicial)';
 
 /* -------------------------------------------------------------------------- */
-/* Archivos del repuesto (fichas técnicas, manuales, cotizaciones…)           */
+/* Biblioteca de archivos (fichas, manuales, documentos sueltos)              */
 /* -------------------------------------------------------------------------- */
+
+const documentInclude = { uploaded_by: { select: { id: true, name: true } } } as const;
+
+/** GET /api/documents?folder=&search=&itemId= */
+export const getDocuments = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const folder = typeof req.query.folder === 'string' && req.query.folder ? req.query.folder : undefined;
+    const itemId = typeof req.query.itemId === 'string' && req.query.itemId ? req.query.itemId : undefined;
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+
+    const docs = await prisma.document.findMany({
+      where: {
+        ...(folder ? { folder } : {}),
+        ...(itemId ? { item_id: itemId } : {}),
+        ...(search
+          ? {
+              OR: [
+                { file_name: { contains: search, mode: 'insensitive' } },
+                { title: { contains: search, mode: 'insensitive' } },
+                { folder: { contains: search, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+      },
+      include: {
+        ...documentInclude,
+        item: { select: { id: true, name: true, internal_code: true } },
+      },
+      orderBy: { created_at: 'desc' },
+      take: 500,
+    });
+    res.json(docs);
+  } catch (error) {
+    console.error('Error listando documentos:', error);
+    res.status(500).json({ error: 'Error al obtener los documentos' });
+  }
+};
+
+/** GET /api/documents/folders — carpetas con su conteo (la primera es el total). */
+export const getDocumentFolders = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const rows = await prisma.document.groupBy({
+      by: ['folder'],
+      _count: { _all: true },
+      orderBy: { folder: 'asc' },
+    });
+    const total = rows.reduce((sum, row) => sum + row._count._all, 0);
+    res.json([
+      { folder: '', count: total },
+      ...rows.map((row) => ({ folder: row.folder, count: row._count._all })),
+    ]);
+  } catch (error) {
+    console.error('Error listando carpetas:', error);
+    res.status(500).json({ error: 'Error al obtener las carpetas' });
+  }
+};
+
+/** POST /api/documents (multipart: file, title?, folder?, item_id?) */
+export const uploadDocument = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ error: 'Adjunta un archivo.' });
+      return;
+    }
+    const folder = String(req.body?.folder || 'General').trim().slice(0, 60) || 'General';
+    const title = String(req.body?.title || '').trim().slice(0, 160) || null;
+    const itemId = String(req.body?.item_id || '').trim() || null;
+
+    if (itemId) {
+      const item = await prisma.item.findUnique({ where: { id: itemId }, select: { id: true } });
+      if (!item) {
+        res.status(404).json({ error: 'El repuesto indicado no existe' });
+        return;
+      }
+    }
+
+    const created = await prisma.document.create({
+      data: {
+        file_url: `/uploads/documents/${file.filename}`,
+        file_name: file.originalname || file.filename,
+        title,
+        mime_type: file.mimetype || null,
+        size: file.size ?? null,
+        folder,
+        item_id: itemId,
+        uploaded_by_id: (req as any).user?.userId ?? null,
+      },
+      include: documentInclude,
+    });
+    res.status(201).json(created);
+  } catch (error) {
+    console.error('Error subiendo documento:', error);
+    res.status(500).json({ error: 'No se pudo subir el documento' });
+  }
+};
+
+/** DELETE /api/documents/:id */
+export const deleteDocument = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const existing = await prisma.document.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: 'Archivo no encontrado' });
+      return;
+    }
+    await prisma.document.delete({ where: { id } });
+    try {
+      const relative = existing.file_url.replace(/^\/uploads\//, '');
+      const diskPath = path.join(__dirname, '../../uploads', relative);
+      if (fs.existsSync(diskPath)) fs.unlinkSync(diskPath);
+    } catch (diskError) {
+      console.error('No se pudo borrar el archivo del disco:', diskError);
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error eliminando documento:', error);
+    res.status(500).json({ error: 'No se pudo eliminar el documento' });
+  }
+};
 
 /** GET /api/inventory/items/:id/files */
 export const getItemFiles = async (req: Request, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const files = await prisma.itemFile.findMany({
+    const files = await prisma.document.findMany({
       where: { item_id: id },
       include: { uploaded_by: { select: { id: true, name: true } } },
       orderBy: { created_at: 'desc' },
@@ -371,10 +491,11 @@ export const uploadItemFile = async (req: Request, res: Response): Promise<void>
       res.status(404).json({ error: 'Repuesto no encontrado' });
       return;
     }
-    const created = await prisma.itemFile.create({
+    const created = await prisma.document.create({
       data: {
         item_id: id,
-        file_url: `/uploads/inventory-files/${file.filename}`,
+        folder: 'Repuestos',
+        file_url: `/uploads/documents/${file.filename}`,
         file_name: file.originalname || file.filename,
         mime_type: file.mimetype || null,
         size: file.size ?? null,
@@ -394,12 +515,12 @@ export const deleteItemFile = async (req: Request, res: Response): Promise<void>
   try {
     const id = req.params.id as string;
     const fileId = req.params.fileId as string;
-    const existing = await prisma.itemFile.findFirst({ where: { id: fileId, item_id: id } });
+    const existing = await prisma.document.findFirst({ where: { id: fileId, item_id: id } });
     if (!existing) {
       res.status(404).json({ error: 'Archivo no encontrado' });
       return;
     }
-    await prisma.itemFile.delete({ where: { id: fileId } });
+    await prisma.document.delete({ where: { id: fileId } });
 
     // Borra el binario del disco sin tumbar la operación si ya no existe.
     try {

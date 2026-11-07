@@ -354,6 +354,46 @@ export const ItemModal = ({
     }
   };
 
+  /** Acciones del repuesto: en el modal van en el encabezado; en el panel, bajo el título. */
+  const actionButtons = item ? (
+    <>
+      {onQuickTransaction && (
+        <button
+          type="button"
+          onClick={() => onQuickTransaction(item.id)}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm shadow-orange-500/30 transition-colors hover:bg-orange-600 active:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-1 sm:text-sm dark:focus:ring-offset-slate-900"
+          title="Registrar entrada o salida de inventario"
+        >
+          <ArrowRightLeft size={16} className="shrink-0" />
+          <span>Registrar movimiento</span>
+        </button>
+      )}
+      {readOnly && onRequestEdit && (
+        <button
+          type="button"
+          onClick={onRequestEdit}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 sm:text-sm dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-200 dark:hover:bg-blue-900/50 dark:focus:ring-offset-slate-900"
+          title="Editar ficha del repuesto"
+        >
+          <Edit2 size={16} className="shrink-0" />
+          <span>Editar</span>
+        </button>
+      )}
+      {canDeleteItems && (
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={isDeleting}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-1 disabled:opacity-50 sm:text-sm dark:border-red-800 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/50 dark:focus:ring-offset-slate-900"
+          title="Eliminar repuesto permanentemente"
+        >
+          {isDeleting ? <Loader2 size={16} className="shrink-0 animate-spin" /> : <Trash2 size={16} className="shrink-0" />}
+          <span>Eliminar</span>
+        </button>
+      )}
+    </>
+  ) : null;
+
   return (
     <div
       className={
@@ -371,57 +411,19 @@ export const ItemModal = ({
             : 'bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-4xl max-h-[95vh] flex flex-col overflow-hidden'
         }
       >
-        <div className={`px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex gap-3 bg-slate-50/50 dark:bg-slate-900/50 shrink-0 ${isDrawer ? 'flex-wrap items-start' : 'justify-between items-center'}`}>
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        <div className={`px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex gap-3 bg-slate-50/50 dark:bg-slate-900/50 shrink-0 items-center ${isDrawer ? '' : 'justify-between'}`}>
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <h2 className="truncate text-xl font-bold text-slate-900 dark:text-slate-100">
               {item ? item.name : 'Nuevo Repuesto'}
             </h2>
             {item && (
-              <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+              <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 {item.internal_code}
               </span>
             )}
           </div>
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-            {item && onQuickTransaction && (
-              <button
-                type="button"
-                onClick={() => onQuickTransaction(item.id)}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm shadow-orange-500/30 transition-colors hover:bg-orange-600 active:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-1 sm:text-sm dark:focus:ring-offset-slate-900"
-                title="Registrar entrada o salida de inventario"
-              >
-                <ArrowRightLeft size={16} className="shrink-0" />
-                <span>Registrar movimiento</span>
-              </button>
-            )}
-            {item && readOnly && onRequestEdit && (
-              <button
-                type="button"
-                onClick={onRequestEdit}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 sm:text-sm dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-200 dark:hover:bg-blue-900/50 dark:focus:ring-offset-slate-900"
-                title="Editar ficha del repuesto"
-              >
-                <Edit2 size={16} className="shrink-0" />
-                <span>Editar</span>
-              </button>
-            )}
-            {item && canDeleteItems && (
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-1 disabled:opacity-50 sm:text-sm dark:border-red-800 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/50 dark:focus:ring-offset-slate-900"
-                title="Eliminar repuesto permanentemente"
-              >
-                {isDeleting ? (
-                  <Loader2 size={16} className="shrink-0 animate-spin" />
-                ) : (
-                  <Trash2 size={16} className="shrink-0" />
-                )}
-                <span>Eliminar</span>
-              </button>
-            )}
-          <div className="ml-1 flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
+            {!isDrawer && actionButtons}
             {canNavigate && (
               <>
                 <button
@@ -453,8 +455,13 @@ export const ItemModal = ({
               <X size={20} />
             </button>
           </div>
-          </div>
         </div>
+
+        {isDrawer && actionButtons && (
+          <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-slate-100 px-4 py-2 dark:border-slate-800">
+            {actionButtons}
+          </div>
+        )}
 
         {isDrawer && item && (
           <div className="flex shrink-0 gap-1 border-b border-slate-100 px-3 dark:border-slate-800">

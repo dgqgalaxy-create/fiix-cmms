@@ -19,7 +19,7 @@ const uploadDir = path.join(__dirname, '../../uploads/inventory');
 const upload = createDiskUploader(uploadDir, { maxFiles: 2 });
 const vendorsUploadDir = path.join(__dirname, '../../uploads/vendors');
 const vendorsUpload = createDiskUploader(vendorsUploadDir, { maxFiles: 1 });
-const itemFilesUploadDir = path.join(__dirname, '../../uploads/inventory-files');
+const itemFilesUploadDir = path.join(__dirname, '../../uploads/documents');
 const itemFilesUpload = createDocumentUploader(itemFilesUploadDir);
 
 router.use(authenticate);
