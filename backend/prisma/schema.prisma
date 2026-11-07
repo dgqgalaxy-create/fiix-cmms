@@ -128,6 +128,7 @@ model User {
   shifts               TechnicianShift[]
   meter_readings       MeterReading[]
   documents            Document[]
+  reported_downtimes   AssetDowntime[]
   preferences          Json?       @default("{}")
 }
 
@@ -260,6 +261,7 @@ model Asset {
   operational_tasks OperationalTask[]
   parts           AssetPart[]
   meters          Meter[]
+  downtimes       AssetDowntime[]
 
   @@index([zone_id])
   @@index([status])
@@ -326,6 +328,7 @@ model WorkOrder {
   inventory_transactions InventoryTransaction[]
   operational_tasks   OperationalTask[]
   comments            WorkOrderComment[]
+  downtimes           AssetDowntime[]
 
   @@index([status, created_at])
   @@index([created_at])
@@ -1088,4 +1091,29 @@ model Document {
 
   @@index([item_id])
   @@index([folder])
+}
+
+// ---------------------------------------------------------------------------
+// Paros por activo: alimenta MTBF, MTTR y disponibilidad.
+// ---------------------------------------------------------------------------
+
+/// Un paro puede estar abierto (sin `ended_at`) o cerrado. El motivo es libre
+/// para no obligar a catalogar y frenar el registro en piso.
+model AssetDowntime {
+  id             String   @id @default(uuid()) @db.Uuid
+  asset_id       String   @db.Uuid
+  asset          Asset    @relation(fields: [asset_id], references: [id], onDelete: Cascade)
+  work_order_id  String?  @db.Uuid
+  work_order     WorkOrder? @relation(fields: [work_order_id], references: [id], onDelete: SetNull)
+  /// Motivo corto: falla mecánica, falta de material, cambio de formato…
+  reason         String?
+  started_at     DateTime
+  ended_at       DateTime?
+  reported_by_id String?  @db.Uuid
+  reported_by    User?    @relation(fields: [reported_by_id], references: [id], onDelete: SetNull)
+  created_at     DateTime @default(now())
+
+  @@index([asset_id, started_at])
+  @@index([work_order_id])
+  @@index([ended_at])
 }

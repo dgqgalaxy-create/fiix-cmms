@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck, AlertTriangle, Clock, Wrench, Package, CalendarClock, Layers, Pencil, Loader2 } from 'lucide-react';
 import type { Asset } from '../api/assets';
 import { getAssetMetrics } from '../api/assets';
@@ -15,6 +15,7 @@ import { ItemModal } from './inventory/ItemModal';
 import { getItemById, getCategories, getLocations, getVendors } from '../api/inventory';
 import type { Item, ItemCategory, ItemLocation, Vendor } from '../api/inventory';
 import { AssetMeters } from './assets/AssetMeters';
+import { AssetDowntimes } from './assets/AssetDowntimes';
 
 interface Props {
   asset: Asset | null;
@@ -36,7 +37,7 @@ const WO_STATUS_LABELS: Record<string, string> = {
 export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Props) => {
   const { hasPermission, user } = useAuth();
   const canManageItems = hasPermission('MANAGE_INVENTORY');
-  const [activeTab, setActiveTab] = useState<'overview' | 'info' | 'metrics' | 'history' | 'meters'>('info');
+  const [activeTab, setActiveTab] = useState<'overview' | 'info' | 'metrics' | 'history' | 'meters' | 'downtimes'>('info');
   const [metrics, setMetrics] = useState<any>(null);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
   const [itemDetail, setItemDetail] = useState<Item | null>(null);
@@ -153,6 +154,7 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Pr
             ['info', 'Información'],
             ['metrics', 'KPIs'],
             ['meters', 'Medidores'],
+            ['downtimes', 'Paros'],
             ['history', 'Historial'],
           ] as const).map(([id, label]) => (
             <button
@@ -569,6 +571,14 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Pr
               assetName={asset.name}
               canManage={canEdit ?? hasPermission('MANAGE_ASSETS')}
               canManageTriggers={user?.role === 'ADMINISTRADOR'}
+            />
+          )}
+
+          {/* TAB: PAROS (MTBF / disponibilidad) */}
+          {activeTab === 'downtimes' && (
+            <AssetDowntimes
+              assetId={asset.id}
+              canManage={canEdit ?? hasPermission('MANAGE_ASSETS')}
             />
           )}
 

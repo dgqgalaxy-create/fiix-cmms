@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.83.0";
+export const APP_VERSION = "1.84.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: Activos — pestaña «Paros»: registra cuándo se detuvo la máquina y cuándo volvió, con motivo y quién lo reportó. Un paro abierto queda marcado como en curso y se puede finalizar con un clic.",
+    "Nuevo: Activos — con los paros se calculan MTBF, MTTR, tiempo parado y disponibilidad de los últimos 30 días, en la misma pestaña. El paro abierto se cuenta hasta ahora, para no subestimar la afectación.",
     "Nuevo: Órdenes de Trabajo — «Bitácora»: una sola línea de tiempo con la creación de la orden, los comentarios, los cambios de estado, los repuestos entregados o devueltos y las fotos, de lo más reciente a lo más viejo.",
     "Mejora: Medidores — «Ir al activo» abre el equipo sin perder el lugar: al cerrar el detalle vuelves a Medidores en vez de quedarte en Activos.",
     "Mejora: Inventario — los detalles de Movimientos, Categorías, Ubicaciones y Proveedores ahora se abren en un panel lateral derecho, igual que Repuestos, en lugar de una ventana centrada.",
