@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react';
+﻿import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, AlertTriangle, Ban, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter, DollarSign, Trash2, Table2, LayoutGrid } from 'lucide-react';
+import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, AlertTriangle, Ban, ShoppingCart, Printer, Loader2, X, Download, Filter, DollarSign, Trash2, Table2, LayoutGrid } from 'lucide-react';
 import { 
   getItems, getItemsPage, getItemById, getTransactions, getTransactionsPage, getTransactionsSummary, getCategories, getLocations, getVendors, getInventorySummary, deleteItem, deleteTransaction
 } from '../api/inventory';
@@ -10,6 +10,7 @@ import { createDraftsFromLowStock } from '../api/purchaseOrders';
 import { useAuth } from '../context/AuthContext';
 import { ItemModal } from '../components/inventory/ItemModal';
 import { ItemsTable } from '../components/inventory/ItemsTable';
+import { DataTable } from '../components/common/DataTable';
 import { ContextMenu } from '../components/common/ContextMenu';
 import { TransactionModal } from '../components/inventory/TransactionModal';
 import { TransactionDetailModal } from '../components/inventory/TransactionDetailModal';
@@ -1330,68 +1331,100 @@ export const InventoryPage = () => {
             </div>
           )}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-600">
-                <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold shadow-md shadow-[#739239]/40 dark:shadow-[#739239]/20 relative z-10">
-                  <tr>
-                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setTxSortBy('date'); setTxSortDirection(txSortBy === 'date' && txSortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                      <div className="flex items-center gap-1.5">Fecha {txSortBy === 'date' ? (txSortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
-                    </th>
-                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setTxSortBy('item'); setTxSortDirection(txSortBy === 'item' && txSortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                      <div className="flex items-center gap-1.5">Repuesto {txSortBy === 'item' ? (txSortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
-                    </th>
-                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setTxSortBy('user'); setTxSortDirection(txSortBy === 'user' && txSortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                      <div className="flex items-center gap-1.5">Usuario {txSortBy === 'user' ? (txSortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
-                    </th>
-                    <th className="px-6 py-4 text-right cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setTxSortBy('amount'); setTxSortDirection(txSortBy === 'amount' && txSortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                      <div className="flex items-center justify-end gap-1.5">Cantidad {txSortBy === 'amount' ? (txSortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
-                    </th>
-                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-100/60 hover:text-indigo-600 transition-colors group" onClick={() => { setTxSortBy('reason'); setTxSortDirection(txSortBy === 'reason' && txSortDirection === 'asc' ? 'desc' : 'asc'); }}>
-                      <div className="flex items-center gap-1.5">Motivo {txSortBy === 'reason' ? (txSortDirection === 'asc' ? <ChevronUp size={14} className="text-indigo-500"/> : <ChevronDown size={14} className="text-indigo-500"/>) : <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" />}</div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {txLoading && (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                        <div className="inline-flex items-center gap-2">
-                          <Loader2 size={18} className="animate-spin text-emerald-600" />
-                          Cargando movimientos…
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                  {!txLoading && paginatedTransactions.map((tx) => (
-                    <tr 
-                      key={tx.id} 
-                      className="hover:bg-slate-50/50 transition-colors cursor-pointer"
-                      onClick={() => handleOpenTransactionDetail(tx)}
-                      onContextMenu={(e) => { if (canDeleteMovements) { e.preventDefault(); setTxCtxMenu({ x: e.clientX, y: e.clientY, tx }); } }}
-                    >
-                      <td className="px-6 py-4">{formatDateTime(tx.created_at)}</td>
-                      <td className="px-6 py-4 font-medium text-slate-900">{tx.item?.name}</td>
-                      <td className="px-6 py-4">{tx.user?.name}</td>
-                      <td className="px-6 py-4 text-right">
-                        <span className={`inline-flex items-center px-2 py-1 rounded font-bold text-xs ${tx.amount > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                          {tx.amount > 0 ? '+' : ''}{tx.amount}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-slate-500">{tx.reason}</td>
-                    </tr>
-                  ))}
-                  {!txLoading && txTotal === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                        {txSearchQ || movementTypeFilter !== 'ALL'
-                          ? 'Ningún movimiento coincide con el filtro.'
-                          : 'No hay movimientos registrados.'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              storageKey="fiix-inv-transactions"
+              rows={paginatedTransactions}
+              rowKey={(tx) => tx.id}
+              isLoading={txLoading}
+              sortBy={txSortBy}
+              sortDirection={txSortDirection}
+              onSort={(key, direction) => {
+                if (direction) {
+                  setTxSortBy(key as typeof txSortBy);
+                  setTxSortDirection(direction);
+                  return;
+                }
+                setTxSortBy(key as typeof txSortBy);
+                setTxSortDirection(txSortBy === key && txSortDirection === 'asc' ? 'desc' : 'asc');
+              }}
+              onOpen={(tx) => handleOpenTransactionDetail(tx)}
+              onContextMenu={(event, tx) => {
+                if (canDeleteMovements) {
+                  event.preventDefault();
+                  setTxCtxMenu({ x: event.clientX, y: event.clientY, tx });
+                }
+              }}
+              columns={[
+                {
+                  key: 'date',
+                  label: 'Fecha',
+                  defaultWidth: 170,
+                  sortKey: 'date',
+                  render: (tx) => <span className="whitespace-nowrap text-slate-600 dark:text-slate-300">{formatDateTime(tx.created_at)}</span>,
+                },
+                {
+                  key: 'item',
+                  label: 'Repuesto',
+                  defaultWidth: 280,
+                  sortKey: 'item',
+                  render: (tx) => <span className="truncate font-medium text-slate-900 dark:text-slate-100">{tx.item?.name}</span>,
+                },
+                {
+                  key: 'user',
+                  label: 'Usuario',
+                  defaultWidth: 180,
+                  sortKey: 'user',
+                  render: (tx) => <span className="truncate text-slate-600 dark:text-slate-300">{tx.user?.name}</span>,
+                },
+                {
+                  key: 'amount',
+                  label: 'Cantidad',
+                  defaultWidth: 110,
+                  align: 'right',
+                  sortKey: 'amount',
+                  render: (tx) => (
+                    <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-bold ${
+                      tx.amount > 0
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+                        : 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
+                    }`}>
+                      {tx.amount > 0 ? '+' : ''}{tx.amount}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'reason',
+                  label: 'Motivo',
+                  defaultWidth: 260,
+                  sortKey: 'reason',
+                  render: (tx) => <span className="truncate text-slate-500 dark:text-slate-400" title={tx.reason || undefined}>{tx.reason}</span>,
+                },
+              ]}
+              renderCard={(tx) => (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-slate-900 dark:text-slate-100">{tx.item?.name}</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">{formatDateTime(tx.created_at)}</p>
+                    </div>
+                    <span className={`shrink-0 rounded px-2 py-1 text-xs font-bold ${
+                      tx.amount > 0
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+                        : 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
+                    }`}>
+                      {tx.amount > 0 ? '+' : ''}{tx.amount}
+                    </span>
+                  </div>
+                  <p className="truncate text-xs text-slate-600 dark:text-slate-300">{tx.reason}</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Registró: {tx.user?.name}</p>
+                </div>
+              )}
+              emptyMessage={
+                txSearchQ || movementTypeFilter !== 'ALL'
+                  ? 'Ningún movimiento coincide con el filtro.'
+                  : 'No hay movimientos registrados.'
+              }
+            />
             {txTotal > ITEMS_PER_PAGE && (
               <div className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-3 sm:px-6">
                 <div className="flex flex-1 justify-between sm:hidden">
@@ -1497,33 +1530,75 @@ export const InventoryPage = () => {
 
       case 'categories':
         return (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {categories.map((cat) => (
-              <div 
-                key={cat.id} 
-                className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between hover:border-emerald-300 transition-colors cursor-pointer"
-                onClick={() => handleOpenCatalogModal('category', cat, true)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                    <Tags size={20} />
+          <DataTable
+            storageKey="fiix-inv-categories"
+            rows={categories}
+            rowKey={(cat) => cat.id}
+            onOpen={(cat) => handleOpenCatalogModal('category', cat, true)}
+            columns={[
+              {
+                key: 'name',
+                label: 'Categoría',
+                defaultWidth: 360,
+                render: (cat) => (
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40">
+                      <Tags size={15} />
+                    </span>
+                    <span className="truncate font-semibold text-slate-900 dark:text-slate-100">{cat.name}</span>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900">{cat.name}</h3>
-                    <p className="text-xs text-slate-500 font-mono">{cat.internal_id}</p>
+                ),
+              },
+              {
+                key: 'code',
+                label: 'Código',
+                defaultWidth: 180,
+                render: (cat) => <span className="font-mono text-[10px] text-slate-500">{cat.internal_id}</span>,
+              },
+              {
+                key: 'actions',
+                label: 'Acciones',
+                defaultWidth: 100,
+                align: 'right',
+                hideable: false,
+                render: (cat) =>
+                  canManage ? (
+                    <button
+                      type="button"
+                      onClick={(event) => { event.stopPropagation(); handleOpenCatalogModal('category', cat, false); }}
+                      className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600"
+                      title="Editar"
+                    >
+                      <Edit2 size={15} />
+                    </button>
+                  ) : null,
+              },
+            ]}
+            renderCard={(cat) => (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40">
+                    <Tags size={18} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-slate-900 dark:text-slate-100">{cat.name}</p>
+                    <p className="truncate font-mono text-[11px] text-slate-500">{cat.internal_id}</p>
                   </div>
                 </div>
                 {canManage && (
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); handleOpenCatalogModal('category', cat, false); }} 
-                    className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                  <button
+                    type="button"
+                    onClick={(event) => { event.stopPropagation(); handleOpenCatalogModal('category', cat, false); }}
+                    className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600"
+                    title="Editar"
                   >
-                    <Edit2 size={16} />
+                    <Edit2 size={15} />
                   </button>
                 )}
               </div>
-            ))}
-          </div>
+            )}
+            emptyMessage="No hay categorías registradas."
+          />
         );
 
       case 'locations':
@@ -1565,152 +1640,216 @@ export const InventoryPage = () => {
                 </>
               )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {filteredLocations.map((loc) => (
-              <div 
-                key={loc.id} 
-                className={`bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between transition-colors cursor-pointer ${
-                  locationSelectionMode && selectedLocationIds.has(loc.id)
-                    ? 'border-emerald-400 ring-2 ring-emerald-200'
-                    : 'border-slate-200 hover:border-emerald-300'
-                }`}
-                onClick={() => {
-                  if (locationSelectionMode) {
-                    setSelectedLocationIds((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(loc.id)) next.delete(loc.id);
-                      else next.add(loc.id);
-                      return next;
-                    });
-                  } else {
-                    handleOpenCatalogModal('location', loc, true);
-                  }
-                }}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  {locationSelectionMode && (
-                    <input
-                      type="checkbox"
-                      checked={selectedLocationIds.has(loc.id)}
-                      onChange={() => {
-                        setSelectedLocationIds((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(loc.id)) next.delete(loc.id);
-                          else next.add(loc.id);
-                          return next;
-                        });
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                    />
-                  )}
-                  <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                    <MapPin size={20} />
+            <DataTable
+              storageKey="fiix-inv-locations"
+              rows={filteredLocations}
+              rowKey={(loc) => loc.id}
+              selectionMode={locationSelectionMode}
+              selectedIds={selectedLocationIds}
+              onToggleSelect={(id) =>
+                setSelectedLocationIds((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(id)) next.delete(id);
+                  else next.add(id);
+                  return next;
+                })
+              }
+              onOpen={(loc) => handleOpenCatalogModal('location', loc, true)}
+              columns={[
+                {
+                  key: 'name',
+                  label: 'Ubicación',
+                  defaultWidth: 360,
+                  render: (loc) => (
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40">
+                        <MapPin size={15} />
+                      </span>
+                      <span className="truncate font-semibold text-slate-900 dark:text-slate-100">{loc.name}</span>
+                    </div>
+                  ),
+                },
+                {
+                  key: 'code',
+                  label: 'Código',
+                  defaultWidth: 180,
+                  render: (loc) => <span className="font-mono text-[10px] text-slate-500">{loc.internal_id}</span>,
+                },
+                {
+                  key: 'actions',
+                  label: 'Acciones',
+                  defaultWidth: 110,
+                  align: 'right',
+                  hideable: false,
+                  render: (loc) => (
+                    <div className="flex items-center justify-end gap-1" onClick={(event) => event.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => setQrLocation(loc)}
+                        className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+                        title="Ver / Imprimir QR"
+                      >
+                        <QrCode size={15} />
+                      </button>
+                      {canManage && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenCatalogModal('location', loc, false)}
+                          className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600"
+                          title="Editar"
+                        >
+                          <Edit2 size={15} />
+                        </button>
+                      )}
+                    </div>
+                  ),
+                },
+              ]}
+              renderCard={(loc) => (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40">
+                      <MapPin size={18} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-slate-900 dark:text-slate-100">{loc.name}</p>
+                      <p className="truncate font-mono text-[11px] text-slate-500">{loc.internal_id}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-slate-900 truncate">{loc.name}</h3>
-                    <p className="text-xs text-slate-500 font-mono">{loc.internal_id}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setQrLocation(loc); }} 
-                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                    title="Ver / Imprimir QR"
-                  >
-                    <QrCode size={16} />
-                  </button>
-                  {canManage && (
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleOpenCatalogModal('location', loc, false); }} 
-                      className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                      title="Editar"
+                  <div className="flex shrink-0 items-center gap-1" onClick={(event) => event.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => setQrLocation(loc)}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600"
+                      title="Ver / Imprimir QR"
                     >
-                      <Edit2 size={16} />
+                      <QrCode size={15} />
                     </button>
-                  )}
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenCatalogModal('location', loc, false)}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600"
+                        title="Editar"
+                      >
+                        <Edit2 size={15} />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-            {filteredLocations.length === 0 && (
-              <div className="md:col-span-3 bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-500">
-                No se encontraron ubicaciones.
-              </div>
-            )}
-            </div>
+              )}
+              emptyMessage="No se encontraron ubicaciones."
+            />
           </div>
         );
 
       case 'vendors':
         return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-            {vendors.map((vendor) => (
-              <div 
-                key={vendor.id} 
-                className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
-                onClick={() => handleOpenCatalogModal('vendor', vendor, true)}
-              >
-                <div className="relative h-28 sm:h-32 shrink-0 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-950">
-                  {vendor.logo_url ? (
-                    <img
-                      src={mediaUrl(vendor.logo_url)}
-                      alt={vendor.name}
-                      className="absolute inset-0 w-full h-full object-contain p-3 bg-white/80 dark:bg-slate-900/80"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).style.display = 'none';
-                        const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
-                        if (fallback) fallback.classList.remove('hidden');
-                      }}
-                    />
-                  ) : null}
-                  <div className={`absolute inset-0 flex items-center justify-center text-indigo-400 ${vendor.logo_url ? 'hidden' : ''}`}>
-                    <Building2 size={40} strokeWidth={1.25} />
+          <DataTable
+            storageKey="fiix-inv-vendors"
+            rows={vendors}
+            rowKey={(vendor) => vendor.id}
+            onOpen={(vendor) => handleOpenCatalogModal('vendor', vendor, true)}
+            columns={[
+              {
+                key: 'name',
+                label: 'Proveedor',
+                defaultWidth: 320,
+                render: (vendor) => (
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40">
+                      <Building2 size={15} />
+                    </span>
+                    <span className="truncate font-semibold text-slate-900 dark:text-slate-100">{vendor.name}</span>
                   </div>
-                  <span className={`absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider shadow-sm ${vendor.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                ),
+              },
+              {
+                key: 'code',
+                label: 'Código',
+                defaultWidth: 150,
+                render: (vendor) => <span className="font-mono text-[10px] text-slate-500">{vendor.internal_id}</span>,
+              },
+              {
+                key: 'phone',
+                label: 'Teléfono',
+                defaultWidth: 160,
+                render: (vendor) => <span className="truncate text-slate-600 dark:text-slate-300">{vendor.phone || '—'}</span>,
+              },
+              {
+                key: 'email',
+                label: 'Correo',
+                defaultWidth: 240,
+                render: (vendor) => <span className="truncate text-slate-600 dark:text-slate-300">{vendor.email || '—'}</span>,
+              },
+              {
+                key: 'status',
+                label: 'Estado',
+                defaultWidth: 110,
+                align: 'center',
+                render: (vendor) => (
+                  <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                    vendor.is_active
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+                      : 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
+                  }`}>
                     {vendor.is_active ? 'Activo' : 'Inactivo'}
                   </span>
-                </div>
-                <div className="p-3.5 flex flex-col gap-2 border-t border-slate-100 dark:border-slate-800">
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">{vendor.name}</h3>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">{vendor.internal_id}</p>
-                    <div className="mt-1.5 space-y-0.5 text-xs text-slate-600 dark:text-slate-300">
-                      {vendor.phone && <p className="truncate">📞 {vendor.phone}</p>}
-                      {vendor.email && <p className="truncate">✉️ {vendor.email}</p>}
-                      {vendor.website_url && (
-                        <p className="truncate">
-                          <a
-                            href={vendor.website_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-indigo-600 dark:text-indigo-400 hover:underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            🌐 Website
-                          </a>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  {canManage && (
-                    <div className="flex justify-end">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleOpenCatalogModal('vendor', vendor, false); }}
-                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg transition-colors"
-                      >
-                        <Edit2 size={13} /> Editar
-                      </button>
-                    </div>
+                ),
+              },
+              {
+                key: 'actions',
+                label: 'Acciones',
+                defaultWidth: 100,
+                align: 'right',
+                hideable: false,
+                render: (vendor) =>
+                  canManage ? (
+                    <button
+                      type="button"
+                      onClick={(event) => { event.stopPropagation(); handleOpenCatalogModal('vendor', vendor, false); }}
+                      className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+                      title="Editar"
+                    >
+                      <Edit2 size={15} />
+                    </button>
+                  ) : null,
+              },
+            ]}
+            renderCard={(vendor) => (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  {vendor.logo_url ? (
+                    <img src={mediaUrl(vendor.logo_url)} alt={vendor.name} className="h-9 w-9 shrink-0 rounded-lg border border-slate-200 object-contain p-0.5" />
+                  ) : (
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 dark:bg-indigo-950/40">
+                      <Building2 size={18} />
+                    </span>
                   )}
+                  <div className="min-w-0">
+                    <p className="truncate font-bold text-slate-900 dark:text-slate-100">{vendor.name}</p>
+                    <p className="truncate font-mono text-[11px] text-slate-500">{vendor.internal_id}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
-            {vendors.length === 0 && (
-              <div className="sm:col-span-2 xl:col-span-3 bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 text-center text-slate-500">
-                No hay proveedores registrados.
+                <div className="space-y-0.5 text-xs text-slate-600 dark:text-slate-300">
+                  {vendor.phone && <p className="truncate">Tel. {vendor.phone}</p>}
+                  {vendor.email && <p className="truncate">{vendor.email}</p>}
+                </div>
+                {canManage && (
+                  <div className="flex justify-end border-t border-slate-100 pt-2 dark:border-slate-800">
+                    <button
+                      type="button"
+                      onClick={(event) => { event.stopPropagation(); handleOpenCatalogModal('vendor', vendor, false); }}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 dark:text-slate-300"
+                    >
+                      <Edit2 size={13} /> Editar
+                    </button>
+                  </div>
+                )}
               </div>
             )}
-          </div>
+            emptyMessage="No hay proveedores registrados."
+          />
         );
 
       default:
