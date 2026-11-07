@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.84.0";
+export const APP_VERSION = "1.85.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,9 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: Órdenes de Trabajo — «Órdenes relacionadas»: vincula una OT con otra como relacionada, duplicada, que bloquea o que causa. Se buscan por folio o título y se ven en ambos lados.",
+    "Nuevo: Órdenes de Trabajo — «Archivos de la orden»: sube y consulta evidencias, fotos o documentos de la OT. Se guardan en la biblioteca de Archivos, en la carpeta «Órdenes de trabajo».",
+    "Nuevo: Activos — pestaña «Archivos»: manuales, fichas técnicas y fotos del equipo, con la misma biblioteca compartida.",
     "Nuevo: Activos — pestaña «Paros»: registra cuándo se detuvo la máquina y cuándo volvió, con motivo y quién lo reportó. Un paro abierto queda marcado como en curso y se puede finalizar con un clic.",
     "Nuevo: Activos — con los paros se calculan MTBF, MTTR, tiempo parado y disponibilidad de los últimos 30 días, en la misma pestaña. El paro abierto se cuenta hasta ahora, para no subestimar la afectación.",
     "Nuevo: Órdenes de Trabajo — «Bitácora»: una sola línea de tiempo con la creación de la orden, los comentarios, los cambios de estado, los repuestos entregados o devueltos y las fotos, de lo más reciente a lo más viejo.",

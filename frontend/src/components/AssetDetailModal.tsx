@@ -16,6 +16,7 @@ import { getItemById, getCategories, getLocations, getVendors } from '../api/inv
 import type { Item, ItemCategory, ItemLocation, Vendor } from '../api/inventory';
 import { AssetMeters } from './assets/AssetMeters';
 import { AssetDowntimes } from './assets/AssetDowntimes';
+import { FilesPanel } from './common/FilesPanel';
 
 interface Props {
   asset: Asset | null;
@@ -37,7 +38,7 @@ const WO_STATUS_LABELS: Record<string, string> = {
 export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Props) => {
   const { hasPermission, user } = useAuth();
   const canManageItems = hasPermission('MANAGE_INVENTORY');
-  const [activeTab, setActiveTab] = useState<'overview' | 'info' | 'metrics' | 'history' | 'meters' | 'downtimes'>('info');
+  const [activeTab, setActiveTab] = useState<'overview' | 'info' | 'metrics' | 'history' | 'meters' | 'downtimes' | 'files'>('info');
   const [metrics, setMetrics] = useState<any>(null);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
   const [itemDetail, setItemDetail] = useState<Item | null>(null);
@@ -155,6 +156,7 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Pr
             ['metrics', 'KPIs'],
             ['meters', 'Medidores'],
             ['downtimes', 'Paros'],
+            ['files', 'Archivos'],
             ['history', 'Historial'],
           ] as const).map(([id, label]) => (
             <button
@@ -579,6 +581,16 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Pr
             <AssetDowntimes
               assetId={asset.id}
               canManage={canEdit ?? hasPermission('MANAGE_ASSETS')}
+            />
+          )}
+
+          {/* TAB: ARCHIVOS */}
+          {activeTab === 'files' && (
+            <FilesPanel
+              assetId={asset.id}
+              folder="Activos"
+              canManage={canEdit ?? hasPermission('MANAGE_ASSETS')}
+              emptyHint="Sube manuales, fichas técnicas o fotos del equipo."
             />
           )}
 

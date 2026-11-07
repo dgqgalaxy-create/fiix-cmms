@@ -26,6 +26,8 @@ import { InfoTip } from './common/InfoTip';
 import { qtyStep, isInvalidQty } from '../utils/qtyMode';
 import { WorkOrderCommentsPanel } from './WorkOrderCommentsPanel';
 import { WorkOrderTimeline } from './workorders/WorkOrderTimeline';
+import { WorkOrderRelations } from './workorders/WorkOrderRelations';
+import { FilesPanel } from './common/FilesPanel';
 import { mediaUrl } from '../utils/mediaUrl';
 import { SearchableSelect } from './ui/SearchableSelect';
 
@@ -1454,10 +1456,28 @@ export const WorkOrderDetailModal = ({
               </div>
 
               <div className="mt-4">
+                <WorkOrderRelations
+                  workOrderId={workOrder.id}
+                  isOpen={isOpen}
+                  canWrite={canWriteOps}
+                />
+              </div>
+
+              <div className="mt-4">
                 <WorkOrderTimeline
                   workOrderId={workOrder.id}
                   isOpen={isOpen}
                   onZoomImage={(src) => setZoomSrc(src)}
+                />
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                <h3 className="mb-2 text-sm font-bold text-slate-800 dark:text-slate-100">Archivos de la orden</h3>
+                <FilesPanel
+                  workOrderId={workOrder.id}
+                  folder="Órdenes de trabajo"
+                  canManage={canWriteOps}
+                  emptyHint="Sube evidencias, fotos o documentos de esta orden."
                 />
               </div>
 

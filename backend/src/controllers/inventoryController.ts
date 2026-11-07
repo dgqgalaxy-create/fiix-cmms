@@ -348,12 +348,16 @@ export const getDocuments = async (req: Request, res: Response): Promise<void> =
   try {
     const folder = typeof req.query.folder === 'string' && req.query.folder ? req.query.folder : undefined;
     const itemId = typeof req.query.itemId === 'string' && req.query.itemId ? req.query.itemId : undefined;
+    const workOrderId = typeof req.query.workOrderId === 'string' && req.query.workOrderId ? req.query.workOrderId : undefined;
+    const assetId = typeof req.query.assetId === 'string' && req.query.assetId ? req.query.assetId : undefined;
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
 
     const docs = await prisma.document.findMany({
       where: {
         ...(folder ? { folder } : {}),
         ...(itemId ? { item_id: itemId } : {}),
+        ...(workOrderId ? { work_order_id: workOrderId } : {}),
+        ...(assetId ? { asset_id: assetId } : {}),
         ...(search
           ? {
               OR: [
@@ -367,6 +371,8 @@ export const getDocuments = async (req: Request, res: Response): Promise<void> =
       include: {
         ...documentInclude,
         item: { select: { id: true, name: true, internal_code: true } },
+        work_order: { select: { id: true, folio: true, title: true } },
+        asset: { select: { id: true, name: true, internal_code: true } },
       },
       orderBy: { created_at: 'desc' },
       take: 500,
@@ -408,11 +414,27 @@ export const uploadDocument = async (req: Request, res: Response): Promise<void>
     const folder = String(req.body?.folder || 'General').trim().slice(0, 60) || 'General';
     const title = String(req.body?.title || '').trim().slice(0, 160) || null;
     const itemId = String(req.body?.item_id || '').trim() || null;
+    const workOrderId = String(req.body?.work_order_id || '').trim() || null;
+    const assetId = String(req.body?.asset_id || '').trim() || null;
 
     if (itemId) {
       const item = await prisma.item.findUnique({ where: { id: itemId }, select: { id: true } });
       if (!item) {
         res.status(404).json({ error: 'El repuesto indicado no existe' });
+        return;
+      }
+    }
+    if (workOrderId) {
+      const wo = await prisma.workOrder.findUnique({ where: { id: workOrderId }, select: { id: true } });
+      if (!wo) {
+        res.status(404).json({ error: 'La orden de trabajo indicada no existe' });
+        return;
+      }
+    }
+    if (assetId) {
+      const asset = await prisma.asset.findUnique({ where: { id: assetId }, select: { id: true } });
+      if (!asset) {
+        res.status(404).json({ error: 'El activo indicado no existe' });
         return;
       }
     }
@@ -426,6 +448,8 @@ export const uploadDocument = async (req: Request, res: Response): Promise<void>
         size: file.size ?? null,
         folder,
         item_id: itemId,
+        work_order_id: workOrderId,
+        asset_id: assetId,
         uploaded_by_id: (req as any).user?.userId ?? null,
       },
       include: documentInclude,

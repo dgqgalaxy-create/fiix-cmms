@@ -129,6 +129,7 @@ model User {
   meter_readings       MeterReading[]
   documents            Document[]
   reported_downtimes   AssetDowntime[]
+  wo_relations         WorkOrderRelation[]
   preferences          Json?       @default("{}")
 }
 
@@ -262,6 +263,7 @@ model Asset {
   parts           AssetPart[]
   meters          Meter[]
   downtimes       AssetDowntime[]
+  documents       Document[]
 
   @@index([zone_id])
   @@index([status])
@@ -329,6 +331,9 @@ model WorkOrder {
   operational_tasks   OperationalTask[]
   comments            WorkOrderComment[]
   downtimes           AssetDowntime[]
+  relations_from      WorkOrderRelation[] @relation("WorkOrderRelations")
+  relations_to        WorkOrderRelation[] @relation("WorkOrderRelated")
+  documents           Document[]
 
   @@index([status, created_at])
   @@index([created_at])
@@ -1085,11 +1090,17 @@ model Document {
   folder         String   @default("General")
   item_id        String?  @db.Uuid
   item           Item?    @relation(fields: [item_id], references: [id], onDelete: SetNull)
+  work_order_id  String?  @db.Uuid
+  work_order     WorkOrder? @relation(fields: [work_order_id], references: [id], onDelete: SetNull)
+  asset_id       String?  @db.Uuid
+  asset          Asset?   @relation(fields: [asset_id], references: [id], onDelete: SetNull)
   uploaded_by_id String?  @db.Uuid
   uploaded_by    User?    @relation(fields: [uploaded_by_id], references: [id], onDelete: SetNull)
   created_at     DateTime @default(now())
 
   @@index([item_id])
+  @@index([work_order_id])
+  @@index([asset_id])
   @@index([folder])
 }
 
@@ -1116,4 +1127,32 @@ model AssetDowntime {
   @@index([asset_id, started_at])
   @@index([work_order_id])
   @@index([ended_at])
+}
+
+// ---------------------------------------------------------------------------
+// Relaciones entre órdenes de trabajo (duplicada, bloquea, causa…).
+// ---------------------------------------------------------------------------
+
+enum WorkOrderRelationType {
+  RELACIONADA
+  DUPLICADA
+  BLOQUEA
+  CAUSA
+}
+
+model WorkOrderRelation {
+  id                   String                @id @default(uuid()) @db.Uuid
+  work_order_id        String                @db.Uuid
+  work_order           WorkOrder             @relation("WorkOrderRelations", fields: [work_order_id], references: [id], onDelete: Cascade)
+  related_work_order_id String               @db.Uuid
+  related_work_order   WorkOrder             @relation("WorkOrderRelated", fields: [related_work_order_id], references: [id], onDelete: Cascade)
+  relation_type        WorkOrderRelationType @default(RELACIONADA)
+  note                 String?
+  created_by_id        String?               @db.Uuid
+  created_by           User?                 @relation(fields: [created_by_id], references: [id], onDelete: SetNull)
+  created_at           DateTime              @default(now())
+
+  @@unique([work_order_id, related_work_order_id, relation_type])
+  @@index([work_order_id])
+  @@index([related_work_order_id])
 }

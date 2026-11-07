@@ -10,6 +10,8 @@ export interface DocumentItem {
   folder: string;
   item_id?: string | null;
   item?: { id: string; name: string; internal_code: string } | null;
+  work_order?: { id: string; folio: number; title: string } | null;
+  asset?: { id: string; name: string; internal_code: string } | null;
   uploaded_by?: { id: string; name: string } | null;
   created_at: string;
 }
@@ -19,7 +21,13 @@ export interface DocumentFolder {
   count: number;
 }
 
-export const getDocuments = async (params?: { folder?: string; search?: string }): Promise<DocumentItem[]> => {
+export const getDocuments = async (params?: {
+  folder?: string;
+  search?: string;
+  itemId?: string;
+  workOrderId?: string;
+  assetId?: string;
+}): Promise<DocumentItem[]> => {
   const response = await api.get('/documents', { params });
   return response.data;
 };
@@ -34,12 +42,16 @@ export const uploadDocument = async (data: {
   folder?: string;
   title?: string;
   item_id?: string;
+  work_order_id?: string;
+  asset_id?: string;
 }): Promise<DocumentItem> => {
   const formData = new FormData();
   formData.append('file', data.file);
   if (data.folder) formData.append('folder', data.folder);
   if (data.title) formData.append('title', data.title);
   if (data.item_id) formData.append('item_id', data.item_id);
+  if (data.work_order_id) formData.append('work_order_id', data.work_order_id);
+  if (data.asset_id) formData.append('asset_id', data.asset_id);
   const response = await api.post('/documents', formData);
   return response.data;
 };

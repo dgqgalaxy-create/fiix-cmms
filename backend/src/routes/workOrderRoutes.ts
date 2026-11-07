@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import { getWorkOrderTimeline } from '../controllers/woTimelineController';
 import {
+  getWorkOrderRelations,
+  createWorkOrderRelation,
+  deleteWorkOrderRelation,
+  searchWorkOrdersForRelation,
+} from '../controllers/woRelationsController';
+import {
   getWorkOrders,
   getWorkOrdersSummary,
   getWorkOrderById,
@@ -30,6 +36,10 @@ router.get('/mine-open-count', authenticate, getMineOpenCount);
 router.get('/summary', authenticate, getWorkOrdersSummary);
 router.get('/line-stoppage', authenticate, getLineStoppageStatus);
 router.get('/:id/timeline', authenticate, getWorkOrderTimeline);
+router.get('/:id/relations', authenticate, getWorkOrderRelations);
+router.get('/:id/relations/search', authenticate, searchWorkOrdersForRelation);
+router.post('/:id/relations', authenticate, requireWritable, createWorkOrderRelation);
+router.delete('/:id/relations/:relationId', authenticate, requireWritable, deleteWorkOrderRelation);
 router.get('/:id/comments', authenticate, listWorkOrderComments);
 router.post(
   '/:id/comments',
