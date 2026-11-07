@@ -14,6 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import { ItemModal } from './inventory/ItemModal';
 import { getItemById, getCategories, getLocations, getVendors } from '../api/inventory';
 import type { Item, ItemCategory, ItemLocation, Vendor } from '../api/inventory';
+import { AssetMeters } from './assets/AssetMeters';
 
 interface Props {
   asset: Asset | null;
@@ -35,7 +36,7 @@ const WO_STATUS_LABELS: Record<string, string> = {
 export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Props) => {
   const { hasPermission } = useAuth();
   const canManageItems = hasPermission('MANAGE_INVENTORY');
-  const [activeTab, setActiveTab] = useState<'overview' | 'info' | 'metrics' | 'history'>('info');
+  const [activeTab, setActiveTab] = useState<'overview' | 'info' | 'metrics' | 'history' | 'meters'>('info');
   const [metrics, setMetrics] = useState<any>(null);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
   const [itemDetail, setItemDetail] = useState<Item | null>(null);
@@ -151,6 +152,7 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Pr
             ['overview', 'De un vistazo'],
             ['info', 'Información'],
             ['metrics', 'KPIs'],
+            ['meters', 'Medidores'],
             ['history', 'Historial'],
           ] as const).map(([id, label]) => (
             <button
@@ -558,6 +560,15 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Pr
                 <div className="text-center text-slate-500 dark:text-slate-400 py-10">No hay datos de monitoreo disponibles.</div>
               )}
             </div>
+          )}
+
+          {/* TAB: MEDIDORES (mantenimiento por uso) */}
+          {activeTab === 'meters' && (
+            <AssetMeters
+              assetId={asset.id}
+              assetName={asset.name}
+              canManage={canEdit ?? hasPermission('MANAGE_ASSETS')}
+            />
           )}
 
           {/* TAB: HISTORY */}

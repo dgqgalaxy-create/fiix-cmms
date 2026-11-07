@@ -84,6 +84,7 @@ app.use(async (req: Request, res: Response, next: NextFunction) => {
 
 import authRoutes from './routes/authRoutes';
 import assetRoutes from './routes/assetRoutes';
+import meterRoutes from './routes/meterRoutes';
 import workOrderRoutes from './routes/workOrderRoutes';
 import kpiRoutes from './routes/kpiRoutes';
 import permissionRoutes from './routes/permissionRoutes';
@@ -133,6 +134,7 @@ app.get('/api/health', async (_req: Request, res: Response) => {
 // Import and use routes here
 app.use('/api/auth', authRoutes);
 app.use('/api/assets', assetRoutes);
+app.use('/api/meters', meterRoutes);
 app.use('/api/work-orders', workOrderRoutes);
 app.use('/api/kpis', kpiRoutes);
 app.use('/api/permissions', permissionRoutes);

@@ -126,6 +126,7 @@ model User {
   exceptions           TechnicianException[]
   time_debts           TechnicianTimeDebt[]
   shifts               TechnicianShift[]
+  meter_readings       MeterReading[]
   preferences          Json?       @default("{}")
 }
 
@@ -257,6 +258,7 @@ model Asset {
   maintenance_plans MaintenancePlan[]
   operational_tasks OperationalTask[]
   parts           AssetPart[]
+  meters          Meter[]
 
   @@index([zone_id])
   @@index([status])
@@ -995,4 +997,70 @@ model PurchaseReceipt {
   quantities Json
   created_at DateTime @default(now())
   @@index([purchase_order_id, created_at])
+}
+
+// ---------------------------------------------------------------------------
+// Mantenimiento por uso: medidores (horómetro, odómetro, ciclos…) y lecturas
+// ---------------------------------------------------------------------------
+
+/// Medidor de uso asociado a un activo. `current_value` se actualiza con cada lectura.
+model Meter {
+  id                 String    @id @default(uuid()) @db.Uuid
+  asset_id           String    @db.Uuid
+  asset              Asset     @relation(fields: [asset_id], references: [id], onDelete: Cascade)
+  name               String
+  /// HORAS | KILOMETROS | CICLOS | PIEZAS | OTRO (texto libre para el usuario)
+  unit               String    @default("HORAS")
+  current_value      Float     @default(0)
+  current_reading_at DateTime?
+  is_active          Boolean   @default(true)
+  notes              String?
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+
+  readings MeterReading[]
+  triggers MeterTrigger[]
+
+  @@index([asset_id])
+}
+
+/// Lectura puntual de un medidor. El historial alimenta las gráficas y los disparadores.
+model MeterReading {
+  id            String   @id @default(uuid()) @db.Uuid
+  meter_id      String   @db.Uuid
+  meter         Meter    @relation(fields: [meter_id], references: [id], onDelete: Cascade)
+  value         Float
+  reading_at    DateTime @default(now())
+  notes         String?
+  created_by_id String?  @db.Uuid
+  created_by    User?    @relation(fields: [created_by_id], references: [id], onDelete: SetNull)
+  created_at    DateTime @default(now())
+
+  @@index([meter_id, reading_at])
+}
+
+/// Regla «cuando el medidor llegue a X, crea una OT».
+model MeterTrigger {
+  id               String                @id @default(uuid()) @db.Uuid
+  meter_id         String                @db.Uuid
+  meter            Meter                 @relation(fields: [meter_id], references: [id], onDelete: Cascade)
+  name             String
+  condition        MeterTriggerCondition @default(GTE)
+  threshold        Float
+  /// Si viene, el disparador es recurrente: tras generar la OT el siguiente
+  /// umbral pasa a ser «lectura + interval». null = disparo único.
+  interval         Float?
+  is_active        Boolean               @default(true)
+  last_fired_at    DateTime?
+  last_fired_value Float?
+  created_at       DateTime              @default(now())
+  updated_at       DateTime              @updatedAt
+
+  @@index([meter_id])
+}
+
+/// GTE: la lectura alcanza o supera el umbral. LTE: baja hasta el umbral.
+enum MeterTriggerCondition {
+  GTE
+  LTE
 }

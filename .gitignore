@@ -34,6 +34,9 @@ yarn-error.log*
 # Cluster PostgreSQL local de desarrollo
 .local/
 
+# Proyecto de referencia externo (AGPL): solo se toman ideas, nunca se versiona
+Inspiracion/
+
 # SO
 .DS_Store
 Thumbs.db
