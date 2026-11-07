@@ -36,7 +36,16 @@ export const getWorkOrderRelations = async (workOrderId: string): Promise<WorkOr
 
 export const createWorkOrderRelation = async (
   workOrderId: string,
-  data: { related_work_order_id?: string; related_folio?: number; relation_type: WorkOrderRelationType; note?: string }
+  data: {
+    related_work_order_id?: string;
+    related_folio?: number;
+    relation_type: WorkOrderRelationType;
+    note?: string;
+    /** 'out' = esta orden → la otra; 'in' = la otra → esta orden. */
+    direction?: 'out' | 'in';
+    /** Solo para DUPLICADA: anular la orden duplicada. */
+    cancel_related?: boolean;
+  }
 ): Promise<void> => {
   await api.post(`/work-orders/${workOrderId}/relations`, data);
 };

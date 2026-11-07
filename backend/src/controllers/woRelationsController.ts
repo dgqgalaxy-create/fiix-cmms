@@ -1,5 +1,6 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import prisma from '../config/prisma';
+import { writeAuditLog } from '../utils/auditLog';
 
 const RELATION_TYPES = ['RELACIONADA', 'DUPLICADA', 'BLOQUEA', 'CAUSA'] as const;
 type RelationType = (typeof RELATION_TYPES)[number];
@@ -122,16 +123,54 @@ export const createWorkOrderRelation = async (req: Request, res: Response): Prom
       return;
     }
 
+    // Dirección: por defecto «esta orden → la otra». Con direction='in' se
+    // invierte, para poder decir «esta orden está bloqueada por la otra».
+    const invert = String(req.body?.direction || 'out').toLowerCase() === 'in';
+    const fromId = invert ? target.id : id;
+    const toId = invert ? id : target.id;
+
     const created = await prisma.workOrderRelation.create({
       data: {
-        work_order_id: id,
-        related_work_order_id: target.id,
+        work_order_id: fromId,
+        related_work_order_id: toId,
         relation_type: type,
         note: typeof note === 'string' ? note.trim().slice(0, 200) || null : null,
         created_by_id: (req as any).user?.userId ?? null,
       },
       include: { related_work_order: { select: summarySelect } },
     });
+
+    // Duplicada: opcionalmente se anula la orden duplicada (la que se vincula),
+    // dejando constancia en su resolución y en la auditoría.
+    const cancelRelated = req.body?.cancel_related === true || req.body?.cancel_related === 'true';
+    if (cancelRelated && type === 'DUPLICADA') {
+      const duplicate = invert ? current : target;
+      const original = invert ? target : current;
+      const duplicateRow = await prisma.workOrder.findUnique({
+        where: { id: duplicate.id },
+        select: { id: true, status: true, resolution_notes: true },
+      });
+      if (duplicateRow && duplicateRow.status !== 'ANULADO') {
+        const note = `Duplicada de OT-${original.folio}.`;
+        await prisma.workOrder.update({
+          where: { id: duplicate.id },
+          data: {
+            status: 'ANULADO',
+            resolution_notes: duplicateRow.resolution_notes
+              ? `${duplicateRow.resolution_notes}\n${note}`
+              : note,
+          },
+        });
+        await writeAuditLog({
+          userId: (req as any).user?.userId ?? null,
+          userName: (req as any).user?.name ?? null,
+          action: 'CANCEL_DUPLICATE_WO',
+          entity: 'WorkOrder',
+          entityId: duplicate.id,
+          summary: `OT-${duplicate.folio} anulada por ser duplicada de OT-${original.folio}`,
+        });
+      }
+    }
 
     res.status(201).json(created);
   } catch (error) {

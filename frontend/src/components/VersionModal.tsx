@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.85.0";
+export const APP_VERSION = "1.86.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Mejora: Órdenes relacionadas — al marcar «Duplicada» puedes anular la duplicada en el mismo paso (queda ANULADO con la nota «Duplicada de OT-xxxx» y registro en auditoría). La casilla viene marcada y puedes desmarcarla si solo quieres vincular.",
+    "Mejora: Órdenes relacionadas — «Bloquea» y «Causa» ahora piden el sentido: «esta orden bloquea a la otra» o «esta orden está bloqueada por la otra». Si una orden está bloqueada por otra que sigue abierta, aparece un aviso rojo en su detalle.",
     "Nuevo: Órdenes de Trabajo — «Órdenes relacionadas»: vincula una OT con otra como relacionada, duplicada, que bloquea o que causa. Se buscan por folio o título y se ven en ambos lados.",
     "Nuevo: Órdenes de Trabajo — «Archivos de la orden»: sube y consulta evidencias, fotos o documentos de la OT. Se guardan en la biblioteca de Archivos, en la carpeta «Órdenes de trabajo».",
     "Nuevo: Activos — pestaña «Archivos»: manuales, fichas técnicas y fotos del equipo, con la misma biblioteca compartida.",

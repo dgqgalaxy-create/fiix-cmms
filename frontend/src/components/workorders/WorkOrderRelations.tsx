@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
 import { Link2, Loader2, Plus, Trash2, X, AlertTriangle, ArrowRight, ArrowLeft } from 'lucide-react';
 import {
   getWorkOrderRelations, createWorkOrderRelation, deleteWorkOrderRelation,
@@ -38,6 +38,16 @@ export const WorkOrderRelations = ({
   const [selected, setSelected] = useState<WorkOrderSearchRow | null>(null);
   const [relationType, setRelationType] = useState<WorkOrderRelationType>('RELACIONADA');
   const [note, setNote] = useState('');
+  const [direction, setDirection] = useState<'out' | 'in'>('out');
+  const [cancelDuplicate, setCancelDuplicate] = useState(true);
+  /** Relaciones que bloquean esta orden y siguen abiertas. */
+  const blockers = rows.filter(
+    (row) =>
+      row.relation_type === 'BLOQUEA' &&
+      row.direction === 'in' &&
+      row.work_order.status !== 'FINALIZADO' &&
+      row.work_order.status !== 'ANULADO'
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -87,12 +97,16 @@ export const WorkOrderRelations = ({
         related_work_order_id: selected.id,
         relation_type: relationType,
         note: note.trim() || undefined,
+        direction,
+        cancel_related: relationType === 'DUPLICADA' ? cancelDuplicate : false,
       });
       setSelected(null);
       setQuery('');
       setResults([]);
       setNote('');
       setRelationType('RELACIONADA');
+      setDirection('out');
+      setCancelDuplicate(true);
       setIsFormOpen(false);
       await load();
     } catch (err: any) {
@@ -131,6 +145,17 @@ export const WorkOrderRelations = ({
           </button>
         )}
       </div>
+
+      {blockers.length > 0 && (
+        <div className="mx-4 mb-3 flex items-start gap-2 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
+          <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+          <span>
+            Esta orden está bloqueada por{' '}
+            <strong>{blockers.map((row) => formatWorkOrderFolio(row.work_order.folio)).join(', ')}</strong>
+            {' '}(todavía abierta). No se impide trabajar, es un aviso.
+          </span>
+        </div>
+      )}
 
       {error && (
         <div className="mx-4 mb-3 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
@@ -201,6 +226,49 @@ export const WorkOrderRelations = ({
               />
             </div>
           </div>
+
+          {/* Dirección: solo tiene sentido para bloquea/causa */}
+          {(relationType === 'BLOQUEA' || relationType === 'CAUSA') && (
+            <div>
+              <label className="mb-1 block text-[11px] font-semibold text-slate-600 dark:text-slate-300" htmlFor="rel-direction">
+                ¿En qué sentido?
+              </label>
+              <select
+                id="rel-direction"
+                value={direction}
+                onChange={(event) => setDirection(event.target.value as 'out' | 'in')}
+                className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm outline-none focus:border-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+              >
+                {relationType === 'BLOQUEA' ? (
+                  <>
+                    <option value="out">Esta orden bloquea a la otra</option>
+                    <option value="in">Esta orden está bloqueada por la otra</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="out">Esta orden causó a la otra</option>
+                    <option value="in">La otra orden causó a esta</option>
+                  </>
+                )}
+              </select>
+            </div>
+          )}
+
+          {/* Duplicada: anular la duplicada */}
+          {relationType === 'DUPLICADA' && (
+            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+              <input
+                type="checkbox"
+                checked={cancelDuplicate}
+                onChange={(event) => setCancelDuplicate(event.target.checked)}
+                className="mt-0.5 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+              />
+              <span>
+                <strong>Anular la orden duplicada</strong> (queda como ANULADO con la nota «Duplicada de…»).
+                Si lo desmarcas, solo se vincula y el estado no cambia.
+              </span>
+            </label>
+          )}
 
           <div className="flex justify-end">
             <button
