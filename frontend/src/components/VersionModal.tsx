@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.75.0";
+export const APP_VERSION = "1.75.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Mejora: Inventario — se retiró el menú interno de pestañas (Repuestos, Movimientos, Categorías, Ubicaciones, Proveedores) porque ahora vive en la barra lateral. Todo ese ancho pasa a la tabla y a los formularios, y el título indica la sección en la que estás.",
     "Nuevo: menú lateral — «Inventario» ahora es un grupo desplegable que muestra Movimientos, Repuestos, Categorías, Ubicaciones, Proveedores y Activos, sin salir de la barra lateral. El submódulo en el que estás se resalta en verde y el grupo se abre solo al entrar al módulo.",
     "Cambio: «Activos» deja de ser una entrada suelta del menú y pasa a vivir dentro de Inventario. La página sigue accesible desde ahí y por su dirección directa.",
     "Nuevo: Horarios — vista «Semana» (matriz Personal × Días) como vista predeterminada: una fila por persona y una columna por día, con todos los turnos a la vista (se acaba el «+N más»), columna del día actual resaltada y fila de cobertura diaria con el conteo por turno. Puedes arrastrar incidencias a cualquier celda y abrir el detalle del día con un clic.",

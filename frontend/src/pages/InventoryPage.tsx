@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, AlertTriangle, Ban, ShoppingCart, PanelLeftClose, PanelLeftOpen, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter, DollarSign, Trash2 } from 'lucide-react';
+import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, AlertTriangle, Ban, ShoppingCart, ChevronUp, ChevronDown, Printer, Loader2, X, Download, Filter, DollarSign, Trash2 } from 'lucide-react';
 import { 
   getItems, getItemsPage, getItemById, getTransactions, getTransactionsPage, getTransactionsSummary, getCategories, getLocations, getVendors, getInventorySummary, deleteItem, deleteTransaction
 } from '../api/inventory';
@@ -81,16 +81,6 @@ export const InventoryPage = () => {
     setSearchParams(next, { replace: true });
   };
   
-  const [catalogNavCollapsed, setCatalogNavCollapsed] = useState(() => {
-    try { return localStorage.getItem('fiix-inventory-nav-collapsed') !== 'false'; }
-    catch { return true; }
-  });
-  const toggleCatalogNav = () => {
-    const next = !catalogNavCollapsed;
-    setCatalogNavCollapsed(next);
-    try { localStorage.setItem('fiix-inventory-nav-collapsed', String(next)); } catch { /* Optional preference storage. */ }
-  };
-
   const [items, setItems] = useState<Item[]>([]);
   const [serverTransactions, setServerTransactions] = useState<InventoryTransaction[]>([]);
   const [categories, setCategories] = useState<ItemCategory[]>([]);
@@ -555,6 +545,9 @@ export const InventoryPage = () => {
     { id: 'locations', label: 'Ubicaciones', icon: <MapPin size={18} /> },
     { id: 'vendors', label: 'Proveedores', icon: <Building2 size={18} /> }
   ];
+
+  /** Sección activa: ahora se navega desde el menú lateral, así que el título lo indica aquí. */
+  const activeTabInfo = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
 
   const filteredLocations = useMemo(() => {
     if (!locationSearchTerm) return locations;
@@ -1817,7 +1810,13 @@ export const InventoryPage = () => {
               </div>
             )}
           </div>
-          <p className="text-slate-500 dark:text-slate-300 mt-2">Gestiona repuestos, movimientos y catálogos.</p>
+          <p className="text-slate-500 dark:text-slate-300 mt-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              <span className="text-slate-400 dark:text-slate-500">{activeTabInfo.icon}</span>
+              {activeTabInfo.label}
+            </span>
+            <span>Gestiona repuestos, movimientos y catálogos.</span>
+          </p>
         </div>
 
         <div
@@ -1948,35 +1947,7 @@ export const InventoryPage = () => {
         </div>
       )}
 
-      <div className="flex flex-col gap-3 lg:flex-row">
-        <div className={`w-full flex-shrink-0 ${catalogNavCollapsed ? 'lg:w-12' : 'lg:w-44'}`}>
-          <button type="button" onClick={toggleCatalogNav} aria-label={catalogNavCollapsed ? 'Expandir navegación de inventario' : 'Plegar navegación de inventario'} aria-expanded={!catalogNavCollapsed} aria-controls="inventory-catalog-nav" title={catalogNavCollapsed ? 'Expandir navegación de inventario' : 'Plegar navegación de inventario'} className="mb-2 hidden h-9 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-500 hover:text-slate-900 lg:flex">
-            {catalogNavCollapsed ? <PanelLeftOpen size={16} /> : <><PanelLeftClose size={16} /> Plegar menú</>}
-          </button>
-          <nav id="inventory-catalog-nav" aria-label="Secciones de inventario" className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => changeTab(tab.id as 'items' | 'transactions' | 'categories' | 'locations' | 'vendors')}
-                title={tab.label}
-                aria-label={tab.label}
-                aria-current={activeTab === tab.id ? 'page' : undefined}
-                className={`flex items-center gap-2 px-3 py-2 text-xs rounded-lg transition-colors whitespace-nowrap ${catalogNavCollapsed ? 'lg:justify-center lg:px-2' : ''} ${
-                  activeTab === tab.id 
-                    ? 'bg-white shadow-sm border border-slate-200 text-slate-900 font-semibold' 
-                    : 'text-slate-500 hover:bg-white/60 hover:text-slate-700 font-medium'
-                }`}
-              >
-                <div className={`${activeTab === tab.id ? 'text-blue-600' : 'text-slate-400'}`}>
-                  {tab.icon}
-                </div>
-                <span className={catalogNavCollapsed ? 'lg:hidden' : ''}>{tab.label}</span>
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        <div className="flex-1 min-w-0">
+      <div className="min-w-0">
           {activeTab === 'items' && (
             <div className="mb-3 space-y-2">
               <div className="flex flex-col md:flex-row gap-4">
@@ -2104,7 +2075,6 @@ export const InventoryPage = () => {
           )}
 
           {renderContent()}
-        </div>
       </div>
 
       {ctxMenu && (
