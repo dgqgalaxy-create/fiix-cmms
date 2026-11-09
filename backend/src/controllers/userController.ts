@@ -23,6 +23,8 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
         name: true,
         email: true,
         role: true,
+        role_id: true,
+        role_def: { select: { id: true, name: true, base_role: true } },
         is_active: true,
         created_at: true,
         hourly_rate: true,
@@ -40,7 +42,7 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
 
 export const createUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, email, password, role, hourly_rate } = req.body;
+    const { name, email, password, role, hourly_rate, role_id } = req.body;
     
     if (!name || !email || !password || !role) {
       res.status(400).json({ error: 'Todos los campos son obligatorios' });
@@ -57,18 +59,22 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     const rate = hourly_rate === undefined || hourly_rate === null || hourly_rate === ''
       ? null
       : Number(hourly_rate);
+    const definition = role_id
+      ? await prisma.roleDefinition.findUnique({ where: { id: String(role_id) } })
+      : null;
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password_hash,
-        role,
+        role: definition?.base_role ?? role,
+        ...(definition ? { role_id: definition.id } : {}),
         ...(rate !== null && Number.isFinite(rate) ? { hourly_rate: rate } : {}),
       },
     });
     
     emitRefresh('refresh_users');
-    res.status(201).json({ id: user.id, name: user.name, email: user.email, role: user.role });
+    res.status(201).json({ id: user.id, name: user.name, email: user.email, role: user.role, role_id: user.role_id });
   } catch(error) {
     console.error('Error creating user:', error);
     res.status(500).json({ error: 'Error al crear usuario' });
@@ -78,11 +84,11 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
 export const updateUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { name, email, password, role, is_active, hourly_rate } = req.body;
+    const { name, email, password, role, is_active, hourly_rate, role_id } = req.body;
 
     const beforeUser = await prisma.user.findUnique({
       where: { id },
-      select: { name: true, email: true, role: true, is_active: true },
+      select: { name: true, email: true, role: true, is_active: true, role_id: true },
     });
     if (!beforeUser) {
       res.status(404).json({ error: 'Usuario no encontrado' });
@@ -92,6 +98,20 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     const updateData: any = { name, email, role };
     if (is_active !== undefined) {
       updateData.is_active = is_active;
+    }
+    if (role_id !== undefined) {
+      if (role_id === null || role_id === '') {
+        updateData.role_id = null;
+      } else {
+        const definition = await prisma.roleDefinition.findUnique({ where: { id: String(role_id) } });
+        if (!definition) {
+          res.status(404).json({ error: 'El rol indicado no existe.' });
+          return;
+        }
+        updateData.role_id = definition.id;
+        // El enum se mantiene sincronizado con el rol base para los checks heredados.
+        updateData.role = definition.base_role;
+      }
     }
     if (hourly_rate !== undefined) {
       const rate = hourly_rate === null || hourly_rate === '' ? null : Number(hourly_rate);

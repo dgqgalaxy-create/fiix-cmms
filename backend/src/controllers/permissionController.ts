@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
+import { getPermissionSnapshot } from '../utils/userPermissions';
 import { Role } from '@prisma/client';
 import { emitRefresh } from '../utils/socket';
 import { writeAuditLog } from '../utils/auditLog';
@@ -161,15 +162,34 @@ export const getAllPermissions = async (req: Request, res: Response): Promise<vo
   }
 };
 
+/**
+ * Permisos del usuario autenticado. Si tiene rol configurable, manda la
+ * definición; si no, el mapa histórico del enum. El comodín `*` (admin sin fila)
+ * se traduce a todos los permisos conocidos para que el front no cambie.
+ */
 export const getMyPermissions = async (req: Request, res: Response): Promise<void> => {
   try {
+    const userId = (req as any).user?.userId as string;
     const role = (req as any).user?.role as Role;
-    if (!role) {
+    if (!userId || !role) {
       res.status(401).json({ error: 'No autorizado' });
       return;
     }
-    const perms = await getOrCreatePermissions(role);
-    res.json(perms.permissions);
+
+    const snapshot = await getPermissionSnapshot(userId);
+    if (!snapshot) {
+      res.status(401).json({ error: 'No autorizado' });
+      return;
+    }
+
+    if (snapshot.permissions['*'] === true) {
+      const defaults = defaultPermissions[role] ?? {};
+      const allTrue = Object.fromEntries(Object.keys(defaults).map((key) => [key, true]));
+      res.json({ ...allTrue, ...snapshot.permissions });
+      return;
+    }
+
+    res.json(snapshot.permissions);
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener permisos' });
   }

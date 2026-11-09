@@ -1,4 +1,4 @@
-﻿import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
@@ -88,6 +88,8 @@ import meterRoutes from './routes/meterRoutes';
 import documentRoutes from './routes/documentRoutes';
 import downtimeRoutes from './routes/downtimeRoutes';
 import statsRoutes from './routes/statsRoutes';
+import roleRoutes from './routes/roleRoutes';
+import { ensureSystemRoles } from './controllers/roleController';
 import workOrderRoutes from './routes/workOrderRoutes';
 import kpiRoutes from './routes/kpiRoutes';
 import permissionRoutes from './routes/permissionRoutes';
@@ -141,6 +143,7 @@ app.use('/api/meters', meterRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/downtimes', downtimeRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/roles', roleRoutes);
 app.use('/api/work-orders', workOrderRoutes);
 app.use('/api/kpis', kpiRoutes);
 app.use('/api/permissions', permissionRoutes);
@@ -254,6 +257,9 @@ initCronJobs();
 
 // Claves de Google Drive editables desde Opciones de Desarrollador (BD).
 void loadDriveDbSettings();
+
+// Roles configurables: asegura los 4 roles base y enlaza a los usuarios sin rol.
+void ensureSystemRoles().catch((error) => console.error('[Roles] No se pudieron preparar los roles base:', error));
 
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

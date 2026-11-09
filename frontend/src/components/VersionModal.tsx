@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.93.1";
+export const APP_VERSION = "1.94.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: Roles configurables — puedes crear roles propios (nombre + rol base + permisos) además de los 4 del sistema, y asignarlos desde la ficha del usuario. Los roles base no se pueden eliminar; los personalizados sí, cuando no tienen usuarios.",
+    "Mejora: Permisos — el servidor resuelve los permisos por rol configurable (con el enum como respaldo) y los usuarios existentes quedan enlazados a su rol base automáticamente.",
     "Corrección: Notas y pendientes — al hacer clic en una nota guardada ya no se activa el modo escritura ni aparece el cursor de texto. Para editar se usa el lápiz de la nota.",
     "Mejora: Roles y permisos — pantalla rediseñada al estilo Atlas: lista de roles a la izquierda con su avance, y a la derecha los permisos agrupados por módulo (Órdenes, Activos, Inventario, Compras, Personal, Checklists, Análisis y Configuración), con buscador y «activar/quitar todos» por módulo.",
     "Mejora: Estadística — selector por entidad (Órdenes de trabajo, Activos, Repuestos, Solicitudes y Costos) y gráficas: antigüedad de OT, disponibilidad por equipo, top de consumo, costo por categoría, solicitudes por mes y por estado, y costo por equipo.",

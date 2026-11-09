@@ -3,6 +3,7 @@ import { X, Loader2, Save, Trash2, Eye, EyeOff } from 'lucide-react';
 import type { User } from '../api/users';
 import { useAuth } from '../context/AuthContext';
 import { SearchableSelect } from './ui/SearchableSelect';
+import { getRoles, type RoleDefinition } from '../api/roles';
 
 interface Props {
   user: User | null;
@@ -18,6 +19,8 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('TECNICO');
+  const [roleId, setRoleId] = useState<string | null>(null);
+  const [roles, setRoles] = useState<RoleDefinition[]>([]);
   const [isActive, setIsActive] = useState(true);
   const [hourlyRate, setHourlyRate] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -28,11 +31,17 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
   const isEditing = !!user;
 
   useEffect(() => {
+    if (!isOpen) return;
+    void getRoles().then(setRoles).catch(() => setRoles([]));
+  }, [isOpen]);
+
+  useEffect(() => {
     if (isOpen) {
       if (user) {
         setName(user.name);
         setEmail(user.email);
         setRole(user.role);
+        setRoleId(user.role_id ?? null);
         setIsActive(user.is_active);
         setHourlyRate(user.hourly_rate != null ? String(user.hourly_rate) : '');
         setPassword(''); // Password empty on edit unless they want to change it
@@ -40,6 +49,7 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
         setName('');
         setEmail('');
         setRole('TECNICO');
+        setRoleId(null);
         setIsActive(true);
         setHourlyRate('');
         setPassword('');
@@ -65,6 +75,7 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
         name,
         email,
         role,
+        role_id: roleId,
         is_active: isActive,
         hourly_rate: hourlyRate.trim() === '' ? null : Number(hourlyRate),
       };
@@ -172,18 +183,35 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Rol en el Sistema *</label>
               <SearchableSelect
-                value={role}
-                onChange={setRole}
+                value={roleId ?? role}
+                onChange={(value) => {
+                  const definition = roles.find((item) => item.id === value);
+                  if (definition) {
+                    setRoleId(definition.id);
+                    setRole(definition.base_role);
+                  } else {
+                    setRoleId(null);
+                    setRole(value);
+                  }
+                }}
                 disabled={user?.id === currentUser?.userId}
-                options={[
-                  { value: 'TECNICO', label: 'TÉCNICO (Solo puede ver y atender sus órdenes)' },
-                  { value: 'GESTIONADOR', label: 'GESTIONADOR (Crea órdenes y asigna a técnicos)' },
-                  { value: 'ADMINISTRADOR', label: 'ADMINISTRADOR (Control total del sistema)' },
-                  { value: 'OBSERVADOR', label: 'OBSERVADOR (Solo consulta + Mensajes; sin editar)' },
-                ]}
+                options={roles.length > 0
+                  ? roles.map((item) => ({
+                      value: item.id,
+                      label: `${item.name} (${item.base_role === 'ADMINISTRADOR' ? 'admin' : item.base_role.toLowerCase()})`,
+                    }))
+                  : [
+                      { value: 'TECNICO', label: 'TÉCNICO (Solo puede ver y atender sus órdenes)' },
+                      { value: 'GESTIONADOR', label: 'GESTIONADOR (Crea órdenes y asigna a técnicos)' },
+                      { value: 'ADMINISTRADOR', label: 'ADMINISTRADOR (Control total del sistema)' },
+                      { value: 'OBSERVADOR', label: 'OBSERVADOR (Solo consulta + Mensajes; sin editar)' },
+                    ]}
                 placeholder="Seleccionar rol…"
                 inputClassName="w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
               />
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                Los roles se configuran en <strong>Permisos</strong>. El rol base conserva el comportamiento heredado.
+              </p>
             </div>
 
             <div>

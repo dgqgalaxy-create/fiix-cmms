@@ -89,6 +89,9 @@ model User {
   email                String      @unique
   password_hash        String
   role                 Role
+  /// Rol configurable (RoleDefinition). Si es null se usa el enum Role.
+  role_id              String?     @db.Uuid
+  role_def             RoleDefinition? @relation(fields: [role_id], references: [id], onDelete: SetNull)
   is_active            Boolean     @default(true)
   must_change_password Boolean     @default(false)
   /// Tarifa por hora (MXN). Alimenta el costo de mano de obra.
@@ -364,6 +367,20 @@ model RolePermission {
   role        Role     @unique
   permissions Json
   updated_at  DateTime @updatedAt
+}
+/// Rol configurable (estilo Atlas). `base_role` conserva la compatibilidad con el
+/// enum Role que usan middleware, KPIs y reportes; `permissions` es la fuente de
+/// verdad cuando el usuario tiene role_id asignado.
+model RoleDefinition {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  base_role   Role     @default(TECNICO)
+  permissions Json     @default("{}")
+  /// Los 4 roles base no se pueden eliminar.
+  is_system   Boolean  @default(false)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  users       User[]
 }
 
 model ItemCategory {
