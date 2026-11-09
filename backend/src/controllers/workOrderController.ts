@@ -1,4 +1,4 @@
-import { workOrderPeriod } from '../utils/workOrderPeriod';
+﻿import { workOrderPeriod } from '../utils/workOrderPeriod';
 import { Request, Response } from 'express';
 import type { Prisma } from '@prisma/client';
 import prisma from '../config/prisma';
@@ -230,6 +230,7 @@ const WO_LIST_SELECT = {
   zone: { select: { id: true, name: true } },
   created_by: { select: { id: true, name: true } },
   assigned_technicians: { select: { id: true, name: true } },
+  crew: { select: { id: true, name: true } },
   _count: { select: { comments: true } },
   comments: {
     orderBy: { created_at: 'desc' as const },
@@ -526,6 +527,11 @@ export const getWorkOrderById = async (req: AuthRequest, res: Response): Promise
         zone: true,
         created_by: { select: { id: true, name: true } },
         assigned_technicians: { select: { id: true, name: true } },
+        crew: {
+          include: {
+            members: { include: { user: { select: { id: true, name: true } } } },
+          },
+        },
         failure_problem: true,
         failure_cause: true,
         failure_remedy: true,

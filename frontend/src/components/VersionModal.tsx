@@ -1,7 +1,7 @@
-import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
+﻿import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.98.0";
+export const APP_VERSION = "1.99.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -28,11 +28,12 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "KPIs y Metas",
     "Checklist Diario",
     "Notas y pendientes",
-    "Calendario de Horarios y Turnos (Roster)",
+    "Cuadrillas (equipos de trabajo)",`r`n    "Calendario de Horarios y Turnos (Roster)",
     "Opciones de Desarrollador",
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: Cuadrillas — agrupa al personal (con zona y descripción) y asígnalo a las órdenes de trabajo desde el detalle de la OT. Cada cuadrilla muestra sus integrantes y cuántas órdenes tiene asignadas.",
     "Nuevo: costos adicionales por OT — servicios de terceros, fletes o refacciones compradas fuera del inventario, con categoría de costo (se puede crear al momento), monto, descripción y fecha. Se pueden eliminar y quedan en la bitácora.",
     "Mejora: Estadística → Costos — ahora suma los costos adicionales: nueva cifra «Adicionales», tercera serie en la gráfica por equipo y columna en la tabla.",
     "Nuevo: Características — el Portal de solicitudes (/request) ya se puede activar o desactivar. Al desactivarlo, el formulario público y el seguimiento muestran un aviso y la API rechaza envíos y consultas.",

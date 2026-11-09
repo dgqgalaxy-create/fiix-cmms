@@ -136,6 +136,7 @@ model User {
   reported_downtimes   AssetDowntime[]
   wo_relations         WorkOrderRelation[]
   work_order_costs     WorkOrderCost[]
+  crew_memberships     CrewMember[]
   preferences          Json?       @default("{}")
 }
 
@@ -216,6 +217,7 @@ model Zone {
   updated_at    DateTime      @updatedAt
 
   work_orders   WorkOrder[]
+  crews         Crew[]
   assets        Asset[]
   sections      ZoneSection[]
 }
@@ -348,6 +350,9 @@ model WorkOrder {
   documents           Document[]
   /// Costos adicionales de la orden (servicios, fletes, refacciones externas).
   costs               WorkOrderCost[]
+  /// Cuadrilla asignada a la orden (opcional).
+  crew_id             String?             @db.Uuid
+  crew                Crew?               @relation(fields: [crew_id], references: [id], onDelete: SetNull)
 
   @@index([status, created_at])
   @@index([created_at])
@@ -1224,4 +1229,32 @@ model WorkOrderCost {
 
   @@index([work_order_id])
   @@index([category_id])
+}
+// ---------------------------------------------------------------------------
+// Cuadrillas: grupos de trabajo reutilizables, asignables a órdenes.
+// ---------------------------------------------------------------------------
+
+model Crew {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String       @unique
+  description String?
+  zone_id     String?      @db.Uuid
+  zone        Zone?        @relation(fields: [zone_id], references: [id], onDelete: SetNull)
+  is_active   Boolean      @default(true)
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+  members     CrewMember[]
+  work_orders WorkOrder[]
+}
+
+model CrewMember {
+  id         String   @id @default(uuid()) @db.Uuid
+  crew_id    String   @db.Uuid
+  crew       Crew     @relation(fields: [crew_id], references: [id], onDelete: Cascade)
+  user_id    String   @db.Uuid
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  role_label String?
+  created_at DateTime @default(now())
+
+  @@unique([crew_id, user_id])
 }

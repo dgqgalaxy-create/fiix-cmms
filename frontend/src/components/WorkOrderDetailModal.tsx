@@ -28,6 +28,7 @@ import { WorkOrderCommentsPanel } from './WorkOrderCommentsPanel';
 import { WorkOrderTimeline } from './workorders/WorkOrderTimeline';
 import { WorkOrderRelations } from './workorders/WorkOrderRelations';
 import { WorkOrderCostsSection } from './workorders/WorkOrderCostsSection';
+import { WorkOrderCrewSection } from './workorders/WorkOrderCrewSection';
 import { FilesPanel } from './common/FilesPanel';
 import { mediaUrl } from '../utils/mediaUrl';
 import { SearchableSelect } from './ui/SearchableSelect';
@@ -1472,7 +1473,12 @@ export const WorkOrderDetailModal = ({
                 />
               </div>
 
-              <div className="mt-4">
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <WorkOrderCrewSection
+                  workOrderId={workOrder.id}
+                  currentCrewId={(workOrder as any).crew?.id ?? null}
+                  canWrite={canWriteOps}
+                />
                 <WorkOrderCostsSection
                   workOrderId={workOrder.id}
                   isOpen={isOpen}

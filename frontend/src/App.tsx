@@ -47,6 +47,7 @@ const DailyChecklistsPage = lazy(() => import('./pages/DailyChecklistsPage'));
 const ChecklistFormPage = lazy(() => import('./pages/ChecklistFormPage'));
 const RosterPage = lazy(() => import('./pages/RosterPage').then((m) => ({ default: m.RosterPage })));
 const NotesPage = lazy(() => import('./pages/NotesPage'));
+const CrewsPage = lazy(() => import('./pages/CrewsPage'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 
 function PageFallback() {
@@ -138,6 +139,17 @@ function App() {
           />
           
           <Route 
+            path="/crews"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <CrewsPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/roster" 
             element={
               <ProtectedRoute>

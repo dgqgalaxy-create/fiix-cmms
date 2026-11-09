@@ -12,6 +12,7 @@ export const MODULE_FEATURES: { key: string; label: string; path: string; descri
   { key: 'stats', label: 'Estadística', path: '/stats', description: 'Antigüedad, consumo, confiabilidad y costos.' },
   { key: 'request_portal', label: 'Portal de solicitudes', path: '/request', description: 'Formulario público (/request) para que cualquier persona solicite mantenimiento y siga su folio.' },
   { key: 'checklists', label: 'Checklist diario', path: '/checklists', description: 'Checklists operativos del turno.' },
+  { key: 'crews', label: 'Cuadrillas', path: '/crews', description: 'Grupos de trabajo asignables a las órdenes.' },
   { key: 'roster', label: 'Horarios y turnos', path: '/roster', description: 'Calendario de turnos del personal.' },
   { key: 'calendar', label: 'Calendario', path: '/calendar', description: 'Agenda de órdenes de trabajo.' },
   { key: 'kpis', label: 'KPIs y metas', path: '/kpis', description: 'Indicadores y objetivos del área.' },
