@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.92.0";
+export const APP_VERSION = "1.93.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Mejora: Roles y permisos — pantalla rediseñada al estilo Atlas: lista de roles a la izquierda con su avance, y a la derecha los permisos agrupados por módulo (Órdenes, Activos, Inventario, Compras, Personal, Checklists, Análisis y Configuración), con buscador y «activar/quitar todos» por módulo.",
     "Mejora: Estadística — selector por entidad (Órdenes de trabajo, Activos, Repuestos, Solicitudes y Costos) y gráficas: antigüedad de OT, disponibilidad por equipo, top de consumo, costo por categoría, solicitudes por mes y por estado, y costo por equipo.",
     "Nuevo: Estadística — vista de «Solicitudes»: volumen por mes, por estado, atención promedio y solicitantes frecuentes.",
     "Nuevo: módulo «Estadística» en el menú lateral, con cuatro vistas: antigüedad de OT por tramos, consumo de repuestos con costo, confiabilidad por equipo (MTBF, MTTR y disponibilidad) y costos por OT y por equipo, con rango de fechas.",
