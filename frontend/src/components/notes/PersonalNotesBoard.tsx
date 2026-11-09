@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Check, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { createPersonalNote, updatePersonalNote, deletePersonalNote, type PersonalNote } from '../../api/notes';
 
@@ -42,7 +42,7 @@ function NoteCard({ note, canWrite, onChanged }: { note?: PersonalNote; canWrite
         {note && <button type="button" disabled={busy} onClick={() => { setEditing(false); setError(''); }} className="text-xs">Cancelar</button>}
         <button type="button" disabled={busy || !text.trim()} onClick={() => void run(() => note ? updatePersonalNote(note.id, { content: text }) : createPersonalNote({ content: text }), true)} className="ml-auto inline-flex items-center gap-1 rounded-lg bg-black/10 px-3 py-2 text-xs font-bold hover:bg-black/15 disabled:opacity-40">{note ? <Check size={14} /> : <Plus size={14} />}{busy ? 'Guardando…' : note ? 'Guardar cambios' : 'Guardar nota'}</button>
       </div>
-    </> : <button type="button" disabled={!canWrite || busy} onClick={() => { setText(personalNoteText(note!)); setEditing(true); }} className="flex-1 whitespace-pre-wrap break-words text-left text-sm leading-relaxed [overflow-wrap:anywhere] disabled:cursor-default">{personalNoteText(note!)}</button>}
+    </> : <div className="flex-1 cursor-default select-text whitespace-pre-wrap break-words text-left text-sm leading-relaxed [overflow-wrap:anywhere]" title="Usa el lápiz para editar">{personalNoteText(note!)}</div>}
     {error && <p role="alert" className="mt-2 text-xs font-semibold">{error}</p>}
   </article>;
 }
