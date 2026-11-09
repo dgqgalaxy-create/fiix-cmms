@@ -1,16 +1,22 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import type { User } from '../api/users';
-import { Pencil, Shield, Wrench, User as UserIcon, Eye, Ban, CheckCircle2, Trash2, DollarSign } from 'lucide-react';
+import { Pencil, Shield, Wrench, User as UserIcon, Eye, Ban, CheckCircle2, Trash2, DollarSign, CalendarClock } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 import { formatCurrency } from '../utils/currency';
 import { ContextMenu } from './common/ContextMenu';
 import { DataTable } from './common/DataTable';
+import type { TechnicianPattern } from '../api/roster';
+import { latestPattern } from '../utils/personnelRoster';
 
 interface Props {
   users: User[];
   onRowClick?: (user: User) => void;
   onToggleActive?: (user: User) => void;
   onDelete?: (user: User) => void;
+  /** Patrones de turno (con vigencia) para mostrar el turno de cada persona. */
+  patterns?: TechnicianPattern[];
+  /** Abre el panel de turno de la persona. */
+  onShiftClick?: (user: User) => void;
 }
 
 const getRoleIcon = (role: string) => {
@@ -35,7 +41,7 @@ const getRoleColor = (role: string) => {
 
 type SortField = 'name' | 'email' | 'role' | 'rate' | 'date';
 
-export const UsersTable = ({ users, onRowClick, onToggleActive, onDelete }: Props) => {
+export const UsersTable = ({ users, onRowClick, onToggleActive, onDelete, patterns = [], onShiftClick }: Props) => {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; user: User } | null>(null);
@@ -63,6 +69,33 @@ export const UsersTable = ({ users, onRowClick, onToggleActive, onDelete }: Prop
 
   const rateText = (user: User) =>
     user.hourly_rate != null ? `${formatCurrency(user.hourly_rate)}/h` : '—';
+
+  const shiftLabel = (user: User) => {
+    const pattern = latestPattern(patterns, user.id);
+    if (!pattern) return null;
+    const label = pattern.pattern_type === 'MIXTO'
+      ? 'Mixto'
+      : pattern.pattern_type === '4X4_FIJO'
+        ? '4x4 fijo'
+        : '4x4 rotatorio';
+    return { label, since: pattern.start_date.slice(0, 10), active: !pattern.end_date };
+  };
+
+  const shiftCell = (user: User) => {
+    const shift = shiftLabel(user);
+    return (
+      <button
+        type="button"
+        onClick={(event) => { event.stopPropagation(); onShiftClick?.(user); }}
+        disabled={!onShiftClick}
+        className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600 transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-default disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/40"
+        title={shift ? `Turno vigente desde ${shift.since}${shift.active ? '' : ' (histórico)'}` : 'Asignar turno'}
+      >
+        <CalendarClock size={12} className="shrink-0" />
+        <span className="truncate">{shift ? shift.label : 'Sin turno'}</span>
+      </button>
+    );
+  };
 
   return (
     <>
@@ -120,6 +153,12 @@ export const UsersTable = ({ users, onRowClick, onToggleActive, onDelete }: Prop
             defaultWidth: 180,
             sortKey: 'role',
             render: (user) => roleBadge(user),
+          },
+          {
+            key: 'shift',
+            label: 'Turno',
+            defaultWidth: 165,
+            render: (user) => shiftCell(user),
           },
           {
             key: 'rate',

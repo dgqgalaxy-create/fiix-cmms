@@ -22,6 +22,33 @@ const exceptions: Record<string, PersonnelRosterStatus> = {
   TIEMPO_POR_TIEMPO: codes.TXT, FESTIVO: absence('Día festivo'),
 };
 
+/**
+ * Patrón vigente para una fecha: el de mayor `start_date` que ya inició y que
+ * no ha terminado. Permite tener varios patrones por persona (cambios por mes).
+ */
+export function patternForDate(patterns: RosterResponse['patterns'], userId: string, day: string) {
+  const target = Date.parse(`${day}T12:00:00Z`);
+  const candidates = patterns.filter((item) => {
+    if (item.user_id !== userId) return false;
+    const from = Date.parse(`${item.start_date.slice(0, 10)}T12:00:00Z`);
+    const to = item.end_date ? Date.parse(`${item.end_date.slice(0, 10)}T12:00:00Z`) : null;
+    return Number.isFinite(from) && from <= target && (to === null || to >= target);
+  });
+  if (candidates.length === 0) return null;
+  return candidates.reduce((latest, item) =>
+    Date.parse(`${item.start_date.slice(0, 10)}T12:00:00Z`) > Date.parse(`${latest.start_date.slice(0, 10)}T12:00:00Z`) ? item : latest
+  );
+}
+
+/** Patrón más reciente (vigente o último registrado), para mostrar en Personal. */
+export function latestPattern(patterns: RosterResponse['patterns'], userId: string) {
+  const own = patterns.filter((item) => item.user_id === userId);
+  if (own.length === 0) return null;
+  return own.reduce((latest, item) =>
+    Date.parse(`${item.start_date.slice(0, 10)}T12:00:00Z`) > Date.parse(`${latest.start_date.slice(0, 10)}T12:00:00Z`) ? item : latest
+  );
+}
+
 /** Uses the same priority as Horarios: explicit shift, exceptions, then pattern. */
 export function personnelDayStatus(roster: RosterResponse, userId: string, day: string): PersonnelRosterStatus {
   const shift = roster.shifts.find(item => item.user_id === userId && item.date.slice(0, 10) === day);
@@ -35,7 +62,7 @@ export function personnelDayStatus(roster: RosterResponse, userId: string, day: 
       kind: states.some(state => state.kind === 'absence') ? 'absence' : states[0].kind,
     };
   }
-  const pattern = roster.patterns.find(item => item.user_id === userId);
+  const pattern = patternForDate(roster.patterns, userId, day);
   if (!pattern) return unknown;
   const days = Math.round((Date.parse(`${day}T12:00:00Z`) - Date.parse(`${pattern.start_date.slice(0, 10)}T12:00:00Z`)) / 86400000);
   if (days < 0 || !Number.isFinite(days)) return unknown;

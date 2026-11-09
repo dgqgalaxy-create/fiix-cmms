@@ -5,6 +5,8 @@ export interface TechnicianPattern {
   user_id: string;
   pattern_type: string;
   start_date: string;
+  /** Fin del periodo; null = vigente (fijo indefinido). */
+  end_date?: string | null;
   user: {
     id: string;
     name: string;
@@ -68,6 +70,11 @@ export interface RosterResponse {
 
 export const getRoster = async (start: string, end: string): Promise<RosterResponse> => {
   const response = await api.get('/roster', { params: { start, end } });
+  return response.data;
+};
+
+export const getPatternHistory = async (userId: string): Promise<TechnicianPattern[]> => {
+  const response = await api.get(`/roster/pattern/${userId}`);
   return response.data;
 };
 

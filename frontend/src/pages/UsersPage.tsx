@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, RefreshCw, Users, Search, LayoutGrid, Table2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -10,6 +10,7 @@ import { getWorkOrders } from '../api/workOrders';
 import type { WorkOrder } from '../api/workOrders';
 import { getTechnicianPerformance } from '../api/kpis';
 import { UsersTable } from '../components/UsersTable';
+import { PersonnelShiftModal } from '../components/PersonnelShiftModal';
 import { UserCards } from '../components/UserCards';
 import { UserModal } from '../components/UserModal';
 import { RequestersTable } from '../components/RequestersTable';
@@ -99,6 +100,8 @@ export const UsersPage = () => {
   // Modals state
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  /** Persona cuyo turno se está programando (panel lateral). */
+  const [shiftUser, setShiftUser] = useState<User | null>(null);
   
   const [isRequesterModalOpen, setIsRequesterModalOpen] = useState(false);
   const [selectedRequester, setSelectedRequester] = useState<Requester | null>(null);
@@ -366,6 +369,8 @@ export const UsersPage = () => {
           ) : (
             <UsersTable 
               users={filteredUsers} 
+              patterns={roster?.patterns ?? []}
+              onShiftClick={(u) => setShiftUser(u)}
               onRowClick={hasPermission('MANAGE_USERS') ? (u) => {
                 setSelectedUser(u);
                 setIsUserModalOpen(true);
@@ -402,6 +407,14 @@ export const UsersPage = () => {
         onClose={() => setIsUserModalOpen(false)} 
         onSubmit={selectedUser ? handleUpdate : handleCreate}
         onDelete={handleDelete}
+      />
+
+      <PersonnelShiftModal
+        user={shiftUser}
+        isOpen={!!shiftUser}
+        onClose={() => setShiftUser(null)}
+        canManage={user?.role === 'ADMINISTRADOR'}
+        onSaved={() => { void refreshRoster(); }}
       />
 
       <RequesterModal

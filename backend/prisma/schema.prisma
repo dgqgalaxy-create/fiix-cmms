@@ -124,7 +124,7 @@ model User {
   chat_message_receipts ChatMessageReceipt[]
   chat_message_reactions ChatMessageReaction[]
 
-  pattern              TechnicianPattern?
+  patterns             TechnicianPattern[]
   exceptions           TechnicianException[]
   time_debts           TechnicianTimeDebt[]
   shifts               TechnicianShift[]
@@ -135,13 +135,19 @@ model User {
   preferences          Json?       @default("{}")
 }
 
+/// Patrón de turno con vigencia. Puede haber varios por persona: uno por periodo.
+/// `end_date` nulo = vigente (fijo indefinido). Al programar un cambio se cierra
+/// el anterior el día anterior, así se soportan meses con patrones distintos.
 model TechnicianPattern {
   id           String   @id @default(uuid()) @db.Uuid
-  user_id      String   @db.Uuid @unique
-  user         User     @relation(fields: [user_id], references: [id])
+  user_id      String   @db.Uuid
+  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   pattern_type String   // "MIXTO", "4X4_ROTATORIO", "4X4_FIJO"
-  start_date   DateTime 
+  start_date   DateTime
+  end_date     DateTime?
   created_at   DateTime @default(now())
+
+  @@index([user_id, start_date])
 }
 
 model TechnicianException {

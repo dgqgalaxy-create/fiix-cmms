@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import type { Event } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
@@ -10,6 +10,7 @@ import { es } from 'date-fns/locale/es';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useAuth } from '../context/AuthContext';
+import { latestPattern } from '../utils/personnelRoster';
 import { getRoster, assignPattern, removePattern, addException, removeException, importRosterCalendar } from '../api/roster';
 import { RosterWeeklySummaryModal } from '../components/RosterWeeklySummaryModal';
 import { RosterMatrix, type RosterMatrixDay } from '../components/RosterMatrix';
@@ -91,12 +92,12 @@ export const RosterPage = () => {
   const [patternStartDate, setPatternStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   /** Patrón que ya tiene la persona seleccionada (si lo hay). */
-  const selectedPersonPattern = data?.patterns.find((item) => item.user_id === selectedUser) ?? null;
+  const selectedPersonPattern = data && selectedUser ? latestPattern(data.patterns, selectedUser) : null;
 
   /** Al elegir la persona, precarga su patrón actual para poder editarlo desde aquí. */
   const handleSelectPatternUser = (userId: string) => {
     setSelectedUser(userId);
-    const existing = data?.patterns.find((item) => item.user_id === userId);
+    const existing = data ? latestPattern(data.patterns, userId) : null;
     if (existing) {
       setSelectedPattern(existing.pattern_type);
       setPatternStartDate(existing.start_date.slice(0, 10));

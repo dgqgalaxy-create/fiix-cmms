@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.89.0";
+export const APP_VERSION = "1.90.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: Personal — columna «Turno» en la tabla: muestra el patrón vigente de cada persona y abre un panel para programarlo, ver el historial y quitarlo.",
+    "Nuevo: Turnos — los patrones ahora tienen vigencia: puedes tener uno por mes, uno fijo todo el año o cambiar cuando lo necesites. Al programar un cambio, el patrón anterior se cierra el día anterior y el histórico se conserva.",
     "Mejora: Personal — las tablas de Usuarios y Solicitantes usan el mismo formato que inventario: columnas de ancho ajustable, menú ⋮ por encabezado, selector de columnas, vista de tabla o tarjetas y ancho completo de la pantalla.",
     "Mejora: Personal — «Ver inactivos» ahora es un interruptor, en lugar de un botón que cambiaba de texto.",
     "Nuevo: Personal — tarifa por hora por persona: se captura en la ficha y se muestra en la tabla. Se usará para el costo de mano de obra en las órdenes.",

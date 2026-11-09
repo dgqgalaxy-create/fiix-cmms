@@ -109,28 +109,73 @@ export const assignPattern = async (req: Request, res: Response) => {
       return;
     }
 
-    const pattern = await prisma.technicianPattern.upsert({
+    // Historial con vigencias: cada patrón tiene un periodo. Al programar uno
+    // nuevo se cierra el vigente el día anterior, para permitir «un mes de una
+    // forma y el siguiente de otra» sin perder el histórico.
+    const existing = await prisma.technicianPattern.findMany({
       where: { user_id },
-      update: { pattern_type, start_date: start },
-      create: { user_id, pattern_type, start_date: start }
+      orderBy: { start_date: 'asc' },
     });
-    
+    const isoDay = (date: Date) => date.toISOString().slice(0, 10);
+    if (existing.some((item) => isoDay(item.start_date) === isoDay(start))) {
+      res.status(409).json({ error: 'Esa persona ya tiene un patrón que inicia en esa fecha.' });
+      return;
+    }
+    if (existing.some((item) => item.start_date.getTime() > start.getTime())) {
+      res.status(409).json({
+        error: 'Ya hay un patrón posterior a esa fecha. Elimínalo primero si quieres reprogramar.',
+      });
+      return;
+    }
+
+    const dayBefore = new Date(start.getTime() - 24 * 60 * 60 * 1000);
+    const open = existing.filter((item) => item.end_date === null);
+    if (open.length > 0) {
+      await prisma.technicianPattern.updateMany({
+        where: { id: { in: open.map((item) => item.id) } },
+        data: { end_date: dayBefore },
+      });
+    }
+
+    const pattern = await prisma.technicianPattern.create({
+      data: { user_id, pattern_type, start_date: start },
+    });
+
     emitRefresh('refresh_roster');
-    res.json(pattern);
+    res.status(201).json(pattern);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
   }
 };
 
-/** Quita el patrón de una persona (los turnos explícitos e incidencias no se tocan). */
+/** Historial de patrones de una persona (más reciente primero). */
+export const getPatternHistory = async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.userId;
+    if (!uuid(userId)) { res.status(400).json({ error: 'Persona inválida.' }); return; }
+    const patterns = await prisma.technicianPattern.findMany({
+      where: { user_id: userId },
+      orderBy: { start_date: 'desc' },
+    });
+    res.json(patterns);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'No se pudo obtener el historial de turnos.' });
+  }
+};
+
+/** Quita el patrón vigente de una persona (los turnos explícitos e incidencias no se tocan). */
 export const removePattern = async (req: Request, res: Response) => {
   try {
     const userId = req.params.userId;
     if (!uuid(userId)) { res.status(400).json({ error: 'Persona inválida.' }); return; }
-    const existing = await prisma.technicianPattern.findUnique({ where: { user_id: userId } });
-    if (!existing) { res.status(404).json({ error: 'Esa persona no tiene un patrón asignado.' }); return; }
-    await prisma.technicianPattern.delete({ where: { user_id: userId } });
+    const existing = await prisma.technicianPattern.findFirst({
+      where: { user_id: userId, end_date: null },
+      orderBy: { start_date: 'desc' },
+    });
+    if (!existing) { res.status(404).json({ error: 'Esa persona no tiene un patrón vigente.' }); return; }
+    await prisma.technicianPattern.delete({ where: { id: existing.id } });
     emitRefresh('refresh_roster');
     res.json({ ok: true });
   } catch (error) {
