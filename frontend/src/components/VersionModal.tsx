@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.96.0";
+export const APP_VERSION = "1.97.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: Características — el Portal de solicitudes (/request) ya se puede activar o desactivar. Al desactivarlo, el formulario público y el seguimiento muestran un aviso y la API rechaza envíos y consultas.",
     "Nuevo: capa visual — animación de entrada en cada cambio de sección, tarjetas con elevación suave al pasar el mouse, cifras que aparecen escalonadas, foco visible consistente, selección de texto con el color de la marca y barras de desplazamiento discretas.",
     "Mejora: barra lateral — el elemento activo se distingue con un borde interior y los elementos se desplazan sutilmente al pasar el mouse.",
     "Nuevo: Configuración → «Características»: activa o desactiva módulos completos (Mensajes, Notas, Inventario, Activos, Compras, Medidores, Archivos, Estadística, Checklists, Horarios, Calendario y KPIs). Los módulos desactivados desaparecen del menú lateral.",

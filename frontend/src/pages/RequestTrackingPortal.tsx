@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
@@ -14,6 +14,17 @@ interface SearchResult { requests: Result[]; total: number; page: number; pageSi
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:ring-2 focus:ring-emerald-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100';
 
 export default function RequestTrackingPortal() {
+  const [portalEnabled, setPortalEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    axios
+      .get(`${BACKEND_URL}/api/public/portal-status`)
+      .then((response) => { if (!cancelled) setPortalEnabled(response.data?.enabled !== false); })
+      .catch(() => { if (!cancelled) setPortalEnabled(true); });
+    return () => { cancelled = true; };
+  }, []);
+
   const [params, setParams] = useSearchParams();
   const searchKey = params.toString();
   const [folio, setFolio] = useState(params.get('folio') || '');
@@ -80,6 +91,19 @@ export default function RequestTrackingPortal() {
     const next = new URLSearchParams(params);
     next.set('page', String(page));
     setParams(next);
+  }
+
+  if (portalEnabled === false) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6 dark:bg-slate-950">
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Portal de solicitudes desactivado</h1>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            El seguimiento de solicitudes no está disponible por el momento.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -1,7 +1,8 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { DEFAULT_SLA_POLICY, mergeSlaPolicy } from '../services/SlaService';
 import { emitRefresh } from '../utils/socket';
+import { clearFeatureCache } from '../utils/features';
 
 export const getSettings = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -65,6 +66,7 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
         },
       });
     }
+    clearFeatureCache();
     emitRefresh('refresh_settings');
     // Si cambió sla_enabled, refrescar listados de OT en las pestañas abiertas
     // (los badges «En riesgo / Vencido» aparecen o desaparecen al instante).
@@ -109,6 +111,7 @@ export const createUom = async (req: Request, res: Response) => {
         default_qty_mode: mode,
       },
     });
+    clearFeatureCache();
     emitRefresh('refresh_settings');
     emitRefresh('refresh_inventory');
     res.json(uom);
@@ -125,6 +128,7 @@ export const deleteUom = async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
     await prisma.unitOfMeasure.delete({ where: { id } });
+    clearFeatureCache();
     emitRefresh('refresh_settings');
     emitRefresh('refresh_inventory');
     res.json({ success: true });
@@ -154,6 +158,7 @@ export const updateUom = async (req: Request, res: Response) => {
       where: { id },
       data,
     });
+    clearFeatureCache();
     emitRefresh('refresh_settings');
     emitRefresh('refresh_inventory');
     res.json(uom);

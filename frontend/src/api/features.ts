@@ -1,4 +1,4 @@
-import api from './axios';
+﻿import api from './axios';
 
 /** Módulos que se pueden activar o desactivar desde Configuración → Características. */
 export const MODULE_FEATURES: { key: string; label: string; path: string; description: string }[] = [
@@ -10,6 +10,7 @@ export const MODULE_FEATURES: { key: string; label: string; path: string; descri
   { key: 'meters', label: 'Medidores', path: '/meters', description: 'Horómetro, odómetro y contadores por activo.' },
   { key: 'files', label: 'Archivos', path: '/files', description: 'Biblioteca de documentos por carpetas.' },
   { key: 'stats', label: 'Estadística', path: '/stats', description: 'Antigüedad, consumo, confiabilidad y costos.' },
+  { key: 'request_portal', label: 'Portal de solicitudes', path: '/request', description: 'Formulario público (/request) para que cualquier persona solicite mantenimiento y siga su folio.' },
   { key: 'checklists', label: 'Checklist diario', path: '/checklists', description: 'Checklists operativos del turno.' },
   { key: 'roster', label: 'Horarios y turnos', path: '/roster', description: 'Calendario de turnos del personal.' },
   { key: 'calendar', label: 'Calendario', path: '/calendar', description: 'Agenda de órdenes de trabajo.' },

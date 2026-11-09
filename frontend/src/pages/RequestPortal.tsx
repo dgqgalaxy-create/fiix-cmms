@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import type { FormEvent, ChangeEvent } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
@@ -80,6 +80,22 @@ function clearDraft() {
 
 export const RequestPortal = () => {
   const saved = readDraft();
+
+  /** El portal puede desactivarse desde Configuración → Características. */
+  const [portalEnabled, setPortalEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    axios
+      .get(`${BACKEND_URL}/public/portal-status`)
+      .then((response) => {
+        if (!cancelled) setPortalEnabled(response.data?.enabled !== false);
+      })
+      .catch(() => {
+        if (!cancelled) setPortalEnabled(true);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const [zones, setZones] = useState<Zone[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -387,6 +403,28 @@ export const RequestPortal = () => {
           >
             Crear otra solicitud
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (portalEnabled === null) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Loader2 className="animate-spin text-emerald-600" size={30} />
+      </div>
+    );
+  }
+
+  if (!portalEnabled) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6 dark:bg-slate-950">
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <img src="/icono_app.jpg" alt="Logo" className="mx-auto mb-4 h-14 w-14 rounded-xl object-cover" />
+          <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Portal de solicitudes desactivado</h1>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Por el momento no se reciben solicitudes por este medio. Contacta al área de mantenimiento.
+          </p>
         </div>
       </div>
     );
