@@ -17,8 +17,11 @@ export interface DocumentItem {
 }
 
 export interface DocumentFolder {
+  id?: string | null;
   folder: string;
+  name?: string;
   count: number;
+  is_custom?: boolean;
 }
 
 export const getDocuments = async (params?: {
@@ -58,4 +61,14 @@ export const uploadDocument = async (data: {
 
 export const deleteDocument = async (id: string): Promise<void> => {
   await api.delete(`/documents/${id}`);
+};
+
+export const createDocumentFolder = async (name: string): Promise<DocumentFolder> =>
+  (await api.post('/documents/folders', { name })).data;
+
+export const renameDocumentFolder = async (id: string, name: string): Promise<DocumentFolder> =>
+  (await api.put(`/documents/folders/${id}`, { name })).data;
+
+export const deleteDocumentFolder = async (id: string): Promise<void> => {
+  await api.delete(`/documents/folders/${id}`);
 };

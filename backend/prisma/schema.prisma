@@ -659,6 +659,8 @@ model SystemSettings {
   email_enabled      Boolean  @default(false)
   sla_enabled        Boolean  @default(true)
   sla_policy         Json?
+  /// Características activas (módulos visibles). Clave = ruta del módulo.
+  features           Json?
   /// Obsoleto: la interfaz móvil de técnico es preferencia por usuario
   /// (`User.preferences.use_technician_mobile_ui`). Se mantiene por compatibilidad de esquema.
   technician_mobile_ui Boolean @default(true)
@@ -1103,6 +1105,14 @@ enum MeterTriggerCondition {
 // ---------------------------------------------------------------------------
 // Archivos del repuesto: fichas técnicas, manuales, cotizaciones…
 // ---------------------------------------------------------------------------
+
+/// Carpeta de la biblioteca de archivos. Permite crear carpetas vacías y
+/// renombrarlas o eliminarlas sin depender de los documentos existentes.
+model DocumentFolder {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String   @unique
+  created_at DateTime @default(now())
+}
 
 model Document {
   id             String   @id @default(uuid()) @db.Uuid

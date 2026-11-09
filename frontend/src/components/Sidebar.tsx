@@ -1,5 +1,6 @@
-﻿import { LayoutDashboard, LogOut, Users, Activity, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote, MessageSquare, ChevronDown, Gauge, FolderOpen, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, LogOut, Users, Activity, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote, MessageSquare, ChevronDown, Gauge, FolderOpen, BarChart3 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getFeatures, isFeatureEnabled } from '../api/features';
 import { useTheme } from '../context/ThemeContext';
 import { VersionModal, APP_VERSION } from './VersionModal';
 import { PlantClock } from './PlantClock';
@@ -140,7 +141,13 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   const [notesBadge, setNotesBadge] = useState(0);
   const [chatBadge, setChatBadge] = useState(0);
   /** Grupos desplegables de la barra lateral (por ruta del módulo padre). */
+  const [features, setFeatures] = useState<Record<string, boolean>>({});
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  // Características activas: los módulos desactivados no aparecen en el menú.
+  useEffect(() => {
+    void getFeatures().then(setFeatures);
+  }, []);
 
   const toggleGroup = (path: string) =>
     setExpandedGroups((prev) => ({ ...prev, [path]: !prev[path] }));
@@ -149,6 +156,9 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   useEffect(() => {
     if (location.pathname.startsWith('/inventory') || location.pathname.startsWith('/assets')) {
       setExpandedGroups((prev) => (prev['/inventory'] ? prev : { ...prev, '/inventory': true }));
+    }
+    if (location.pathname.startsWith('/stats')) {
+      setExpandedGroups((prev) => (prev['/stats'] ? prev : { ...prev, '/stats': true }));
     }
   }, [location.pathname]);
 
@@ -200,7 +210,18 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
       },
       { name: 'Medidores', path: '/meters', icon: <Gauge size={16} /> },
       { name: 'Archivos', path: '/files', icon: <FolderOpen size={16} /> },
-      { name: 'Estadística', path: '/stats', icon: <BarChart3 size={16} /> },
+      {
+        name: 'Estadística',
+        path: '/stats',
+        icon: <BarChart3 size={16} />,
+        children: [
+          { name: 'Órdenes de trabajo', to: '/stats/orders' },
+          { name: 'Activos', to: '/stats/assets' },
+          { name: 'Repuestos', to: '/stats/parts' },
+          { name: 'Solicitudes', to: '/stats/requests' },
+          { name: 'Costos', to: '/stats/costs' },
+        ],
+      },
       { name: 'Checklist Diario', path: '/checklists', icon: <ClipboardCheck size={16} /> },
       { name: 'Horarios', path: '/roster', icon: <Clock size={16} /> },
       { name: 'Calendario', path: '/calendar', icon: <Calendar size={16} /> },
@@ -225,9 +246,11 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
     // Con barra inferior móvil, no repetir atajos que ya están abajo.
     const bottomNavPaths = new Set(['/home', '/dashboard', '/messages', '/inventory']);
+    // Características desactivadas en Configuración → no se muestran.
+    const featureItems = availableItems.filter((item) => isFeatureEnabled(features, item.path));
     const menuItems = isTechMobileShell
-      ? availableItems.filter((item) => !bottomNavPaths.has(item.path))
-      : availableItems;
+      ? featureItems.filter((item) => !bottomNavPaths.has(item.path))
+      : featureItems;
 
     // Apply saved order
     const savedOrder: string[] = user?.preferences?.sidebarOrder || [];

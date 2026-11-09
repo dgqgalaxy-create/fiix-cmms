@@ -1,5 +1,5 @@
-import { Router } from 'express';
-import { getSettings, updateSettings, getUoms, createUom, updateUom, deleteUom } from '../controllers/settingsController';
+﻿import { Router } from 'express';
+import { getSettings, updateSettings, getFeatures, getUoms, createUom, updateUom, deleteUom } from '../controllers/settingsController';
 import { authenticate, requirePermission, requireRole } from '../middlewares/authMiddleware';
 
 const router = Router();
@@ -7,6 +7,9 @@ const router = Router();
 // Lectura/escritura de ajustes globales del sistema: solo Administrador.
 router.get('/', authenticate, requirePermission('VIEW_SETTINGS'), requireRole(['ADMINISTRADOR']), getSettings);
 router.patch('/', authenticate, requirePermission('VIEW_SETTINGS'), requireRole(['ADMINISTRADOR']), updateSettings);
+
+// Características visibles para cualquier usuario autenticado (menú lateral).
+router.get('/features', authenticate, getFeatures);
 
 // UOM (Unidades de medida)
 router.get('/uom', authenticate, getUoms);

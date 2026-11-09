@@ -1,13 +1,14 @@
-import { useState, useEffect, type ReactNode } from 'react';
+﻿import { useState, useEffect, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw } from 'lucide-react';
+import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft } from 'lucide-react';
 import { PermissionsPage } from './PermissionsPage';
 import { DeveloperOptions } from './DeveloperOptions';
 import { ChecklistCatalogue } from '../components/ChecklistCatalogue';
 import { UomCatalogue } from '../components/UomCatalogue';
 import { ListChecks, Scale } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { MODULE_FEATURES } from '../api/features';
 import api from '../api/axios';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { canUseTechnicianMobileUi, isTechnicianMobileUiPrefOn } from '../hooks/useTechnicianMobileShell';
@@ -134,6 +135,7 @@ export const SettingsPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [slaSaveMsg, setSlaSaveMsg] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(appearanceOnly ? 'appearance' : 'general');
+  const [features, setFeatures] = useState<Record<string, boolean>>({});
   const [slaPriorityTab, setSlaPriorityTab] = useState<SlaPriorityKey>('URGENTE');
   const { theme, setTheme } = useTheme();
 
@@ -151,6 +153,7 @@ export const SettingsPage = () => {
           sla_enabled: res.data.sla_enabled ?? true,
         });
         setSlaPolicy(mergePolicy(res.data.sla_policy));
+        setFeatures((res.data.features as Record<string, boolean>) ?? {});
       }
     } catch (err) {
       console.error(err);
@@ -240,12 +243,27 @@ export const SettingsPage = () => {
       });
       if (res.data?.sla_policy) {
         setSlaPolicy(mergePolicy(res.data.sla_policy));
+        setFeatures((res.data.features as Record<string, boolean>) ?? {});
       }
       setSlaSaveMsg('Tiempos de SLA (Acuerdo de Nivel de Servicio) guardados correctamente.');
       setTimeout(() => setSlaSaveMsg(null), 3500);
     } catch (err) {
       console.error(err);
       setSlaSaveMsg('Error al guardar. Revisa permisos o conexión.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleFeatureToggle = async (key: string) => {
+    const next = { ...features, [key]: features[key] === false ? true : false };
+    setFeatures(next);
+    try {
+      setIsSaving(true);
+      await api.patch('/settings', { features: next });
+    } catch (err) {
+      console.error(err);
+      setFeatures(features);
     } finally {
       setIsSaving(false);
     }
@@ -302,6 +320,7 @@ export const SettingsPage = () => {
             {isAdmin && navBtn('developer', 'Opciones de Desarrollador', <Code size={18} />)}
             {isAdmin && hasPermission('MANAGE_CHECKLIST_CATALOG') &&
               navBtn('checklist_catalogue', 'Catálogo de Checklist', <ListChecks size={18} />)}
+            {isAdmin && navBtn('features', 'Características', <ToggleLeft size={18} />)}
             {isAdmin && navBtn('uom', 'Unidades de Medida', <Scale size={18} />)}
             {isAdmin && hasPermission('MANAGE_PERMISSIONS') &&
               navBtn('permissions', 'Roles y Permisos', <Shield size={18} />)}
@@ -455,6 +474,40 @@ export const SettingsPage = () => {
                     <p className="mt-3 text-sm font-medium text-emerald-700 dark:text-emerald-400">{slaSaveMsg}</p>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {isAdmin && activeTab === 'features' && (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200">Características</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Activa o desactiva módulos completos. Al desactivarlos, desaparecen del menú lateral para todos.
+                </p>
+              </div>
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {MODULE_FEATURES.map((module) => {
+                  const enabled = features[module.key] !== false;
+                  return (
+                    <div key={module.key} className="flex items-start gap-3 px-6 py-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{module.label}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{module.description}</p>
+                      </div>
+                      <label className="relative inline-flex shrink-0 cursor-pointer items-center">
+                        <input
+                          type="checkbox"
+                          className="peer sr-only"
+                          checked={enabled}
+                          onChange={() => void handleFeatureToggle(module.key)}
+                        />
+                        <span className="h-6 w-11 rounded-full bg-slate-200 transition-colors peer-checked:bg-emerald-600 dark:bg-slate-700" />
+                        <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
+                      </label>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

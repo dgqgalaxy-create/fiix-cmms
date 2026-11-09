@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.94.0";
+export const APP_VERSION = "1.95.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,9 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: Configuración → «Características»: activa o desactiva módulos completos (Mensajes, Notas, Inventario, Activos, Compras, Medidores, Archivos, Estadística, Checklists, Horarios, Calendario y KPIs). Los módulos desactivados desaparecen del menú lateral.",
+    "Mejora: Estadística — ahora es un desplegable en la barra lateral, con Órdenes de trabajo, Activos, Repuestos, Solicitudes y Costos como accesos directos, y se quitó el selector interno de la página.",
+    "Nuevo: Archivos — carpetas administrables: crea carpetas nuevas (aunque estén vacías), renómbralas y elimínalas. Solo el administrador puede hacerlo; una carpeta con archivos no se puede borrar.",
     "Nuevo: Roles configurables — puedes crear roles propios (nombre + rol base + permisos) además de los 4 del sistema, y asignarlos desde la ficha del usuario. Los roles base no se pueden eliminar; los personalizados sí, cuando no tienen usuarios.",
     "Mejora: Permisos — el servidor resuelve los permisos por rol configurable (con el enum como respaldo) y los usuarios existentes quedan enlazados a su rol base automáticamente.",
     "Corrección: Notas y pendientes — al hacer clic en una nota guardada ya no se activa el modo escritura ni aparece el cursor de texto. Para editar se usa el lápiz de la nota.",

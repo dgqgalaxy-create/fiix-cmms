@@ -28,7 +28,7 @@ export const getSettings = async (req: Request, res: Response): Promise<void> =>
 
 export const updateSettings = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { telegram_enabled, email_enabled, sla_enabled, sla_policy, checklist_column_count, technician_mobile_ui } = req.body;
+    const { telegram_enabled, email_enabled, sla_enabled, sla_policy, checklist_column_count, technician_mobile_ui, features } = req.body;
     let settings = await prisma.systemSettings.findFirst();
 
     const nextPolicy =
@@ -47,6 +47,7 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
           sla_enabled: sla_enabled ?? true,
           sla_policy: nextPolicy ?? DEFAULT_SLA_POLICY,
           technician_mobile_ui: technician_mobile_ui ?? true,
+          ...(features && typeof features === 'object' ? { features } : {}),
           ...(nextColumnCount !== undefined ? { checklist_column_count: nextColumnCount } : {}),
         },
       });
@@ -59,6 +60,7 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
           sla_enabled: sla_enabled ?? settings.sla_enabled,
           ...(technician_mobile_ui !== undefined ? { technician_mobile_ui: Boolean(technician_mobile_ui) } : {}),
           ...(nextPolicy ? { sla_policy: nextPolicy } : {}),
+          ...(features && typeof features === 'object' ? { features } : {}),
           ...(nextColumnCount !== undefined ? { checklist_column_count: nextColumnCount } : {}),
         },
       });
@@ -165,5 +167,19 @@ export const updateUom = async (req: Request, res: Response) => {
       return;
     }
     res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/**
+ * GET /api/settings/features — módulos activos para cualquier usuario.
+ * Se usa en el menú lateral para ocultar los módulos deshabilitados.
+ */
+export const getFeatures = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const settings = await prisma.systemSettings.findFirst();
+    res.json((settings?.features as Record<string, boolean>) ?? {});
+  } catch (error) {
+    console.error('Error obteniendo características:', error);
+    res.status(500).json({ error: 'No se pudieron obtener las características' });
   }
 };

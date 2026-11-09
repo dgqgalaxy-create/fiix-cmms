@@ -1,8 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  BarChart3, Activity, DollarSign, Loader2, AlertTriangle, RefreshCw,
-  ClipboardList, Boxes, Inbox,
-} from 'lucide-react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { BarChart3, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, PieChart, Pie, Legend,
 } from 'recharts';
@@ -15,14 +13,6 @@ import { formatDateTime } from '../utils/dateUtils';
 import { formatWorkOrderFolio } from '../utils/folio';
 
 type Section = 'orders' | 'assets' | 'parts' | 'requests' | 'costs';
-
-const SECTIONS: { id: Section; label: string; icon: React.ReactNode }[] = [
-  { id: 'orders', label: 'Órdenes de trabajo', icon: <ClipboardList size={15} /> },
-  { id: 'assets', label: 'Activos', icon: <Activity size={15} /> },
-  { id: 'parts', label: 'Repuestos', icon: <Boxes size={15} /> },
-  { id: 'requests', label: 'Solicitudes', icon: <Inbox size={15} /> },
-  { id: 'costs', label: 'Costos', icon: <DollarSign size={15} /> },
-];
 
 const STATUS_LABELS: Record<string, string> = {
   PENDIENTE: 'Pendiente',
@@ -38,7 +28,9 @@ const isoDay = (date: Date) => date.toISOString().slice(0, 10);
 
 /** Estadística por entidad: órdenes, activos, repuestos, solicitudes y costos, con gráficas. */
 export const StatsPage = () => {
-  const [section, setSection] = useState<Section>('orders');
+  const location = useLocation();
+  const sub = location.pathname.split('/')[2] as Section | undefined;
+  const section: Section = sub && ['orders', 'assets', 'parts', 'requests', 'costs'].includes(sub) ? sub : 'orders';
   const [from, setFrom] = useState(() => isoDay(new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)));
   const [to, setTo] = useState(() => isoDay(new Date()));
 
@@ -155,25 +147,6 @@ export const StatsPage = () => {
             <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} /> Actualizar
           </button>
         </div>
-      </div>
-
-      {/* Selector de entidad, como el de Estadística de Atlas */}
-      <div className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-900">
-        {SECTIONS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setSection(item.id)}
-            aria-current={section === item.id ? 'page' : undefined}
-            className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-              section === item.id
-                ? 'bg-emerald-600 text-white'
-                : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'
-            }`}
-          >
-            {item.icon} {item.label}
-          </button>
-        ))}
       </div>
 
       {error && (

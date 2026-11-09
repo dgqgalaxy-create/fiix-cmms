@@ -384,22 +384,122 @@ export const getDocuments = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-/** GET /api/documents/folders — carpetas con su conteo (la primera es el total). */
+/**
+ * GET /api/documents/folders — carpetas con su conteo. Incluye las carpetas
+ * creadas explícitamente (aunque estén vacías) y las que solo existen porque
+ * algún documento las usa. La primera entrada es el total (folder vacío).
+ */
 export const getDocumentFolders = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const rows = await prisma.document.groupBy({
-      by: ['folder'],
-      _count: { _all: true },
-      orderBy: { folder: 'asc' },
-    });
-    const total = rows.reduce((sum, row) => sum + row._count._all, 0);
+    const [stored, used] = await Promise.all([
+      prisma.documentFolder.findMany({ orderBy: { name: 'asc' } }),
+      prisma.document.groupBy({
+        by: ['folder'],
+        _count: { _all: true },
+        orderBy: { folder: 'asc' },
+      }),
+    ]);
+
+    const counts = new Map(used.map((row) => [row.folder, row._count._all]));
+    const names = new Set<string>([...stored.map((row) => row.name), ...counts.keys()]);
+    const storedByName = new Map(stored.map((row) => [row.name, row]));
+
+    const folders = [...names]
+      .sort((a, b) => a.localeCompare(b, 'es'))
+      .map((name) => ({
+        id: storedByName.get(name)?.id ?? null,
+        folder: name,
+        name,
+        count: counts.get(name) ?? 0,
+        is_custom: storedByName.has(name),
+      }));
+
+    const total = folders.reduce((sum, row) => sum + row.count, 0);
     res.json([
-      { folder: '', count: total },
-      ...rows.map((row) => ({ folder: row.folder, count: row._count._all })),
+      { id: null, folder: '', name: 'Todos', count: total, is_custom: false },
+      ...folders,
     ]);
   } catch (error) {
     console.error('Error listando carpetas:', error);
     res.status(500).json({ error: 'Error al obtener las carpetas' });
+  }
+};
+
+/** POST /api/documents/folders — crear carpeta (admin). */
+export const createDocumentFolder = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const name = String(req.body?.name ?? '').trim().slice(0, 60);
+    if (!name) {
+      res.status(400).json({ error: 'Escribe el nombre de la carpeta.' });
+      return;
+    }
+    const exists = await prisma.documentFolder.findUnique({ where: { name } });
+    const used = await prisma.document.count({ where: { folder: name } });
+    if (exists || used > 0) {
+      res.status(409).json({ error: 'Ya existe una carpeta con ese nombre.' });
+      return;
+    }
+    const created = await prisma.documentFolder.create({ data: { name } });
+    res.status(201).json({ id: created.id, folder: created.name, name: created.name, count: 0, is_custom: true });
+  } catch (error) {
+    console.error('Error creando carpeta:', error);
+    res.status(500).json({ error: 'No se pudo crear la carpeta' });
+  }
+};
+
+/** PUT /api/documents/folders/:id — renombrar (admin). */
+export const renameDocumentFolder = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const name = String(req.body?.name ?? '').trim().slice(0, 60);
+    if (!name) {
+      res.status(400).json({ error: 'Escribe el nombre de la carpeta.' });
+      return;
+    }
+    const folder = await prisma.documentFolder.findUnique({ where: { id } });
+    if (!folder) {
+      res.status(404).json({ error: 'Carpeta no encontrada' });
+      return;
+    }
+    const duplicate = await prisma.documentFolder.findUnique({ where: { name } });
+    if (duplicate && duplicate.id !== id) {
+      res.status(409).json({ error: 'Ya existe una carpeta con ese nombre.' });
+      return;
+    }
+
+    await prisma.$transaction([
+      prisma.documentFolder.update({ where: { id }, data: { name } }),
+      prisma.document.updateMany({ where: { folder: folder.name }, data: { folder: name } }),
+    ]);
+
+    res.json({ id, folder: name, name, count: 0, is_custom: true });
+  } catch (error) {
+    console.error('Error renombrando carpeta:', error);
+    res.status(500).json({ error: 'No se pudo renombrar la carpeta' });
+  }
+};
+
+/** DELETE /api/documents/folders/:id — eliminar (admin, solo si está vacía). */
+export const deleteDocumentFolder = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const folder = await prisma.documentFolder.findUnique({ where: { id } });
+    if (!folder) {
+      res.status(404).json({ error: 'Carpeta no encontrada' });
+      return;
+    }
+    const used = await prisma.document.count({ where: { folder: folder.name } });
+    if (used > 0) {
+      res.status(409).json({
+        error: `La carpeta tiene ${used} archivo(s). Muévelos o elimínalos antes de borrarla.`,
+      });
+      return;
+    }
+    await prisma.documentFolder.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error eliminando carpeta:', error);
+    res.status(500).json({ error: 'No se pudo eliminar la carpeta' });
   }
 };
 

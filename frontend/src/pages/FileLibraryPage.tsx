@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FolderOpen, Search, Upload, Loader2, Trash2, Download, FileText, FileSpreadsheet,
   FileImage, File as FileIcon, X, FolderPlus, AlertTriangle, LayoutGrid, List, Package,
+  Pencil, Check, Trash2 as TrashIcon,
 } from 'lucide-react';
 import {
   getDocuments, getDocumentFolders, uploadDocument, deleteDocument,
+  createDocumentFolder, renameDocumentFolder, deleteDocumentFolder,
   type DocumentItem, type DocumentFolder,
 } from '../api/documents';
 import { formatDateTime } from '../utils/dateUtils';
@@ -28,7 +30,7 @@ const fileIcon = (mime?: string | null, size = 18) => {
 
 /** Biblioteca unificada de archivos: documentos de repuestos y documentos sueltos por carpeta. */
 export const FileLibraryPage = () => {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const canManage = hasPermission('MANAGE_INVENTORY');
 
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
@@ -42,6 +44,9 @@ export const FileLibraryPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [folderModal, setFolderModal] = useState<{ mode: 'create' | 'rename'; id?: string; name: string } | null>(null);
+  const [folderError, setFolderError] = useState<string | null>(null);
+  const isAdmin = hasPermission('MANAGE_INVENTORY') && user?.role === 'ADMINISTRADOR';
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -80,6 +85,44 @@ export const FileLibraryPage = () => {
     }
   };
 
+  const saveFolder = async () => {
+    if (!folderModal) return;
+    const name = folderModal.name.trim();
+    if (!name) {
+      setFolderError('Escribe el nombre de la carpeta.');
+      return;
+    }
+    try {
+      setFolderError(null);
+      if (folderModal.mode === 'create') {
+        const created = await createDocumentFolder(name);
+        setFolderModal(null);
+        await load();
+        setFolderFilter(created?.folder ?? name);
+      } else if (folderModal.id) {
+        const renamed = await renameDocumentFolder(folderModal.id, name);
+        setFolderModal(null);
+        await load();
+        if (folderFilter && folderFilter !== renamed?.folder) setFolderFilter(renamed?.folder ?? folderFilter);
+      }
+    } catch (err: any) {
+      setFolderError(err?.response?.data?.error || 'No se pudo guardar la carpeta.');
+    }
+  };
+
+  const removeFolder = async (row: DocumentFolder) => {
+    if (!row.id) return;
+    if (!window.confirm(`¿Eliminar la carpeta «${row.name ?? row.folder}»?`)) return;
+    try {
+      setFolderError(null);
+      await deleteDocumentFolder(row.id);
+      if (folderFilter === row.folder) setFolderFilter('');
+      await load();
+    } catch (err: any) {
+      setFolderError(err?.response?.data?.error || 'No se pudo eliminar la carpeta.');
+    }
+  };
+
   const totalLabel = useMemo(() => {
     const total = folders.find((f) => f.folder === '')?.count ?? documents.length;
     return `${documents.length} de ${total} archivos`;
@@ -115,31 +158,71 @@ export const FileLibraryPage = () => {
       <div className="flex flex-col gap-4 lg:flex-row">
         {/* Carpetas */}
         <aside className="w-full shrink-0 lg:w-56">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Carpetas</p>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Carpetas</p>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => { setFolderError(null); setFolderModal({ mode: 'create', name: '' }); }}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-1.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                title="Nueva carpeta"
+              >
+                <FolderPlus size={13} /> Nueva
+              </button>
+            )}
+          </div>
           <div className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
             {folders.map((row) => {
               const active = folderFilter === row.folder;
+              const custom = Boolean(row.is_custom && row.id);
               return (
-                <button
+                <div
                   key={row.folder || 'all'}
-                  type="button"
-                  onClick={() => setFolderFilter(row.folder)}
-                  aria-current={active ? 'true' : undefined}
-                  className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors lg:w-full ${
+                  className={`flex items-center gap-1 rounded-lg pr-1 transition-colors ${
                     active
-                      ? 'bg-emerald-600/15 font-semibold text-emerald-700 dark:text-emerald-300'
+                      ? 'bg-emerald-600/15 text-emerald-700 dark:text-emerald-300'
                       : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
                   }`}
                 >
-                  <FolderOpen size={15} className="shrink-0" />
-                  <span className="truncate">{row.folder || 'Todos'}</span>
-                  <span className="ml-auto rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                    {row.count}
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setFolderFilter(row.folder)}
+                    aria-current={active ? 'true' : undefined}
+                    className={`flex min-w-0 flex-1 items-center gap-2 whitespace-nowrap px-3 py-2 text-sm ${active ? 'font-semibold' : ''}`}
+                  >
+                    <FolderOpen size={15} className="shrink-0" />
+                    <span className="truncate">{row.name ?? row.folder ?? 'Todos'}</span>
+                    <span className="ml-auto rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                      {row.count}
+                    </span>
+                  </button>
+                  {isAdmin && custom && (
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() => { setFolderError(null); setFolderModal({ mode: 'rename', id: row.id!, name: row.name ?? row.folder }); }}
+                        className="rounded p-1 text-slate-400 hover:bg-white hover:text-emerald-600 dark:hover:bg-slate-700"
+                        title="Renombrar carpeta"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void removeFolder(row)}
+                        className="rounded p-1 text-slate-400 hover:bg-white hover:text-rose-600 dark:hover:bg-slate-700"
+                        title="Eliminar carpeta"
+                      >
+                        <TrashIcon size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
+          {folderError && (
+            <p className="mt-2 text-[11px] font-semibold text-rose-600 dark:text-rose-400">{folderError}</p>
+          )}
         </aside>
 
         {/* Archivos */}
@@ -318,6 +401,47 @@ export const FileLibraryPage = () => {
           onClose={() => setUploadOpen(false)}
           onSaved={async () => { setUploadOpen(false); await load(); }}
         />
+      )}
+      {folderModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm" onClick={() => setFolderModal(null)}>
+          <form
+            onSubmit={(event) => { event.preventDefault(); void saveFolder(); }}
+            onClick={(event) => event.stopPropagation()}
+            className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+          >
+            <div className="mb-3 flex items-start justify-between">
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                {folderModal.mode === 'create' ? 'Nueva carpeta' : 'Renombrar carpeta'}
+              </h2>
+              <button type="button" onClick={() => setFolderModal(null)} className="rounded p-1 text-slate-400 hover:text-slate-600" aria-label="Cerrar">
+                <X size={18} />
+              </button>
+            </div>
+            <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="folder-name">
+              Nombre
+            </label>
+            <input
+              id="folder-name"
+              autoFocus
+              value={folderModal.name}
+              onChange={(event) => setFolderModal({ ...folderModal, name: event.target.value })}
+              placeholder="Ej. Manuales"
+              className="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+            />
+            {folderError && <p className="mt-2 text-[11px] font-semibold text-rose-600 dark:text-rose-400">{folderError}</p>}
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => setFolderModal(null)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+              >
+                <Check size={14} /> {folderModal.mode === 'create' ? 'Crear' : 'Guardar'}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
     </div>
   );

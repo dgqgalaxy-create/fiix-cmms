@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+﻿import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, lazy, Suspense } from 'react';
 import { syncOfflineQueue } from './utils/offlineSync';
 import { AuthProvider } from './context/AuthContext';
@@ -160,7 +160,7 @@ function App() {
           />
           
           <Route 
-            path="/stats" 
+            path="/stats/*" 
             element={
               <ProtectedRoute>
                 <Layout>
