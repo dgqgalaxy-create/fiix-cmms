@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+﻿import { useState, useEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { Asset } from '../api/assets';
-import { Activity, Ban, Settings, Trash2, Edit, Database, QrCode, Image as ImageIcon, ChevronUp, ChevronDown, Archive, Package, ArrowLeft, ArrowRight, RotateCcw, Columns3 } from 'lucide-react';
+import { Activity, Ban, Settings, Trash2, Edit, Database, QrCode, Image as ImageIcon, ChevronUp, ChevronDown, Archive, Package, ArrowLeft, ArrowRight, RotateCcw, Columns3, MoreVertical, EyeOff, GripVertical, Table2, LayoutGrid } from 'lucide-react';
 import { mediaUrl } from '../utils/mediaUrl';
 import { ContextMenu } from './common/ContextMenu';
 import type { ContextMenuAction } from './common/ContextMenu';
@@ -417,6 +417,72 @@ export const AssetsTable = ({
   const [visibleKeys, setVisibleKeys] = useState<ColumnKey[] | null>(null);
   const serverMode = typeof serverTotal === 'number' && typeof onServerPageChange === 'function';
 
+  /* ---- Anchos ajustables, menú por encabezado y vista tabla/tarjetas ---- */
+  const [colWidths, setColWidths] = useState<Record<string, number>>(() => {
+    try {
+      const raw = localStorage.getItem(`${columnsStorageKey}:widths`);
+      return raw ? (JSON.parse(raw) as Record<string, number>) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [view, setView] = useState<'table' | 'cards'>(() => {
+    try {
+      return localStorage.getItem(`${columnsStorageKey}:view`) === 'cards' ? 'cards' : 'table';
+    } catch {
+      return 'table';
+    }
+  });
+  const [menuKey, setMenuKey] = useState<ColumnKey | null>(null);
+  const resizing = useRef<{ key: string; startX: number; startWidth: number } | null>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${columnsStorageKey}:widths`, JSON.stringify(colWidths));
+    } catch {
+      /* preferencia opcional */
+    }
+  }, [colWidths, columnsStorageKey]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${columnsStorageKey}:view`, view);
+    } catch {
+      /* preferencia opcional */
+    }
+  }, [view, columnsStorageKey]);
+
+  useEffect(() => {
+    if (!menuKey) return;
+    const close = () => setMenuKey(null);
+    window.addEventListener('pointerdown', close);
+    return () => window.removeEventListener('pointerdown', close);
+  }, [menuKey]);
+
+  useEffect(() => {
+    const onMove = (event: PointerEvent) => {
+      const current = resizing.current;
+      if (!current) return;
+      event.preventDefault();
+      setColWidths((prev) => ({
+        ...prev,
+        [current.key]: Math.max(60, current.startWidth + (event.clientX - current.startX)),
+      }));
+    };
+    const onUp = () => {
+      if (!resizing.current) return;
+      resizing.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, []);
+
   // Cargar personalización del usuario.
   useEffect(() => {
     try {
@@ -575,6 +641,44 @@ export const AssetsTable = ({
   const alignClass = (col: ColumnDef) =>
     col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left';
 
+  /** Convierte la clase Tailwind de ancho (w-[9.5rem]) a píxeles; null = columna elástica. */
+  const widthFromClass = (cls: string): number | null => {
+    const rem = /w-\[([\d.]+)rem\]/.exec(cls);
+    if (rem) return Math.round(parseFloat(rem[1]) * 16);
+    const px = /w-\[(\d+)px\]/.exec(cls);
+    if (px) return parseInt(px[1], 10);
+    // w-auto: absorbe el espacio restante (nombre del equipo).
+    return null;
+  };
+  const widthOf = (col: ColumnDef) => colWidths[col.key] ?? widthFromClass(col.width);
+  const totalWidth = visibleCols.reduce((sum, col) => sum + (widthOf(col) ?? 0), 0)
+    + (selectionMode ? 40 : 0)
+    + 40;
+
+  const startResize = (event: React.PointerEvent, key: ColumnKey) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const col = visibleCols.find((c) => c.key === key);
+    const measured = col ? widthOf(col) : null;
+    const cell = (event.currentTarget as HTMLElement).parentElement;
+    resizing.current = {
+      key,
+      startX: event.clientX,
+      startWidth: measured ?? Math.round(cell?.getBoundingClientRect().width ?? 160),
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  const applySort = (key: ColumnKey, direction?: SortDirection) => {
+    if (direction) {
+      setSortField(key);
+      setSortDirection(direction);
+      return;
+    }
+    handleSort(key);
+  };
+
   const paginationControls = resultTotal > ITEMS_PER_PAGE && (
     <div className="flex items-center justify-between bg-white dark:bg-slate-900 px-4 py-3 sm:px-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm mt-4">
       <div className="flex flex-1 justify-between sm:hidden">
@@ -658,7 +762,34 @@ export const AssetsTable = ({
   return (
     <div className="min-w-0">
       {/* Vista densa para Celulares */}
-      <div className="block sm:hidden space-y-2">
+      {/* Barra: vista tabla/tarjetas */}
+      <div className="mb-2 flex items-center justify-end gap-2">
+        <span className="mr-auto text-[11px] text-slate-400 dark:text-slate-500">
+          Arrastra el borde de un encabezado para cambiar el ancho · ⋮ para opciones
+        </span>
+        <div className="flex overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+          <button
+            type="button"
+            onClick={() => setView('table')}
+            aria-pressed={view === 'table'}
+            title="Vista de tabla"
+            className={`px-2 py-1.5 ${view === 'table' ? 'bg-emerald-600 text-white' : 'text-slate-500 dark:text-slate-300'}`}
+          >
+            <Table2 size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setView('cards')}
+            aria-pressed={view === 'cards'}
+            title="Vista de tarjetas"
+            className={`px-2 py-1.5 ${view === 'cards' ? 'bg-emerald-600 text-white' : 'text-slate-500 dark:text-slate-300'}`}
+          >
+            <LayoutGrid size={14} />
+          </button>
+        </div>
+      </div>
+
+      <div className={view === 'cards' ? 'grid gap-2 sm:grid-cols-2 xl:grid-cols-3' : 'block sm:hidden space-y-2'}>
         {pageAssets.map((asset) => (
           <div
             key={asset.id}
@@ -757,15 +888,26 @@ export const AssetsTable = ({
       </div>
 
       {/* Vista de Tabla para Escritorio — sin scroll horizontal */}
-      <div className="hidden sm:block bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden min-w-0">
-        <table className="w-full table-fixed text-left text-sm text-slate-600 dark:text-slate-400">
+      <div className={`${view === 'cards' ? 'hidden' : 'hidden sm:block'} bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden min-w-0`}>
+        <table
+          className="w-full table-fixed text-left text-sm text-slate-600 dark:text-slate-400"
+          style={{ width: '100%', minWidth: totalWidth }}
+        >
+          <colgroup>
+            {selectionMode && <col style={{ width: 40 }} />}
+            {visibleCols.map((col) => (
+              <col key={col.key} style={{ width: widthOf(col) ?? undefined }} />
+            ))}
+            <col style={{ width: 40 }} />
+          </colgroup>
           <thead className="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px] font-bold shadow-md shadow-[#739239]/40 dark:shadow-[#739239]/20 relative z-10">
             <tr>
               {selectionMode && <th className="px-2 py-2.5 w-10" />}
               {visibleCols.map((col) => (
                 <th
                   key={col.key}
-                  className={`${thClass} ${col.width} ${responsiveClass(col)} ${alignClass(col)}`}
+                  style={{ width: widthOf(col) ?? undefined }}
+                  className={`group relative ${thClass} ${responsiveClass(col)} ${alignClass(col)}`}
                   onClick={() => handleSort(col.key)}
                   onContextMenu={(e) => {
                     e.preventDefault();
@@ -784,7 +926,75 @@ export const AssetsTable = ({
                     ) : (
                       <ChevronUp size={14} className="opacity-0 group-hover:opacity-40 transition-opacity shrink-0" />
                     )}
+
+                    <button
+                      type="button"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setMenuKey(menuKey === col.key ? null : col.key);
+                      }}
+                      aria-label={`Opciones de ${col.label}`}
+                      className="ml-auto rounded p-0.5 text-slate-400 opacity-0 transition-opacity hover:bg-slate-200 hover:text-slate-700 group-hover:opacity-100 focus:opacity-100 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                    >
+                      <MoreVertical size={13} />
+                    </button>
                   </div>
+
+                  {menuKey === col.key && (
+                    <div
+                      onPointerDown={(event) => event.stopPropagation()}
+                      className="absolute right-0 z-40 mt-1 w-48 rounded-xl border border-slate-200 bg-white p-1 text-left text-[11px] font-medium normal-case tracking-normal text-slate-700 shadow-xl dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => { applySort(col.key, 'asc'); setMenuKey(null); }}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      >
+                        <ChevronUp size={13} /> Ordenar ascendente
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { applySort(col.key, 'desc'); setMenuKey(null); }}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      >
+                        <ChevronDown size={13} /> Ordenar descendente
+                      </button>
+                      {!col.fixed && (
+                        <button
+                          type="button"
+                          onClick={() => { toggleColumn(col.key); setMenuKey(null); }}
+                          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800"
+                        >
+                          <EyeOff size={13} /> Ocultar columna
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        disabled={effectiveVisible.indexOf(col.key) <= 0}
+                        onClick={() => { moveColumn(col.key, -1); setMenuKey(null); }}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50 disabled:opacity-40 dark:hover:bg-slate-800"
+                      >
+                        <ArrowLeft size={13} /> Mover a la izquierda
+                      </button>
+                      <button
+                        type="button"
+                        disabled={effectiveVisible.indexOf(col.key) >= effectiveVisible.length - 1}
+                        onClick={() => { moveColumn(col.key, 1); setMenuKey(null); }}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50 disabled:opacity-40 dark:hover:bg-slate-800"
+                      >
+                        <ArrowRight size={13} /> Mover a la derecha
+                      </button>
+                    </div>
+                  )}
+
+                  <span
+                    onPointerDown={(event) => startResize(event, col.key)}
+                    className="absolute right-0 top-0 z-10 flex h-full w-2 cursor-col-resize items-center justify-center hover:bg-emerald-200/60 dark:hover:bg-emerald-800/40"
+                    aria-hidden
+                  >
+                    <GripVertical size={10} className="text-slate-300 opacity-0 group-hover:opacity-100 dark:text-slate-600" />
+                  </span>
                 </th>
               ))}
               <th className="px-2 py-2.5 w-10 hidden lg:table-cell">

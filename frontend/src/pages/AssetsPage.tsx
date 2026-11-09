@@ -495,6 +495,7 @@ export const AssetsPage = () => {
 
       <AssetDetailModal
         asset={detailAsset}
+        variant="drawer"
         isOpen={!!detailAsset}
         onClose={() => {
           setDetailAsset(null);

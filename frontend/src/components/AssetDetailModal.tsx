@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck, AlertTriangle, Clock, Wrench, Package, CalendarClock, Layers, Pencil, Loader2 } from 'lucide-react';
 import type { Asset } from '../api/assets';
 import { getAssetMetrics } from '../api/assets';
@@ -25,6 +25,8 @@ interface Props {
   /** Abre el modal de edición (mismo CreateAssetModal que la tabla). */
   onEdit?: (asset: Asset) => void;
   canEdit?: boolean;
+  /** `drawer` abre el detalle como panel lateral derecho (mismo patrón que Repuestos). */
+  variant?: 'modal' | 'drawer';
 }
 
 const WO_STATUS_LABELS: Record<string, string> = {
@@ -35,7 +37,8 @@ const WO_STATUS_LABELS: Record<string, string> = {
   ANULADO: 'Anulado',
 };
 
-export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Props) => {
+export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit, variant = 'modal' }: Props) => {
+  const isDrawer = variant === 'drawer';
   const { hasPermission, user } = useAuth();
   const canManageItems = hasPermission('MANAGE_INVENTORY');
   const [activeTab, setActiveTab] = useState<'overview' | 'info' | 'metrics' | 'history' | 'meters' | 'downtimes' | 'files'>('info');
@@ -121,8 +124,18 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit }: Pr
 
   return (
     <>
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+    <div
+      className={`fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm ${isDrawer ? 'flex justify-end' : 'flex items-center justify-center p-4 animate-in fade-in duration-200'}`}
+      onClick={isDrawer ? onClose : undefined}
+    >
+      <div
+        onClick={isDrawer ? (event) => event.stopPropagation() : undefined}
+        className={
+          isDrawer
+            ? 'bg-white dark:bg-slate-900 shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col h-full animate-in slide-in-from-right duration-300 sm:rounded-l-3xl'
+            : 'bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200'
+        }
+      >
         
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-start bg-slate-50/50 dark:bg-slate-900/50">
