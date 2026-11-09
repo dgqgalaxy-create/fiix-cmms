@@ -161,7 +161,7 @@ export const StatsPage = () => {
         </div>
       ) : section === 'orders' ? (
         <section className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="stagger grid gap-3 sm:grid-cols-3">
             <Stat label="OT abiertas" value={String(aging?.total ?? 0)} />
             <Stat
               label="Más antigua"
@@ -218,7 +218,7 @@ export const StatsPage = () => {
         </section>
       ) : section === 'assets' ? (
         <section className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="stagger grid gap-3 sm:grid-cols-3">
             <Stat label="Activos con datos" value={String(reliability?.assets.length ?? 0)} />
             <Stat
               label="Disponibilidad promedio"
@@ -293,7 +293,7 @@ export const StatsPage = () => {
         </section>
       ) : section === 'parts' ? (
         <section className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="stagger grid gap-3 sm:grid-cols-3">
             <Stat label="Costo del consumo" value={formatCurrency(consumption?.total_cost ?? 0)} />
             <Stat label="Cantidad total" value={String(consumption?.total_quantity ?? 0)} />
             <Stat label="Repuestos distintos" value={String(consumption?.items.length ?? 0)} />
@@ -362,7 +362,7 @@ export const StatsPage = () => {
         </section>
       ) : section === 'requests' ? (
         <section className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="stagger grid gap-3 sm:grid-cols-3">
             <Stat label="Solicitudes" value={String(requests?.total ?? 0)} />
             <Stat label="Abiertas" value={String(requests?.open ?? 0)} tone="amber" />
             <Stat
@@ -431,7 +431,7 @@ export const StatsPage = () => {
         </section>
       ) : (
         <section className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Stat label="Costo total" value={formatCurrency(costs?.totals.total ?? 0)} />
             <Stat label="Mano de obra" value={formatCurrency(costs?.totals.labor ?? 0)} />
             <Stat label="Repuestos" value={formatCurrency(costs?.totals.parts ?? 0)} />
@@ -504,7 +504,7 @@ const Stat = ({ label, value, tone, hint }: { label: string; value: string; tone
       : tone === 'amber' ? 'text-amber-600 dark:text-amber-400'
         : 'text-slate-900 dark:text-slate-100';
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+    <div className="lift rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
       <p className={`mt-1 text-xl font-bold ${color}`}>{value}</p>
       {hint && <p className="text-[10px] text-slate-400">{hint}</p>}
@@ -513,7 +513,7 @@ const Stat = ({ label, value, tone, hint }: { label: string; value: string; tone
 };
 
 const ChartCard = ({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) => (
-  <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+  <div className="lift rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
     <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">{title}</h2>
     {subtitle && <p className="mb-2 text-[11px] text-slate-500 dark:text-slate-400">{subtitle}</p>}
     {children}

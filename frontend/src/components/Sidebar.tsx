@@ -98,10 +98,10 @@ const SortableNavItem = ({
         <Link
           to={item.path}
           onClick={onClose}
-          className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors font-medium text-sm ${
-            isActive 
-              ? 'bg-emerald-600/20 text-emerald-400' 
-              : 'hover:bg-slate-800 hover:text-white'
+          className={`relative flex-1 flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 font-medium text-sm ${
+            isActive
+              ? 'bg-emerald-600/20 text-emerald-400 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.25)]'
+              : 'hover:bg-slate-800 hover:text-white hover:translate-x-0.5'
           }`}
         >
           {item.icon}

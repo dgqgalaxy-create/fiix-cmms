@@ -1014,7 +1014,7 @@ export const InventoryPage = () => {
             <div
               className={
                 itemsView === 'cards'
-                  ? 'grid gap-3 sm:grid-cols-2 xl:grid-cols-3'
+                  ? 'stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-3'
                   : 'block sm:hidden space-y-4'
               }
             >

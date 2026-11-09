@@ -272,9 +272,9 @@ export const FileLibraryPage = () => {
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Sube uno con el botón «Subir archivo».</p>
             </div>
           ) : view === 'grid' ? (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {documents.map((doc) => (
-                <div key={doc.id} className="flex flex-col rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <div key={doc.id} className="lift flex flex-col rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
                   <div className="flex items-start gap-2">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
                       {fileIcon(doc.mime_type, 20)}

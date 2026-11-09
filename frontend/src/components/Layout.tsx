@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
@@ -162,7 +162,10 @@ export const Layout = ({ children }: { children: ReactNode }) => {
           )}
         </div>
 
-        <div className={isWidePage ? 'max-w-none' : 'max-w-6xl mx-auto'}>
+        <div
+          key={location.pathname}
+          className={`page-enter ${isWidePage ? 'max-w-none' : 'max-w-6xl mx-auto'}`}
+        >
           {children}
         </div>
       </div>

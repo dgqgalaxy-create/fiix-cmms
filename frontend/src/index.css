@@ -434,3 +434,116 @@ body {
     animation: none !important;
   }
 }
+
+/* ==========================================================================
+   Capa visual: movimiento, profundidad y detalles de interacción.
+   Las duraciones y curvas viven aquí para que todo el sistema se sienta igual.
+   ========================================================================== */
+:root {
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 140ms;
+  --dur-med: 260ms;
+  --dur-slow: 420ms;
+}
+
+/* Entrada de página: se aplica al contenedor de contenido en Layout. */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.page-enter {
+  animation: page-enter var(--dur-med) var(--ease-out-quart) both;
+}
+
+/* Tarjetas con elevación suave al pasar el mouse. */
+.lift {
+  transition:
+    transform var(--dur-fast) var(--ease-out-quart),
+    box-shadow var(--dur-fast) var(--ease-out-quart),
+    border-color var(--dur-fast) var(--ease-out-quart);
+  will-change: transform;
+}
+.lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px -16px rgb(15 23 42 / 0.45);
+}
+.dark .lift:hover {
+  box-shadow: 0 10px 28px -14px rgb(0 0 0 / 0.65);
+}
+
+/* Aparición escalonada para listas y cuadrículas (usa --stagger en el hijo). */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.stagger > * {
+  animation: fade-up var(--dur-med) var(--ease-out-quart) both;
+}
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 35ms; }
+.stagger > *:nth-child(3) { animation-delay: 70ms; }
+.stagger > *:nth-child(4) { animation-delay: 105ms; }
+.stagger > *:nth-child(5) { animation-delay: 140ms; }
+.stagger > *:nth-child(6) { animation-delay: 175ms; }
+.stagger > *:nth-child(7) { animation-delay: 210ms; }
+.stagger > *:nth-child(8) { animation-delay: 245ms; }
+.stagger > *:nth-child(n+9) { animation-delay: 280ms; }
+
+/* Indicador deslizante para pestañas/segmentos activos. */
+.seg-indicator {
+  transition: transform var(--dur-med) var(--ease-spring), width var(--dur-med) var(--ease-spring);
+}
+
+/* Foco visible consistente en todo el sistema (teclado). */
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--color-primary) 80%, white 20%);
+  outline-offset: 2px;
+}
+
+/* Selección de texto con el color de la marca. */
+::selection {
+  background: color-mix(in oklab, var(--color-primary) 26%, transparent);
+}
+
+/* Scrollbars discretas y coherentes en ambos temas. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--color-fg-muted) 45%, transparent) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--color-fg-muted) 40%, transparent);
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--color-fg-muted) 65%, transparent);
+  background-clip: content-box;
+}
+
+/* Botones: micro-presión al hacer clic. */
+.ui-btn-primary:active,
+.ui-btn-secondary:active,
+.ui-btn-danger:active {
+  transform: scale(0.985);
+}
+
+/* Respeta la preferencia de movimiento reducido. */
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .stagger > * {
+    animation: none !important;
+  }
+  .lift:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
