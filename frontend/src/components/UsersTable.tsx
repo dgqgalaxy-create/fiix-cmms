@@ -1,6 +1,6 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { User } from '../api/users';
-import { Pencil, Shield, Wrench, User as UserIcon, Eye, Ban, CheckCircle2, Trash2, DollarSign, CalendarClock } from 'lucide-react';
+import { Pencil, Shield, Wrench, User as UserIcon, Eye, Ban, CheckCircle2, Trash2, DollarSign, CalendarClock, Activity } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 import { formatCurrency } from '../utils/currency';
 import { ContextMenu } from './common/ContextMenu';
@@ -17,6 +17,8 @@ interface Props {
   patterns?: TechnicianPattern[];
   /** Abre el panel de turno de la persona. */
   onShiftClick?: (user: User) => void;
+  /** Abre el desempeño (KPIs) de la persona; también disponible en clic derecho. */
+  onViewPerformance?: (user: User) => void;
 }
 
 const getRoleIcon = (role: string) => {
@@ -41,7 +43,7 @@ const getRoleColor = (role: string) => {
 
 type SortField = 'name' | 'email' | 'role' | 'rate' | 'date';
 
-export const UsersTable = ({ users, onRowClick, onToggleActive, onDelete, patterns = [], onShiftClick }: Props) => {
+export const UsersTable = ({ users, onRowClick, onToggleActive, onDelete, patterns = [], onShiftClick, onViewPerformance }: Props) => {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; user: User } | null>(null);
@@ -228,6 +230,22 @@ export const UsersTable = ({ users, onRowClick, onToggleActive, onDelete, patter
           onClose={() => setCtxMenu(null)}
           actions={[
             { key: 'edit', label: 'Editar', icon: <Pencil size={15} />, onClick: () => onRowClick?.(ctxMenu.user) },
+            ...(onViewPerformance && ['TECNICO', 'GESTIONADOR'].includes(ctxMenu.user.role)
+              ? [{
+                  key: 'performance',
+                  label: 'Ver desempeño',
+                  icon: <Activity size={15} />,
+                  onClick: () => onViewPerformance(ctxMenu.user),
+                }]
+              : []),
+            ...(onShiftClick
+              ? [{
+                  key: 'shift',
+                  label: 'Turno y horario',
+                  icon: <CalendarClock size={15} />,
+                  onClick: () => onShiftClick(ctxMenu.user),
+                }]
+              : []),
             ...(onToggleActive ? [{ key: 'active', label: ctxMenu.user.is_active ? 'Dar de baja' : 'Reactivar', icon: ctxMenu.user.is_active ? <Ban size={15} /> : <CheckCircle2 size={15} />, onClick: () => onToggleActive(ctxMenu.user) }] : []),
             ...(onDelete ? [{ key: 'delete', label: 'Eliminar', icon: <Trash2 size={15} />, danger: true, onClick: () => onDelete(ctxMenu.user) }] : []),
           ]}

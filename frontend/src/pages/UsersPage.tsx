@@ -371,6 +371,16 @@ export const UsersPage = () => {
               users={filteredUsers} 
               patterns={roster?.patterns ?? []}
               onShiftClick={(u) => setShiftUser(u)}
+              onViewPerformance={(u) => navigate(`/kpis/technicians/${u.id}`, {
+                state: {
+                  returnTo: {
+                    pathname: location.pathname,
+                    search: location.search,
+                    hash: location.hash,
+                    restorePersonnel: { activeTab, searchTerm, showInactive, viewMode },
+                  },
+                },
+              })}
               onRowClick={hasPermission('MANAGE_USERS') ? (u) => {
                 setSelectedUser(u);
                 setIsUserModalOpen(true);

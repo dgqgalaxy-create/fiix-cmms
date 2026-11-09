@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.90.1";
+export const APP_VERSION = "1.90.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Mejora: Personal — «Ver desempeño» ya está disponible también en la vista de tabla, con clic derecho sobre la fila. En el mismo menú se agregó «Turno y horario».",
     "Corrección: Personal, Órdenes de Trabajo, Activos y Archivos ahora usan todo el ancho de la pantalla; antes el layout los limitaba a un máximo fijo y las tablas quedaban angostas.",
     "Nuevo: Personal — columna «Turno» en la tabla: muestra el patrón vigente de cada persona y abre un panel para programarlo, ver el historial y quitarlo.",
     "Nuevo: Turnos — los patrones ahora tienen vigencia: puedes tener uno por mes, uno fijo todo el año o cambiar cuando lo necesites. Al programar un cambio, el patrón anterior se cierra el día anterior y el histórico se conserva.",
