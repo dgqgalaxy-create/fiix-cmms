@@ -27,6 +27,7 @@ import { qtyStep, isInvalidQty } from '../utils/qtyMode';
 import { WorkOrderCommentsPanel } from './WorkOrderCommentsPanel';
 import { WorkOrderTimeline } from './workorders/WorkOrderTimeline';
 import { WorkOrderRelations } from './workorders/WorkOrderRelations';
+import { WorkOrderCostsSection } from './workorders/WorkOrderCostsSection';
 import { FilesPanel } from './common/FilesPanel';
 import { mediaUrl } from '../utils/mediaUrl';
 import { SearchableSelect } from './ui/SearchableSelect';
@@ -1468,6 +1469,14 @@ export const WorkOrderDetailModal = ({
                   workOrderId={workOrder.id}
                   isOpen={isOpen}
                   onZoomImage={(src) => setZoomSrc(src)}
+                />
+              </div>
+
+              <div className="mt-4">
+                <WorkOrderCostsSection
+                  workOrderId={workOrder.id}
+                  isOpen={isOpen}
+                  canWrite={canWriteOps}
                 />
               </div>
 

@@ -135,6 +135,7 @@ model User {
   documents            Document[]
   reported_downtimes   AssetDowntime[]
   wo_relations         WorkOrderRelation[]
+  work_order_costs     WorkOrderCost[]
   preferences          Json?       @default("{}")
 }
 
@@ -345,6 +346,8 @@ model WorkOrder {
   relations_from      WorkOrderRelation[] @relation("WorkOrderRelations")
   relations_to        WorkOrderRelation[] @relation("WorkOrderRelated")
   documents           Document[]
+  /// Costos adicionales de la orden (servicios, fletes, refacciones externas).
+  costs               WorkOrderCost[]
 
   @@index([status, created_at])
   @@index([created_at])
@@ -1190,4 +1193,35 @@ model WorkOrderRelation {
   @@unique([work_order_id, related_work_order_id, relation_type])
   @@index([work_order_id])
   @@index([related_work_order_id])
+}
+
+// ---------------------------------------------------------------------------
+// Costos de OT: categorías configurables + costos adicionales por orden.
+// ---------------------------------------------------------------------------
+
+model CostCategory {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String   @unique
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  costs      WorkOrderCost[]
+}
+
+/// Costo extra de una orden: servicio externo, flete, refacción comprada fuera…
+/// Se suma al costo de mano de obra y de repuestos en Estadística.
+model WorkOrderCost {
+  id            String        @id @default(uuid()) @db.Uuid
+  work_order_id String        @db.Uuid
+  work_order    WorkOrder     @relation(fields: [work_order_id], references: [id], onDelete: Cascade)
+  category_id   String?       @db.Uuid
+  category      CostCategory? @relation(fields: [category_id], references: [id], onDelete: SetNull)
+  description   String?
+  amount        Float
+  incurred_at   DateTime      @default(now())
+  created_by_id String?       @db.Uuid
+  created_by    User?         @relation(fields: [created_by_id], references: [id], onDelete: SetNull)
+  created_at    DateTime      @default(now())
+
+  @@index([work_order_id])
+  @@index([category_id])
 }

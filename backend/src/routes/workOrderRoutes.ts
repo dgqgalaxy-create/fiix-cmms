@@ -1,6 +1,14 @@
 import { Router } from 'express';
 import { getWorkOrderTimeline } from '../controllers/woTimelineController';
 import {
+  getCostCategories,
+  createCostCategory,
+  updateCostCategory,
+  getWorkOrderCosts,
+  addWorkOrderCost,
+  deleteWorkOrderCost,
+} from '../controllers/workOrderCostController';
+import {
   getWorkOrderRelations,
   createWorkOrderRelation,
   deleteWorkOrderRelation,
@@ -29,6 +37,16 @@ import { upload } from '../middlewares/upload';
 const router = Router();
 
 router.get('/', authenticate, getWorkOrders);
+
+// Categorías de costo (antes de /:id para que no las capture la ruta de detalle).
+router.get('/cost-categories', authenticate, getCostCategories);
+router.post('/cost-categories', authenticate, requireWritable, requirePermission('EDIT_WORK_ORDERS'), createCostCategory);
+router.patch('/cost-categories/:id', authenticate, requireWritable, requirePermission('EDIT_WORK_ORDERS'), updateCostCategory);
+
+// Costos adicionales por orden.
+router.get('/:id/costs', authenticate, getWorkOrderCosts);
+router.post('/:id/costs', authenticate, requireWritable, requirePermission('EDIT_WORK_ORDERS'), addWorkOrderCost);
+router.delete('/:id/costs/:costId', authenticate, requireWritable, requirePermission('EDIT_WORK_ORDERS'), deleteWorkOrderCost);
 
 router.get('/requesters', authenticate, getRequesters);
 router.get('/mine-open-count', authenticate, getMineOpenCount);

@@ -1,4 +1,4 @@
-import api from './axios';
+﻿import api from './axios';
 
 export interface AgingBucket {
   key: string;
@@ -82,9 +82,17 @@ export interface CostOrder {
 export interface CostsResponse {
   from: string;
   to: string;
-  totals: { labor: number; parts: number; total: number; orders: number; hours: number };
+  totals: {
+    labor: number;
+    parts: number;
+    extra: number;
+    total: number;
+    orders: number;
+    hours: number;
+    extras_by_category?: { name: string; amount: number }[];
+  };
   orders: CostOrder[];
-  assets: { asset: { id: string; name: string; internal_code: string }; labor: number; parts: number; total: number; orders: number }[];
+  assets: { asset: { id: string; name: string; internal_code: string }; labor: number; parts: number; extra: number; total: number; orders: number }[];
 }
 
 const rangeParams = (from?: string, to?: string) => ({

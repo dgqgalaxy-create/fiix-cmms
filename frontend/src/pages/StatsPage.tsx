@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { BarChart3, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 import {
@@ -435,7 +435,7 @@ export const StatsPage = () => {
             <Stat label="Costo total" value={formatCurrency(costs?.totals.total ?? 0)} />
             <Stat label="Mano de obra" value={formatCurrency(costs?.totals.labor ?? 0)} />
             <Stat label="Repuestos" value={formatCurrency(costs?.totals.parts ?? 0)} />
-            <Stat label="Horas de trabajo" value={`${(costs?.totals.hours ?? 0).toFixed(1)} h`} />
+            <Stat label="Adicionales" value={formatCurrency(costs?.totals.extra ?? 0)} />
           </div>
 
           <ChartCard title="Costo por equipo" subtitle="Mano de obra = tiempo de la OT × tarifa promedio de los asignados">
@@ -445,6 +445,7 @@ export const StatsPage = () => {
                   name: row.asset.internal_code || row.asset.name,
                   mano: Math.round(row.labor),
                   repuestos: Math.round(row.parts),
+                  adicionales: Math.round(row.extra ?? 0),
                 }))}
                 layout="vertical"
                 margin={{ top: 8, right: 16, left: 8, bottom: 0 }}
@@ -455,7 +456,8 @@ export const StatsPage = () => {
                 <Tooltip {...chartTooltip} formatter={(value) => formatCurrency(Number(value))} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Bar dataKey="mano" name="Mano de obra" stackId="costos" fill="#059669" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="repuestos" name="Repuestos" stackId="costos" fill="#0ea5e9" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="repuestos" name="Repuestos" stackId="costos" fill="#0ea5e9" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="adicionales" name="Adicionales" stackId="costos" fill="#f59e0b" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -469,6 +471,7 @@ export const StatsPage = () => {
                     <th className="px-4 py-2 text-center">OT</th>
                     <th className="px-4 py-2 text-right">Mano de obra</th>
                     <th className="px-4 py-2 text-right">Repuestos</th>
+                    <th className="px-4 py-2 text-right">Adicionales</th>
                     <th className="px-4 py-2 text-right">Total</th>
                   </tr>
                 </thead>
@@ -482,11 +485,12 @@ export const StatsPage = () => {
                       <td className="px-4 py-2 text-center">{row.orders}</td>
                       <td className="px-4 py-2 text-right">{formatCurrency(row.labor)}</td>
                       <td className="px-4 py-2 text-right">{formatCurrency(row.parts)}</td>
+                      <td className="px-4 py-2 text-right">{formatCurrency(row.extra ?? 0)}</td>
                       <td className="px-4 py-2 text-right font-bold text-slate-800 dark:text-slate-100">{formatCurrency(row.total)}</td>
                     </tr>
                   ))}
                   {(costs?.assets ?? []).length === 0 && (
-                    <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-500">Sin costos en el periodo.</td></tr>
+                    <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-500">Sin costos en el periodo.</td></tr>
                   )}
                 </tbody>
               </table>

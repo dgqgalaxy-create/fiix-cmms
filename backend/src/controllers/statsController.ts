@@ -253,6 +253,22 @@ export const getCosts = async (req: Request, res: Response): Promise<void> => {
         })
       : [];
 
+    // Costos adicionales capturados en cada orden (servicios, fletes, etc.).
+    const extraRows = orderIds.length
+      ? await prisma.workOrderCost.findMany({
+          where: { work_order_id: { in: orderIds } },
+          select: { work_order_id: true, amount: true, category: { select: { name: true } } },
+        })
+      : [];
+
+    const extraByOrder = new Map<string, number>();
+    const extraByCategory = new Map<string, number>();
+    for (const row of extraRows) {
+      extraByOrder.set(row.work_order_id, (extraByOrder.get(row.work_order_id) ?? 0) + row.amount);
+      const key = row.category?.name ?? 'Sin categoría';
+      extraByCategory.set(key, (extraByCategory.get(key) ?? 0) + row.amount);
+    }
+
     const partsByOrder = new Map<string, number>();
     for (const row of parts) {
       if (!row.work_order_id) continue;
@@ -268,6 +284,7 @@ export const getCosts = async (req: Request, res: Response): Promise<void> => {
       const hours = Number(order.accumulated_time_ms ?? 0) / (60 * 60 * 1000);
       const laborCost = hours * averageRate;
       const partsCost = partsByOrder.get(order.id) ?? 0;
+      const extraCost = extraByOrder.get(order.id) ?? 0;
       return {
         id: order.id,
         folio: order.folio,
@@ -279,19 +296,21 @@ export const getCosts = async (req: Request, res: Response): Promise<void> => {
         average_rate: averageRate,
         labor_cost: laborCost,
         parts_cost: partsCost,
-        total_cost: laborCost + partsCost,
+        extra_cost: extraCost,
+        total_cost: laborCost + partsCost + extraCost,
         technicians: order.assigned_technicians.map((tech) => tech.name),
         created_at: order.created_at,
         completed_at: order.completed_at,
       };
     }).sort((a, b) => b.total_cost - a.total_cost);
 
-    const byAsset = new Map<string, { asset: { id: string; name: string; internal_code: string }; labor: number; parts: number; total: number; orders: number }>();
+    const byAsset = new Map<string, { asset: { id: string; name: string; internal_code: string }; labor: number; parts: number; extra: number; total: number; orders: number }>();
     for (const row of rows) {
       const key = row.asset.id;
-      const current = byAsset.get(key) ?? { asset: row.asset, labor: 0, parts: 0, total: 0, orders: 0 };
+      const current = byAsset.get(key) ?? { asset: row.asset, labor: 0, parts: 0, extra: 0, total: 0, orders: 0 };
       current.labor += row.labor_cost;
       current.parts += row.parts_cost;
+      current.extra += row.extra_cost;
       current.total += row.total_cost;
       current.orders += 1;
       byAsset.set(key, current);
@@ -303,9 +322,13 @@ export const getCosts = async (req: Request, res: Response): Promise<void> => {
       totals: {
         labor: rows.reduce((sum, row) => sum + row.labor_cost, 0),
         parts: rows.reduce((sum, row) => sum + row.parts_cost, 0),
+        extra: rows.reduce((sum, row) => sum + row.extra_cost, 0),
         total: rows.reduce((sum, row) => sum + row.total_cost, 0),
         orders: rows.length,
         hours: rows.reduce((sum, row) => sum + row.hours, 0),
+        extras_by_category: [...extraByCategory.entries()]
+          .map(([name, amount]) => ({ name, amount }))
+          .sort((a, b) => b.amount - a.amount),
       },
       orders: rows.slice(0, 100),
       assets: [...byAsset.values()].sort((a, b) => b.total - a.total),

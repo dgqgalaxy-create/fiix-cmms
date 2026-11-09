@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.97.0";
+export const APP_VERSION = "1.98.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: costos adicionales por OT — servicios de terceros, fletes o refacciones compradas fuera del inventario, con categoría de costo (se puede crear al momento), monto, descripción y fecha. Se pueden eliminar y quedan en la bitácora.",
+    "Mejora: Estadística → Costos — ahora suma los costos adicionales: nueva cifra «Adicionales», tercera serie en la gráfica por equipo y columna en la tabla.",
     "Nuevo: Características — el Portal de solicitudes (/request) ya se puede activar o desactivar. Al desactivarlo, el formulario público y el seguimiento muestran un aviso y la API rechaza envíos y consultas.",
     "Nuevo: capa visual — animación de entrada en cada cambio de sección, tarjetas con elevación suave al pasar el mouse, cifras que aparecen escalonadas, foco visible consistente, selección de texto con el color de la marca y barras de desplazamiento discretas.",
     "Mejora: barra lateral — el elemento activo se distingue con un borde interior y los elementos se desplazan sutilmente al pasar el mouse.",
