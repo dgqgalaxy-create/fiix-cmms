@@ -1180,7 +1180,7 @@ export const getTransactionsSummary = async (req: Request, res: Response): Promi
 
 export const createTransaction = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { item_id, amount, reason, client_request_id } = req.body;
+    const { item_id, amount, reason, client_request_id, work_order_id } = req.body;
     const user_id = (req as any).user.userId; // Tomamos el ID del usuario autenticado
 
     const requestId =
@@ -1205,6 +1205,16 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
           stock_actual: item?.stock ?? 0,
           idempotent: true,
         });
+        return;
+      }
+    }
+
+    // La orden es opcional: si viene, el movimiento queda ligado al costo de la OT.
+    const workOrderId = typeof work_order_id === 'string' && work_order_id.trim() ? work_order_id.trim() : null;
+    if (workOrderId) {
+      const wo = await prisma.workOrder.findUnique({ where: { id: workOrderId }, select: { id: true } });
+      if (!wo) {
+        res.status(404).json({ error: 'La orden de trabajo no existe' });
         return;
       }
     }
@@ -1240,6 +1250,7 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
           amount: transactionAmount,
           reason,
           unit_cost: snappedCost,
+          ...(workOrderId ? { work_order_id: workOrderId } : {}),
           ...(requestId ? { client_request_id: requestId } : {}),
         }
       });

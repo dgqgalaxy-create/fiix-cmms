@@ -5,6 +5,7 @@ export const MODULE_FEATURES: { key: string; label: string; path: string; descri
   { key: 'messages', label: 'Mensajes', path: '/messages', description: 'Chat interno entre el personal.' },
   { key: 'notes', label: 'Notas y pendientes', path: '/notes', description: 'Tablero personal de notas y tareas.' },
   { key: 'inventory', label: 'Inventario', path: '/inventory', description: 'Repuestos, movimientos, categorías, ubicaciones y proveedores.' },
+  { key: 'kits', label: 'Kits de repuestos', path: '/kits', description: 'Conjuntos de repuestos que se consumen juntos.' },
   { key: 'assets', label: 'Activos', path: '/assets', description: 'Equipos, zonas y secciones.' },
   { key: 'purchases', label: 'Compras', path: '/purchase-orders', description: 'Órdenes de compra y entregas parciales.' },
   { key: 'meters', label: 'Medidores', path: '/meters', description: 'Horómetro, odómetro y contadores por activo.' },
@@ -15,7 +16,6 @@ export const MODULE_FEATURES: { key: string; label: string; path: string; descri
   { key: 'crews', label: 'Cuadrillas', path: '/crews', description: 'Grupos de trabajo asignables a las órdenes.' },
   { key: 'roster', label: 'Horarios y turnos', path: '/roster', description: 'Calendario de turnos del personal.' },
   { key: 'calendar', label: 'Calendario', path: '/calendar', description: 'Agenda de órdenes de trabajo.' },
-  { key: 'kpis', label: 'KPIs y metas', path: '/kpis', description: 'Indicadores y objetivos del área.' },
 ];
 
 /** Características activas (mapa ruta → activo). Devuelve {} si falla. */

@@ -343,6 +343,8 @@ export const createTransaction = async (data: {
   amount: number;
   reason: string;
   client_request_id?: string;
+  /** Si viene, el movimiento queda ligado al costo de esa orden. */
+  work_order_id?: string;
 }) => {
   const response = await axiosInstance.post<{
     transaction: InventoryTransaction;

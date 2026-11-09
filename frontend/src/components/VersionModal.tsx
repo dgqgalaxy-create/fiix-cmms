@@ -1,7 +1,7 @@
 ﻿import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.99.0";
+export const APP_VERSION = "1.100.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -24,6 +24,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Módulo de Compras",
     "Activos (zonas y secciones)",
     "Permisos",
+    "Kits de repuestos",
     "Directorio y Solicitantes",
     "KPIs y Metas",
     "Checklist Diario",
@@ -34,6 +35,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: Kits de repuestos — agrupa repuestos que se usan juntos, consulta para cuántos kits alcanza el stock y consúmelos en una orden con un clic (descuenta existencias y suma al costo de la OT).",
+    "Mejora: KPIs y Metas ahora vive dentro de Estadística, como un acceso más del desplegable en la barra lateral.",
     "Nuevo: Cuadrillas — agrupa al personal (con zona y descripción) y asígnalo a las órdenes de trabajo desde el detalle de la OT. Cada cuadrilla muestra sus integrantes y cuántas órdenes tiene asignadas.",
     "Nuevo: costos adicionales por OT — servicios de terceros, fletes o refacciones compradas fuera del inventario, con categoría de costo (se puede crear al momento), monto, descripción y fecha. Se pueden eliminar y quedan en la bitácora.",
     "Mejora: Estadística → Costos — ahora suma los costos adicionales: nueva cifra «Adicionales», tercera serie en la gráfica por equipo y columna en la tabla.",

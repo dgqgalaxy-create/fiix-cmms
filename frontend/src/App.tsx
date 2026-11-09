@@ -48,6 +48,7 @@ const ChecklistFormPage = lazy(() => import('./pages/ChecklistFormPage'));
 const RosterPage = lazy(() => import('./pages/RosterPage').then((m) => ({ default: m.RosterPage })));
 const NotesPage = lazy(() => import('./pages/NotesPage'));
 const CrewsPage = lazy(() => import('./pages/CrewsPage'));
+const KitsPage = lazy(() => import('./pages/KitsPage'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 
 function PageFallback() {
@@ -139,6 +140,17 @@ function App() {
           />
           
           <Route 
+            path="/kits"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <KitsPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/crews"
             element={
               <ProtectedRoute>
@@ -248,16 +260,19 @@ function App() {
             } 
           />
           
-          <Route 
-            path="/kpis" 
+          <Route
+            path="/stats/kpis"
             element={
               <ProtectedRoute>
                 <Layout>
                   <KPIPage />
                 </Layout>
               </ProtectedRoute>
-            } 
+            }
           />
+
+          {/* Ruta antigua: se conserva para no romper enlaces guardados. */}
+          <Route path="/kpis" element={<Navigate to="/stats/kpis" replace />} />
 
           <Route path="/kpis/technicians/:technicianId" element={<ProtectedRoute><Layout><TechnicianPerformancePage /></Layout></ProtectedRoute>} />
 

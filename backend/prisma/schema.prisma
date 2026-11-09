@@ -457,6 +457,7 @@ model Item {
   asset_parts            AssetPart[]
   documents              Document[]
 
+  kit_items              KitItem[]
   @@index([category_id])
   @@index([location_id])
   @@index([vendor_id])
@@ -1257,4 +1258,28 @@ model CrewMember {
   created_at DateTime @default(now())
 
   @@unique([crew_id, user_id])
+}
+// ---------------------------------------------------------------------------
+// Kits de repuestos: conjuntos reutilizables que se consumen en una orden.
+// ---------------------------------------------------------------------------
+
+model Kit {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @unique
+  description String?
+  is_active   Boolean   @default(true)
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  items       KitItem[]
+}
+
+model KitItem {
+  id       String @id @default(uuid()) @db.Uuid
+  kit_id   String @db.Uuid
+  kit      Kit    @relation(fields: [kit_id], references: [id], onDelete: Cascade)
+  item_id  String @db.Uuid
+  item     Item   @relation(fields: [item_id], references: [id], onDelete: Cascade)
+  quantity Float  @default(1)
+
+  @@unique([kit_id, item_id])
 }

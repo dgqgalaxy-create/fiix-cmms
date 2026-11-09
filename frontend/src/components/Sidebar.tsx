@@ -1,4 +1,4 @@
-﻿import { LayoutDashboard, LogOut, Users, Activity, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote, MessageSquare, ChevronDown, Gauge, FolderOpen, BarChart3 } from 'lucide-react';
+﻿import { LayoutDashboard, LogOut, Users, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote, MessageSquare, ChevronDown, Gauge, FolderOpen, BarChart3 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getFeatures, isFeatureEnabled } from '../api/features';
 import { useTheme } from '../context/ThemeContext';
@@ -205,6 +205,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
           { name: 'Categorías', to: '/inventory?tab=categories' },
           { name: 'Ubicaciones', to: '/inventory?tab=locations' },
           { name: 'Proveedores', to: '/inventory?tab=vendors' },
+          { name: 'Kits', to: '/kits' },
           { name: 'Activos', to: '/assets' },
         ],
       },
@@ -220,13 +221,13 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
           { name: 'Repuestos', to: '/stats/parts' },
           { name: 'Solicitudes', to: '/stats/requests' },
           { name: 'Costos', to: '/stats/costs' },
+          { name: 'KPIs y Metas', to: '/stats/kpis' },
         ],
       },
       { name: 'Checklist Diario', path: '/checklists', icon: <ClipboardCheck size={16} /> },
       { name: 'Cuadrillas', path: '/crews', icon: <Users size={16} /> },
       { name: 'Horarios', path: '/roster', icon: <Clock size={16} /> },
       { name: 'Calendario', path: '/calendar', icon: <Calendar size={16} /> },
-      { name: 'KPIs y Metas', path: '/kpis', icon: <Activity size={16} /> },
     ];
 
     if (hasPermission('MANAGE_PURCHASES')) {
@@ -378,9 +379,11 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
               strategy={verticalListSortingStrategy}
             >
               {orderedItems.map((item) => {
-                const hasChildren = Boolean(item.children?.length);
+                // Los hijos también respetan las características desactivadas.
+                const visibleChildren = (item.children || []).filter((child) => isFeatureEnabled(features, child.to.split('?')[0]));
+                const hasChildren = visibleChildren.length > 0;
                 const isExpanded = !isEditMode && hasChildren && Boolean(expandedGroups[item.path]);
-                const childPaths = (item.children || []).map((c) => c.to.split('?')[0]);
+                const childPaths = visibleChildren.map((c) => c.to.split('?')[0]);
                 const isActive = location.pathname === item.path || childPaths.includes(location.pathname);
                 const currentTab = new URLSearchParams(location.search).get('tab') || 'items';
                 const isChildActive = (to: string) => {
@@ -399,9 +402,9 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                       expanded={isExpanded}
                       onToggle={hasChildren && !isEditMode ? () => toggleGroup(item.path) : undefined}
                     />
-                    {isExpanded && item.children && (
+                    {isExpanded && visibleChildren.length > 0 && (
                       <div className="mt-0.5 space-y-0.5 pb-1 pl-7">
-                        {item.children.map((child) => {
+                        {visibleChildren.map((child) => {
                           const active = isChildActive(child.to);
                           return (
                             <Link
