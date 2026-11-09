@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, RefreshCw, Users, Search, Eye, EyeOff, LayoutGrid, Table2 } from 'lucide-react';
+import { Plus, RefreshCw, Users, Search, LayoutGrid, Table2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getUsers, createUser, updateUser, deleteUser, getOnlineUsers } from '../api/users';
 import type { User } from '../api/users';
@@ -321,17 +321,22 @@ export const UsersPage = () => {
                   <Table2 size={15} /> Tabla
                 </button>
               </div>
-              <button
-                onClick={() => setShowInactive(!showInactive)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors border shadow-sm ${
-                  showInactive 
-                    ? 'bg-slate-800 text-white border-slate-700 hover:bg-slate-700' 
-                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
-                }`}
+              <label
+                className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                title={showInactive ? 'Ocultar usuarios dados de baja' : 'Mostrar también los usuarios dados de baja'}
               >
-                {showInactive ? <EyeOff size={16} /> : <Eye size={16} />}
-                {showInactive ? 'Ocultar Inactivos' : 'Ver Inactivos'}
-              </button>
+                <span className="relative inline-flex h-5 w-9 shrink-0 items-center">
+                  <input
+                    type="checkbox"
+                    className="peer sr-only"
+                    checked={showInactive}
+                    onChange={(event) => setShowInactive(event.target.checked)}
+                  />
+                  <span className="h-5 w-9 rounded-full bg-slate-300 transition-colors peer-checked:bg-emerald-600 dark:bg-slate-600" />
+                  <span className="absolute left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4" />
+                </span>
+                Ver inactivos
+              </label>
             </div>
           </div>
           {viewMode === 'cards' ? (

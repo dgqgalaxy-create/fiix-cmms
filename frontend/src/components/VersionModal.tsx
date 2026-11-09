@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.88.0";
+export const APP_VERSION = "1.89.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,9 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Mejora: Personal — las tablas de Usuarios y Solicitantes usan el mismo formato que inventario: columnas de ancho ajustable, menú ⋮ por encabezado, selector de columnas, vista de tabla o tarjetas y ancho completo de la pantalla.",
+    "Mejora: Personal — «Ver inactivos» ahora es un interruptor, en lugar de un botón que cambiaba de texto.",
+    "Nuevo: Personal — tarifa por hora por persona: se captura en la ficha y se muestra en la tabla. Se usará para el costo de mano de obra en las órdenes.",
     "Nuevo: Activos — la tabla ya tiene el mismo formato que el resto: columnas de ancho ajustable, menú ⋮ en cada encabezado (ordenar, ocultar, mover), vista de tabla o tarjetas y detalle en panel lateral derecho. Tus preferencias se recuerdan en el navegador.",
     "Corrección: importación de CSV — los archivos guardados con BOM (como los exporta Excel) hacían que la primera columna no se reconociera y la hoja se importara vacía. Ahora se limpia el BOM al leer el archivo.",
     "Nuevo: Órdenes de Trabajo — la tabla usa el mismo formato que inventario: columnas de ancho ajustable (arrastra el borde del encabezado), menú ⋮ por columna para ordenar u ocultar, botón «Columnas» y vista de tabla o tarjetas. Tus preferencias se recuerdan en el navegador y la impresión conserva su formato compacto.",

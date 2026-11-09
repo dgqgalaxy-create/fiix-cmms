@@ -19,6 +19,7 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('TECNICO');
   const [isActive, setIsActive] = useState(true);
+  const [hourlyRate, setHourlyRate] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,12 +34,14 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
         setEmail(user.email);
         setRole(user.role);
         setIsActive(user.is_active);
+        setHourlyRate(user.hourly_rate != null ? String(user.hourly_rate) : '');
         setPassword(''); // Password empty on edit unless they want to change it
       } else {
         setName('');
         setEmail('');
         setRole('TECNICO');
         setIsActive(true);
+        setHourlyRate('');
         setPassword('');
       }
       setError('');
@@ -58,7 +61,13 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
       setIsSubmitting(true);
       setError('');
       
-      const data: any = { name, email, role, is_active: isActive };
+      const data: any = {
+        name,
+        email,
+        role,
+        is_active: isActive,
+        hourly_rate: hourlyRate.trim() === '' ? null : Number(hourlyRate),
+      };
       if (password) {
         data.password = password;
       }
@@ -175,6 +184,25 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
                 placeholder="Seleccionar rol…"
                 inputClassName="w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800"
               />
+            </div>
+
+            <div>
+              <label htmlFor="hourly_rate" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                Tarifa por hora (MXN)
+              </label>
+              <input
+                id="hourly_rate"
+                type="number"
+                min="0"
+                step="0.01"
+                value={hourlyRate}
+                onChange={(e) => setHourlyRate(e.target.value)}
+                placeholder="Ej. 85.50"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all"
+              />
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Se usa para calcular el costo de mano de obra en las órdenes. Déjalo vacío si no aplica.
+              </p>
             </div>
 
             {isEditing && (

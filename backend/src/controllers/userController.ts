@@ -25,6 +25,7 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
         role: true,
         is_active: true,
         created_at: true,
+        hourly_rate: true,
         // Última conexión (heartbeat cada 30 s): la muestran las tarjetas de Personal.
         last_active: true,
       }
@@ -39,7 +40,7 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
 
 export const createUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, hourly_rate } = req.body;
     
     if (!name || !email || !password || !role) {
       res.status(400).json({ error: 'Todos los campos son obligatorios' });
@@ -53,8 +54,17 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     }
     
     const password_hash = await bcrypt.hash(password, 10);
+    const rate = hourly_rate === undefined || hourly_rate === null || hourly_rate === ''
+      ? null
+      : Number(hourly_rate);
     const user = await prisma.user.create({
-      data: { name, email, password_hash, role }
+      data: {
+        name,
+        email,
+        password_hash,
+        role,
+        ...(rate !== null && Number.isFinite(rate) ? { hourly_rate: rate } : {}),
+      },
     });
     
     emitRefresh('refresh_users');
@@ -68,7 +78,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
 export const updateUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { name, email, password, role, is_active } = req.body;
+    const { name, email, password, role, is_active, hourly_rate } = req.body;
 
     const beforeUser = await prisma.user.findUnique({
       where: { id },
@@ -82,6 +92,10 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     const updateData: any = { name, email, role };
     if (is_active !== undefined) {
       updateData.is_active = is_active;
+    }
+    if (hourly_rate !== undefined) {
+      const rate = hourly_rate === null || hourly_rate === '' ? null : Number(hourly_rate);
+      updateData.hourly_rate = rate !== null && Number.isFinite(rate) ? rate : null;
     }
     let passwordChanged = false;
     if (password && password.trim() !== '') {

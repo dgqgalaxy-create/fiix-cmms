@@ -91,6 +91,8 @@ model User {
   role                 Role
   is_active            Boolean     @default(true)
   must_change_password Boolean     @default(false)
+  /// Tarifa por hora (MXN). Alimenta el costo de mano de obra.
+  hourly_rate          Float?
   last_active          DateTime?
   current_path         String?
   created_at           DateTime    @default(now())

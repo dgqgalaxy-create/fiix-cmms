@@ -1,4 +1,4 @@
-import api from './axios';
+﻿import api from './axios';
 
 export interface User {
   id: string;
@@ -11,6 +11,8 @@ export interface User {
   current_path?: string | null;
   preferences?: any;
   must_change_password?: boolean;
+  /** Tarifa por hora (MXN) para costo de mano de obra. */
+  hourly_rate?: number | null;
   /** Flag global: si SLA está desactivado, el frontend oculta sus indicativos. */
   sla_enabled?: boolean;
 }
