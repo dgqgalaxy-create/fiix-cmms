@@ -1,4 +1,4 @@
-import { LayoutDashboard, LogOut, Users, Activity, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote, MessageSquare, ChevronDown, Gauge, FolderOpen } from 'lucide-react';
+﻿import { LayoutDashboard, LogOut, Users, Activity, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote, MessageSquare, ChevronDown, Gauge, FolderOpen, BarChart3 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { VersionModal, APP_VERSION } from './VersionModal';
@@ -200,6 +200,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
       },
       { name: 'Medidores', path: '/meters', icon: <Gauge size={16} /> },
       { name: 'Archivos', path: '/files', icon: <FolderOpen size={16} /> },
+      { name: 'Estadística', path: '/stats', icon: <BarChart3 size={16} /> },
       { name: 'Checklist Diario', path: '/checklists', icon: <ClipboardCheck size={16} /> },
       { name: 'Horarios', path: '/roster', icon: <Clock size={16} /> },
       { name: 'Calendario', path: '/calendar', icon: <Calendar size={16} /> },

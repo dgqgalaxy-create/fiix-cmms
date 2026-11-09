@@ -15,6 +15,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default:
 const AssetsPage = lazy(() => import('./pages/AssetsPage').then((m) => ({ default: m.AssetsPage })));
 const MetersPage = lazy(() => import('./pages/MetersPage').then((m) => ({ default: m.MetersPage })));
 const FileLibraryPage = lazy(() => import('./pages/FileLibraryPage').then((m) => ({ default: m.FileLibraryPage })));
+const StatsPage = lazy(() => import('./pages/StatsPage').then((m) => ({ default: m.StatsPage })));
 const UsersPage = lazy(() => import('./pages/UsersPage').then((m) => ({ default: m.UsersPage })));
 const KPIPage = lazy(() => import('./pages/KPIPage').then((m) => ({ default: m.KPIPage })));
 const TechnicianPerformancePage = lazy(() => import('./pages/TechnicianPerformancePage').then((m) => ({ default: m.TechnicianPerformancePage })));
@@ -153,6 +154,17 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <AssetsPage />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/stats" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <StatsPage />
                 </Layout>
               </ProtectedRoute>
             } 
