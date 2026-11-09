@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
@@ -26,7 +26,13 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
-  const isWidePage = location.pathname.startsWith('/inventory') || location.pathname.startsWith('/calendar') || location.pathname.startsWith('/roster');
+  const isWidePage = location.pathname.startsWith('/inventory')
+    || location.pathname.startsWith('/calendar')
+    || location.pathname.startsWith('/roster')
+    || location.pathname.startsWith('/users')
+    || location.pathname.startsWith('/work-orders')
+    || location.pathname.startsWith('/assets')
+    || location.pathname.startsWith('/files');
 
   useEffect(() => {
     // Prefetch personal para asignación OT offline (caché en localStorage).
