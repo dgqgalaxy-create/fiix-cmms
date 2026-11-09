@@ -28,7 +28,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "KPIs y Metas",
     "Checklist Diario",
     "Notas y pendientes",
-    "Cuadrillas (equipos de trabajo)",`r`n    "Calendario de Horarios y Turnos (Roster)",
+    "Cuadrillas (equipos de trabajo)",
+    "Calendario de Horarios y Turnos (Roster)",
     "Opciones de Desarrollador",
     "Asistente GTZ AI (solo lectura)"
   ];
