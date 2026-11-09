@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.91.0";
+export const APP_VERSION = "1.92.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -33,6 +33,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Mejora: Estadística — selector por entidad (Órdenes de trabajo, Activos, Repuestos, Solicitudes y Costos) y gráficas: antigüedad de OT, disponibilidad por equipo, top de consumo, costo por categoría, solicitudes por mes y por estado, y costo por equipo.",
+    "Nuevo: Estadística — vista de «Solicitudes»: volumen por mes, por estado, atención promedio y solicitantes frecuentes.",
     "Nuevo: módulo «Estadística» en el menú lateral, con cuatro vistas: antigüedad de OT por tramos, consumo de repuestos con costo, confiabilidad por equipo (MTBF, MTTR y disponibilidad) y costos por OT y por equipo, con rango de fechas.",
     "Nuevo: costos de OT — costo de mano de obra calculado como tiempo de la orden × tarifa promedio de los técnicos asignados, sumado al costo de los repuestos consumidos.",
     "Mejora: Personal — «Ver desempeño» ya está disponible también en la vista de tabla, con clic derecho sobre la fila. En el mismo menú se agregó «Turno y horario».",

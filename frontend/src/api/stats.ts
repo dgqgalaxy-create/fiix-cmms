@@ -103,3 +103,18 @@ export const getStatsReliability = async (from?: string, to?: string): Promise<R
 
 export const getStatsCosts = async (from?: string, to?: string): Promise<CostsResponse> =>
   (await api.get('/stats/costs', { params: rangeParams(from, to) })).data;
+
+export interface RequestsResponse {
+  from: string;
+  to: string;
+  total: number;
+  open: number;
+  average_attention_hours: number | null;
+  by_month: { month: string; count: number }[];
+  by_status: { status: string; count: number }[];
+  top_requesters: { name: string; count: number; open: number }[];
+  orders: { id: string; folio: number; title: string; status: string; requester_name?: string | null; created_at: string }[];
+}
+
+export const getStatsRequests = async (from?: string, to?: string): Promise<RequestsResponse> =>
+  (await api.get('/stats/requests', { params: rangeParams(from, to) })).data;

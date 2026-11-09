@@ -315,3 +315,73 @@ export const getCosts = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ error: 'No se pudieron calcular los costos' });
   }
 };
+
+/**
+ * GET /api/stats/requests — solicitudes recibidas (OT con solicitante) por mes,
+ * estado y solicitante. Sirve para ver volumen y tiempos de atención.
+ */
+export const getRequests = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { from, to } = range(req);
+
+    const orders = await prisma.workOrder.findMany({
+      where: {
+        created_at: { gte: from, lte: to },
+        OR: [{ requester_name: { not: null } }, { request_image_url: { not: null } }],
+      },
+      select: {
+        id: true,
+        folio: true,
+        title: true,
+        status: true,
+        priority: true,
+        requester_name: true,
+        created_at: true,
+        completed_at: true,
+        asset: { select: { id: true, name: true } },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    const byMonth = new Map<string, number>();
+    const byStatus = new Map<string, number>();
+    const byRequester = new Map<string, { name: string; count: number; open: number }>();
+    let totalAttentionMs = 0;
+    let attended = 0;
+
+    for (const order of orders) {
+      const month = order.created_at.toISOString().slice(0, 7);
+      byMonth.set(month, (byMonth.get(month) ?? 0) + 1);
+
+      byStatus.set(order.status, (byStatus.get(order.status) ?? 0) + 1);
+
+      const name = order.requester_name?.trim() || 'Sin solicitante';
+      const current = byRequester.get(name) ?? { name, count: 0, open: 0 };
+      current.count += 1;
+      if (!['FINALIZADO', 'ANULADO'].includes(order.status)) current.open += 1;
+      byRequester.set(name, current);
+
+      if (order.completed_at) {
+        totalAttentionMs += order.completed_at.getTime() - order.created_at.getTime();
+        attended += 1;
+      }
+    }
+
+    res.json({
+      from,
+      to,
+      total: orders.length,
+      open: orders.filter((order) => !['FINALIZADO', 'ANULADO'].includes(order.status)).length,
+      average_attention_hours: attended > 0 ? totalAttentionMs / attended / (60 * 60 * 1000) : null,
+      by_month: [...byMonth.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([month, count]) => ({ month, count })),
+      by_status: [...byStatus.entries()].map(([status, count]) => ({ status, count })),
+      top_requesters: [...byRequester.values()].sort((a, b) => b.count - a.count).slice(0, 15),
+      orders: orders.slice(0, 100),
+    });
+  } catch (error) {
+    console.error('Error calculando solicitudes:', error);
+    res.status(500).json({ error: 'No se pudieron calcular las solicitudes' });
+  }
+};
