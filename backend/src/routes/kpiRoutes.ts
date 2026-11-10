@@ -13,7 +13,7 @@ import {
   getResponseTimeZones,
   updateResponseTimeZones,
 } from '../controllers/kpiController';
-import { authenticate, requirePermission, requireRole } from '../middlewares/authMiddleware';
+import { authenticate, requirePermission } from '../middlewares/authMiddleware';
 
 const router = Router();
 
@@ -29,7 +29,7 @@ router.get('/technician-performance/:technicianId', getTechnicianPerformanceDeta
 router.get('/by-line', getMttrMtbfByLine);
 router.get('/by-line/:line/assets', getLineAssetsMttrMtbf);
 router.get('/response-time-zones', getResponseTimeZones);
-router.put('/response-time-zones', requireRole(['ADMINISTRADOR']), updateResponseTimeZones);
+router.put('/response-time-zones', requirePermission('MANAGE_KPIS'), updateResponseTimeZones);
 router.put('/goals', requirePermission('MANAGE_KPIS'), updateGoals);
 
 export default router;

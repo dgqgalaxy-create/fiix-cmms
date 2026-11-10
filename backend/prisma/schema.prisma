@@ -672,6 +672,10 @@ model SystemSettings {
   features           Json?
   /// Configuración del portal público de solicitudes (/request).
   portal_config      Json?
+  /// Preferencias de fecha y hora: zona IANA, formato de fecha y formato de hora.
+  time_zone          String?
+  date_format        String?
+  time_format        String?
   /// Obsoleto: la interfaz móvil de técnico es preferencia por usuario
   /// (`User.preferences.use_technician_mobile_ui`). Se mantiene por compatibilidad de esquema.
   technician_mobile_ui Boolean @default(true)

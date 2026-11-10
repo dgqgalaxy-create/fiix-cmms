@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import {
   Shield, Loader2, CheckCircle2, Search, Users, Wrench, Package, ShoppingCart,
-  ClipboardCheck, BarChart3, Settings, UserCog, Lock, Plus, Trash2, X,
+  ClipboardCheck, BarChart3, Settings, UserCog, Lock, Plus, Trash2, X, FolderOpen,
 } from 'lucide-react';
 import { getRoles, createRole, updateRole, deleteRole, type RoleDefinition } from '../api/roles';
 import { useAuth } from '../context/AuthContext';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 
-type ModuleKey = 'orders' | 'assets' | 'inventory' | 'purchases' | 'personnel' | 'checklists' | 'analytics' | 'settings';
+type ModuleKey = 'orders' | 'assets' | 'inventory' | 'purchases' | 'personnel' | 'checklists' | 'analytics' | 'files' | 'settings';
 
 const MODULES: { key: ModuleKey; label: string; icon: React.ReactNode }[] = [
   { key: 'orders', label: 'Órdenes de trabajo', icon: <ClipboardCheck size={15} /> },
@@ -19,6 +19,7 @@ const MODULES: { key: ModuleKey; label: string; icon: React.ReactNode }[] = [
   { key: 'personnel', label: 'Personal y turnos', icon: <Users size={15} /> },
   { key: 'checklists', label: 'Checklists', icon: <ClipboardCheck size={15} /> },
   { key: 'analytics', label: 'Análisis y fallas', icon: <BarChart3 size={15} /> },
+  { key: 'files', label: 'Archivos', icon: <FolderOpen size={15} /> },
   { key: 'settings', label: 'Configuración', icon: <Settings size={15} /> },
 ];
 
@@ -52,7 +53,16 @@ const AVAILABLE_PERMISSIONS: { key: string; label: string; description: string; 
   { key: 'MANAGE_RCA', label: 'Editar árbol de fallas', description: 'Agregar, activar o desactivar elementos del árbol de fallas.', module: 'analytics' },
 
   { key: 'VIEW_SETTINGS', label: 'Ver configuración', description: 'Acceso a Configuración (apariencia y opciones del sistema).', module: 'settings' },
+  { key: 'MANAGE_SETTINGS', label: 'Administrar configuración', description: 'Cambiar notificaciones, SLA, portal, características y catálogos.', module: 'settings' },
   { key: 'MANAGE_PERMISSIONS', label: 'Administrar permisos', description: 'Acceso a esta pantalla de roles y permisos.', module: 'settings' },
+  { key: 'MANAGE_ROLES', label: 'Administrar roles', description: 'Crear, editar y eliminar roles (API de roles).', module: 'settings' },
+  { key: 'PERFORM_WRITE_ACTIONS', label: 'Modificar datos', description: 'Sin este permiso el usuario solo puede consultar.', module: 'settings' },
+
+  { key: 'MANAGE_REQUESTERS', label: 'Administrar solicitantes', description: 'Crear, editar y eliminar solicitantes del directorio.', module: 'personnel' },
+  { key: 'MANAGE_METER_TRIGGERS', label: 'Administrar disparadores', description: 'Crear y editar disparadores de medidores que generan OT.', module: 'assets' },
+  { key: 'MANAGE_LINE_COSTS', label: 'Costos por línea', description: 'Elegir las zonas visibles en el análisis de costos por línea.', module: 'analytics' },
+  { key: 'ASSIGN_CHECKLIST_TECHNICIAN', label: 'Asignar técnico a checklist', description: 'Reasignar el técnico responsable de un checklist.', module: 'checklists' },
+  { key: 'MANAGE_FILE_FOLDERS', label: 'Administrar carpetas', description: 'Crear, renombrar y eliminar carpetas de la biblioteca de archivos.', module: 'files' },
 ];
 
 const BASE_ROLE_LABELS: Record<string, string> = {
@@ -101,11 +111,14 @@ export const PermissionsPage = () => {
 
   const current = roles.find((role) => role.id === selectedId) ?? null;
 
+  /**
+   * Único candado del sistema: el rol base Administrador conserva
+   * «Administrar permisos» para que nadie se quede sin poder gestionarlos.
+   * Todo lo demás se puede activar o desactivar libremente.
+   */
   const isLocked = (role: RoleDefinition | null, key: string) => {
     if (!role) return false;
-    if (role.base_role === 'ADMINISTRADOR' && (key === 'MANAGE_PERMISSIONS' || key === 'MANAGE_USERS')) return true;
-    if (role.base_role === 'OBSERVADOR' && key !== 'VIEW_ALL_WORK_ORDERS' && key !== 'VIEW_RCA') return true;
-    return false;
+    return role.base_role === 'ADMINISTRADOR' && key === 'MANAGE_PERMISSIONS';
   };
 
   const filtered = useMemo(() => {

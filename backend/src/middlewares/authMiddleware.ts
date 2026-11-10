@@ -1,4 +1,4 @@
-﻿import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/auth';
 import prisma from '../config/prisma';
 import { getPermissionSnapshot, snapshotAllows } from '../utils/userPermissions';
@@ -135,18 +135,31 @@ export const requireRole = (roles: string[]) => {
  * Bloquea mutaciones para OBSERVADOR (solo consulta + Mensajes).
  * No aplicar en /api/chat ni en lecturas / preferencias / notificaciones vistas.
  */
-export const requireWritable = (req: AuthRequest, res: Response, next: NextFunction): void => {
+/**
+ * Exige el permiso «puede modificar datos» (PERFORM_WRITE_ACTIONS).
+ * Antes estaba fijo al rol Observador; ahora se configura en Roles y permisos.
+ */
+export const requireWritable = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   if (!req.user) {
     res.status(401).json({ error: 'No autenticado' });
     return;
   }
-  if (req.user.role === 'OBSERVADOR') {
-    res.status(403).json({
-      error: 'Tu perfil (Observador) solo permite consultar y usar Mensajes',
-    });
-    return;
+  try {
+    const snapshot = await getPermissionSnapshot(req.user.userId);
+    if (!snapshot) {
+      res.status(401).json({ error: 'Usuario no encontrado' });
+      return;
+    }
+    if (!snapshotAllows(snapshot, 'PERFORM_WRITE_ACTIONS')) {
+      res.status(403).json({
+        error: 'Tu rol solo permite consultar. Pide al administrador el permiso para modificar datos.',
+      });
+      return;
+    }
+    next();
+  } catch (error) {
+    res.status(500).json({ error: 'Error verificando permisos' });
   }
-  next();
 };
 
 export const requirePermission = (permission: string) => {
@@ -163,16 +176,6 @@ export const requirePermission = (permission: string) => {
         return;
       }
 
-      // El rol base Observador solo puede consultar; el servidor lo bloquea.
-      if (snapshot.baseRole === 'OBSERVADOR') {
-        const readOk = permission === 'VIEW_ALL_WORK_ORDERS' || permission === 'VIEW_RCA';
-        if (!readOk) {
-          res.status(403).json({
-            error: 'Tu perfil (Observador) solo permite consultar y usar Mensajes',
-          });
-          return;
-        }
-      }
 
       if (snapshotAllows(snapshot, permission)) {
         next();

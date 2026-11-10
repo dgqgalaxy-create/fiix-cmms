@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { getPermissionSnapshot } from '../utils/userPermissions';
 import { Role } from '@prisma/client';
@@ -6,7 +6,7 @@ import { emitRefresh } from '../utils/socket';
 import { writeAuditLog } from '../utils/auditLog';
 import type { AuthRequest } from '../middlewares/authMiddleware';
 
-const defaultPermissions: Record<Role, any> = {
+export const defaultPermissions: Record<Role, any> = {
   ADMINISTRADOR: {
     MANAGE_USERS: true,
     MANAGE_ASSETS: true,
@@ -31,6 +31,14 @@ const defaultPermissions: Record<Role, any> = {
     VIEW_RCA: true,
     MANAGE_RCA: true,
     VIEW_SETTINGS: true,
+    PERFORM_WRITE_ACTIONS: true,
+    MANAGE_SETTINGS: true,
+    MANAGE_ROLES: true,
+    MANAGE_METER_TRIGGERS: true,
+    MANAGE_REQUESTERS: true,
+    MANAGE_FILE_FOLDERS: true,
+    MANAGE_LINE_COSTS: true,
+    ASSIGN_CHECKLIST_TECHNICIAN: true,
   },
   GESTIONADOR: {
     MANAGE_USERS: false,
@@ -56,6 +64,14 @@ const defaultPermissions: Record<Role, any> = {
     VIEW_RCA: true,
     MANAGE_RCA: true,
     VIEW_SETTINGS: true,
+    PERFORM_WRITE_ACTIONS: true,
+    MANAGE_SETTINGS: false,
+    MANAGE_ROLES: false,
+    MANAGE_METER_TRIGGERS: false,
+    MANAGE_REQUESTERS: true,
+    MANAGE_FILE_FOLDERS: false,
+    MANAGE_LINE_COSTS: false,
+    ASSIGN_CHECKLIST_TECHNICIAN: false,
   },
   TECNICO: {
     MANAGE_USERS: false,
@@ -81,6 +97,14 @@ const defaultPermissions: Record<Role, any> = {
     VIEW_RCA: true,
     MANAGE_RCA: false,
     VIEW_SETTINGS: false,
+    PERFORM_WRITE_ACTIONS: true,
+    MANAGE_SETTINGS: false,
+    MANAGE_ROLES: false,
+    MANAGE_METER_TRIGGERS: false,
+    MANAGE_REQUESTERS: false,
+    MANAGE_FILE_FOLDERS: false,
+    MANAGE_LINE_COSTS: false,
+    ASSIGN_CHECKLIST_TECHNICIAN: false,
   },
   OBSERVADOR: {
     MANAGE_USERS: false,
@@ -106,6 +130,14 @@ const defaultPermissions: Record<Role, any> = {
     VIEW_RCA: true,
     MANAGE_RCA: false,
     VIEW_SETTINGS: false,
+    PERFORM_WRITE_ACTIONS: false,
+    MANAGE_SETTINGS: false,
+    MANAGE_ROLES: false,
+    MANAGE_METER_TRIGGERS: false,
+    MANAGE_REQUESTERS: false,
+    MANAGE_FILE_FOLDERS: false,
+    MANAGE_LINE_COSTS: false,
+    ASSIGN_CHECKLIST_TECHNICIAN: false,
   },
 };
 

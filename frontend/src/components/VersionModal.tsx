@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.102.0";
+export const APP_VERSION = "1.103.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -35,6 +35,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: todos los privilegios son configurables en Roles y permisos. Se agregaron los permisos de configuración, roles, solicitantes, disparadores de medidores, costos por línea, carpetas de archivos, asignación de checklists y «modificar datos» (escritura). Ya no hay restricciones fijas por rol: solo el Administrador conserva «Administrar permisos» para no perder el control.",
+    "Nuevo: Configuración → Fecha y hora: elige zona horaria, formato de fecha (DD/MM/AAAA, MM/DD/AAAA, AAAA-MM-DD) y formato de hora (12 h o 24 h). Se aplica a todo el sistema.",
     "Nuevo: la tecla Escape cierra la ventana o panel abierto (detalle de OT, repuestos, activos, transacciones, usuarios, turnos, solicitudes, kits, cuadrillas, permisos y diálogos de archivos), igual que la X.",
     "Corrección: al abrir el detalle de una orden ya no se desplaza la vista al final; el panel abre desde arriba y la página de fondo queda bloqueada mientras está abierto.",
     "Corrección: el panel de detalle de la OT ya se ancla al borde derecho y a toda la altura de la pantalla. La animación de entrada de página retenía un transform y desplazaba los paneles fijos.",

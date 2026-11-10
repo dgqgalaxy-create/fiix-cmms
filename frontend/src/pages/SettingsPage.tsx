@@ -1,7 +1,7 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft, Globe } from 'lucide-react';
+import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft, Globe, Clock } from 'lucide-react';
 import { PermissionsPage } from './PermissionsPage';
 import { DeveloperOptions } from './DeveloperOptions';
 import { ChecklistCatalogue } from '../components/ChecklistCatalogue';
@@ -10,6 +10,7 @@ import { ListChecks, Scale } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { MODULE_FEATURES } from '../api/features';
 import { savePortalConfig, PORTAL_FIELD_LABELS, PORTAL_OPTION_LABELS, type PortalConfig, type PortalFieldKey } from '../api/portal';
+import { setDateTimePreferences, formatDateTime, getDateTimePreferences, type DateFormat, type TimeFormat } from '../utils/dateUtils';
 import api from '../api/axios';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { canUseTechnicianMobileUi, isTechnicianMobileUiPrefOn } from '../hooks/useTechnicianMobileShell';
@@ -62,6 +63,26 @@ const DEFAULT_SLA_POLICY: SlaPolicy = {
     resolution_escalate_h: 168,
   },
 };
+
+/** Zonas horarias habituales; la zona del navegador se agrega si no está. */
+const TIME_ZONES: { value: string; label: string }[] = [
+  { value: 'America/Mexico_City', label: 'Centro de México (CDMX, Guadalajara, Monterrey)' },
+  { value: 'America/Cancun', label: 'Quintana Roo (Cancún)' },
+  { value: 'America/Monterrey', label: 'Monterrey' },
+  { value: 'America/Chihuahua', label: 'Chihuahua' },
+  { value: 'America/Hermosillo', label: 'Sonora (Hermosillo)' },
+  { value: 'America/Tijuana', label: 'Baja California (Tijuana)' },
+  { value: 'America/Bogota', label: 'Colombia (Bogotá)' },
+  { value: 'America/Lima', label: 'Perú (Lima)' },
+  { value: 'America/Santiago', label: 'Chile (Santiago)' },
+  { value: 'America/Argentina/Buenos_Aires', label: 'Argentina (Buenos Aires)' },
+  { value: 'America/New_York', label: 'Este de EE. UU. (Nueva York)' },
+  { value: 'America/Chicago', label: 'Centro de EE. UU. (Chicago)' },
+  { value: 'America/Denver', label: 'Montaña de EE. UU. (Denver)' },
+  { value: 'America/Los_Angeles', label: 'Pacífico de EE. UU. (Los Ángeles)' },
+  { value: 'Europe/Madrid', label: 'España (Madrid)' },
+  { value: 'UTC', label: 'UTC (tiempo universal)' },
+];
 
 const PRIORITY_META: Record<SlaPriorityKey, { title: string; hint: string; accent: string }> = {
   URGENTE: {
@@ -123,7 +144,8 @@ const mergePolicy = (raw: unknown): SlaPolicy => {
 
 export const SettingsPage = () => {
   const { hasPermission, user, updateUserPreferences } = useAuth();
-  const isAdmin = user?.role === 'ADMINISTRADOR';
+  // Quien puede administrar la configuración (permiso configurable, no rol fijo).
+  const isAdmin = hasPermission('MANAGE_SETTINGS');
   /** Técnico y Gestionador con VIEW_SETTINGS solo ven Apariencia. */
   const appearanceOnly = !isAdmin;
   const [settings, setSettings] = useState({
@@ -138,6 +160,8 @@ export const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState(appearanceOnly ? 'appearance' : 'general');
   const [features, setFeatures] = useState<Record<string, boolean>>({});
   const [portalConfig, setPortalConfig] = useState<PortalConfig | null>(null);
+  const [datePrefs, setDatePrefs] = useState<{ time_zone: string; date_format: DateFormat; time_format: TimeFormat }>(() => getDateTimePreferences());
+  const [dateMsg, setDateMsg] = useState<string | null>(null);
   const [portalMsg, setPortalMsg] = useState<string | null>(null);
   const [slaPriorityTab, setSlaPriorityTab] = useState<SlaPriorityKey>('URGENTE');
   const { theme, setTheme } = useTheme();
@@ -158,6 +182,11 @@ export const SettingsPage = () => {
         setSlaPolicy(mergePolicy(res.data.sla_policy));
         setFeatures((res.data.features as Record<string, boolean>) ?? {});
         setPortalConfig((res.data.portal_config as PortalConfig) ?? null);
+        setDatePrefs({
+          time_zone: res.data.time_zone ?? 'America/Mexico_City',
+          date_format: (res.data.date_format as DateFormat) ?? 'DD/MM/YYYY',
+          time_format: res.data.time_format === '12' ? '12' : '24',
+        });
       }
     } catch (err) {
       console.error(err);
@@ -249,6 +278,11 @@ export const SettingsPage = () => {
         setSlaPolicy(mergePolicy(res.data.sla_policy));
         setFeatures((res.data.features as Record<string, boolean>) ?? {});
         setPortalConfig((res.data.portal_config as PortalConfig) ?? null);
+        setDatePrefs({
+          time_zone: res.data.time_zone ?? 'America/Mexico_City',
+          date_format: (res.data.date_format as DateFormat) ?? 'DD/MM/YYYY',
+          time_format: res.data.time_format === '12' ? '12' : '24',
+        });
       }
       setSlaSaveMsg('Tiempos de SLA (Acuerdo de Nivel de Servicio) guardados correctamente.');
       setTimeout(() => setSlaSaveMsg(null), 3500);
@@ -303,6 +337,26 @@ export const SettingsPage = () => {
       options: { ...portalConfig.options, [group]: next },
     });
     setPortalMsg(null);
+  };
+
+  const saveDateTime = async () => {
+    setIsSaving(true);
+    setDateMsg(null);
+    try {
+      await api.patch('/settings', {
+        time_zone: datePrefs.time_zone,
+        date_format: datePrefs.date_format,
+        time_format: datePrefs.time_format,
+      });
+      setDateTimePreferences(datePrefs);
+      setDateMsg('Preferencias guardadas.');
+      window.setTimeout(() => setDateMsg(null), 2500);
+    } catch (err) {
+      console.error(err);
+      setDateMsg('No se pudo guardar. Revisa permisos o conexión.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const savePortal = async () => {
@@ -372,6 +426,7 @@ export const SettingsPage = () => {
             {isAdmin && navBtn('developer', 'Opciones de Desarrollador', <Code size={18} />)}
             {isAdmin && hasPermission('MANAGE_CHECKLIST_CATALOG') &&
               navBtn('checklist_catalogue', 'Catálogo de Checklist', <ListChecks size={18} />)}
+            {isAdmin && navBtn('datetime', 'Fecha y hora', <Clock size={18} />)}
             {isAdmin && navBtn('portal', 'Portal de solicitudes', <Globe size={18} />)}
             {isAdmin && navBtn('features', 'Características', <ToggleLeft size={18} />)}
             {isAdmin && navBtn('uom', 'Unidades de Medida', <Scale size={18} />)}
@@ -527,6 +582,91 @@ export const SettingsPage = () => {
                     <p className="mt-3 text-sm font-medium text-emerald-700 dark:text-emerald-400">{slaSaveMsg}</p>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {isAdmin && activeTab === 'datetime' && (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="border-b border-slate-100 p-6 dark:border-slate-800">
+                  <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200">Fecha y hora</h2>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    Define la zona horaria del sistema y cómo se muestran las fechas y las horas en toda la aplicación.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 p-6 sm:grid-cols-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="time-zone">
+                      Zona horaria
+                    </label>
+                    <select
+                      id="time-zone"
+                      value={datePrefs.time_zone}
+                      onChange={(event) => setDatePrefs({ ...datePrefs, time_zone: event.target.value })}
+                      className="ui-input"
+                    >
+                      {!TIME_ZONES.some((zone) => zone.value === datePrefs.time_zone) && (
+                        <option value={datePrefs.time_zone}>{datePrefs.time_zone}</option>
+                      )}
+                      {TIME_ZONES.map((zone) => (
+                        <option key={zone.value} value={zone.value}>{zone.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="date-format">
+                      Formato de fecha
+                    </label>
+                    <select
+                      id="date-format"
+                      value={datePrefs.date_format}
+                      onChange={(event) => setDatePrefs({ ...datePrefs, date_format: event.target.value as DateFormat })}
+                      className="ui-input"
+                    >
+                      <option value="DD/MM/YYYY">DD/MM/AAAA (31/12/2026)</option>
+                      <option value="MM/DD/YYYY">MM/DD/AAAA (12/31/2026)</option>
+                      <option value="YYYY-MM-DD">AAAA-MM-DD (2026-12-31)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="time-format">
+                      Formato de hora
+                    </label>
+                    <select
+                      id="time-format"
+                      value={datePrefs.time_format}
+                      onChange={(event) => setDatePrefs({ ...datePrefs, time_format: event.target.value as TimeFormat })}
+                      className="ui-input"
+                    >
+                      <option value="24">24 horas (18:30)</option>
+                      <option value="12">12 horas (06:30 p. m.)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-100 p-6 dark:border-slate-800">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Vista previa</p>
+                  <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">
+                    {(() => {
+                      const previous = getDateTimePreferences();
+                      setDateTimePreferences(datePrefs);
+                      const preview = formatDateTime(new Date());
+                      setDateTimePreferences(previous);
+                      return preview;
+                    })()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                {dateMsg && <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">{dateMsg}</span>}
+                <button type="button" onClick={() => void saveDateTime()} disabled={isSaving} className="ui-btn-primary">
+                  <Save size={15} /> {isSaving ? 'Guardando…' : 'Guardar preferencias'}
+                </button>
               </div>
             </div>
           )}

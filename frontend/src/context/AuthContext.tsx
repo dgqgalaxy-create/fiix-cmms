@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import api from '../api/axios';
+import { setDateTimePreferences } from '../utils/dateUtils';
 import type { ReactNode } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { getMyPermissions } from '../api/permissions';
@@ -69,6 +71,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('Error loading permissions', err);
     }
   };
+
+  // Preferencias globales de fecha y hora (Configuración → Fecha y hora).
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    api.get('/settings/preferences')
+      .then((response) => {
+        if (!cancelled) setDateTimePreferences(response.data);
+      })
+      .catch(() => { /* se usan los valores por defecto */ });
+    return () => { cancelled = true; };
+  }, [token]);
 
   useEffect(() => {
     if (token) {

@@ -11,7 +11,7 @@ import {
   updateMeterTrigger,
   deleteMeterTrigger,
 } from '../controllers/meterController';
-import { authenticate, requirePermission, requireRole } from '../middlewares/authMiddleware';
+import { authenticate, requirePermission } from '../middlewares/authMiddleware';
 
 const router = Router();
 
@@ -32,8 +32,8 @@ router.patch('/:id', requirePermission('MANAGE_ASSETS'), updateMeter);
 router.delete('/:id', requirePermission('MANAGE_ASSETS'), deleteMeter);
 
 // Configurar disparadores: solo el administrador (define cuándo se genera una OT).
-router.post('/:id/triggers', requireRole(['ADMINISTRADOR']), createMeterTrigger);
-router.patch('/:id/triggers/:triggerId', requireRole(['ADMINISTRADOR']), updateMeterTrigger);
-router.delete('/:id/triggers/:triggerId', requireRole(['ADMINISTRADOR']), deleteMeterTrigger);
+router.post('/:id/triggers', requirePermission('MANAGE_METER_TRIGGERS'), createMeterTrigger);
+router.patch('/:id/triggers/:triggerId', requirePermission('MANAGE_METER_TRIGGERS'), updateMeterTrigger);
+router.delete('/:id/triggers/:triggerId', requirePermission('MANAGE_METER_TRIGGERS'), deleteMeterTrigger);
 
 export default router;

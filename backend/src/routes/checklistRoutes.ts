@@ -26,7 +26,7 @@ import {
   reorderActivities,
   restoreDefaultActivities
 } from '../controllers/checklistController';
-import { authenticate, requirePermission, requireRole, requireWritable } from '../middlewares/authMiddleware';
+import { authenticate, requirePermission, requireWritable } from '../middlewares/authMiddleware';
 
 const router = Router();
 
@@ -53,13 +53,13 @@ router.post('/transfers/:id/reject', requireWritable, rejectChecklistTransfer);
 router.post('/transfers/:id/cancel', requireWritable, cancelChecklistTransfer);
 
 // Continuación tras incumplimiento
-router.post('/continuation-requests/:id/approve', requireWritable, requireRole(['ADMINISTRADOR']), approveChecklistContinuation);
-router.post('/continuation-requests/:id/reject', requireWritable, requireRole(['ADMINISTRADOR']), rejectChecklistContinuation);
+router.post('/continuation-requests/:id/approve', requireWritable, requirePermission('ASSIGN_CHECKLIST_TECHNICIAN'), approveChecklistContinuation);
+router.post('/continuation-requests/:id/reject', requireWritable, requirePermission('ASSIGN_CHECKLIST_TECHNICIAN'), rejectChecklistContinuation);
 router.post('/continuation-requests/:id/cancel', requireWritable, cancelChecklistContinuation);
 
 router.post('/:id/start', requireWritable, startChecklist);
 router.post('/:id/transfer', requireWritable, transferChecklist);
-router.post('/:id/assign-technician', requireWritable, requireRole(['ADMINISTRADOR']), assignChecklistTechnician);
+router.post('/:id/assign-technician', requireWritable, requirePermission('ASSIGN_CHECKLIST_TECHNICIAN'), assignChecklistTechnician);
 router.post('/:id/request-continuation', requireWritable, requestChecklistContinuation);
 router.get('/:id', getChecklistById);
 router.put('/row/:rowId', requireWritable, updateChecklistRow);

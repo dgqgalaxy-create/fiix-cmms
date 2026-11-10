@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, requireRole } from '../middlewares/authMiddleware';
+import { authenticate, requirePermission } from '../middlewares/authMiddleware';
 import { getAllPermissions, getMyPermissions, updateRolePermissions } from '../controllers/permissionController';
 
 const router = Router();
@@ -8,7 +8,7 @@ const router = Router();
 router.get('/my-permissions', authenticate, getMyPermissions);
 
 // Solo el administrador puede gestionar todos los permisos
-router.get('/', authenticate, requireRole(['ADMINISTRADOR']), getAllPermissions);
-router.put('/:role', authenticate, requireRole(['ADMINISTRADOR']), updateRolePermissions);
+router.get('/', authenticate, requirePermission('MANAGE_ROLES'), getAllPermissions);
+router.put('/:role', authenticate, requirePermission('MANAGE_ROLES'), updateRolePermissions);
 
 export default router;

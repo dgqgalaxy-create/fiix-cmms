@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { emitRefresh } from '../utils/socket';
+import { defaultPermissions } from './permissionController';
 
 const BASE_ROLES = ['ADMINISTRADOR', 'GESTIONADOR', 'TECNICO', 'OBSERVADOR'] as const;
 
@@ -30,6 +31,18 @@ export async function ensureSystemRoles(): Promise<void> {
           is_system: true,
           permissions: (legacy?.permissions as object) ?? (system.base_role === 'ADMINISTRADOR' ? { '*': true } : {}),
         },
+      });
+    }
+
+    // Rellena permisos que se agregaron al sistema después de crear el rol
+    // (no sobrescribe lo que el administrador haya cambiado).
+    const defaults = defaultPermissions[system.base_role] ?? {};
+    const stored = (role.permissions as Record<string, boolean>) ?? {};
+    const merged = { ...defaults, ...stored };
+    if (Object.keys(defaults).some((key) => stored[key] === undefined)) {
+      role = await prisma.roleDefinition.update({
+        where: { id: role.id },
+        data: { permissions: merged },
       });
     }
 
@@ -138,7 +151,18 @@ export const updateRole = async (req: Request, res: Response): Promise<void> => 
     }
 
     if (req.body?.permissions && typeof req.body.permissions === 'object') {
-      data.permissions = req.body.permissions;
+      // Se mezcla con lo existente: un envío parcial no borra los demás permisos.
+      const stored = (existing.permissions as Record<string, boolean>) ?? {};
+      const incoming: Record<string, boolean> = {
+        ...stored,
+        ...(req.body.permissions as Record<string, boolean>),
+      };
+      // Evita que el sistema quede sin nadie capaz de administrar permisos.
+      const baseRole = data.base_role ?? existing.base_role;
+      if (baseRole === 'ADMINISTRADOR' && incoming.MANAGE_PERMISSIONS === false) {
+        incoming.MANAGE_PERMISSIONS = true;
+      }
+      data.permissions = incoming;
     }
 
     const updated = await prisma.roleDefinition.update({ where: { id }, data });

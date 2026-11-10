@@ -1,4 +1,4 @@
-﻿import { Request, Response } from 'express';
+import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { DEFAULT_SLA_POLICY, mergeSlaPolicy } from '../services/SlaService';
 import { emitRefresh } from '../utils/socket';
@@ -31,7 +31,25 @@ export const getSettings = async (req: Request, res: Response): Promise<void> =>
 
 export const updateSettings = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { telegram_enabled, email_enabled, sla_enabled, sla_policy, checklist_column_count, technician_mobile_ui, features, portal_config } = req.body;
+    const { telegram_enabled, email_enabled, sla_enabled, sla_policy, checklist_column_count, technician_mobile_ui, features, portal_config, time_zone, date_format, time_format } = req.body;
+    // Preferencias de fecha y hora (validadas contra catálogos cerrados).
+    const ALLOWED_DATE_FORMATS = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'];
+    const ALLOWED_TIME_FORMATS = ['12', '24'];
+    const nextTimeZone = typeof time_zone === 'string' && time_zone.trim() ? time_zone.trim() : undefined;
+    if (nextTimeZone) {
+      try {
+        new Intl.DateTimeFormat('es-MX', { timeZone: nextTimeZone });
+      } catch {
+        res.status(400).json({ error: 'La zona horaria no es válida.' });
+        return;
+      }
+    }
+    const nextDateFormat = ALLOWED_DATE_FORMATS.includes(String(date_format))
+      ? String(date_format)
+      : undefined;
+    const nextTimeFormat = ALLOWED_TIME_FORMATS.includes(String(time_format))
+      ? String(time_format)
+      : undefined;
     let settings = await prisma.systemSettings.findFirst();
 
     const nextPolicy =
@@ -52,6 +70,9 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
           technician_mobile_ui: technician_mobile_ui ?? true,
           ...(features && typeof features === 'object' ? { features } : {}),
           ...(portal_config && typeof portal_config === 'object' ? { portal_config: mergePortalConfig(portal_config) as unknown as object } : {}),
+          ...(nextTimeZone ? { time_zone: nextTimeZone } : {}),
+          ...(nextDateFormat ? { date_format: nextDateFormat } : {}),
+          ...(nextTimeFormat ? { time_format: nextTimeFormat } : {}),
           ...(nextColumnCount !== undefined ? { checklist_column_count: nextColumnCount } : {}),
         },
       });
@@ -66,6 +87,9 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
           ...(nextPolicy ? { sla_policy: nextPolicy } : {}),
           ...(features && typeof features === 'object' ? { features } : {}),
           ...(portal_config && typeof portal_config === 'object' ? { portal_config: mergePortalConfig(portal_config) as unknown as object } : {}),
+          ...(nextTimeZone ? { time_zone: nextTimeZone } : {}),
+          ...(nextDateFormat ? { date_format: nextDateFormat } : {}),
+          ...(nextTimeFormat ? { time_format: nextTimeFormat } : {}),
           ...(nextColumnCount !== undefined ? { checklist_column_count: nextColumnCount } : {}),
         },
       });
@@ -191,5 +215,25 @@ export const getFeatures = async (_req: Request, res: Response): Promise<void> =
   } catch (error) {
     console.error('Error obteniendo características:', error);
     res.status(500).json({ error: 'No se pudieron obtener las características' });
+  }
+};
+/**
+ * GET /api/settings/preferences — zona horaria y formatos de fecha/hora.
+ * Disponible para cualquier usuario autenticado (lo usa el frontend para
+ * formatear fechas y horas en toda la aplicación).
+ */
+export const getDateTimePreferences = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const settings = await prisma.systemSettings.findFirst({
+      select: { time_zone: true, date_format: true, time_format: true },
+    });
+    res.json({
+      time_zone: settings?.time_zone ?? 'America/Mexico_City',
+      date_format: settings?.date_format ?? 'DD/MM/YYYY',
+      time_format: settings?.time_format ?? '24',
+    });
+  } catch (error) {
+    console.error('Error obteniendo preferencias de fecha:', error);
+    res.status(500).json({ error: 'No se pudieron obtener las preferencias' });
   }
 };
