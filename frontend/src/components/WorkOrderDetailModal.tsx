@@ -12,6 +12,7 @@ import { SignatureField } from './SignatureField';
 import api from '../api/axios';
 import type { SignatureFieldRef } from './SignatureField';
 import { Download } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { ErrorBoundary } from './ErrorBoundary';
 import { generateWorkOrderPDF } from '../utils/pdfGenerator';
 import { SlaBadge } from './SlaBadge';
@@ -628,7 +629,7 @@ export const WorkOrderDetailModal = ({
     }
   };
 
-  return (
+  return createPortal(
     <ErrorBoundary>
       {/* Panel lateral derecho: mismo patrón que el detalle de repuestos. */}
       <div
@@ -1753,6 +1754,7 @@ export const WorkOrderDetailModal = ({
         />
       </div>
     )}
-    </ErrorBoundary>
+    </ErrorBoundary>,
+    document.body
   );
 };
