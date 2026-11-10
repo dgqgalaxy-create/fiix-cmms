@@ -137,6 +137,7 @@ model User {
   wo_relations         WorkOrderRelation[]
   work_order_costs     WorkOrderCost[]
   work_order_views     WorkOrderView[]
+  api_keys             ApiKey[]
   crew_memberships     CrewMember[]
   preferences          Json?       @default("{}")
 }
@@ -1362,4 +1363,53 @@ model CustomFieldValue {
 
   @@unique([field_id, entity_id])
   @@index([entity_id])
+}
+// ---------------------------------------------------------------------------
+// Integraciones: llaves de API para sistemas externos y webhooks de salida.
+// ---------------------------------------------------------------------------
+
+model ApiKey {
+  id            String    @id @default(uuid()) @db.Uuid
+  name          String
+  /// Primeros caracteres de la llave (para identificarla sin mostrarla).
+  key_prefix    String
+  /// SHA-256 de la llave completa; la llave en claro solo se muestra al crearla.
+  key_hash      String    @unique
+  /// Permisos concedidos: ["read", "write"]
+  scopes        Json      @default("[\"read\"]")
+  created_by_id String?   @db.Uuid
+  created_by    User?     @relation(fields: [created_by_id], references: [id], onDelete: SetNull)
+  last_used_at  DateTime?
+  expires_at    DateTime?
+  is_active     Boolean   @default(true)
+  created_at    DateTime  @default(now())
+}
+
+model Webhook {
+  id            String    @id @default(uuid()) @db.Uuid
+  url           String
+  description   String?
+  /// Eventos suscritos: work_order.created, work_order.updated, work_order.comment
+  events        Json      @default("[]")
+  /// Secreto para firmar el payload (HMAC-SHA256 en X-GTZ-Signature).
+  secret        String
+  is_active     Boolean   @default(true)
+  last_status   Int?
+  last_error    String?
+  last_sent_at  DateTime?
+  created_at    DateTime  @default(now())
+  deliveries    WebhookDelivery[]
+}
+
+model WebhookDelivery {
+  id          String   @id @default(uuid()) @db.Uuid
+  webhook_id  String   @db.Uuid
+  webhook     Webhook  @relation(fields: [webhook_id], references: [id], onDelete: Cascade)
+  event       String
+  status      Int?
+  ok          Boolean  @default(false)
+  error       String?
+  created_at  DateTime @default(now())
+
+  @@index([webhook_id, created_at])
 }

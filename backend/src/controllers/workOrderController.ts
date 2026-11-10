@@ -1,5 +1,6 @@
 ﻿import { workOrderPeriod } from '../utils/workOrderPeriod';
 import { touchWorkOrderActivity, withUnreadState } from '../utils/workOrderActivity';
+import { emitWebhook } from '../services/webhookService';
 import { Request, Response } from 'express';
 import { mergePortalConfig } from '../utils/portalConfig';
 import type { Prisma } from '@prisma/client';
@@ -673,6 +674,13 @@ export const createPublicWorkOrder = async (req: Request, res: Response): Promis
     });
 
     emitWorkOrderUpdated(newWorkOrder.id);
+    void emitWebhook('work_order.created', {
+      id: newWorkOrder.id,
+      folio: newWorkOrder.folio,
+      title: newWorkOrder.title,
+      status: newWorkOrder.status,
+      priority: newWorkOrder.priority,
+    });
     
     // Disparar notificaciones
     try {
@@ -1041,6 +1049,12 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
 
       emitWorkOrderUpdated(id);
       if (didConsumeInventory) emitRefresh('refresh_inventory');
+      void emitWebhook('work_order.updated', {
+        id,
+        folio: currentWorkOrder.folio,
+        status: (req.body?.status ? String(req.body.status) : currentWorkOrder.status),
+        title: currentWorkOrder.title,
+      });
 
       const actorName = userId
         ? (await prisma.user.findUnique({ where: { id: userId }, select: { name: true } }))?.name

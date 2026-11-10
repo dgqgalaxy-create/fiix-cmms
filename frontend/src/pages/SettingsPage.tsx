@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft, Globe, Clock, ListPlus, Trash2, Loader2 } from 'lucide-react';
+import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft, Globe, Clock, ListPlus, Trash2, Loader2, Plug, Copy, Plus } from 'lucide-react';
 import { PermissionsPage } from './PermissionsPage';
 import { DeveloperOptions } from './DeveloperOptions';
 import { ChecklistCatalogue } from '../components/ChecklistCatalogue';
@@ -12,6 +12,7 @@ import { MODULE_FEATURES } from '../api/features';
 import { savePortalConfig, PORTAL_FIELD_LABELS, PORTAL_OPTION_LABELS, type PortalConfig, type PortalFieldKey } from '../api/portal';
 import { setDateTimePreferences, formatDateTime, getDateTimePreferences, type DateFormat, type TimeFormat } from '../utils/dateUtils';
 import { getCustomFields, createCustomField, deleteCustomField, updateCustomField, ENTITY_LABELS, TYPE_LABELS, type CustomFieldDefinition, type CustomFieldEntity, type CustomFieldType } from '../api/customFields';
+import { getApiKeys, createApiKey, revokeApiKey, getWebhooks, createWebhook, deleteWebhook, updateWebhook, testWebhook, WEBHOOK_EVENTS, type ApiKeyRow, type WebhookRow } from '../api/integrations';
 import api from '../api/axios';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { canUseTechnicianMobileUi, isTechnicianMobileUiPrefOn } from '../hooks/useTechnicianMobileShell';
@@ -171,6 +172,16 @@ export const SettingsPage = () => {
   const [cfRequired, setCfRequired] = useState(false);
   const [cfBusy, setCfBusy] = useState(false);
   const [cfMsg, setCfMsg] = useState<string | null>(null);
+  const [apiKeys, setApiKeys] = useState<ApiKeyRow[]>([]);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [newKeyScopes, setNewKeyScopes] = useState<string[]>(['read']);
+  const [revealedKey, setRevealedKey] = useState<string | null>(null);
+  const [webhooks, setWebhooks] = useState<WebhookRow[]>([]);
+  const [hookUrl, setHookUrl] = useState('');
+  const [hookEvents, setHookEvents] = useState<string[]>(['work_order.created']);
+  const [hookSecret, setHookSecret] = useState<string | null>(null);
+  const [intMsg, setIntMsg] = useState<string | null>(null);
+  const [intBusy, setIntBusy] = useState(false);
   const [portalMsg, setPortalMsg] = useState<string | null>(null);
   const [slaPriorityTab, setSlaPriorityTab] = useState<SlaPriorityKey>('URGENTE');
   const { theme, setTheme } = useTheme();
@@ -204,6 +215,20 @@ export const SettingsPage = () => {
     }
   };
 
+
+  // Integraciones (llaves y webhooks): se cargan al abrir su pestaña.
+  useEffect(() => {
+    if (activeTab !== 'integrations' || !isAdmin) return;
+    let cancelled = false;
+    Promise.all([getApiKeys(), getWebhooks()])
+      .then(([keys, hooks]) => {
+        if (cancelled) return;
+        setApiKeys(keys);
+        setWebhooks(hooks);
+      })
+      .catch(() => { if (!cancelled) setIntMsg('No se pudieron cargar las integraciones.'); });
+    return () => { cancelled = true; };
+  }, [activeTab, isAdmin]);
 
   // Campos personalizados: se cargan al abrir su pestaña.
   useEffect(() => {
@@ -357,6 +382,88 @@ export const SettingsPage = () => {
     setPortalMsg(null);
   };
 
+  const addApiKey = async () => {
+    if (!newKeyName.trim()) {
+      setIntMsg('Escribe un nombre para la llave.');
+      return;
+    }
+    setIntBusy(true);
+    setIntMsg(null);
+    try {
+      const created = await createApiKey({ name: newKeyName.trim(), scopes: newKeyScopes });
+      setRevealedKey(created.key);
+      setNewKeyName('');
+      setApiKeys(await getApiKeys());
+      setIntMsg('Llave creada. Cópiala ahora: no se volverá a mostrar.');
+    } catch (err: any) {
+      setIntMsg(err?.response?.data?.error || 'No se pudo crear la llave.');
+    } finally {
+      setIntBusy(false);
+    }
+  };
+
+  const removeApiKey = async (row: ApiKeyRow) => {
+    if (!window.confirm(`¿Revocar la llave «${row.name}»? Los sistemas que la usen dejarán de funcionar.`)) return;
+    try {
+      await revokeApiKey(row.id);
+      setApiKeys(await getApiKeys());
+    } catch {
+      setIntMsg('No se pudo revocar la llave.');
+    }
+  };
+
+  const addWebhook = async () => {
+    if (!hookUrl.trim() || hookEvents.length === 0) {
+      setIntMsg('Indica la URL y al menos un evento.');
+      return;
+    }
+    setIntBusy(true);
+    setIntMsg(null);
+    try {
+      const created = await createWebhook({ url: hookUrl.trim(), events: hookEvents });
+      setHookSecret(created.secret);
+      setHookUrl('');
+      setWebhooks(await getWebhooks());
+      setIntMsg('Webhook creado.');
+    } catch (err: any) {
+      setIntMsg(err?.response?.data?.error || 'No se pudo crear el webhook.');
+    } finally {
+      setIntBusy(false);
+    }
+  };
+
+  const toggleWebhook = async (hook: WebhookRow) => {
+    try {
+      await updateWebhook(hook.id, { is_active: !hook.is_active });
+      setWebhooks(await getWebhooks());
+    } catch {
+      setIntMsg('No se pudo actualizar el webhook.');
+    }
+  };
+
+  const removeWebhook = async (hook: WebhookRow) => {
+    if (!window.confirm(`¿Eliminar el webhook ${hook.url}?`)) return;
+    try {
+      await deleteWebhook(hook.id);
+      setWebhooks(await getWebhooks());
+    } catch {
+      setIntMsg('No se pudo eliminar el webhook.');
+    }
+  };
+
+  const tryWebhook = async (hook: WebhookRow) => {
+    setIntBusy(true);
+    try {
+      const result = await testWebhook(hook.id);
+      setIntMsg(result.ok ? `Prueba enviada (HTTP ${result.status}).` : `Falló la prueba: ${result.error}`);
+      setWebhooks(await getWebhooks());
+    } catch {
+      setIntMsg('No se pudo probar el webhook.');
+    } finally {
+      setIntBusy(false);
+    }
+  };
+
   const addCustomField = async () => {
     if (!cfLabel.trim()) {
       setCfMsg('Escribe el nombre del campo.');
@@ -493,6 +600,7 @@ export const SettingsPage = () => {
             {isAdmin && navBtn('developer', 'Opciones de Desarrollador', <Code size={18} />)}
             {isAdmin && hasPermission('MANAGE_CHECKLIST_CATALOG') &&
               navBtn('checklist_catalogue', 'Catálogo de Checklist', <ListChecks size={18} />)}
+            {isAdmin && navBtn('integrations', 'Integraciones', <Plug size={18} />)}
             {isAdmin && navBtn('custom_fields', 'Campos personalizados', <ListPlus size={18} />)}
             {isAdmin && navBtn('datetime', 'Fecha y hora', <Clock size={18} />)}
             {isAdmin && navBtn('portal', 'Portal de solicitudes', <Globe size={18} />)}
@@ -649,6 +757,209 @@ export const SettingsPage = () => {
                   {slaSaveMsg && (
                     <p className="mt-3 text-sm font-medium text-emerald-700 dark:text-emerald-400">{slaSaveMsg}</p>
                   )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isAdmin && activeTab === 'integrations' && (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="border-b border-slate-100 p-6 dark:border-slate-800">
+                  <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200">Llaves de API</h2>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    Permiten que otros sistemas lean o creen órdenes sin usar la sesión de un usuario.
+                    Envían la llave en <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">X-API-Key</code>.
+                  </p>
+                </div>
+
+                <div className="p-4">
+                  {apiKeys.length === 0 ? (
+                    <p className="py-3 text-center text-xs text-slate-500 dark:text-slate-400">Aún no hay llaves.</p>
+                  ) : (
+                    <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {apiKeys.map((row) => (
+                        <li key={row.id} className="flex flex-wrap items-center gap-3 py-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                              {row.name}
+                              {!row.is_active && <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-slate-800">Inactiva</span>}
+                            </p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                              <span className="font-mono">{row.key_prefix}…</span> · {row.scopes.join(', ')}
+                              {row.last_used_at ? ` · último uso ${formatDateTime(row.last_used_at)}` : ' · sin usar'}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void removeApiKey(row)}
+                            className="rounded p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40"
+                            title="Revocar llave"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="sm:col-span-2">
+                      <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="key-name">Nombre</label>
+                      <input
+                        id="key-name"
+                        value={newKeyName}
+                        onChange={(event) => setNewKeyName(event.target.value)}
+                        placeholder="Ej. Integración ERP"
+                        className="ui-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Alcance</label>
+                      <div className="flex items-center gap-3 py-2 text-xs text-slate-700 dark:text-slate-200">
+                        {['read', 'write'].map((scope) => (
+                          <label key={scope} className="flex items-center gap-1.5">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 accent-emerald-600"
+                              checked={newKeyScopes.includes(scope)}
+                              onChange={() => setNewKeyScopes((prev) => prev.includes(scope) ? prev.filter((item) => item !== scope) : [...prev, scope])}
+                            />
+                            {scope === 'read' ? 'Lectura' : 'Escritura'}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex justify-end">
+                    <button type="button" onClick={() => void addApiKey()} disabled={intBusy} className="ui-btn-primary">
+                      {intBusy ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />} Crear llave
+                    </button>
+                  </div>
+
+                  {revealedKey && (
+                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/40">
+                      <p className="text-xs font-bold text-amber-900 dark:text-amber-200">Copia la llave ahora (no se vuelve a mostrar):</p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <code className="min-w-0 flex-1 truncate rounded bg-white px-2 py-1 font-mono text-[11px] text-slate-800 dark:bg-slate-900 dark:text-slate-100">
+                          {revealedKey}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={() => void navigator.clipboard.writeText(revealedKey)}
+                          className="rounded-lg border border-amber-300 px-2 py-1 text-[11px] font-semibold text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200"
+                        >
+                          <Copy size={12} /> Copiar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="border-b border-slate-100 p-6 dark:border-slate-800">
+                  <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200">Webhooks</h2>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    GTZ CMMS avisa a tu sistema cuando ocurre un evento. Cada envío se firma con
+                    <code className="mx-1 rounded bg-slate-100 px-1 dark:bg-slate-800">X-GTZ-Signature</code>
+                    (HMAC-SHA256 del cuerpo con el secreto).
+                  </p>
+                </div>
+
+                <div className="p-4">
+                  {webhooks.length === 0 ? (
+                    <p className="py-3 text-center text-xs text-slate-500 dark:text-slate-400">Aún no hay webhooks.</p>
+                  ) : (
+                    <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {webhooks.map((hook) => (
+                        <li key={hook.id} className="py-2">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-mono text-xs text-slate-800 dark:text-slate-100">{hook.url}</p>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                {hook.events.join(', ')}
+                                {hook.last_status != null ? ` · último envío HTTP ${hook.last_status}` : ''}
+                                {hook.last_error ? ` · ${hook.last_error}` : ''}
+                              </p>
+                            </div>
+                            <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 accent-emerald-600"
+                                checked={hook.is_active}
+                                onChange={() => void toggleWebhook(hook)}
+                              />
+                              Activo
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => void tryWebhook(hook)}
+                              disabled={intBusy}
+                              className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300"
+                            >
+                              Probar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void removeWebhook(hook)}
+                              className="rounded p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40"
+                              title="Eliminar webhook"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className="mt-4 grid gap-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="hook-url">URL destino</label>
+                      <input
+                        id="hook-url"
+                        value={hookUrl}
+                        onChange={(event) => setHookUrl(event.target.value)}
+                        placeholder="https://mi-sistema.com/webhooks/gtz"
+                        className="ui-input"
+                      />
+                    </div>
+                    <div>
+                      <p className="mb-1 text-xs font-semibold text-slate-600 dark:text-slate-300">Eventos</p>
+                      <div className="flex flex-wrap gap-3">
+                        {WEBHOOK_EVENTS.map((event) => (
+                          <label key={event.value} className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-200">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 accent-emerald-600"
+                              checked={hookEvents.includes(event.value)}
+                              onChange={() => setHookEvents((prev) => prev.includes(event.value) ? prev.filter((item) => item !== event.value) : [...prev, event.value])}
+                            />
+                            {event.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex justify-end">
+                    <button type="button" onClick={() => void addWebhook()} disabled={intBusy} className="ui-btn-primary">
+                      {intBusy ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />} Crear webhook
+                    </button>
+                  </div>
+
+                  {hookSecret && (
+                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/40">
+                      <p className="text-xs font-bold text-amber-900 dark:text-amber-200">Secreto para firmar (guárdalo en tu sistema):</p>
+                      <code className="mt-1 block break-all rounded bg-white px-2 py-1 font-mono text-[11px] text-slate-800 dark:bg-slate-900 dark:text-slate-100">
+                        {hookSecret}
+                      </code>
+                    </div>
+                  )}
+
+                  {intMsg && <p className="mt-3 text-xs font-semibold text-emerald-700 dark:text-emerald-400">{intMsg}</p>}
                 </div>
               </div>
             </div>
