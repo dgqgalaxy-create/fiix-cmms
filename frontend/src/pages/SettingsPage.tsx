@@ -1,7 +1,7 @@
-﻿import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft, Globe, Clock, ListPlus, Trash2, Loader2, Plug, Copy, Plus } from 'lucide-react';
+import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft, Globe, Clock, ListPlus, Trash2, Loader2, Plug, Copy, Plus, ShieldCheck } from 'lucide-react';
 import { PermissionsPage } from './PermissionsPage';
 import { DeveloperOptions } from './DeveloperOptions';
 import { ChecklistCatalogue } from '../components/ChecklistCatalogue';
@@ -13,6 +13,7 @@ import { savePortalConfig, PORTAL_FIELD_LABELS, PORTAL_OPTION_LABELS, type Porta
 import { setDateTimePreferences, formatDateTime, getDateTimePreferences, type DateFormat, type TimeFormat } from '../utils/dateUtils';
 import { getCustomFields, createCustomField, deleteCustomField, updateCustomField, ENTITY_LABELS, TYPE_LABELS, type CustomFieldDefinition, type CustomFieldEntity, type CustomFieldType } from '../api/customFields';
 import { getApiKeys, createApiKey, revokeApiKey, getWebhooks, createWebhook, deleteWebhook, updateWebhook, testWebhook, WEBHOOK_EVENTS, type ApiKeyRow, type WebhookRow } from '../api/integrations';
+import { getApprovalRules, createApprovalRule, updateApprovalRule, deleteApprovalRule, type ApprovalRule } from '../api/approvals';
 import api from '../api/axios';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { canUseTechnicianMobileUi, isTechnicianMobileUiPrefOn } from '../hooks/useTechnicianMobileShell';
@@ -182,6 +183,12 @@ export const SettingsPage = () => {
   const [hookSecret, setHookSecret] = useState<string | null>(null);
   const [intMsg, setIntMsg] = useState<string | null>(null);
   const [intBusy, setIntBusy] = useState(false);
+  const [rules, setRules] = useState<ApprovalRule[]>([]);
+  const [ruleName, setRuleName] = useState('');
+  const [rulePriorities, setRulePriorities] = useState<string[]>([]);
+  const [ruleTypes, setRuleTypes] = useState<string[]>([]);
+  const [ruleCritical, setRuleCritical] = useState(false);
+  const [ruleMsg, setRuleMsg] = useState<string | null>(null);
   const [portalMsg, setPortalMsg] = useState<string | null>(null);
   const [slaPriorityTab, setSlaPriorityTab] = useState<SlaPriorityKey>('URGENTE');
   const { theme, setTheme } = useTheme();
@@ -215,6 +222,16 @@ export const SettingsPage = () => {
     }
   };
 
+
+  // Reglas de aprobación: se cargan al abrir su pestaña.
+  useEffect(() => {
+    if (activeTab !== 'approvals' || !isAdmin) return;
+    let cancelled = false;
+    getApprovalRules()
+      .then((rows) => { if (!cancelled) setRules(rows); })
+      .catch(() => { if (!cancelled) setRuleMsg('No se pudieron cargar las reglas.'); });
+    return () => { cancelled = true; };
+  }, [activeTab, isAdmin]);
 
   // Integraciones (llaves y webhooks): se cargan al abrir su pestaña.
   useEffect(() => {
@@ -380,6 +397,58 @@ export const SettingsPage = () => {
       options: { ...portalConfig.options, [group]: next },
     });
     setPortalMsg(null);
+  };
+
+  const addApprovalRule = async () => {
+    if (!ruleName.trim()) {
+      setRuleMsg('Escribe el nombre de la regla.');
+      return;
+    }
+    if (rulePriorities.length === 0 && ruleTypes.length === 0 && !ruleCritical) {
+      setRuleMsg('Selecciona al menos una condición.');
+      return;
+    }
+    setIntBusy(true);
+    setRuleMsg(null);
+    try {
+      await createApprovalRule({
+        name: ruleName.trim(),
+        conditions: {
+          priorities: rulePriorities,
+          maintenance_types: ruleTypes,
+          asset_critical: ruleCritical,
+        },
+      });
+      setRuleName('');
+      setRulePriorities([]);
+      setRuleTypes([]);
+      setRuleCritical(false);
+      setRules(await getApprovalRules());
+      setRuleMsg('Regla creada.');
+    } catch (err: any) {
+      setRuleMsg(err?.response?.data?.error || 'No se pudo crear la regla.');
+    } finally {
+      setIntBusy(false);
+    }
+  };
+
+  const toggleApprovalRule = async (rule: ApprovalRule) => {
+    try {
+      await updateApprovalRule(rule.id, { is_active: !rule.is_active });
+      setRules(await getApprovalRules());
+    } catch {
+      setRuleMsg('No se pudo actualizar la regla.');
+    }
+  };
+
+  const removeApprovalRule = async (rule: ApprovalRule) => {
+    if (!window.confirm(`¿Eliminar la regla «${rule.name}»?`)) return;
+    try {
+      await deleteApprovalRule(rule.id);
+      setRules(await getApprovalRules());
+    } catch {
+      setRuleMsg('No se pudo eliminar la regla.');
+    }
   };
 
   const addApiKey = async () => {
@@ -600,6 +669,7 @@ export const SettingsPage = () => {
             {isAdmin && navBtn('developer', 'Opciones de Desarrollador', <Code size={18} />)}
             {isAdmin && hasPermission('MANAGE_CHECKLIST_CATALOG') &&
               navBtn('checklist_catalogue', 'Catálogo de Checklist', <ListChecks size={18} />)}
+            {isAdmin && navBtn('approvals', 'Aprobaciones', <ShieldCheck size={18} />)}
             {isAdmin && navBtn('integrations', 'Integraciones', <Plug size={18} />)}
             {isAdmin && navBtn('custom_fields', 'Campos personalizados', <ListPlus size={18} />)}
             {isAdmin && navBtn('datetime', 'Fecha y hora', <Clock size={18} />)}
@@ -757,6 +827,123 @@ export const SettingsPage = () => {
                   {slaSaveMsg && (
                     <p className="mt-3 text-sm font-medium text-emerald-700 dark:text-emerald-400">{slaSaveMsg}</p>
                   )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isAdmin && activeTab === 'approvals' && (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="border-b border-slate-100 p-6 dark:border-slate-800">
+                  <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200">Reglas de aprobación</h2>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    Cuando una orden nueva cumple las condiciones, queda «pendiente de aprobación» y no puede
+                    iniciarse ni finalizarse hasta que alguien con el permiso la autorice.
+                  </p>
+                </div>
+
+                <div className="p-4">
+                  {rules.length === 0 ? (
+                    <p className="py-3 text-center text-xs text-slate-500 dark:text-slate-400">Aún no hay reglas.</p>
+                  ) : (
+                    <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {rules.map((rule) => (
+                        <li key={rule.id} className="flex flex-wrap items-center gap-3 py-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{rule.name}</p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                              {[
+                                rule.conditions.priorities?.length ? `prioridad: ${rule.conditions.priorities.join(', ')}` : '',
+                                rule.conditions.maintenance_types?.length ? `tipo: ${rule.conditions.maintenance_types.join(', ')}` : '',
+                                rule.conditions.asset_critical ? 'activo crítico' : '',
+                              ].filter(Boolean).join(' · ') || 'sin condiciones'}
+                              {` · ${rule.approvals_count} aprobación(es)`}
+                            </p>
+                          </div>
+                          <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 accent-emerald-600"
+                              checked={rule.is_active}
+                              onChange={() => void toggleApprovalRule(rule)}
+                            />
+                            Activa
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => void removeApprovalRule(rule)}
+                            className="rounded p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40"
+                            title="Eliminar regla"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className="mt-4 grid gap-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="rule-name">Nombre de la regla</label>
+                      <input
+                        id="rule-name"
+                        value={ruleName}
+                        onChange={(event) => setRuleName(event.target.value)}
+                        placeholder="Ej. Órdenes urgentes requieren autorización"
+                        className="ui-input"
+                      />
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div>
+                        <p className="mb-1 text-xs font-semibold text-slate-600 dark:text-slate-300">Prioridad</p>
+                        {['BAJO', 'NORMAL', 'URGENTE'].map((priority) => (
+                          <label key={priority} className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-200">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 accent-emerald-600"
+                              checked={rulePriorities.includes(priority)}
+                              onChange={() => setRulePriorities((prev) => prev.includes(priority) ? prev.filter((item) => item !== priority) : [...prev, priority])}
+                            />
+                            {priority}
+                          </label>
+                        ))}
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-semibold text-slate-600 dark:text-slate-300">Tipo</p>
+                        {['SERVICIO', 'PREVENTIVO', 'CORRECTIVO'].map((type) => (
+                          <label key={type} className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-200">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 accent-emerald-600"
+                              checked={ruleTypes.includes(type)}
+                              onChange={() => setRuleTypes((prev) => prev.includes(type) ? prev.filter((item) => item !== type) : [...prev, type])}
+                            />
+                            {type}
+                          </label>
+                        ))}
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-semibold text-slate-600 dark:text-slate-300">Activo</p>
+                        <label className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-200">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 accent-emerald-600"
+                            checked={ruleCritical}
+                            onChange={() => setRuleCritical((prev) => !prev)}
+                          />
+                          Solo activos críticos
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-end gap-3">
+                    {ruleMsg && <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">{ruleMsg}</span>}
+                    <button type="button" onClick={() => void addApprovalRule()} disabled={intBusy} className="ui-btn-primary">
+                      {intBusy ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />} Crear regla
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, CheckCircle2, Users, UserPlus, PauseCircle, PlayCircle, ChevronLeft, ChevronRight, ZoomIn, StickyNote } from 'lucide-react';
 import type { WorkOrder } from '../api/workOrders';
@@ -32,6 +32,7 @@ import { WorkOrderRelations } from './workorders/WorkOrderRelations';
 import { WorkOrderCostsSection } from './workorders/WorkOrderCostsSection';
 import { WorkOrderCrewSection } from './workorders/WorkOrderCrewSection';
 import { CustomFieldsSection } from './common/CustomFieldsSection';
+import { WorkOrderApprovalSection } from './workorders/WorkOrderApprovalSection';
 import { FilesPanel } from './common/FilesPanel';
 import { mediaUrl } from '../utils/mediaUrl';
 import { SearchableSelect } from './ui/SearchableSelect';
@@ -1499,6 +1500,15 @@ export const WorkOrderDetailModal = ({
                   workOrderId={workOrder.id}
                   isOpen={isOpen}
                   canWrite={canWriteOps}
+                />
+              </div>
+
+              <div className="mt-4">
+                <WorkOrderApprovalSection
+                  workOrderId={workOrder.id}
+                  approvalStatus={(workOrder as any).approval_status ?? 'NONE'}
+                  isOpen={isOpen}
+                  onDecided={() => { window.dispatchEvent(new CustomEvent('approval-decided')); }}
                 />
               </div>
 

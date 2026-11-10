@@ -1,6 +1,7 @@
 ﻿import { workOrderPeriod } from '../utils/workOrderPeriod';
 import { touchWorkOrderActivity, withUnreadState } from '../utils/workOrderActivity';
 import { emitWebhook } from '../services/webhookService';
+import { evaluateApproval } from './approvalController';
 import { Request, Response } from 'express';
 import { mergePortalConfig } from '../utils/portalConfig';
 import type { Prisma } from '@prisma/client';
@@ -207,6 +208,7 @@ export const getRequesters = async (req: Request, res: Response): Promise<void> 
 const WO_LIST_SELECT = {
   id: true,
   folio: true,
+  approval_status: true,
   last_activity_at: true,
   title: true,
   description: true,
@@ -675,12 +677,14 @@ export const createPublicWorkOrder = async (req: Request, res: Response): Promis
 
     emitWorkOrderUpdated(newWorkOrder.id);
     void emitWebhook('work_order.created', {
+
       id: newWorkOrder.id,
       folio: newWorkOrder.folio,
       title: newWorkOrder.title,
       status: newWorkOrder.status,
       priority: newWorkOrder.priority,
     });
+    void evaluateApproval(newWorkOrder.id);
     
     // Disparar notificaciones
     try {
@@ -752,6 +756,7 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
     });
 
     emitWorkOrderUpdated(newWorkOrder.id);
+    void evaluateApproval(newWorkOrder.id);
     try {
       await triggerNewWorkOrderNotification(newWorkOrder);
     } catch (notifyError) {
@@ -787,6 +792,12 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
     });
     if (!currentWorkOrder) {
       res.status(404).json({ error: 'Orden no encontrada' });
+      return;
+    }
+
+    // Si la orden requiere aprobación, no puede iniciar ni finalizar todavía.
+    if (currentWorkOrder.approval_status === 'PENDIENTE' && (status === 'EN_PROCESO' || status === 'FINALIZADO')) {
+      res.status(400).json({ error: 'La orden requiere aprobación antes de iniciar o finalizar.' });
       return;
     }
 
@@ -1055,6 +1066,7 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
         status: (req.body?.status ? String(req.body.status) : currentWorkOrder.status),
         title: currentWorkOrder.title,
       });
+      void evaluateApproval(id);
 
       const actorName = userId
         ? (await prisma.user.findUnique({ where: { id: userId }, select: { name: true } }))?.name

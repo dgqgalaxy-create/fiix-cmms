@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import {
   Shield, Loader2, CheckCircle2, Search, Users, Wrench, Package, ShoppingCart,
@@ -62,6 +62,7 @@ const AVAILABLE_PERMISSIONS: { key: string; label: string; description: string; 
   { key: 'MANAGE_METER_TRIGGERS', label: 'Administrar disparadores', description: 'Crear y editar disparadores de medidores que generan OT.', module: 'assets' },
   { key: 'MANAGE_LINE_COSTS', label: 'Costos por línea', description: 'Elegir las zonas visibles en el análisis de costos por línea.', module: 'analytics' },
   { key: 'ASSIGN_CHECKLIST_TECHNICIAN', label: 'Asignar técnico a checklist', description: 'Reasignar el técnico responsable de un checklist.', module: 'checklists' },
+  { key: 'APPROVE_WORK_ORDERS', label: 'Aprobar órdenes', description: 'Autorizar o rechazar órdenes que requieren aprobación.', module: 'orders' },
   { key: 'MANAGE_FILE_FOLDERS', label: 'Administrar carpetas', description: 'Crear, renombrar y eliminar carpetas de la biblioteca de archivos.', module: 'files' },
 ];
 

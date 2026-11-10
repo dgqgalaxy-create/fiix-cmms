@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.106.0";
+export const APP_VERSION = "1.107.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -35,6 +35,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: Workflows de aprobación — reglas por prioridad, tipo de mantenimiento o activo crítico; si una orden las cumple queda «por aprobar» y no puede iniciarse ni finalizarse hasta que alguien con el permiso «Aprobar órdenes» la autorice o la rechace (con motivo). Queda historial y aviso en la tabla.",
     "Nuevo: Integraciones — llaves de API (lectura y escritura) y webhooks firmados (HMAC-SHA256) para órdenes creadas, actualizadas o con comentarios. La API pública vive en /api/v1 con el encabezado X-API-Key; en Configuración → Integraciones se crean, prueban y revocan.",
     "Nuevo: Campos personalizados — el administrador define campos propios (texto, texto largo, número, fecha, lista o sí/no, obligatorios u opcionales) para órdenes de trabajo, activos y repuestos desde Configuración. Aparecen en la ficha de cada registro para capturarlos.",
     "Nuevo: aviso de cambios en órdenes de trabajo — un círculo verde palpitante junto al folio indica que la orden tuvo actividad (comentario, cambio de estado, asignación) después de tu última visita; desaparece al abrir el detalle. Es por usuario.",

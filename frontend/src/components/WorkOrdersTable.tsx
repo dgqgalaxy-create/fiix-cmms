@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { WorkOrder } from '../api/workOrders';
 import { Clock, CheckCircle2, AlertCircle, Wrench, Calendar, MapPin, Tag, User, ChevronUp, ChevronDown, Camera, MessageSquare, Eye, Trash2, MoreVertical, EyeOff, GripVertical, Columns3, Table2, LayoutGrid } from 'lucide-react';
 import { SlaBadge } from './SlaBadge';
@@ -688,6 +688,14 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                         <span className="bg-slate-800 dark:bg-slate-700 text-white px-2.5 py-1 print:px-0.5 print:py-0 rounded-md print:rounded-sm text-xs print:text-[7.5px] font-bold tracking-wide print:tracking-normal">
                           {formatWorkOrderFolio(wo.folio)}
                         </span>
+                        {(wo as any).approval_status === 'PENDIENTE' && (
+                          <span
+                            className="rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200 print:hidden"
+                            title="Requiere aprobación"
+                          >
+                            Por aprobar
+                          </span>
+                        )}
                         {wo.has_updates && (
                           <span
                             className="relative inline-flex h-2.5 w-2.5 print:hidden"

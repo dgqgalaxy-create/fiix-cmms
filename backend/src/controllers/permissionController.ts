@@ -39,6 +39,7 @@ export const defaultPermissions: Record<Role, any> = {
     MANAGE_FILE_FOLDERS: true,
     MANAGE_LINE_COSTS: true,
     ASSIGN_CHECKLIST_TECHNICIAN: true,
+    APPROVE_WORK_ORDERS: true,
   },
   GESTIONADOR: {
     MANAGE_USERS: false,
@@ -72,6 +73,7 @@ export const defaultPermissions: Record<Role, any> = {
     MANAGE_FILE_FOLDERS: false,
     MANAGE_LINE_COSTS: false,
     ASSIGN_CHECKLIST_TECHNICIAN: false,
+    APPROVE_WORK_ORDERS: true,
   },
   TECNICO: {
     MANAGE_USERS: false,
@@ -105,6 +107,7 @@ export const defaultPermissions: Record<Role, any> = {
     MANAGE_FILE_FOLDERS: false,
     MANAGE_LINE_COSTS: false,
     ASSIGN_CHECKLIST_TECHNICIAN: false,
+    APPROVE_WORK_ORDERS: false,
   },
   OBSERVADOR: {
     MANAGE_USERS: false,
@@ -138,6 +141,7 @@ export const defaultPermissions: Record<Role, any> = {
     MANAGE_FILE_FOLDERS: false,
     MANAGE_LINE_COSTS: false,
     ASSIGN_CHECKLIST_TECHNICIAN: false,
+    APPROVE_WORK_ORDERS: false,
   },
 };
 

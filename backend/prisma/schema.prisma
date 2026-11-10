@@ -138,6 +138,7 @@ model User {
   work_order_costs     WorkOrderCost[]
   work_order_views     WorkOrderView[]
   api_keys             ApiKey[]
+  approvals_decided    WorkOrderApproval[]
   crew_memberships     CrewMember[]
   preferences          Json?       @default("{}")
 }
@@ -356,6 +357,9 @@ model WorkOrder {
   /// «cambios sin revisar» por usuario.
   last_activity_at    DateTime            @default(now())
   views               WorkOrderView[]
+  /// Estado de aprobación (reglas de autorización).
+  approval_status     ApprovalStatus      @default(NONE)
+  approvals           WorkOrderApproval[]
   /// Cuadrilla asignada a la orden (opcional).
   crew_id             String?             @db.Uuid
   crew                Crew?               @relation(fields: [crew_id], references: [id], onDelete: SetNull)
@@ -1412,4 +1416,42 @@ model WebhookDelivery {
   created_at  DateTime @default(now())
 
   @@index([webhook_id, created_at])
+}
+// ---------------------------------------------------------------------------
+// Aprobaciones: reglas que exigen autorización antes de trabajar una orden.
+// ---------------------------------------------------------------------------
+
+enum ApprovalStatus {
+  NONE
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+}
+
+model ApprovalRule {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  is_active  Boolean  @default(true)
+  /// Condiciones: { priorities: [], maintenance_types: [], asset_critical: bool, zone_ids: [] }
+  conditions Json     @default("{}")
+  sort_order Int      @default(0)
+  created_at DateTime @default(now())
+  approvals  WorkOrderApproval[]
+}
+
+model WorkOrderApproval {
+  id            String         @id @default(uuid()) @db.Uuid
+  work_order_id String         @db.Uuid
+  work_order    WorkOrder      @relation(fields: [work_order_id], references: [id], onDelete: Cascade)
+  rule_id       String?        @db.Uuid
+  rule          ApprovalRule?  @relation(fields: [rule_id], references: [id], onDelete: SetNull)
+  status        ApprovalStatus @default(PENDIENTE)
+  requested_at  DateTime       @default(now())
+  decided_at    DateTime?
+  decided_by_id String?        @db.Uuid
+  decided_by    User?          @relation(fields: [decided_by_id], references: [id], onDelete: SetNull)
+  comment       String?
+
+  @@index([work_order_id])
+  @@index([status])
 }
