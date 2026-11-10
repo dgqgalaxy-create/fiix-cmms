@@ -1,26 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Clock } from 'lucide-react';
+import { formatDate, getDateTimePreferences } from '../utils/dateUtils';
 
+/** Zona de planta por defecto (la preferencia configurada manda). */
 export const PLANT_TZ = 'America/Mexico_City';
 
-const timeFmt = new Intl.DateTimeFormat('es-MX', {
-  timeZone: PLANT_TZ,
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  hourCycle: 'h23',
-});
-const dateFmt = new Intl.DateTimeFormat('es-MX', {
-  timeZone: PLANT_TZ,
-  weekday: 'short',
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-});
-
 /**
- * Reloj de la hora que usa la aplicación (hora de planta, America/Mexico_City).
- * Sirve para saber con qué hora se calculan turnos, KPIs y periodos.
+ * Reloj de la hora que usa la aplicación. Respeta Configuración → Fecha y hora:
+ * zona horaria y formato de 12 o 24 horas.
  */
 export function PlantClock({
   className = '',
@@ -38,13 +25,33 @@ export function PlantClock({
     return () => window.clearInterval(id);
   }, []);
 
-  const time = timeFmt.format(now);
-  const date = dateFmt.format(now);
+  const prefs = getDateTimePreferences();
+  const timeZone = prefs.time_zone || PLANT_TZ;
+
+  let time = '';
+  try {
+    time = new Intl.DateTimeFormat('es-MX', {
+      timeZone,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: prefs.time_format === '12',
+    }).format(now);
+  } catch {
+    time = new Intl.DateTimeFormat('es-MX', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: prefs.time_format === '12',
+    }).format(now);
+  }
+
+  const date = formatDate(now);
 
   return (
     <span
       className={`inline-flex items-center gap-1 whitespace-nowrap tabular-nums ${className}`}
-      title={`Hora de planta · ${date} (${PLANT_TZ})`}
+      title={`Hora de planta · ${date} (${timeZone})`}
       aria-label={`Hora de planta: ${time}`}
     >
       {withIcon && <Clock size={12} className="shrink-0 opacity-80" aria-hidden="true" />}

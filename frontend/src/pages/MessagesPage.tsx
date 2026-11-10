@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DragEvent, ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -19,6 +19,7 @@ import {
   X as XIcon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { formatTime } from '../utils/dateUtils';
 import { getUsers, getOnlineUsers, type User } from '../api/users';
 import {
   listConversations,
@@ -134,7 +135,7 @@ const isEmojiOnlyText = (text: string): boolean => {
 };
 
 const fmtTime = (iso: string) =>
-  new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  formatTime(iso);
 
 const sameCalendarDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() &&

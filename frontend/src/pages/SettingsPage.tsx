@@ -592,8 +592,9 @@ export const SettingsPage = () => {
         time_format: datePrefs.time_format,
       });
       setDateTimePreferences(datePrefs);
-      setDateMsg('Preferencias guardadas.');
-      window.setTimeout(() => setDateMsg(null), 2500);
+      setDateMsg('Preferencias guardadas. Actualizando…');
+      // Recarga suave para que toda la app aplique el nuevo formato ya.
+      window.setTimeout(() => window.location.reload(), 700);
     } catch (err) {
       console.error(err);
       setDateMsg('No se pudo guardar. Revisa permisos o conexión.');

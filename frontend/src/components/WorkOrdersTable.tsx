@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import type { WorkOrder } from '../api/workOrders';
 import { Clock, CheckCircle2, AlertCircle, Wrench, Calendar, MapPin, Tag, User, ChevronUp, ChevronDown, Camera, MessageSquare, Eye, Trash2, MoreVertical, EyeOff, GripVertical, Columns3, Table2, LayoutGrid } from 'lucide-react';
 import { SlaBadge } from './SlaBadge';
 import { formatWorkOrderFolio } from '../utils/folio';
+import { formatTime } from '../utils/dateUtils';
 import { mediaUrl } from '../utils/mediaUrl';
 import { ContextMenu } from './common/ContextMenu';
 
@@ -36,7 +37,7 @@ const formatFriendlyDate = (dateString: string) => {
                     d.getFullYear() === today.getFullYear();
     
     if (isToday) {
-      return `Hoy ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      return 'Hoy ' + formatTime(d);
     }
     
     return d.toLocaleString('es-MX', { 
