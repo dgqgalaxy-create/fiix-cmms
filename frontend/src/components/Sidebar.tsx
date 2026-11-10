@@ -1,4 +1,4 @@
-﻿import { LayoutDashboard, LogOut, Users, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote, MessageSquare, ChevronDown, Gauge, FolderOpen, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, LogOut, Users, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote, MessageSquare, ChevronDown, Gauge, FolderOpen, BarChart3 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getFeatures, isFeatureEnabled } from '../api/features';
 import { useTheme } from '../context/ThemeContext';
@@ -160,6 +160,9 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     if (location.pathname.startsWith('/stats')) {
       setExpandedGroups((prev) => (prev['/stats'] ? prev : { ...prev, '/stats': true }));
     }
+    if (location.pathname.startsWith('/users') || location.pathname.startsWith('/crews')) {
+      setExpandedGroups((prev) => (prev['/users'] ? prev : { ...prev, '/users': true }));
+    }
   }, [location.pathname]);
 
   const refreshNotesBadge = useCallback(async () => {
@@ -225,7 +228,6 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         ],
       },
       { name: 'Checklist Diario', path: '/checklists', icon: <ClipboardCheck size={16} /> },
-      { name: 'Cuadrillas', path: '/crews', icon: <Users size={16} /> },
       { name: 'Horarios', path: '/roster', icon: <Clock size={16} /> },
       { name: 'Calendario', path: '/calendar', icon: <Calendar size={16} /> },
     ];
@@ -237,7 +239,15 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
       availableItems.push({ name: 'Planes Preventivos', path: '/maintenance-plans', icon: <CalendarClock size={16} /> });
     }
     if (hasPermission('MANAGE_USERS')) {
-      availableItems.push({ name: 'Personal', path: '/users', icon: <Users size={16} /> });
+      availableItems.push({
+        name: 'Personal',
+        path: '/users',
+        icon: <Users size={16} />,
+        children: [
+          { name: 'Directorio', to: '/users' },
+          { name: 'Cuadrillas', to: '/crews' },
+        ],
+      });
     }
     if (hasPermission('VIEW_RCA')) {
       availableItems.push({ name: 'Árbol de Fallas', path: '/rca', icon: <GitBranch size={16} /> });
