@@ -1,4 +1,5 @@
-﻿import { useEscapeKey } from '../hooks/useEscapeKey';
+import { useAnimatedClose } from '../hooks/useAnimatedClose';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { useState, useEffect } from 'react';
 import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck, AlertTriangle, Clock, Wrench, Package, CalendarClock, Layers, Pencil, Loader2 } from 'lucide-react';
 import type { Asset } from '../api/assets';
@@ -40,7 +41,8 @@ const WO_STATUS_LABELS: Record<string, string> = {
 };
 
 export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit, variant = 'modal' }: Props) => {
-  useEscapeKey(onClose, isOpen);
+  const { closing, requestClose } = useAnimatedClose(onClose, isOpen);
+  useEscapeKey(requestClose, isOpen && !closing);
   const isDrawer = variant === 'drawer';
   const { hasPermission, user } = useAuth();
   const canManageItems = hasPermission('MANAGE_INVENTORY');
@@ -65,6 +67,13 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit, vari
     return () => { cancelled = true; };
   }, [isOpen, asset?.id]);
 
+  const panelClass = `bg-white dark:bg-slate-900 shadow-2xl overflow-hidden flex flex-col ${
+    isDrawer ? 'h-full w-full max-w-3xl' : 'rounded-3xl w-full max-w-4xl max-h-[90vh]'
+  } ${
+    closing
+      ? (isDrawer ? 'animate-slide-out-right' : 'animate-zoom-out')
+      : (isDrawer ? 'animate-in slide-in-from-right duration-300' : 'animate-in zoom-in-95 duration-200')
+  }`;
   useEffect(() => {
     if (isOpen && asset) {
       setActiveTab('info');
@@ -140,17 +149,12 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit, vari
     <>
     <div
       className={`fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm ${isDrawer ? 'flex justify-end' : 'flex items-center justify-center p-4 animate-in fade-in duration-200'}`}
-      onClick={isDrawer ? onClose : undefined}
+      onClick={isDrawer ? requestClose : undefined}
     >
       <div
         onClick={isDrawer ? (event) => event.stopPropagation() : undefined}
-        className={
-          isDrawer
-            ? 'bg-white dark:bg-slate-900 shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col h-full animate-in slide-in-from-right duration-300 sm:rounded-l-3xl'
-            : 'bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200'
-        }
+        className={panelClass}
       >
-        
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-start bg-slate-50/50 dark:bg-slate-900/50">
           <div className="flex gap-4">
@@ -168,7 +172,7 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit, vari
             </div>
           </div>
           <button 
-            onClick={onClose}
+            onClick={requestClose}
             className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-white dark:bg-slate-900 rounded-xl transition-colors"
           >
             <X size={20} />

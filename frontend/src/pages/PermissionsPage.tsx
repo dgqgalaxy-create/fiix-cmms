@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import {
   Shield, Loader2, CheckCircle2, Search, Users, Wrench, Package, ShoppingCart,
@@ -375,7 +375,7 @@ export const PermissionsPage = () => {
           <form
             onSubmit={handleCreate}
             onClick={(event) => event.stopPropagation()}
-            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+            className="animate-in fade-in zoom-in-95 duration-200 w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
           >
             <div className="mb-3 flex items-start justify-between">
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Nuevo rol</h2>

@@ -1,4 +1,5 @@
-import { X } from 'lucide-react';
+﻿import { X } from 'lucide-react';
+import { useAnimatedClose } from '../../hooks/useAnimatedClose';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import type { InventoryTransaction } from '../../api/inventory';
 import { formatDateTime } from '../../utils/dateUtils';
@@ -12,7 +13,8 @@ interface Props {
 }
 
 export const TransactionDetailModal = ({ isOpen, onClose, transaction, variant = 'modal' }: Props) => {
-  useEscapeKey(onClose, isOpen);
+  const { closing, requestClose } = useAnimatedClose(onClose, isOpen);
+  useEscapeKey(requestClose, isOpen && !closing);
   if (!isOpen || !transaction) return null;
 
   const isDrawer = variant === 'drawer';
@@ -20,15 +22,11 @@ export const TransactionDetailModal = ({ isOpen, onClose, transaction, variant =
   return (
     <div
       className={`fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm ${isDrawer ? 'flex justify-end' : 'flex items-center justify-center p-4'}`}
-      onClick={isDrawer ? onClose : undefined}
+      onClick={isDrawer ? requestClose : undefined}
     >
       <div
         onClick={isDrawer ? (event) => event.stopPropagation() : undefined}
-        className={
-          isDrawer
-            ? 'flex h-full w-full max-w-md flex-col overflow-hidden bg-white shadow-2xl animate-in slide-in-from-right duration-300 dark:bg-slate-900 sm:rounded-l-2xl'
-            : 'bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden'
-        }
+        className={`${isDrawer ? 'flex h-full w-full max-w-md flex-col overflow-hidden bg-white shadow-2xl dark:bg-slate-900 sm:rounded-l-2xl' : 'bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden'} ${closing ? (isDrawer ? 'animate-slide-out-right' : 'animate-zoom-out') : (isDrawer ? 'animate-in slide-in-from-right duration-300' : 'animate-in zoom-in-95 duration-200')}`}
       >
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
           <div className="min-w-0">
@@ -39,7 +37,7 @@ export const TransactionDetailModal = ({ isOpen, onClose, transaction, variant =
               {transaction.amount > 0 ? 'Entrada' : 'Salida'} · {formatDateTime(transaction.created_at)}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
+          <button onClick={requestClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -97,7 +95,7 @@ export const TransactionDetailModal = ({ isOpen, onClose, transaction, variant =
         <div className={`border-t border-slate-100 p-6 flex justify-end gap-3 dark:border-slate-800 ${isDrawer ? 'shrink-0' : 'mt-2 pt-6'}`}>
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             className="px-5 py-2.5 bg-blue-50 text-blue-600 dark:bg-slate-800 dark:text-blue-400 font-semibold hover:bg-blue-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
           >
             Cerrar

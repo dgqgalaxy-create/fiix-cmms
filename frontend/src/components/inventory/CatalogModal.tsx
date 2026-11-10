@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import { useAnimatedClose } from '../../hooks/useAnimatedClose';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { X, Save, Trash2, Upload, Building2 } from 'lucide-react';
 import { 
@@ -22,7 +23,8 @@ interface Props {
 }
 
 export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, allItems, onSelectItem, variant = 'modal' }: Props) => {
-  useEscapeKey(onClose, isOpen);
+  const { closing, requestClose } = useAnimatedClose(onClose, isOpen);
+  useEscapeKey(requestClose, isOpen && !closing);
   const [formData, setFormData] = useState<any>({
     internal_id: '',
     name: '',
@@ -152,15 +154,11 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
   return (
     <div
       className={`fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm ${isDrawer ? 'flex justify-end' : 'flex items-center justify-center p-4'}`}
-      onClick={isDrawer ? onClose : undefined}
+      onClick={isDrawer ? requestClose : undefined}
     >
       <div
         onClick={isDrawer ? (event) => event.stopPropagation() : undefined}
-        className={
-          isDrawer
-            ? 'flex h-full w-full max-w-xl flex-col overflow-hidden bg-white shadow-2xl animate-in slide-in-from-right duration-300 dark:bg-slate-900 sm:rounded-l-2xl'
-            : 'bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden'
-        }
+        className={`${isDrawer ? 'flex h-full w-full max-w-xl flex-col overflow-hidden bg-white shadow-2xl dark:bg-slate-900 sm:rounded-l-2xl' : 'bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden'} ${closing ? (isDrawer ? 'animate-slide-out-right' : 'animate-zoom-out') : (isDrawer ? 'animate-in slide-in-from-right duration-300' : 'animate-in zoom-in-95 duration-200')}`}
       >
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
           <div className="min-w-0">
@@ -169,7 +167,7 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
               <p className="truncate font-mono text-[11px] text-slate-500 dark:text-slate-400">{item.internal_id}</p>
             )}
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
+          <button onClick={requestClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -325,7 +323,7 @@ export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, a
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={requestClose}
                   className="px-5 py-2.5 text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-xl transition-colors"
                 >
                   {readOnly ? 'Cerrar' : 'Cancelar'}

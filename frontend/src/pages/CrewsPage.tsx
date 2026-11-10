@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Users, Plus, Pencil, Trash2, Loader2, X, Search, MapPin, CheckCircle2,
 } from 'lucide-react';
@@ -242,7 +242,7 @@ export default function CrewsPage() {
           <form
             onSubmit={save}
             onClick={(event) => event.stopPropagation()}
-            className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+            className="animate-in fade-in zoom-in-95 duration-200 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
           >
             <div className="flex items-start justify-between border-b border-slate-100 p-4 dark:border-slate-800">
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">

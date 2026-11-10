@@ -614,3 +614,64 @@ tbody tr {
 .ui-btn-icon {
   @apply inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 hover:text-emerald-600 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800;
 }
+/* ==========================================================================
+   Pulido global: se aplica a toda la app sin tocar cada pantalla.
+   ========================================================================== */
+
+/* Botones: transición uniforme y micro-presión (solo con puntero). */
+button:not(:disabled),
+a[role='button']:not([aria-disabled='true']) {
+  transition-property: background-color, border-color, color, box-shadow, transform, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+}
+@media (hover: hover) {
+  button:not(:disabled):active {
+    transform: translateY(0.5px) scale(0.995);
+  }
+}
+
+/* Campos: foco consistente con el color de la marca. */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 22%, transparent);
+  border-color: color-mix(in oklab, var(--color-primary) 60%, var(--color-border));
+}
+
+/* Tarjetas y contenedores con borde: sombra suave al pasar el mouse (solo hover real). */
+@media (hover: hover) {
+  .rounded-2xl.border.bg-white:hover,
+  .rounded-3xl.border.bg-white:hover {
+    border-color: color-mix(in oklab, var(--color-primary) 28%, var(--color-border));
+  }
+}
+
+/* Tablas: encabezado ligeramente pegajoso en contenedores con scroll propio. */
+.table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background-color: rgb(248 250 252);
+}
+.dark .table-scroll thead th {
+  background-color: rgb(15 23 42 / 0.98);
+}
+
+/* Enlaces de texto: subrayado animado sutil. */
+.link-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: background-size 200ms ease;
+}
+.link-underline:hover {
+  background-size: 100% 1px;
+}
+
+/* Cualquier panel/modal usa la curva del sistema al animarse. */
+.animate-in {
+  animation-timing-function: var(--ease-out-quart);
+}

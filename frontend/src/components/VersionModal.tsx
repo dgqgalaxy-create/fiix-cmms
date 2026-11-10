@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.111.0";
+export const APP_VERSION = "1.112.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -35,6 +35,8 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Mejora visual (toda la app): animación de entrada y salida en los modales de activos, usuarios, catálogo, movimientos, turnos, kits, cuadrillas, contratistas y permisos; foco e interacción de botones y campos unificados; encabezados de tabla fijos con sombra al hacer scroll.",
+    "Corrección: el punto de «cambios sin revisar» en Órdenes ya no palpita al abrir el detalle (se apaga al hacer clic y la animación es más tenue).",
     "Mejora visual: las tablas muestran una silueta con brillo mientras cargan (en lugar de «Cargando…»), el encabezado de las tablas proyecta sombra al hacer scroll y las gráficas de Estadística animan sus barras al cambiar de periodo.",
     "Mejora visual: los paneles laterales (detalle de OT y de repuesto) ahora tienen animación de salida al cerrarse; se agregaron las variantes de botón «fantasma» e «icono», y se mejoró el contraste del texto atenuado en modo oscuro.",
     "Nuevo: idioma de la interfaz — Configuración → Idioma permite elegir Español o English. Se aplica a la navegación, la pantalla de acceso y el resto de textos que ya están traducidos; los módulos pendientes siguen en español y se irán migrando.",

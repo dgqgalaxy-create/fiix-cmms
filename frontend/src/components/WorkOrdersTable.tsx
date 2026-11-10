@@ -104,6 +104,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
       return base;
     }
   });
+  const [openingId, setOpeningId] = useState<string | null>(null);
   const [hiddenCols, setHiddenCols] = useState<WoCol[]>(() => {
     try {
       const raw = localStorage.getItem(WO_TABLE_KEY);
@@ -674,7 +675,7 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                 return (
                 <tr
                   key={wo.id} 
-                  onClick={() => onRowClick && onRowClick(wo)}
+                  onClick={() => { setOpeningId(wo.id); onRowClick && onRowClick(wo); }}
                   onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, wo }); }}
                   className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group print:break-inside-avoid ${
                     rowPhotoUrl ? 'wo-photo-row' : ''
@@ -697,13 +698,13 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                             Por aprobar
                           </span>
                         )}
-                        {wo.has_updates && (
+                        {wo.has_updates && openingId !== wo.id && (
                           <span
                             className="relative inline-flex h-2.5 w-2.5 print:hidden"
                             title="Cambios sin revisar"
                             aria-label="Cambios sin revisar"
                           >
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
                             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
                           </span>
                         )}

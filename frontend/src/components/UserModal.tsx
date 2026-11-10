@@ -1,3 +1,4 @@
+﻿import { useAnimatedClose } from '../hooks/useAnimatedClose';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 import { useState, useEffect } from 'react';
 import { X, Loader2, Save, Trash2, Eye, EyeOff } from 'lucide-react';
@@ -15,7 +16,8 @@ interface Props {
 }
 
 export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) => {
-  useEscapeKey(onClose, isOpen);
+  const { closing, requestClose } = useAnimatedClose(onClose, isOpen);
+  useEscapeKey(requestClose, isOpen && !closing);
   const { user: currentUser } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -114,15 +116,15 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}></div>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${closing ? 'animate-fade-out' : 'animate-in fade-in duration-150'}`}>
+      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={requestClose}></div>
 
-      <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+      <div className={`relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] ${closing ? 'animate-zoom-out' : 'animate-in zoom-in-95 duration-200'}`}>
         <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
           <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">
             {isEditing ? 'Editar Usuario' : 'Nuevo Usuario'}
           </h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
+          <button onClick={requestClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -271,7 +273,7 @@ export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) 
              )}
           </div>
           <div className="flex gap-3">
-            <button type="button" onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">
+            <button type="button" onClick={requestClose} className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">
               Cancelar
             </button>
             <button type="submit" form="user-form" disabled={isSubmitting} className="px-6 py-2.5 flex items-center justify-center gap-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-emerald-950 disabled:opacity-70 rounded-xl shadow-sm shadow-emerald-700/20 transition-colors">

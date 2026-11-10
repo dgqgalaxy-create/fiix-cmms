@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
+import { useAnimatedClose } from '../hooks/useAnimatedClose';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 import { X, Loader2, CalendarClock, Trash2, AlertTriangle, Check } from 'lucide-react';
 import { format } from 'date-fns';
@@ -28,7 +29,8 @@ export const PersonnelShiftModal = ({
   canManage: boolean;
   onSaved: () => void;
 }) => {
-  useEscapeKey(onClose, true);
+  const { closing, requestClose } = useAnimatedClose(onClose, true);
+  useEscapeKey(requestClose, true && !closing);
   const [history, setHistory] = useState<TechnicianPattern[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,17 +89,17 @@ export const PersonnelShiftModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex justify-end bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[70] flex justify-end bg-slate-900/50 backdrop-blur-sm" onClick={requestClose}>
       <div
         onClick={(event) => event.stopPropagation()}
-        className="flex h-full w-full max-w-lg flex-col overflow-hidden bg-white shadow-2xl animate-in slide-in-from-right duration-300 dark:bg-slate-900 sm:rounded-l-2xl"
+        className={`flex h-full w-full max-w-lg flex-col overflow-hidden bg-white shadow-2xl dark:bg-slate-900 sm:rounded-l-2xl ${closing ? 'animate-slide-out-right' : 'animate-in slide-in-from-right duration-300'}`}
       >
         <div className="flex items-start justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div className="min-w-0">
             <h2 className="truncate text-lg font-bold text-slate-900 dark:text-slate-100">{user.name}</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">Turno y patrones</p>
           </div>
-          <button onClick={onClose} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Cerrar">
+          <button onClick={requestClose} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Cerrar">
             <X size={18} />
           </button>
         </div>
