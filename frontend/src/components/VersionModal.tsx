@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.101.0";
+export const APP_VERSION = "1.101.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -35,6 +35,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Mejora: el detalle de una orden de trabajo ahora se abre como panel lateral derecho (igual que el detalle de repuestos), con encabezado fijo y contenido con desplazamiento propio.",
     "Nuevo: Portal de solicitudes configurable — elige qué campos pide el formulario público, cuáles son obligatorios, qué opciones aparecen en prioridad, tipo de mantenimiento y grupo, y los textos de bienvenida y de confirmación.",
     "Nuevo: Kits de repuestos — agrupa repuestos que se usan juntos, consulta para cuántos kits alcanza el stock y consúmelos en una orden con un clic (descuenta existencias y suma al costo de la OT).",
     "Mejora: KPIs y Metas ahora vive dentro de Estadística, como un acceso más del desplegable en la barra lateral.",

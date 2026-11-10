@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, CheckCircle2, Users, UserPlus, PauseCircle, PlayCircle, ChevronLeft, ChevronRight, ZoomIn, StickyNote } from 'lucide-react';
 import type { WorkOrder } from '../api/workOrders';
@@ -630,11 +630,16 @@ export const WorkOrderDetailModal = ({
 
   return (
     <ErrorBoundary>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
-        <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}></div>
-
-        <div className="relative bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[96vh] sm:max-h-[92vh]">
-        <div className="px-4 py-3 sm:px-5 sm:py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-start gap-3 bg-slate-50/50 dark:bg-slate-900/50">
+      {/* Panel lateral derecho: mismo patrón que el detalle de repuestos. */}
+      <div
+        className="fixed inset-0 z-[60] flex justify-end bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200"
+        onClick={onClose}
+      >
+        <div
+          onClick={(event) => event.stopPropagation()}
+          className="flex h-full w-full max-w-5xl flex-col overflow-hidden bg-white shadow-2xl animate-in slide-in-from-right duration-300 dark:bg-slate-900 sm:border-l sm:border-slate-200 dark:sm:border-slate-800"
+        >
+        <div className="shrink-0 px-4 py-3 sm:px-5 sm:py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-start gap-3 bg-slate-50/50 dark:bg-slate-900/50">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1">
@@ -715,7 +720,7 @@ export const WorkOrderDetailModal = ({
           </div>
         </div>
 
-        <div className="p-4 sm:p-5 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
           {remoteEditorName && (
             <div className="mb-4 p-3 sm:p-4 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 rounded-xl text-sm font-medium border border-amber-200 dark:border-amber-800 flex items-start gap-2">
               <Users size={18} className="shrink-0 mt-0.5" />
