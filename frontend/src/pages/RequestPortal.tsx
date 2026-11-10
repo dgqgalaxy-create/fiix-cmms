@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { FormEvent, ChangeEvent } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { BACKEND_URL } from '../api/axios';
 import { compressImageFile, dataUrlToFile, fileToDataUrl } from '../utils/imageCompress';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { formatWorkOrderFolio } from '../utils/folio';
+import { getPublicPortalConfig, type PortalConfig } from '../api/portal';
 
 interface Zone {
   id: string;
@@ -83,6 +84,14 @@ export const RequestPortal = () => {
 
   /** El portal puede desactivarse desde Configuración → Características. */
   const [portalEnabled, setPortalEnabled] = useState<boolean | null>(null);
+  /** Campos, catálogos y textos configurados por el administrador. */
+  const [portalCfg, setPortalCfg] = useState<PortalConfig | null>(null);
+
+  /** Sin configuración cargada, el formulario se comporta como siempre. */
+  const showField = (key: keyof PortalConfig['fields']) => (portalCfg ? portalCfg.fields[key].enabled : true);
+  const requireField = (key: keyof PortalConfig['fields']) => (portalCfg ? portalCfg.fields[key].required : true);
+  const requiredMark = (key: keyof PortalConfig['fields']) =>
+    requireField(key) ? <span className="text-red-500">*</span> : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -96,6 +105,33 @@ export const RequestPortal = () => {
       });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPublicPortalConfig()
+      .then((cfg) => {
+        if (cancelled) return;
+        setPortalCfg({
+          intro_text: cfg.intro_text,
+          success_text: cfg.success_text,
+          fields: cfg.fields,
+          options: {
+            priorities: cfg.options.priorities.map((option) => option.value),
+            maintenance_types: cfg.options.maintenance_types.map((option) => option.value),
+            production_groups: cfg.options.production_groups.map((option) => option.value),
+          },
+        });
+      })
+      .catch(() => { /* sin configuración se usa el formulario completo */ });
+    return () => { cancelled = true; };
+  }, []);
+  // Si el administrador quitó una opción, movemos el valor por defecto a la primera válida.
+  useEffect(() => {
+    if (!portalCfg) return;
+    setPriority((current) => (portalCfg.options.priorities.includes(current) ? current : portalCfg.options.priorities[0]));
+    setMaintenanceType((current) => (portalCfg.options.maintenance_types.includes(current) ? current : portalCfg.options.maintenance_types[0]));
+    setProductionGroup((current) => (portalCfg.options.production_groups.includes(current) ? current : portalCfg.options.production_groups[0]));
+  }, [portalCfg]);
 
   const [zones, setZones] = useState<Zone[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -370,6 +406,9 @@ export const RequestPortal = () => {
             <CheckCircle2 size={40} className="text-emerald-500 dark:text-emerald-400" />
           </div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">¡Solicitud Enviada!</h2>
+          <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
+            {portalCfg?.success_text ?? "Tu solicitud fue registrada. Guarda el folio para consultar su avance."}
+          </p>
           {submittedSummary && (
             <div className="mb-5 text-left rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 overflow-hidden">
               <div className="px-4 py-3 bg-emerald-50 dark:bg-emerald-950/30 border-b border-emerald-100 dark:border-emerald-900">
@@ -463,7 +502,9 @@ export const RequestPortal = () => {
         <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
           <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
             <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Nueva Solicitud de Mantenimiento</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Completa el formulario para reportar una falla.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              {portalCfg?.intro_text ?? "Completa el formulario para reportar una falla."}
+            </p>
           </div>
 
           <form
@@ -504,16 +545,18 @@ export const RequestPortal = () => {
               />
             </div>
 
+            {showField('description') && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción {requiredMark('description')}</label>
               <textarea
+                required={requireField('description')}
                 rows={3}
                 className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all resize-none"
                 placeholder="Detalla el problema o tarea a realizar..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
-            </div>
+            </div>) }
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -555,93 +598,97 @@ export const RequestPortal = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Prioridad <span className="text-red-500">*</span></label>
-                <SearchableSelect
-                  required
-                  value={priority}
-                  onChange={setPriority}
-                  options={[
-                    { value: 'BAJO', label: 'Bajo' },
-                    { value: 'NORMAL', label: 'Normal' },
-                    { value: 'URGENTE', label: 'Urgente' },
-                  ]}
-                  placeholder="Buscar…"
-                  inputClassName="w-full px-4 py-3 pr-8 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
-                />
-              </div>
+              {showField('priority') && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Prioridad {requiredMark('priority')}</label>
+                  <SearchableSelect
+                    required={requireField('priority')}
+                    value={priority}
+                    onChange={setPriority}
+                    options={(portalCfg?.options.priorities ?? ['BAJO', 'NORMAL', 'URGENTE']).map((value) => ({
+                      value,
+                      label: value === 'BAJO' ? 'Bajo' : value === 'NORMAL' ? 'Normal' : value === 'URGENTE' ? 'Urgente' : value,
+                    }))}
+                    placeholder="Buscar…"
+                    inputClassName="w-full px-4 py-3 pr-8 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
+                  />
+                </div>
+              )}
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de Mantenimiento <span className="text-red-500">*</span></label>
-                <SearchableSelect
-                  required
-                  value={maintenanceType}
-                  onChange={setMaintenanceType}
-                  options={[
-                    { value: 'SERVICIO', label: 'Servicio' },
-                    { value: 'PREVENTIVO', label: 'Preventivo' },
-                    { value: 'CORRECTIVO', label: 'Correctivo' },
-                  ]}
-                  placeholder="Buscar…"
-                  inputClassName="w-full px-4 py-3 pr-8 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
-                />
-              </div>
+              {showField('maintenance_type') && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de Mantenimiento {requiredMark('maintenance_type')}</label>
+                  <SearchableSelect
+                    required={requireField('maintenance_type')}
+                    value={maintenanceType}
+                    onChange={setMaintenanceType}
+                    options={(portalCfg?.options.maintenance_types ?? ['SERVICIO', 'PREVENTIVO', 'CORRECTIVO']).map((value) => ({
+                      value,
+                      label: value === 'SERVICIO' ? 'Servicio' : value === 'PREVENTIVO' ? 'Preventivo' : value === 'CORRECTIVO' ? 'Correctivo' : value,
+                    }))}
+                    placeholder="Buscar…"
+                    inputClassName="w-full px-4 py-3 pr-8 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-all outline-none transition-all"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre del Solicitante <span className="text-red-500">*</span></label>
-                {isLoadingData ? (
-                  <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 flex items-center gap-2">
-                    <Loader2 className="animate-spin" size={16} /> Cargando solicitantes...
-                  </div>
-                ) : (
+              {showField('requester') && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre del Solicitante {requiredMark('requester')}</label>
+                  {isLoadingData ? (
+                    <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 flex items-center gap-2">
+                      <Loader2 className="animate-spin" size={16} /> Cargando solicitantes...
+                    </div>
+                  ) : (
+                    <SearchableSelect
+                      required={requireField('requester')}
+                      value={requesterName}
+                      onChange={(v) => {
+                        setRequesterName(v);
+                        if (v !== '__OTHER__') setCustomRequester('');
+                      }}
+                      options={[
+                        ...requesters.map((name) => ({ value: name, label: name })),
+                        { value: '__OTHER__', label: 'Otro (escribir nombre)...' },
+                      ]}
+                      placeholder="Selecciona un solicitante"
+                      inputClassName="w-full px-4 py-3 pr-8 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
+                    />
+                  )}
+                  {requesterName === '__OTHER__' && (
+                    <input
+                      type="text"
+                      required={requireField('requester')}
+                      className="mt-2 w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
+                      placeholder="Escribe tu nombre completo"
+                      value={customRequester}
+                      onChange={(e) => setCustomRequester(e.target.value)}
+                    />
+                  )}
+                </div>
+              )}
+
+              {showField('production_group') && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Grupo de Producción {requiredMark('production_group')}</label>
                   <SearchableSelect
-                    required
-                    value={requesterName}
-                    onChange={(v) => {
-                      setRequesterName(v);
-                      if (v !== '__OTHER__') setCustomRequester('');
-                    }}
-                    options={[
-                      ...requesters.map((name) => ({ value: name, label: name })),
-                      { value: '__OTHER__', label: 'Otro (escribir nombre)...' },
-                    ]}
-                    placeholder="Selecciona un solicitante"
+                    required={requireField('production_group')}
+                    value={productionGroup}
+                    onChange={setProductionGroup}
+                    options={(portalCfg?.options.production_groups ?? ['A', 'B', 'C', 'D', 'NA']).map((value) => ({
+                      value,
+                      label: value === 'NA' ? 'N/A' : `Grupo ${value}`,
+                    }))}
+                    placeholder="Buscar…"
                     inputClassName="w-full px-4 py-3 pr-8 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
                   />
-                )}
-                {requesterName === '__OTHER__' && (
-                  <input
-                    type="text"
-                    required
-                    className="mt-2 w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
-                    placeholder="Escribe tu nombre completo"
-                    value={customRequester}
-                    onChange={(e) => setCustomRequester(e.target.value)}
-                  />
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Grupo de Producción <span className="text-red-500">*</span></label>
-                <SearchableSelect
-                  required
-                  value={productionGroup}
-                  onChange={setProductionGroup}
-                  options={[
-                    { value: 'A', label: 'Grupo A' },
-                    { value: 'B', label: 'Grupo B' },
-                    { value: 'C', label: 'Grupo C' },
-                    { value: 'D', label: 'Grupo D' },
-                    { value: 'NA', label: 'N/A' },
-                  ]}
-                  placeholder="Buscar…"
-                  inputClassName="w-full px-4 py-3 pr-8 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
-                />
-              </div>
+                </div>
+              )}
             </div>
 
+            {showField('machine_stopped') && (
             <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
@@ -656,9 +703,12 @@ export const RequestPortal = () => {
                 </div>
               </label>
             </div>
+            )}
 
+            {showField('photo') && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Foto de la falla (opcional)</label>
+
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Foto de la falla {requiredMark('photo')}</label>
               <div className="flex gap-2">
                 <label className={`flex-1 flex flex-col items-center justify-center py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors text-slate-600 dark:text-slate-400 ${compressing ? 'opacity-60 pointer-events-none' : ''}`}>
                   <span className="text-xl mb-1">📷</span>
@@ -704,8 +754,10 @@ export const RequestPortal = () => {
                 </div>
               )}
             </div>
+            )}
 
             <button
+
               type="submit"
               disabled={loading || compressing || !isOnline || isLoadingData}
               className={`w-full flex items-center justify-center gap-2 font-bold py-3 px-4 rounded-xl transition-all ${

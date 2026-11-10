@@ -9,6 +9,7 @@ import { upload } from '../middlewares/upload';
 import { createRateLimiter } from '../middlewares/rateLimit';
 import prisma from '../config/prisma';
 import { isFeatureEnabled } from '../utils/features';
+import { mergePortalConfig, portalOptionsForClient } from '../utils/portalConfig';
 
 const router = Router();
 
@@ -29,6 +30,23 @@ const publicGetLimiter = createRateLimiter({
 router.get('/portal-status', publicGetLimiter, async (_req, res) => {
   const enabled = await isFeatureEnabled('request_portal');
   res.json({ enabled });
+});
+
+/** Configuración del formulario público (campos, obligatorios, catálogos, textos). */
+router.get('/portal-config', publicGetLimiter, async (_req, res) => {
+  try {
+    const settings = await prisma.systemSettings.findFirst({ select: { portal_config: true } });
+    const config = mergePortalConfig(settings?.portal_config);
+    res.json({
+      intro_text: config.intro_text,
+      success_text: config.success_text,
+      fields: config.fields,
+      options: portalOptionsForClient(config),
+    });
+  } catch (error) {
+    console.error('Error obteniendo la configuración del portal:', error);
+    res.status(500).json({ error: 'No se pudo obtener la configuración del portal' });
+  }
 });
 
 /**

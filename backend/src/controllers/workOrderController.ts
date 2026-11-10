@@ -1,5 +1,6 @@
 ﻿import { workOrderPeriod } from '../utils/workOrderPeriod';
 import { Request, Response } from 'express';
+import { mergePortalConfig } from '../utils/portalConfig';
 import type { Prisma } from '@prisma/client';
 import prisma from '../config/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
@@ -572,6 +573,54 @@ export const createPublicWorkOrder = async (req: Request, res: Response): Promis
       return;
     }
 
+    // Configuración del portal (Configuración → Portal de solicitudes).
+    const portalSettings = await prisma.systemSettings.findFirst({ select: { portal_config: true } });
+    const portal = mergePortalConfig(portalSettings?.portal_config);
+    const hasFile = Boolean((req as any).files?.['request_image']?.length);
+
+    const missing = (label: string) => {
+      res.status(400).json({ error: `Falta un dato obligatorio: ${label}` });
+      return;
+    };
+
+    if (portal.fields.description.required && !String(description ?? '').trim()) {
+      missing('Descripción');
+      return;
+    }
+    if (portal.fields.requester.enabled && portal.fields.requester.required && !String(requester_name ?? '').trim()) {
+      missing('Nombre del solicitante');
+      return;
+    }
+    if (portal.fields.photo.enabled && portal.fields.photo.required && !hasFile) {
+      missing('Foto de la falla');
+      return;
+    }
+
+    const normalizeOption = (value: unknown, allowed: string[], fallback: string, label: string): string | null => {
+      const raw = String(value ?? '').trim().toUpperCase();
+      if (!raw) return fallback;
+      if (!allowed.includes(raw)) {
+        res.status(400).json({ error: `Valor no permitido en ${label}: ${raw}` });
+        return null;
+      }
+      return raw;
+    };
+
+    const priorityValue = portal.fields.priority.enabled
+      ? normalizeOption(priority, portal.options.priorities, portal.options.priorities[0], 'Prioridad')
+      : portal.options.priorities[0];
+    if (priorityValue === null) return;
+
+    const maintenanceValue = portal.fields.maintenance_type.enabled
+      ? normalizeOption(maintenance_type, portal.options.maintenance_types, portal.options.maintenance_types[0], 'Tipo de mantenimiento')
+      : portal.options.maintenance_types[0];
+    if (maintenanceValue === null) return;
+
+    const productionValue = portal.fields.production_group.enabled
+      ? normalizeOption(production_group, portal.options.production_groups, portal.options.production_groups[0], 'Grupo de producción')
+      : portal.options.production_groups[0];
+    if (productionValue === null) return;
+
     const fullDescription = location ? `Ubicación: ${location}\n\n${description || ''}` : description;
 
     // We need a created_by_id because the schema requires it. We assign it to an admin.
@@ -601,13 +650,15 @@ export const createPublicWorkOrder = async (req: Request, res: Response): Promis
         description: fullDescription,
         asset_id,
         zone_id,
-        machine_stopped: machine_stopped === true || machine_stopped === 'true',
-        requester_name,
+        machine_stopped: portal.fields.machine_stopped.enabled
+          ? (machine_stopped === true || machine_stopped === 'true')
+          : false,
+        requester_name: portal.fields.requester.enabled ? requester_name : null,
         created_by_id: adminUser.id,
         status: 'PENDIENTE' as any,
-        priority: (priority || 'NORMAL') as any,
-        maintenance_type: (maintenance_type || 'CORRECTIVO') as any,
-        production_group: (production_group || 'NA') as any,
+        priority: priorityValue as any,
+        maintenance_type: maintenanceValue as any,
+        production_group: productionValue as any,
         request_image_url,
       },
       include: {

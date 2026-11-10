@@ -1,7 +1,7 @@
-﻿import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft } from 'lucide-react';
+import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft, Globe } from 'lucide-react';
 import { PermissionsPage } from './PermissionsPage';
 import { DeveloperOptions } from './DeveloperOptions';
 import { ChecklistCatalogue } from '../components/ChecklistCatalogue';
@@ -9,6 +9,7 @@ import { UomCatalogue } from '../components/UomCatalogue';
 import { ListChecks, Scale } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { MODULE_FEATURES } from '../api/features';
+import { savePortalConfig, PORTAL_FIELD_LABELS, PORTAL_OPTION_LABELS, type PortalConfig, type PortalFieldKey } from '../api/portal';
 import api from '../api/axios';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { canUseTechnicianMobileUi, isTechnicianMobileUiPrefOn } from '../hooks/useTechnicianMobileShell';
@@ -136,6 +137,8 @@ export const SettingsPage = () => {
   const [slaSaveMsg, setSlaSaveMsg] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(appearanceOnly ? 'appearance' : 'general');
   const [features, setFeatures] = useState<Record<string, boolean>>({});
+  const [portalConfig, setPortalConfig] = useState<PortalConfig | null>(null);
+  const [portalMsg, setPortalMsg] = useState<string | null>(null);
   const [slaPriorityTab, setSlaPriorityTab] = useState<SlaPriorityKey>('URGENTE');
   const { theme, setTheme } = useTheme();
 
@@ -154,6 +157,7 @@ export const SettingsPage = () => {
         });
         setSlaPolicy(mergePolicy(res.data.sla_policy));
         setFeatures((res.data.features as Record<string, boolean>) ?? {});
+        setPortalConfig((res.data.portal_config as PortalConfig) ?? null);
       }
     } catch (err) {
       console.error(err);
@@ -244,6 +248,7 @@ export const SettingsPage = () => {
       if (res.data?.sla_policy) {
         setSlaPolicy(mergePolicy(res.data.sla_policy));
         setFeatures((res.data.features as Record<string, boolean>) ?? {});
+        setPortalConfig((res.data.portal_config as PortalConfig) ?? null);
       }
       setSlaSaveMsg('Tiempos de SLA (Acuerdo de Nivel de Servicio) guardados correctamente.');
       setTimeout(() => setSlaSaveMsg(null), 3500);
@@ -264,6 +269,53 @@ export const SettingsPage = () => {
     } catch (err) {
       console.error(err);
       setFeatures(features);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const patchPortal = (patch: Partial<PortalConfig>) => {
+    if (!portalConfig) return;
+    setPortalConfig({ ...portalConfig, ...patch });
+    setPortalMsg(null);
+  };
+
+  const patchPortalField = (key: PortalFieldKey, patch: { enabled?: boolean; required?: boolean }) => {
+    if (!portalConfig) return;
+    const current = portalConfig.fields[key];
+    const next = { ...current, ...patch };
+    if (!next.enabled) next.required = false;
+    setPortalConfig({
+      ...portalConfig,
+      fields: { ...portalConfig.fields, [key]: next },
+    });
+    setPortalMsg(null);
+  };
+
+  const togglePortalOption = (group: keyof PortalConfig['options'], value: string) => {
+    if (!portalConfig) return;
+    const current = portalConfig.options[group];
+    const next = current.includes(value) ? current.filter((item) => item !== value) : [...current, value];
+    // Nunca dejar un catálogo vacío: el formulario necesita al menos una opción.
+    if (next.length === 0) return;
+    setPortalConfig({
+      ...portalConfig,
+      options: { ...portalConfig.options, [group]: next },
+    });
+    setPortalMsg(null);
+  };
+
+  const savePortal = async () => {
+    if (!portalConfig) return;
+    setIsSaving(true);
+    setPortalMsg(null);
+    try {
+      await savePortalConfig(portalConfig);
+      setPortalMsg('Configuración del portal guardada.');
+      window.setTimeout(() => setPortalMsg(null), 2500);
+    } catch (err) {
+      console.error(err);
+      setPortalMsg('No se pudo guardar. Revisa permisos o conexión.');
     } finally {
       setIsSaving(false);
     }
@@ -320,6 +372,7 @@ export const SettingsPage = () => {
             {isAdmin && navBtn('developer', 'Opciones de Desarrollador', <Code size={18} />)}
             {isAdmin && hasPermission('MANAGE_CHECKLIST_CATALOG') &&
               navBtn('checklist_catalogue', 'Catálogo de Checklist', <ListChecks size={18} />)}
+            {isAdmin && navBtn('portal', 'Portal de solicitudes', <Globe size={18} />)}
             {isAdmin && navBtn('features', 'Características', <ToggleLeft size={18} />)}
             {isAdmin && navBtn('uom', 'Unidades de Medida', <Scale size={18} />)}
             {isAdmin && hasPermission('MANAGE_PERMISSIONS') &&
@@ -474,6 +527,127 @@ export const SettingsPage = () => {
                     <p className="mt-3 text-sm font-medium text-emerald-700 dark:text-emerald-400">{slaSaveMsg}</p>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {isAdmin && activeTab === 'portal' && portalConfig && (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="border-b border-slate-100 p-6 dark:border-slate-800">
+                  <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200">Portal de solicitudes</h2>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    Define qué se pide en el formulario público (/request) y los textos que ve el solicitante.
+                  </p>
+                </div>
+                <div className="space-y-4 p-6">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="portal-intro">
+                      Texto de bienvenida
+                    </label>
+                    <textarea
+                      id="portal-intro"
+                      rows={2}
+                      value={portalConfig.intro_text}
+                      onChange={(event) => patchPortal({ intro_text: event.target.value })}
+                      className="ui-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="portal-success">
+                      Texto al enviar la solicitud
+                    </label>
+                    <textarea
+                      id="portal-success"
+                      rows={2}
+                      value={portalConfig.success_text}
+                      onChange={(event) => patchPortal({ success_text: event.target.value })}
+                      className="ui-input"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="border-b border-slate-100 p-4 dark:border-slate-800">
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">Campos del formulario</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Título, zona y activo no se pueden ocultar porque la orden los necesita.
+                  </p>
+                </div>
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {PORTAL_FIELD_LABELS.map((field) => {
+                    const config = portalConfig.fields[field.key];
+                    return (
+                      <div key={field.key} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{field.label}</p>
+                          {field.hint && <p className="text-[11px] text-slate-500 dark:text-slate-400">{field.hint}</p>}
+                        </div>
+                        <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 accent-emerald-600"
+                            checked={config.enabled}
+                            disabled={field.locked}
+                            onChange={(event) => patchPortalField(field.key, { enabled: event.target.checked })}
+                          />
+                          Mostrar
+                        </label>
+                        <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 accent-emerald-600"
+                            checked={config.required}
+                            disabled={field.locked || !config.enabled}
+                            onChange={(event) => patchPortalField(field.key, { required: event.target.checked })}
+                          />
+                          Obligatorio
+                        </label>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="border-b border-slate-100 p-4 dark:border-slate-800">
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">Opciones disponibles</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Deja al menos una opción en cada lista.</p>
+                </div>
+                <div className="grid gap-4 p-4 sm:grid-cols-3">
+                  {([
+                    { key: 'priorities' as const, title: 'Prioridad', options: PORTAL_OPTION_LABELS.priorities },
+                    { key: 'maintenance_types' as const, title: 'Tipo de mantenimiento', options: PORTAL_OPTION_LABELS.maintenance_types },
+                    { key: 'production_groups' as const, title: 'Grupo de producción', options: PORTAL_OPTION_LABELS.production_groups },
+                  ]).map((group) => (
+                    <div key={group.key}>
+                      <p className="mb-2 text-xs font-semibold text-slate-600 dark:text-slate-300">{group.title}</p>
+                      <div className="space-y-1">
+                        {group.options.map((option) => (
+                          <label key={option.value} className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200">
+                            <input
+                              type="checkbox"
+                              className="h-3.5 w-3.5 accent-emerald-600"
+                              checked={portalConfig.options[group.key].includes(option.value)}
+                              onChange={() => togglePortalOption(group.key, option.value)}
+                            />
+                            {option.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                {portalMsg && (
+                  <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">{portalMsg}</span>
+                )}
+                <button type="button" onClick={() => void savePortal()} disabled={isSaving} className="ui-btn-primary">
+                  <Save size={15} /> {isSaving ? 'Guardando…' : 'Guardar portal'}
+                </button>
               </div>
             </div>
           )}

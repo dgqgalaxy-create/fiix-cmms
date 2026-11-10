@@ -3,6 +3,7 @@ import prisma from '../config/prisma';
 import { DEFAULT_SLA_POLICY, mergeSlaPolicy } from '../services/SlaService';
 import { emitRefresh } from '../utils/socket';
 import { clearFeatureCache } from '../utils/features';
+import { mergePortalConfig } from '../utils/portalConfig';
 
 export const getSettings = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -20,6 +21,7 @@ export const getSettings = async (req: Request, res: Response): Promise<void> =>
     res.json({
       ...settings,
       sla_policy: mergeSlaPolicy(settings.sla_policy),
+      portal_config: mergePortalConfig(settings.portal_config),
     });
   } catch (error) {
     console.error('Error fetching settings:', error);
@@ -29,7 +31,7 @@ export const getSettings = async (req: Request, res: Response): Promise<void> =>
 
 export const updateSettings = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { telegram_enabled, email_enabled, sla_enabled, sla_policy, checklist_column_count, technician_mobile_ui, features } = req.body;
+    const { telegram_enabled, email_enabled, sla_enabled, sla_policy, checklist_column_count, technician_mobile_ui, features, portal_config } = req.body;
     let settings = await prisma.systemSettings.findFirst();
 
     const nextPolicy =
@@ -49,6 +51,7 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
           sla_policy: nextPolicy ?? DEFAULT_SLA_POLICY,
           technician_mobile_ui: technician_mobile_ui ?? true,
           ...(features && typeof features === 'object' ? { features } : {}),
+          ...(portal_config && typeof portal_config === 'object' ? { portal_config: mergePortalConfig(portal_config) as unknown as object } : {}),
           ...(nextColumnCount !== undefined ? { checklist_column_count: nextColumnCount } : {}),
         },
       });
@@ -62,6 +65,7 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
           ...(technician_mobile_ui !== undefined ? { technician_mobile_ui: Boolean(technician_mobile_ui) } : {}),
           ...(nextPolicy ? { sla_policy: nextPolicy } : {}),
           ...(features && typeof features === 'object' ? { features } : {}),
+          ...(portal_config && typeof portal_config === 'object' ? { portal_config: mergePortalConfig(portal_config) as unknown as object } : {}),
           ...(nextColumnCount !== undefined ? { checklist_column_count: nextColumnCount } : {}),
         },
       });
@@ -76,6 +80,7 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
     res.json({
       ...settings,
       sla_policy: mergeSlaPolicy(settings.sla_policy),
+      portal_config: mergePortalConfig(settings.portal_config),
     });
   } catch (error) {
     console.error('Error updating settings:', error);
