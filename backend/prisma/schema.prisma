@@ -696,6 +696,8 @@ model SystemSettings {
   portal_config      Json?
   /// Preferencias de fecha y hora: zona IANA, formato de fecha y formato de hora.
   time_zone          String?
+  /// Idioma de la interfaz: es | en.
+  language           String?
   date_format        String?
   time_format        String?
   /// Obsoleto: la interfaz móvil de técnico es preferencia por usuario

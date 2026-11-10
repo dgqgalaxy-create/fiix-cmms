@@ -2,6 +2,7 @@
 import { useEffect, lazy, Suspense } from 'react';
 import { syncOfflineQueue } from './utils/offlineSync';
 import { AuthProvider } from './context/AuthContext';
+import { I18nProvider } from './i18n/I18nProvider';
 import { ThemeProvider } from './context/ThemeContext';
 import { MaintenanceProvider } from './context/MaintenanceContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -92,6 +93,7 @@ function App() {
   }, []);
 
   return (
+    <I18nProvider>
     <AuthProvider>
       <ThemeProvider>
         <MaintenanceProvider>
@@ -379,6 +381,7 @@ function App() {
         </MaintenanceProvider>
       </ThemeProvider>
     </AuthProvider>
+    </I18nProvider>
   );
 }
 

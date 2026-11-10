@@ -31,7 +31,7 @@ export const getSettings = async (req: Request, res: Response): Promise<void> =>
 
 export const updateSettings = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { telegram_enabled, email_enabled, sla_enabled, sla_policy, checklist_column_count, technician_mobile_ui, features, portal_config, time_zone, date_format, time_format } = req.body;
+    const { telegram_enabled, email_enabled, sla_enabled, sla_policy, checklist_column_count, technician_mobile_ui, features, portal_config, time_zone, date_format, time_format, language } = req.body;
     // Preferencias de fecha y hora (validadas contra catálogos cerrados).
     const ALLOWED_DATE_FORMATS = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'];
     const ALLOWED_TIME_FORMATS = ['12', '24'];
@@ -50,6 +50,7 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
     const nextTimeFormat = ALLOWED_TIME_FORMATS.includes(String(time_format))
       ? String(time_format)
       : undefined;
+    const nextLanguage = ['es', 'en'].includes(String(language)) ? String(language) : undefined;
     let settings = await prisma.systemSettings.findFirst();
 
     const nextPolicy =
@@ -73,6 +74,7 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
           ...(nextTimeZone ? { time_zone: nextTimeZone } : {}),
           ...(nextDateFormat ? { date_format: nextDateFormat } : {}),
           ...(nextTimeFormat ? { time_format: nextTimeFormat } : {}),
+          ...(nextLanguage ? { language: nextLanguage } : {}),
           ...(nextColumnCount !== undefined ? { checklist_column_count: nextColumnCount } : {}),
         },
       });
@@ -90,6 +92,7 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
           ...(nextTimeZone ? { time_zone: nextTimeZone } : {}),
           ...(nextDateFormat ? { date_format: nextDateFormat } : {}),
           ...(nextTimeFormat ? { time_format: nextTimeFormat } : {}),
+          ...(nextLanguage ? { language: nextLanguage } : {}),
           ...(nextColumnCount !== undefined ? { checklist_column_count: nextColumnCount } : {}),
         },
       });
@@ -225,15 +228,26 @@ export const getFeatures = async (_req: Request, res: Response): Promise<void> =
 export const getDateTimePreferences = async (_req: Request, res: Response): Promise<void> => {
   try {
     const settings = await prisma.systemSettings.findFirst({
-      select: { time_zone: true, date_format: true, time_format: true },
+      select: { time_zone: true, date_format: true, time_format: true, language: true },
     });
     res.json({
       time_zone: settings?.time_zone ?? 'America/Mexico_City',
       date_format: settings?.date_format ?? 'DD/MM/YYYY',
       time_format: settings?.time_format ?? '24',
+      language: settings?.language ?? 'es',
     });
   } catch (error) {
     console.error('Error obteniendo preferencias de fecha:', error);
     res.status(500).json({ error: 'No se pudieron obtener las preferencias' });
+  }
+};
+/** GET /api/public/language — idioma del sistema (sin autenticación). */
+export const getPublicLanguage = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const settings = await prisma.systemSettings.findFirst({ select: { language: true } });
+    res.json({ language: settings?.language ?? 'es' });
+  } catch (error) {
+    console.error('Error obteniendo el idioma:', error);
+    res.status(500).json({ error: 'No se pudo obtener el idioma' });
   }
 };

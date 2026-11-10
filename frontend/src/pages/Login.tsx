@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../i18n/I18nProvider';
 import api from '../api/axios';
 import { Mail, Lock, Loader2, Eye, EyeOff, Info, X } from 'lucide-react';
 import { APP_VERSION } from '../components/VersionModal';
@@ -20,6 +21,7 @@ export const Login = () => {
   } | null>(null);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useI18n();
 
   useEffect(() => {
     const msg = sessionStorage.getItem(POST_WIPE_MESSAGE_KEY);
@@ -80,7 +82,7 @@ export const Login = () => {
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2">
             GTZ CMMS <span className="text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full mt-1">v{APP_VERSION}</span>
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2">Inicia sesión para gestionar el mantenimiento</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-2">{t('login.subtitle')}</p>
         </div>
 
         {postWipeMessage && (
@@ -115,7 +117,7 @@ export const Login = () => {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 ml-1">Usuario</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 ml-1">{t('login.user')}</label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-600 dark:group-focus-within:text-emerald-400 transition-colors">
                 <Mail size={18} />
@@ -132,7 +134,7 @@ export const Login = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 ml-1">Contraseña</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 ml-1">{t('login.password')}</label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-600 dark:group-focus-within:text-emerald-400 transition-colors">
                 <Lock size={18} />
@@ -163,7 +165,7 @@ export const Login = () => {
             {isLoading ? (
               <Loader2 className="animate-spin" size={20} />
             ) : (
-              'Ingresar'
+              t('login.submit')
             )}
           </button>
         </form>

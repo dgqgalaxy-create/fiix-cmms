@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import {
   getRequestTracking,
   getRequestTrackingDetail,
@@ -10,6 +10,7 @@ import { createRateLimiter } from '../middlewares/rateLimit';
 import prisma from '../config/prisma';
 import { isFeatureEnabled } from '../utils/features';
 import { mergePortalConfig, portalOptionsForClient } from '../utils/portalConfig';
+import { getPublicLanguage } from '../controllers/settingsController';
 
 const router = Router();
 
@@ -27,6 +28,8 @@ const publicGetLimiter = createRateLimiter({
 });
 
 /** Estado del portal: permite que la página pública muestre «desactivado». */
+router.get('/language', publicGetLimiter, getPublicLanguage);
+
 router.get('/portal-status', publicGetLimiter, async (_req, res) => {
   const enabled = await isFeatureEnabled('request_portal');
   res.json({ enabled });

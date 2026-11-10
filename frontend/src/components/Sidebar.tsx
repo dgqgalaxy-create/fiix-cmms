@@ -1,5 +1,6 @@
-﻿import { LayoutDashboard, LogOut, Users, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote, MessageSquare, ChevronDown, Gauge, FolderOpen, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, LogOut, Users, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote, MessageSquare, ChevronDown, Gauge, FolderOpen, BarChart3 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../i18n/I18nProvider';
 import { getFeatures, isFeatureEnabled } from '../api/features';
 import { useTheme } from '../context/ThemeContext';
 import { VersionModal, APP_VERSION } from './VersionModal';
@@ -138,6 +139,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [orderedItems, setOrderedItems] = useState<NavItem[]>([]);
+  const { t } = useI18n();
   const [notesBadge, setNotesBadge] = useState(0);
   const [chatBadge, setChatBadge] = useState(0);
   /** Grupos desplegables de la barra lateral (por ruta del módulo padre). */
@@ -193,60 +195,60 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   useEffect(() => {
     const availableItems: NavItem[] = [
-      { name: 'Inicio', path: '/home', icon: <Home size={16} /> },
-      { name: 'Órdenes de Trabajo', path: '/dashboard', icon: <LayoutDashboard size={16} /> },
-      { name: 'Informes', path: '/weekly-report', icon: <Calendar size={16} /> },
-      { name: 'Mensajes', path: '/messages', icon: <MessageSquare size={16} />, badge: chatBadge },
-      { name: 'Notas y pendientes', path: '/notes', icon: <StickyNote size={16} />, badge: notesBadge },
+      { name: t('nav.home'), path: '/home', icon: <Home size={16} /> },
+      { name: t('nav.work_orders'), path: '/dashboard', icon: <LayoutDashboard size={16} /> },
+      { name: t('nav.reports'), path: '/weekly-report', icon: <Calendar size={16} /> },
+      { name: t('nav.messages'), path: '/messages', icon: <MessageSquare size={16} />, badge: chatBadge },
+      { name: t('nav.notes'), path: '/notes', icon: <StickyNote size={16} />, badge: notesBadge },
       {
-        name: 'Inventario',
+        name: t('nav.inventory'),
         path: '/inventory',
         icon: <Package size={16} />,
         children: [
-          { name: 'Movimientos', to: '/inventory?tab=transactions' },
-          { name: 'Repuestos', to: '/inventory?tab=items' },
-          { name: 'Categorías', to: '/inventory?tab=categories' },
-          { name: 'Ubicaciones', to: '/inventory?tab=locations' },
-          { name: 'Proveedores', to: '/inventory?tab=vendors' },
-          { name: 'Kits', to: '/kits' },
-          { name: 'Activos', to: '/assets' },
+          { name: t('nav.inventory.movements'), to: '/inventory?tab=transactions' },
+          { name: t('nav.inventory.parts'), to: '/inventory?tab=items' },
+          { name: t('nav.inventory.categories'), to: '/inventory?tab=categories' },
+          { name: t('nav.inventory.locations'), to: '/inventory?tab=locations' },
+          { name: t('nav.inventory.vendors'), to: '/inventory?tab=vendors' },
+          { name: t('nav.inventory.kits'), to: '/kits' },
+          { name: t('nav.inventory.assets'), to: '/assets' },
         ],
       },
-      { name: 'Medidores', path: '/meters', icon: <Gauge size={16} /> },
-      { name: 'Archivos', path: '/files', icon: <FolderOpen size={16} /> },
+      { name: t('nav.meters'), path: '/meters', icon: <Gauge size={16} /> },
+      { name: t('nav.files'), path: '/files', icon: <FolderOpen size={16} /> },
       {
-        name: 'Estadística',
+        name: t('nav.statistics'),
         path: '/stats',
         icon: <BarChart3 size={16} />,
         children: [
-          { name: 'Órdenes de trabajo', to: '/stats/orders' },
-          { name: 'Activos', to: '/stats/assets' },
-          { name: 'Repuestos', to: '/stats/parts' },
-          { name: 'Solicitudes', to: '/stats/requests' },
-          { name: 'Costos', to: '/stats/costs' },
-          { name: 'KPIs y Metas', to: '/stats/kpis' },
+          { name: t('nav.stats.orders'), to: '/stats/orders' },
+          { name: t('nav.stats.assets'), to: '/stats/assets' },
+          { name: t('nav.stats.parts'), to: '/stats/parts' },
+          { name: t('nav.stats.requests'), to: '/stats/requests' },
+          { name: t('nav.stats.costs'), to: '/stats/costs' },
+          { name: t('nav.stats.kpis'), to: '/stats/kpis' },
         ],
       },
-      { name: 'Checklist Diario', path: '/checklists', icon: <ClipboardCheck size={16} /> },
-      { name: 'Horarios', path: '/roster', icon: <Clock size={16} /> },
-      { name: 'Calendario', path: '/calendar', icon: <Calendar size={16} /> },
+      { name: t('nav.checklist'), path: '/checklists', icon: <ClipboardCheck size={16} /> },
+      { name: t('nav.schedule'), path: '/roster', icon: <Clock size={16} /> },
+      { name: t('nav.calendar'), path: '/calendar', icon: <Calendar size={16} /> },
     ];
 
     if (hasPermission('MANAGE_PURCHASES')) {
-      availableItems.push({ name: 'Compras', path: '/purchase-orders', icon: <ShoppingCart size={16} /> });
+      availableItems.push({ name: t('nav.purchases'), path: '/purchase-orders', icon: <ShoppingCart size={16} /> });
     }
     if (hasPermission('MANAGE_MAINTENANCE_PLANS')) {
-      availableItems.push({ name: 'Planes Preventivos', path: '/maintenance-plans', icon: <CalendarClock size={16} /> });
+      availableItems.push({ name: t('nav.plans'), path: '/maintenance-plans', icon: <CalendarClock size={16} /> });
     }
     if (hasPermission('MANAGE_USERS')) {
       availableItems.push({
-        name: 'Personal',
+        name: t('nav.personnel'),
         path: '/users',
         icon: <Users size={16} />,
         children: [
-          { name: 'Directorio', to: '/users' },
-          { name: 'Cuadrillas', to: '/crews' },
-          { name: 'Contratistas', to: '/contractors' },
+          { name: t('nav.personnel.directory'), to: '/users' },
+          { name: t('nav.personnel.crews'), to: '/crews' },
+          { name: t('nav.personnel.contractors'), to: '/contractors' },
         ],
       });
     }
@@ -254,7 +256,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
       availableItems.push({ name: 'Árbol de Fallas', path: '/rca', icon: <GitBranch size={16} /> });
     }
     if (hasPermission('VIEW_SETTINGS')) {
-      availableItems.push({ name: 'Configuración', path: '/settings', icon: <Settings size={16} /> });
+      availableItems.push({ name: t('nav.settings'), path: '/settings', icon: <Settings size={16} /> });
     }
 
     // Con barra inferior móvil, no repetir atajos que ya están abajo.

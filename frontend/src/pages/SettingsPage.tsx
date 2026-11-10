@@ -1,7 +1,7 @@
-import { useState, useEffect, type ReactNode } from 'react';
+﻿import { useState, useEffect, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft, Globe, Clock, ListPlus, Trash2, Loader2, Plug, Copy, Plus, ShieldCheck } from 'lucide-react';
+import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft, Globe, Clock, ListPlus, Trash2, Loader2, Plug, Copy, Plus, ShieldCheck, Languages } from 'lucide-react';
 import { PermissionsPage } from './PermissionsPage';
 import { DeveloperOptions } from './DeveloperOptions';
 import { ChecklistCatalogue } from '../components/ChecklistCatalogue';
@@ -11,6 +11,8 @@ import { useAuth } from '../context/AuthContext';
 import { MODULE_FEATURES } from '../api/features';
 import { savePortalConfig, PORTAL_FIELD_LABELS, PORTAL_OPTION_LABELS, type PortalConfig, type PortalFieldKey } from '../api/portal';
 import { setDateTimePreferences, formatDateTime, getDateTimePreferences, type DateFormat, type TimeFormat } from '../utils/dateUtils';
+import { useI18n } from '../i18n/I18nProvider';
+import { LANGUAGE_LABELS, type Language } from '../i18n/translations';
 import { getCustomFields, createCustomField, deleteCustomField, updateCustomField, ENTITY_LABELS, TYPE_LABELS, type CustomFieldDefinition, type CustomFieldEntity, type CustomFieldType } from '../api/customFields';
 import { getApiKeys, createApiKey, revokeApiKey, getWebhooks, createWebhook, deleteWebhook, updateWebhook, testWebhook, WEBHOOK_EVENTS, type ApiKeyRow, type WebhookRow } from '../api/integrations';
 import { getApprovalRules, createApprovalRule, updateApprovalRule, deleteApprovalRule, type ApprovalRule } from '../api/approvals';
@@ -192,6 +194,9 @@ export const SettingsPage = () => {
   const [portalMsg, setPortalMsg] = useState<string | null>(null);
   const [slaPriorityTab, setSlaPriorityTab] = useState<SlaPriorityKey>('URGENTE');
   const { theme, setTheme } = useTheme();
+  const { language, setLanguage, t } = useI18n();
+  const [langBusy, setLangBusy] = useState(false);
+  const [langMsg, setLangMsg] = useState<string | null>(null);
 
   const fetchSettings = async () => {
     if (!isAdmin) {
@@ -397,6 +402,21 @@ export const SettingsPage = () => {
       options: { ...portalConfig.options, [group]: next },
     });
     setPortalMsg(null);
+  };
+
+  const applyLanguage = async (code: Language) => {
+    setLangBusy(true);
+    setLangMsg(null);
+    try {
+      await api.patch('/settings', { language: code });
+      setLanguage(code);
+      setLangMsg(t('language.saved'));
+      window.setTimeout(() => window.location.reload(), 700);
+    } catch {
+      setLangMsg('No se pudo guardar el idioma.');
+    } finally {
+      setLangBusy(false);
+    }
   };
 
   const addApprovalRule = async () => {
@@ -670,6 +690,7 @@ export const SettingsPage = () => {
             {isAdmin && navBtn('developer', 'Opciones de Desarrollador', <Code size={18} />)}
             {isAdmin && hasPermission('MANAGE_CHECKLIST_CATALOG') &&
               navBtn('checklist_catalogue', 'Catálogo de Checklist', <ListChecks size={18} />)}
+            {isAdmin && navBtn('language', t('settings.language'), <Languages size={18} />)}
             {isAdmin && navBtn('approvals', 'Aprobaciones', <ShieldCheck size={18} />)}
             {isAdmin && navBtn('integrations', 'Integraciones', <Plug size={18} />)}
             {isAdmin && navBtn('custom_fields', 'Campos personalizados', <ListPlus size={18} />)}
@@ -829,6 +850,40 @@ export const SettingsPage = () => {
                     <p className="mt-3 text-sm font-medium text-emerald-700 dark:text-emerald-400">{slaSaveMsg}</p>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {isAdmin && activeTab === 'language' && (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="border-b border-slate-100 p-6 dark:border-slate-800">
+                  <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200">Idioma de la interfaz</h2>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('language.help')}</p>
+                </div>
+                <div className="grid gap-3 p-6 sm:grid-cols-2">
+                  {(['es', 'en'] as Language[]).map((code) => (
+                    <button
+                      key={code}
+                      type="button"
+                      onClick={() => void applyLanguage(code)}
+                      disabled={langBusy}
+                      className={`rounded-xl border px-4 py-3 text-left transition-colors ${
+                        language === code
+                          ? 'border-emerald-400 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/40'
+                          : 'border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{LANGUAGE_LABELS[code]}</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {code === 'es' ? 'Interfaz en español' : 'Interface in English'}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+                {langMsg && (
+                  <p className="px-6 pb-4 text-xs font-semibold text-emerald-700 dark:text-emerald-400">{langMsg}</p>
+                )}
               </div>
             </div>
           )}
