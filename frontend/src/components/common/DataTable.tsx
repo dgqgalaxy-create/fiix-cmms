@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+﻿import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp, Columns3, EyeOff, GripVertical, LayoutGrid, MoreVertical, Table2 } from 'lucide-react';
+import { TableSkeleton } from './Skeleton';
 
 /**
  * Tabla reutilizable con columnas redimensionables, menú por encabezado
@@ -74,6 +75,7 @@ export function DataTable<T>({
   className = '',
 }: Props<T>) {
   const saved = useMemo(() => load(storageKey), [storageKey]);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [widths, setWidths] = useState<Record<string, number>>(() => {
     const base = Object.fromEntries(columns.map((c) => [c.key, c.defaultWidth]));
     return { ...base, ...(saved.widths ?? {}) };
@@ -238,7 +240,7 @@ export function DataTable<T>({
           ))}
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div ref={scrollRef} onScroll={(event) => { const el = event.currentTarget; el.classList.toggle('is-scrolled', el.scrollTop > 4); }} className="table-scroll overflow-x-auto">
           <table className="table-fixed text-left text-xs leading-snug text-slate-600 dark:text-slate-300" style={{ width: totalWidth, minWidth: '100%' }}>
             <colgroup>
               {visible.map((c) => <col key={c.key} style={{ width: widths[c.key] ?? c.defaultWidth }} />)}
@@ -326,11 +328,7 @@ export function DataTable<T>({
               </tr>
             </thead>
             <tbody>
-              {isLoading && (
-                <tr>
-                  <td colSpan={visible.length} className="px-6 py-8 text-center text-slate-500">Cargando…</td>
-                </tr>
-              )}
+              {isLoading && <TableSkeleton columns={visible.length} />}
               {!isLoading && rows.map((row) => {
                 const id = rowKey(row);
                 const selected = selectionMode && selectedIds?.has(id);

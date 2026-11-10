@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { BarChart3, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 import {
@@ -178,7 +178,7 @@ export const StatsPage = () => {
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                 <Tooltip {...chartTooltip} />
-                <Bar dataKey="cantidad" radius={[6, 6, 0, 0]} fill="#059669" />
+                <Bar animationDuration={650} animationBegin={60} dataKey="cantidad" radius={[6, 6, 0, 0]} fill="#059669" />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -243,7 +243,7 @@ export const StatsPage = () => {
                 <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
                 <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 10 }} />
                 <Tooltip {...chartTooltip} />
-                <Bar dataKey="disponibilidad" radius={[0, 6, 6, 0]}>
+                <Bar animationDuration={650} animationBegin={60} dataKey="disponibilidad" radius={[0, 6, 6, 0]}>
                   {availabilityChart.map((entry, index) => (
                     <Cell key={index} fill={entry.disponibilidad >= 95 ? '#059669' : entry.disponibilidad >= 85 ? '#f59e0b' : '#ef4444'} />
                   ))}
@@ -307,7 +307,7 @@ export const StatsPage = () => {
                   <XAxis type="number" tick={{ fontSize: 10 }} />
                   <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 9 }} />
                   <Tooltip {...chartTooltip} formatter={(value) => formatCurrency(Number(value))} />
-                  <Bar dataKey="costo" radius={[0, 6, 6, 0]} fill="#0ea5e9" />
+                  <Bar animationDuration={650} animationBegin={60} dataKey="costo" radius={[0, 6, 6, 0]} fill="#0ea5e9" />
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
@@ -315,7 +315,7 @@ export const StatsPage = () => {
             <ChartCard title="Costo por categoría" subtitle="Distribución del consumo">
               <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
-                  <Pie data={consumptionPie} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90} paddingAngle={2}>
+                  <Pie animationDuration={650} animationBegin={60} data={consumptionPie} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90} paddingAngle={2}>
                     {consumptionPie.map((entry, index) => (
                       <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
                     ))}
@@ -380,7 +380,7 @@ export const StatsPage = () => {
                   <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
                   <Tooltip {...chartTooltip} />
-                  <Bar dataKey="solicitudes" radius={[6, 6, 0, 0]} fill="#8b5cf6" />
+                  <Bar animationDuration={650} animationBegin={60} dataKey="solicitudes" radius={[6, 6, 0, 0]} fill="#8b5cf6" />
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
@@ -388,7 +388,7 @@ export const StatsPage = () => {
             <ChartCard title="Solicitudes por estado" subtitle="Situación actual">
               <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
-                  <Pie data={requestsPie} dataKey="value" nameKey="name" innerRadius={45} outerRadius={85} paddingAngle={2}>
+                  <Pie animationDuration={650} animationBegin={60} data={requestsPie} dataKey="value" nameKey="name" innerRadius={45} outerRadius={85} paddingAngle={2}>
                     {requestsPie.map((entry, index) => (
                       <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
                     ))}
@@ -455,9 +455,9 @@ export const StatsPage = () => {
                 <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 9 }} />
                 <Tooltip {...chartTooltip} formatter={(value) => formatCurrency(Number(value))} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="mano" name="Mano de obra" stackId="costos" fill="#059669" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="repuestos" name="Repuestos" stackId="costos" fill="#0ea5e9" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="adicionales" name="Adicionales" stackId="costos" fill="#f59e0b" radius={[0, 6, 6, 0]} />
+                <Bar animationDuration={650} animationBegin={60} dataKey="mano" name="Mano de obra" stackId="costos" fill="#059669" radius={[0, 0, 0, 0]} />
+                <Bar animationDuration={650} animationBegin={60} dataKey="repuestos" name="Repuestos" stackId="costos" fill="#0ea5e9" radius={[0, 0, 0, 0]} />
+                <Bar animationDuration={650} animationBegin={60} dataKey="adicionales" name="Adicionales" stackId="costos" fill="#f59e0b" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>

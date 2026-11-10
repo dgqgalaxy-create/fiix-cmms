@@ -86,7 +86,16 @@ export const ItemModal = ({
   navigationPaused = false,
   variant = 'modal',
 }: Props) => {
-  useEscapeKey(onClose, true);
+  const [closing, setClosing] = useState(false);
+
+  const requestClose = () => {
+    setClosing(true);
+    window.setTimeout(() => { setClosing(false); onClose(); }, 180);
+  };
+
+  useEffect(() => { if (isOpen) setClosing(false); }, [isOpen]);
+
+  useEscapeKey(requestClose, !closing);
   const { hasPermission } = useAuth();
   const isDrawer = variant === 'drawer';
   const [tab, setTab] = useState<'detalle' | 'movimientos' | 'equipos' | 'archivos'>('detalle');
@@ -405,13 +414,13 @@ export const ItemModal = ({
           ? 'fixed inset-0 z-[60] flex justify-end bg-slate-900/40 backdrop-blur-[2px]'
           : 'fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-[60] backdrop-blur-sm'
       }
-      onClick={isDrawer ? onClose : undefined}
+      onClick={isDrawer ? requestClose : undefined}
     >
       <div
         onClick={isDrawer ? (event) => event.stopPropagation() : undefined}
         className={
           isDrawer
-            ? 'flex h-full w-full max-w-2xl flex-col overflow-hidden bg-white shadow-2xl animate-in slide-in-from-right duration-300 dark:bg-slate-900 sm:border-l sm:border-slate-200 sm:rounded-l-2xl dark:sm:border-slate-800'
+            ? `flex h-full w-full max-w-2xl flex-col overflow-hidden bg-white shadow-2xl dark:bg-slate-900 sm:border-l sm:border-slate-200 sm:rounded-l-2xl dark:sm:border-slate-800 ${closing ? 'animate-slide-out-right' : 'animate-in slide-in-from-right duration-300'}`
             : 'bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-4xl max-h-[95vh] flex flex-col overflow-hidden'
         }
       >

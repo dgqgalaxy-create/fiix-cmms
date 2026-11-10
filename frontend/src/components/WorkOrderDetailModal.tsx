@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, CheckCircle2, Users, UserPlus, PauseCircle, PlayCircle, ChevronLeft, ChevronRight, ZoomIn, StickyNote } from 'lucide-react';
 import type { WorkOrder } from '../api/workOrders';
@@ -119,6 +119,7 @@ export const WorkOrderDetailModal = ({
   const { canEdit, remoteEditorName } = useWorkOrderPresence(workOrder?.id, isOpen);
   const isTechMobileShell = useTechnicianMobileShell();
   const scrollBodyRef = useRef<HTMLDivElement>(null);
+  const [closing, setClosing] = useState(false);
   const evidenceRef = useRef<HTMLDivElement>(null);
   const holdReasonRef = useRef<HTMLInputElement>(null);
   const finalizeSectionRef = useRef<HTMLDivElement>(null);
@@ -127,8 +128,21 @@ export const WorkOrderDetailModal = ({
   const skipConfirmRef = useRef(false);
   const awaitPhotoThenSaveRef = useRef(false);
 
+  /** Cierre con animación de salida (se desmonta al terminar). */
+  const requestClose = useCallback(() => {
+    setClosing(true);
+    window.setTimeout(() => {
+      setClosing(false);
+      onClose();
+    }, 190);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (isOpen) setClosing(false);
+  }, [isOpen]);
+
   // Escape cierra el panel, igual que la X.
-  useEscapeKey(onClose, Boolean(isOpen));
+  useEscapeKey(requestClose, Boolean(isOpen) && !closing);
 
   /**
    * Al abrir (o cambiar de orden): el panel se muestra desde arriba y la página
@@ -666,12 +680,12 @@ export const WorkOrderDetailModal = ({
     <ErrorBoundary>
       {/* Panel lateral derecho: mismo patrón que el detalle de repuestos. */}
       <div
-        className="fixed inset-0 z-[60] flex justify-end bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200"
-        onClick={onClose}
+        className={`fixed inset-0 z-[60] flex justify-end bg-slate-900/40 backdrop-blur-[2px] ${closing ? 'animate-fade-out' : 'animate-in fade-in duration-200'}`}
+        onClick={requestClose}
       >
         <div
           onClick={(event) => event.stopPropagation()}
-          className="flex h-full w-full max-w-5xl flex-col overflow-hidden bg-white shadow-2xl animate-in slide-in-from-right duration-300 dark:bg-slate-900 sm:border-l sm:border-slate-200 dark:sm:border-slate-800"
+          className={`flex h-full w-full max-w-5xl flex-col overflow-hidden bg-white shadow-2xl dark:bg-slate-900 sm:border-l sm:border-slate-200 dark:sm:border-slate-800 ${closing ? 'animate-slide-out-right' : 'animate-in slide-in-from-right duration-300'}`}
         >
         <div className="shrink-0 px-4 py-3 sm:px-5 sm:py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-start gap-3 bg-slate-50/50 dark:bg-slate-900/50">
           <div className="min-w-0">
@@ -748,7 +762,7 @@ export const WorkOrderDetailModal = ({
                 <StickyNote size={20} />
               </button>
             )}
-            <button autoFocus={autoFocusClose} onClick={onClose} aria-label="Cerrar detalle de orden" className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
+            <button autoFocus={autoFocusClose} onClick={requestClose} aria-label="Cerrar detalle de orden" className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-full transition-colors">
               <X size={20} />
             </button>
           </div>
