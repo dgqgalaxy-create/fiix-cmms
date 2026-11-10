@@ -2807,7 +2807,7 @@ export const DeveloperOptions = () => {
 
       {/* Delete Modal */}
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="animate-in fade-in duration-150 fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-3 text-red-600 dark:text-red-400 mb-4">
               <AlertTriangle size={24} />
@@ -2859,7 +2859,7 @@ export const DeveloperOptions = () => {
 
       {/* Orphan uploads cleanup modal */}
       {isOrphanModalOpen && orphanPreview && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="animate-in fade-in duration-150 fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-3 text-orange-600 dark:text-orange-400 mb-4">
               <ImageOff size={24} />
@@ -2946,7 +2946,7 @@ export const DeveloperOptions = () => {
 
       {/* Restore server backup modal */}
       {isRestoreModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="animate-in fade-in duration-150 fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400 mb-4">
               <AlertTriangle size={24} />
@@ -3052,7 +3052,7 @@ export const DeveloperOptions = () => {
 
       {/* Download backups modal */}
       {isDownloadModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+        <div className="animate-in fade-in duration-150 fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-black text-slate-900 dark:text-white">
@@ -3155,7 +3155,7 @@ export const DeveloperOptions = () => {
 
       {/* Restore from uploaded file modal */}
       {isUploadRestoreOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+        <div className="animate-in fade-in duration-150 fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-black text-slate-900 dark:text-white">
@@ -3261,7 +3261,7 @@ export const DeveloperOptions = () => {
 
       {/* Loading Modal */}
       {loadingMessage && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="animate-in fade-in duration-150 fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-md w-full shadow-2xl flex flex-col items-center text-center border border-slate-200 dark:border-slate-700">
             <div className="w-16 h-16 border-4 border-emerald-200 dark:border-emerald-900 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
             <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Procesando...</h3>

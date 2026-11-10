@@ -53,7 +53,7 @@ export const QRDisplayModal: React.FC<Props> = ({ isOpen, onClose, title, subtit
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
+    <div className="animate-in fade-in duration-150 fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
       
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-sm relative flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">

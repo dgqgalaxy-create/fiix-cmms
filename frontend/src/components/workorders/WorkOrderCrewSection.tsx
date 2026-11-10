@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Skeleton } from '../common/Skeleton';
 import { Users, Loader2 } from 'lucide-react';
 import { getCrews, assignCrewToWorkOrder, type Crew } from '../../api/crews';
 
@@ -54,7 +55,7 @@ export function WorkOrderCrewSection({ workOrderId, currentCrewId, canWrite }: P
       </div>
 
       {loading ? (
-        <p className="text-xs text-slate-500">Cargando…</p>
+        <Skeleton className="h-9 w-full rounded-lg" />
       ) : (
         <>
           <select

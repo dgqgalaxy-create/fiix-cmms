@@ -1,4 +1,5 @@
-﻿import { useState } from 'react';
+import { Skeleton } from '../../components/common/Skeleton';
+import { useState } from 'react';
 import { Check, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { createPersonalNote, updatePersonalNote, deletePersonalNote, type PersonalNote } from '../../api/notes';
 
@@ -50,7 +51,7 @@ function NoteCard({ note, canWrite, onChanged }: { note?: PersonalNote; canWrite
 export function PersonalNotesBoard({ notes, loading, canWrite, onChanged }: { notes: PersonalNote[]; loading: boolean; canWrite: boolean; onChanged: () => Promise<void> }) {
   return <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
     {canWrite && <NoteCard canWrite={canWrite} onChanged={onChanged} />}
-    {loading && <p role="status" className="p-4 text-sm text-slate-500">Cargando notas…</p>}
+    {loading && <div className="p-4"><Skeleton className="h-3 w-40" /></div>}
     {notes.map(note => <NoteCard key={note.id} note={note} canWrite={canWrite} onChanged={onChanged} />)}
     {!loading && notes.length === 0 && <p className="p-4 text-sm text-slate-500">{canWrite ? 'Tu tablero está vacío. Escribe tu primera nota.' : 'Sin notas para mostrar.'}</p>}
   </div>;

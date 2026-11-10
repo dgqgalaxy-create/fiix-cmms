@@ -753,7 +753,7 @@ export default function NotesPage() {
       )}
 
       {completeTask && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-3">
+        <div className="animate-in fade-in duration-150 fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-3">
           <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl dark:bg-slate-900">
             <h3 className="text-sm font-black text-slate-900 dark:text-white">Completar pendiente</h3>
             <p className="mt-1 text-xs text-slate-500">{completeTask.title}</p>

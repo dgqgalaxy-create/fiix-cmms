@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { DetailSkeleton } from '../components/common/Skeleton';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -651,7 +652,7 @@ export default function ChecklistFormPage() {
   };
 
   if (isLoading || !checklist) {
-    return <div className="p-8 text-center text-slate-500 dark:text-slate-400">Cargando formato...</div>;
+    return <div className="p-8"><DetailSkeleton /></div>;
   }
 
   const isEditable = isClaimedByMe && canWriteOps;

@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FolderOpen, Search, Upload, Loader2, Trash2, Download, FileText, FileSpreadsheet,
   FileImage, File as FileIcon, X, FolderPlus, AlertTriangle, LayoutGrid, List, Package,
@@ -409,7 +409,7 @@ export const FileLibraryPage = () => {
         />
       )}
       {folderModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm" onClick={() => setFolderModal(null)}>
+        <div className="animate-in fade-in duration-150 fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm" onClick={() => setFolderModal(null)}>
           <form
             onSubmit={(event) => { event.preventDefault(); void saveFolder(); }}
             onClick={(event) => event.stopPropagation()}
@@ -481,7 +481,7 @@ const UploadDocumentModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="animate-in fade-in duration-150 fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm" onClick={onClose}>
       <form
         onSubmit={submit}
         onClick={(event) => event.stopPropagation()}

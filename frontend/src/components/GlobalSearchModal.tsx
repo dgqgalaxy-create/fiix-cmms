@@ -217,7 +217,7 @@ export const GlobalSearchModal = () => {
   return (
     <>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[12vh] px-4">
+        <div className="animate-in fade-in duration-150 fixed inset-0 z-[100] flex items-start justify-center pt-[12vh] px-4">
           <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
           <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800">

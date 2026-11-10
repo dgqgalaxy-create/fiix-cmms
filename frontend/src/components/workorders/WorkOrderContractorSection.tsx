@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Skeleton } from '../common/Skeleton';
 import { HardHat, Loader2 } from 'lucide-react';
 import { getContractors, type Contractor } from '../../api/contractors';
 import api from '../../api/axios';
@@ -51,7 +52,7 @@ export function WorkOrderContractorSection({ workOrderId, currentContractorId, c
       </div>
 
       {loading ? (
-        <p className="text-xs text-slate-500">Cargando…</p>
+        <Skeleton className="h-9 w-full rounded-lg" />
       ) : (
         <select
           value={contractorId}

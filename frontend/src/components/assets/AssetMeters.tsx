@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Skeleton } from '../common/Skeleton';
 import {
   Gauge, Plus, X, Loader2, Trash2, Pencil, Bell, ArrowDownToLine, CheckCircle2, AlertTriangle, Power,
 } from 'lucide-react';
@@ -573,7 +574,7 @@ const TriggersModal = ({
             <div>
               <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Últimas lecturas</p>
               {loadingReadings ? (
-                <p className="text-xs text-slate-500">Cargando…</p>
+                <Skeleton className="h-3 w-32" />
               ) : readings.length === 0 ? (
                 <p className="text-xs text-slate-500">Sin lecturas registradas.</p>
               ) : (

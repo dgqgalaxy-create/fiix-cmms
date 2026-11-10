@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
+import { DetailSkeleton } from '../components/common/Skeleton';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -659,7 +660,7 @@ export const KPIPage = () => {
   };
 
   if (isLoading && !data) {
-    return <div className="p-8 text-center text-slate-500 dark:text-slate-400">Cargando indicadores...</div>;
+    return <div className="p-8"><DetailSkeleton /></div>;
   }
 
   return (

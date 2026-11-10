@@ -1,4 +1,5 @@
-﻿import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { Skeleton } from './common/Skeleton';
 import { useAnimatedClose } from '../hooks/useAnimatedClose';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 import { X, Loader2, CalendarClock, Trash2, AlertTriangle, Check } from 'lucide-react';
@@ -189,7 +190,7 @@ export const PersonnelShiftModal = ({
           <div>
             <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Historial</p>
             {isLoading ? (
-              <p className="text-sm text-slate-500">Cargando…</p>
+              <Skeleton className="h-4 w-48" />
             ) : history.length === 0 ? (
               <p className="text-sm text-slate-500 dark:text-slate-400">Todavía no hay turnos registrados.</p>
             ) : (

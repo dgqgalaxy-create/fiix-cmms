@@ -1,4 +1,5 @@
-﻿import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
+import { DetailSkeleton } from '../components/common/Skeleton';
 import { Navigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft, Globe, Clock, ListPlus, Trash2, Loader2, Plug, Copy, Plus, ShieldCheck, Languages } from 'lucide-react';
@@ -649,7 +650,7 @@ export const SettingsPage = () => {
   }
 
   if (isLoading) {
-    return <div className="p-8">Cargando configuración...</div>;
+    return <div className="p-8"><DetailSkeleton /></div>;
   }
 
   const navBtn = (id: string, label: string, icon: ReactNode) => (

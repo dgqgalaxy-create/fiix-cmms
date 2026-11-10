@@ -211,7 +211,7 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose, onScan }) => 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-0">
+    <div className="animate-in fade-in duration-150 fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-0">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
 
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-md relative flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
