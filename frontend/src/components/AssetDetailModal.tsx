@@ -1,3 +1,4 @@
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { useState, useEffect } from 'react';
 import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck, AlertTriangle, Clock, Wrench, Package, CalendarClock, Layers, Pencil, Loader2 } from 'lucide-react';
 import type { Asset } from '../api/assets';
@@ -38,6 +39,7 @@ const WO_STATUS_LABELS: Record<string, string> = {
 };
 
 export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit, variant = 'modal' }: Props) => {
+  useEscapeKey(onClose, isOpen);
   const isDrawer = variant === 'drawer';
   const { hasPermission, user } = useAuth();
   const canManageItems = hasPermission('MANAGE_INVENTORY');

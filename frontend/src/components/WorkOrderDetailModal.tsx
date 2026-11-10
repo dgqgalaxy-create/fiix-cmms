@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, CheckCircle2, Users, UserPlus, PauseCircle, PlayCircle, ChevronLeft, ChevronRight, ZoomIn, StickyNote } from 'lucide-react';
 import type { WorkOrder } from '../api/workOrders';
@@ -13,6 +13,7 @@ import api from '../api/axios';
 import type { SignatureFieldRef } from './SignatureField';
 import { Download } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { ErrorBoundary } from './ErrorBoundary';
 import { generateWorkOrderPDF } from '../utils/pdfGenerator';
 import { SlaBadge } from './SlaBadge';
@@ -114,6 +115,7 @@ export const WorkOrderDetailModal = ({
   const { user, hasPermission, canWriteOps } = useAuth();
   const { canEdit, remoteEditorName } = useWorkOrderPresence(workOrder?.id, isOpen);
   const isTechMobileShell = useTechnicianMobileShell();
+  const scrollBodyRef = useRef<HTMLDivElement>(null);
   const evidenceRef = useRef<HTMLDivElement>(null);
   const holdReasonRef = useRef<HTMLInputElement>(null);
   const finalizeSectionRef = useRef<HTMLDivElement>(null);
@@ -121,6 +123,34 @@ export const WorkOrderDetailModal = ({
   const pendingAutoSaveRef = useRef(false);
   const skipConfirmRef = useRef(false);
   const awaitPhotoThenSaveRef = useRef(false);
+
+  // Escape cierra el panel, igual que la X.
+  useEscapeKey(onClose, Boolean(isOpen));
+
+  /**
+   * Al abrir (o cambiar de orden): el panel se muestra desde arriba y la página
+   * de fondo no se desplaza. El reset se repite en el siguiente frame porque el
+   * contenido (comentarios, bitácora) termina de montarse después.
+   */
+  useEffect(() => {
+    if (!isOpen) return;
+    const reset = () => {
+      if (scrollBodyRef.current) scrollBodyRef.current.scrollTop = 0;
+      window.scrollTo({ top: 0 });
+    };
+    reset();
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const raf = requestAnimationFrame(reset);
+    const timer = window.setTimeout(reset, 150);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(timer);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen, workOrder?.id]);
 
   const [liveWorkOrder, setLiveWorkOrder] = useState<WorkOrder | null>(workOrder);
   const [status, setStatus] = useState<string>('');
@@ -721,7 +751,7 @@ export const WorkOrderDetailModal = ({
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
+        <div ref={scrollBodyRef} className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
           {remoteEditorName && (
             <div className="mb-4 p-3 sm:p-4 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 rounded-xl text-sm font-medium border border-amber-200 dark:border-amber-800 flex items-start gap-2">
               <Users size={18} className="shrink-0 mt-0.5" />

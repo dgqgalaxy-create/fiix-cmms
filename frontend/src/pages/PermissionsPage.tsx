@@ -7,6 +7,7 @@ import {
 import { getRoles, createRole, updateRole, deleteRole, type RoleDefinition } from '../api/roles';
 import { useAuth } from '../context/AuthContext';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 type ModuleKey = 'orders' | 'assets' | 'inventory' | 'purchases' | 'personnel' | 'checklists' | 'analytics' | 'settings';
 
@@ -75,6 +76,12 @@ export const PermissionsPage = () => {
   const [newName, setNewName] = useState('');
   const [newBase, setNewBase] = useState('TECNICO');
   const [deleteTarget, setDeleteTarget] = useState<RoleDefinition | null>(null);
+
+  // Escape cierra el diálogo de nuevo rol o el de borrado.
+  useEscapeKey(() => {
+    if (deleteTarget) { setDeleteTarget(null); return; }
+    if (creating) setCreating(false);
+  }, Boolean(creating || deleteTarget));
 
   const load = async (background = false) => {
     try {

@@ -1,3 +1,4 @@
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { useState, useEffect } from 'react';
 import { X, Loader2, Save, Trash2, Eye, EyeOff } from 'lucide-react';
 import type { User } from '../api/users';
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export const UserModal = ({ user, isOpen, onClose, onSubmit, onDelete }: Props) => {
+  useEscapeKey(onClose, isOpen);
   const { user: currentUser } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');

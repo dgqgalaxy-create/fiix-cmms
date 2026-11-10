@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import axios from 'axios';
 import { X, Loader2, CalendarDays, User, MapPin, Package, Wrench, AlertTriangle, Image as ImageIcon, Clock } from 'lucide-react';
 import { BACKEND_URL } from '../api/axios';
@@ -100,6 +101,7 @@ function EvidenceImage({ src, label }: { src: string; label: string }) {
 }
 
 export function RequestTrackingDetailModal({ folio, onClose }: Props) {
+  useEscapeKey(onClose, true);
   const [detail, setDetail] = useState<PublicRequestDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -123,13 +125,6 @@ export function RequestTrackingDetailModal({ folio, onClose }: Props) {
     return () => controller.abort();
   }, [folio, retry]);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
 
   const state = detail ? getPublicRequestStatus(detail.status) : null;
   const assetLabel = detail?.asset

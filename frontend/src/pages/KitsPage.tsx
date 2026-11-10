@@ -7,6 +7,7 @@ import { getItems, createTransaction, type Item } from '../api/inventory';
 import { getWorkOrders } from '../api/workOrders';
 import { useAuth } from '../context/AuthContext';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface DraftItem {
   item_id: string;
@@ -50,6 +51,12 @@ export default function KitsPage() {
   const [consume, setConsume] = useState<{ kit: Kit; factor: number; workOrderId: string } | null>(null);
   const [consumeError, setConsumeError] = useState<string | null>(null);
   const [consuming, setConsuming] = useState(false);
+
+  // Escape cierra el diálogo abierto (consumo o alta/edición).
+  useEscapeKey(() => {
+    if (consume) { setConsume(null); return; }
+    if (draft) { setDraft(null); return; }
+  }, Boolean(consume || draft));
 
   const load = async (background = false) => {
     try {

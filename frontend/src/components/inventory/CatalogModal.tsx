@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { X, Save, Trash2, Upload, Building2 } from 'lucide-react';
 import { 
   createCategory, updateCategory, deleteCategory,
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export const CatalogModal = ({ isOpen, onClose, onSaved, type, item, readOnly, allItems, onSelectItem, variant = 'modal' }: Props) => {
+  useEscapeKey(onClose, isOpen);
   const [formData, setFormData] = useState<any>({
     internal_id: '',
     name: '',

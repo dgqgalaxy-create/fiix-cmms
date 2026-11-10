@@ -12,6 +12,7 @@ import {
 import { formatDateTime } from '../utils/dateUtils';
 import { mediaUrl } from '../utils/mediaUrl';
 import { useAuth } from '../context/AuthContext';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 const formatSize = (bytes?: number | null): string => {
   if (!bytes || bytes <= 0) return '';
@@ -45,6 +46,11 @@ export const FileLibraryPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [folderModal, setFolderModal] = useState<{ mode: 'create' | 'rename'; id?: string; name: string } | null>(null);
+  // Escape cierra el diálogo de carpeta o el de subida.
+  useEscapeKey(() => {
+    if (folderModal) { setFolderModal(null); return; }
+    if (uploadOpen) setUploadOpen(false);
+  }, Boolean(folderModal || uploadOpen));
   const [folderError, setFolderError] = useState<string | null>(null);
   const isAdmin = hasPermission('MANAGE_INVENTORY') && user?.role === 'ADMINISTRADOR';
 

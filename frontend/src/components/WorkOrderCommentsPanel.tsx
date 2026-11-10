@@ -56,8 +56,14 @@ export function WorkOrderCommentsPanel({ workOrderId, isOpen, canWrite, onZoomIm
     };
   }, [isOpen, workOrderId]);
 
+  // Solo desplaza el contenedor de comentarios, nunca la página ni el panel.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const anchor = bottomRef.current;
+    if (!anchor) return;
+    const scroller = anchor.parentElement;
+    if (scroller) {
+      scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'smooth' });
+    }
   }, [comments.length]);
 
   const handleSend = async () => {

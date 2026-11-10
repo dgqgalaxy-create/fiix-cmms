@@ -1,3 +1,4 @@
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { useState, useEffect, useMemo } from 'react';
 import { X, Loader2, Trash2 } from 'lucide-react';
 import type { Asset } from '../api/assets';
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Props) => {
+  useEscapeKey(onClose, isOpen);
   const [internalCode, setInternalCode] = useState('');
   const [name, setName] = useState('');
   const [brand, setBrand] = useState('');

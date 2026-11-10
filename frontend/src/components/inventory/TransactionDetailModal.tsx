@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import type { InventoryTransaction } from '../../api/inventory';
 import { formatDateTime } from '../../utils/dateUtils';
 
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export const TransactionDetailModal = ({ isOpen, onClose, transaction, variant = 'modal' }: Props) => {
+  useEscapeKey(onClose, isOpen);
   if (!isOpen || !transaction) return null;
 
   const isDrawer = variant === 'drawer';

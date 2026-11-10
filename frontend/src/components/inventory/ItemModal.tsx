@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { X, Save, Upload, ArrowRightLeft, ChevronLeft, ChevronRight, Loader2, Edit2, Trash2 } from 'lucide-react';
 import { createItem, updateItem, deleteItem, getTransactions } from '../../api/inventory';
 import { getUoms } from '../../api/settings';
@@ -83,6 +84,7 @@ export const ItemModal = ({
   navigationPaused = false,
   variant = 'modal',
 }: Props) => {
+  useEscapeKey(onClose, true);
   const { hasPermission } = useAuth();
   const isDrawer = variant === 'drawer';
   const [tab, setTab] = useState<'detalle' | 'movimientos' | 'equipos' | 'archivos'>('detalle');

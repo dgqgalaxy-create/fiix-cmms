@@ -9,6 +9,7 @@ import { getUsers, type User } from '../api/users';
 import { getZones, type Zone } from '../api/zones';
 import { useAuth } from '../context/AuthContext';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface Draft {
   id?: string;
@@ -34,6 +35,10 @@ export default function CrewsPage() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [memberSearch, setMemberSearch] = useState('');
   const [saved, setSaved] = useState(false);
+
+  useEscapeKey(() => {
+    if (draft) setDraft(null);
+  }, Boolean(draft));
 
   const load = async (background = false) => {
     try {

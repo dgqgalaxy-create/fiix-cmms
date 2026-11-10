@@ -1,4 +1,5 @@
-﻿import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { X, Loader2, CalendarClock, Trash2, AlertTriangle, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -27,6 +28,7 @@ export const PersonnelShiftModal = ({
   canManage: boolean;
   onSaved: () => void;
 }) => {
+  useEscapeKey(onClose, true);
   const [history, setHistory] = useState<TechnicianPattern[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
