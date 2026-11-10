@@ -1,4 +1,5 @@
 ﻿import { workOrderPeriod } from '../utils/workOrderPeriod';
+import { touchWorkOrderActivity, withUnreadState } from '../utils/workOrderActivity';
 import { Request, Response } from 'express';
 import { mergePortalConfig } from '../utils/portalConfig';
 import type { Prisma } from '@prisma/client';
@@ -27,15 +28,15 @@ function calendarDaysBetween(from: Date, to: Date): number {
 }
 
 /**
- * Home indicators: which L1–L5 lines are stopped by open CORRECTIVO/PREVENTIVO WOs with
+ * Home indicators: which L1â€“L5 lines are stopped by open CORRECTIVO/PREVENTIVO WOs with
  * machine_stopped=true, days since the last corrective stoppage event (any status except ANULADO),
  * and the all-time best streak (bestStreakDays).
  *
- * Streak definition (same filters for every event: CORRECTIVO + machine_stopped + L1–L5 + not ANULADO):
+ * Streak definition (same filters for every event: CORRECTIVO + machine_stopped + L1â€“L5 + not ANULADO):
  * - A "stoppage event" is the created_at of such a work order.
  * - Completed streaks = calendar-day gaps between consecutive events (sorted ascending).
- * - Current streak = days from the latest event to now (0 if any L1–L5 line is currently stopped
- *   by an open CORRECTIVO WO — open PREVENTIVO stoppages appear on chips but do not reset the streak).
+ * - Current streak = days from the latest event to now (0 if any L1â€“L5 line is currently stopped
+ *   by an open CORRECTIVO WO â€” open PREVENTIVO stoppages appear on chips but do not reset the streak).
  * - bestStreakDays = max(completed gaps, current streak). We do NOT invent a gap before the
  *   first recorded event (no plant "start of history" date in data).
  */
@@ -47,7 +48,7 @@ export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): P
       { asset: { zone: { name: { in: lineNames, mode: 'insensitive' as const } } } },
     ];
 
-    // Streak / récord: historically corrective-only.
+    // Streak / rÃ©cord: historically corrective-only.
     const stoppageWhere = {
       maintenance_type: 'CORRECTIVO' as const,
       machine_stopped: true,
@@ -58,6 +59,7 @@ export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): P
     const stoppageSelect = {
       id: true,
       folio: true,
+  last_activity_at: true,
       title: true,
       status: true,
       maintenance_type: true,
@@ -145,7 +147,7 @@ export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): P
       const line =
         resolveProductionLine(lastStoppage.zone?.name) ||
         resolveProductionLine(lastStoppage.asset?.zone?.name) ||
-        '—';
+        'â€”';
       lastStoppagePayload = {
         id: lastStoppage.id,
         folio: lastStoppage.folio,
@@ -167,7 +169,7 @@ export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): P
         );
         if (gap > maxGap) maxGap = gap;
       }
-      // Include the open streak (last → now), already 0 when a corrective line is currently stopped.
+      // Include the open streak (last â†’ now), already 0 when a corrective line is currently stopped.
       const currentForBest = daysWithoutStoppage ?? 0;
       bestStreakDays = Math.max(maxGap, currentForBest);
     }
@@ -182,7 +184,7 @@ export const getLineStoppageStatus = async (_req: AuthRequest, res: Response): P
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Error al obtener estado de líneas paradas' });
+    res.status(500).json({ error: 'Error al obtener estado de lÃ­neas paradas' });
   }
 };
 
@@ -204,6 +206,7 @@ export const getRequesters = async (req: Request, res: Response): Promise<void> 
 const WO_LIST_SELECT = {
   id: true,
   folio: true,
+  last_activity_at: true,
   title: true,
   description: true,
   status: true,
@@ -309,7 +312,7 @@ function buildWorkOrderWhere(req: AuthRequest): Record<string, unknown> {
     and.push({ assigned_technicians: { none: {} } });
   }
   if (overdue === '1' || overdue === 'true') {
-    // Órdenes abiertas cuyo límite ya venció (para el mini-resumen «Vencidas»).
+    // Ã“rdenes abiertas cuyo lÃ­mite ya venciÃ³ (para el mini-resumen Â«VencidasÂ»).
     and.push({ status: openStatuses, due_date: { lt: new Date() } });
   }
 
@@ -399,13 +402,13 @@ function mapWorkOrdersWithSla(workOrders: any[], sla_policy: SlaPolicy | null) {
             author: latest.author,
           }
         : null,
-      // Con SLA desactivado no se expone el indicador: la UI oculta badges («Vencido», etc.).
+      // Con SLA desactivado no se expone el indicador: la UI oculta badges (Â«VencidoÂ», etc.).
       sla: sla_policy ? computeWorkOrderSla(wo, sla_policy) : null,
     };
   });
 }
 
-/** Conteo ligero para badge «Mis OT» (abiertas asignadas al usuario). */
+/** Conteo ligero para badge Â«Mis OTÂ» (abiertas asignadas al usuario). */
 export const getMineOpenCount = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
@@ -422,7 +425,7 @@ export const getMineOpenCount = async (req: AuthRequest, res: Response): Promise
     res.json({ count });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Error al contar órdenes' });
+    res.status(500).json({ error: 'Error al contar Ã³rdenes' });
   }
 };
 
@@ -453,7 +456,8 @@ export const getWorkOrders = async (req: AuthRequest, res: Response): Promise<vo
           take: limitNum,
         }),
       ]);
-      const data = mapWorkOrdersWithSla(workOrders, effectiveSlaPolicy);
+      const mapped = mapWorkOrdersWithSla(workOrders, effectiveSlaPolicy);
+      const data = await withUnreadState(mapped, req.user?.userId);
       res.json({
         data,
         total,
@@ -470,10 +474,11 @@ export const getWorkOrders = async (req: AuthRequest, res: Response): Promise<vo
       select: WO_LIST_SELECT,
       orderBy,
     });
-    res.json(mapWorkOrdersWithSla(workOrders, effectiveSlaPolicy));
+    const mappedAll = mapWorkOrdersWithSla(workOrders, effectiveSlaPolicy);
+    res.json(await withUnreadState(mappedAll, req.user?.userId));
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Error al obtener órdenes de trabajo' });
+    res.status(500).json({ error: 'Error al obtener Ã³rdenes de trabajo' });
   }
 };
 
@@ -514,7 +519,7 @@ export const getWorkOrdersSummary = async (req: AuthRequest, res: Response): Pro
     res.json(summary);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Error al obtener resumen de órdenes de trabajo' });
+    res.status(500).json({ error: 'Error al obtener resumen de Ã³rdenes de trabajo' });
   }
 };
 
@@ -573,7 +578,7 @@ export const createPublicWorkOrder = async (req: Request, res: Response): Promis
       return;
     }
 
-    // Configuración del portal (Configuración → Portal de solicitudes).
+    // ConfiguraciÃ³n del portal (ConfiguraciÃ³n â†’ Portal de solicitudes).
     const portalSettings = await prisma.systemSettings.findFirst({ select: { portal_config: true } });
     const portal = mergePortalConfig(portalSettings?.portal_config);
     const hasFile = Boolean((req as any).files?.['request_image']?.length);
@@ -584,7 +589,7 @@ export const createPublicWorkOrder = async (req: Request, res: Response): Promis
     };
 
     if (portal.fields.description.required && !String(description ?? '').trim()) {
-      missing('Descripción');
+      missing('DescripciÃ³n');
       return;
     }
     if (portal.fields.requester.enabled && portal.fields.requester.required && !String(requester_name ?? '').trim()) {
@@ -617,11 +622,11 @@ export const createPublicWorkOrder = async (req: Request, res: Response): Promis
     if (maintenanceValue === null) return;
 
     const productionValue = portal.fields.production_group.enabled
-      ? normalizeOption(production_group, portal.options.production_groups, portal.options.production_groups[0], 'Grupo de producción')
+      ? normalizeOption(production_group, portal.options.production_groups, portal.options.production_groups[0], 'Grupo de producciÃ³n')
       : portal.options.production_groups[0];
     if (productionValue === null) return;
 
-    const fullDescription = location ? `Ubicación: ${location}\n\n${description || ''}` : description;
+    const fullDescription = location ? `UbicaciÃ³n: ${location}\n\n${description || ''}` : description;
 
     // We need a created_by_id because the schema requires it. We assign it to an admin.
     const adminUser = await prisma.user.findFirst({ where: { role: 'ADMINISTRADOR' } });
@@ -673,13 +678,13 @@ export const createPublicWorkOrder = async (req: Request, res: Response): Promis
     try {
       await triggerNewWorkOrderNotification(newWorkOrder);
     } catch (notifyError) {
-      console.error('Error enviando notificaciones de solicitud pública:', notifyError);
+      console.error('Error enviando notificaciones de solicitud pÃºblica:', notifyError);
     }
 
     res.status(201).json(newWorkOrder);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Error al crear la orden de trabajo pública' });
+    res.status(500).json({ error: 'Error al crear la orden de trabajo pÃºblica' });
   }
 };
 
@@ -788,20 +793,20 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
       }
     }
 
-    // Regla estricta: Los técnicos no pueden editar datos de origen.
+    // Regla estricta: Los tÃ©cnicos no pueden editar datos de origen.
     if (userRole === 'TECNICO') {
       if (currentWorkOrder.status === 'FINALIZADO') {
-        res.status(403).json({ error: 'Prohibido: No puedes editar una orden que ya está finalizada.' });
+        res.status(403).json({ error: 'Prohibido: No puedes editar una orden que ya estÃ¡ finalizada.' });
         return;
       }
       
       if (title !== undefined || description !== undefined || asset_id !== undefined || assigned_technicians_ids !== undefined || zone_id !== undefined || priority !== undefined || maintenance_type !== undefined || requester_name !== undefined || production_group !== undefined) {
-        res.status(403).json({ error: 'Prohibido: Los Técnicos no pueden alterar campos operativos o de asignación manual masiva.' });
+        res.status(403).json({ error: 'Prohibido: Los TÃ©cnicos no pueden alterar campos operativos o de asignaciÃ³n manual masiva.' });
         return;
       }
     }
 
-    // Transiciones críticas: solo si el estado en BD sigue siendo el esperado
+    // Transiciones crÃ­ticas: solo si el estado en BD sigue siendo el esperado
     if (status && status !== currentWorkOrder.status) {
       const allowedFrom: Record<string, string[]> = {
         PENDIENTE: ['EN_PROCESO', 'ANULADO'],
@@ -820,7 +825,7 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
       }
 
       // Pausar / finalizar / reanudar: el usuario debe estar asignado (usar Unirme/Colaborar).
-      // Aceptar PENDIENTE → EN_PROCESO sí auto-asigna más abajo.
+      // Aceptar PENDIENTE â†’ EN_PROCESO sÃ­ auto-asigna mÃ¡s abajo.
       const isAssigned = currentWorkOrder.assigned_technicians.some((t) => t.id === userId);
       if (
         userId &&
@@ -835,7 +840,7 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
       }
     }
 
-    // Multer inyecta los archivos aquí
+    // Multer inyecta los archivos aquÃ­
     const files = (req as any).files as { [fieldname: string]: Express.Multer.File[] };
     
     const updateData: any = { status, resolution_notes };
@@ -859,9 +864,9 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
       updateData.assigned_technicians = { set: assigned_technicians_ids.map((tid: string) => ({ id: tid })) };
     }
 
-    // Auto-asignación al aceptar la orden (pasar de PENDIENTE a EN_PROCESO):
-    // si no quedará ningún técnico asignado, se auto-asigna a quien la acepta,
-    // sin importar su rol (técnico, gestionador o administrador).
+    // Auto-asignaciÃ³n al aceptar la orden (pasar de PENDIENTE a EN_PROCESO):
+    // si no quedarÃ¡ ningÃºn tÃ©cnico asignado, se auto-asigna a quien la acepta,
+    // sin importar su rol (tÃ©cnico, gestionador o administrador).
     if (status === 'EN_PROCESO' && currentWorkOrder.status === 'PENDIENTE' && userId) {
       const willHaveTechnicians = (userRole !== 'TECNICO' && assigned_technicians_ids !== undefined)
         ? assigned_technicians_ids.length > 0
@@ -872,10 +877,10 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
       }
     }
     
-    // Transiciones de pausa/reanudación/cierre y consumo de repuestos: se resuelven
-    // DENTRO de la transacción final, bajo bloqueo de la OT (ver más abajo). Así el
+    // Transiciones de pausa/reanudaciÃ³n/cierre y consumo de repuestos: se resuelven
+    // DENTRO de la transacciÃ³n final, bajo bloqueo de la OT (ver mÃ¡s abajo). AsÃ­ el
     // cierre y los descuentos son todo-o-nada: si el cierre falla (p. ej. conflicto 409
-    // por otra actualización en paralelo), ningún repuesto queda descontado.
+    // por otra actualizaciÃ³n en paralelo), ningÃºn repuesto queda descontado.
 
     // Repuestos usados: llegan como JSON string (FormData) o como arreglo directo.
     const parsedUsedItems: Array<{ item_id?: string; amount: unknown }> = [];
@@ -885,12 +890,12 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
         try {
           raw = JSON.parse(used_items);
         } catch {
-          res.status(400).json({ error: 'La lista de repuestos utilizados no es válida.' });
+          res.status(400).json({ error: 'La lista de repuestos utilizados no es vÃ¡lida.' });
           return;
         }
       }
       if (!Array.isArray(raw)) {
-        res.status(400).json({ error: 'La lista de repuestos utilizados no es válida.' });
+        res.status(400).json({ error: 'La lista de repuestos utilizados no es vÃ¡lida.' });
         return;
       }
       for (const part of raw) {
@@ -900,14 +905,14 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
       }
     }
 
-    // Cierre: transición a FINALIZADO. completed_at y consumo se resuelven bajo bloqueo.
+    // Cierre: transiciÃ³n a FINALIZADO. completed_at y consumo se resuelven bajo bloqueo.
     const closing = status === 'FINALIZADO' && currentWorkOrder.status !== 'FINALIZADO';
 
     let didConsumeInventory = false;
-    // Cantidades YA validadas (parseQty) por ítem consumido, para auditar con precisión.
+    // Cantidades YA validadas (parseQty) por Ã­tem consumido, para auditar con precisiÃ³n.
     const consumedByItem = new Map<string, number>();
 
-    // Construir URLs de las imágenes
+    // Construir URLs de las imÃ¡genes
     if (files && files['before_image']) {
       updateData.before_image_url = `/uploads/${files['before_image'][0].filename}`;
     }
@@ -916,19 +921,19 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
     }
 
     // Comparar-y-actualizar bajo bloqueo de fila: cierre de la OT + consumo de repuestos
-    // en UNA sola transacción (todo-o-nada). Si algo falla, la transacción revierte y no
+    // en UNA sola transacciÃ³n (todo-o-nada). Si algo falla, la transacciÃ³n revierte y no
     // queda ni el estado cambiado ni repuestos descontados.
     try {
       const updated = await prisma.$transaction(
         async (tx) => {
-          // 1) Serializar los cambios sobre esta OT (cierres concurrentes se encolan aquí).
+          // 1) Serializar los cambios sobre esta OT (cierres concurrentes se encolan aquÃ­).
           await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM "WorkOrder" WHERE id = ${id}::uuid FOR UPDATE`;
 
           const fresh = await tx.workOrder.findUnique({ where: { id } });
           if (!fresh) {
             throw Object.assign(new Error('NOT_FOUND'), { code: 'NOT_FOUND' });
           }
-          // El estado cambió en paralelo respecto a la lectura inicial → 409 (rollback total).
+          // El estado cambiÃ³ en paralelo respecto a la lectura inicial â†’ 409 (rollback total).
           if (status && status !== currentWorkOrder.status && fresh.status !== currentWorkOrder.status) {
             throw Object.assign(new Error('CONFLICT'), {
               code: 'CONFLICT',
@@ -951,7 +956,7 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
             merged.paused_at = null;
           }
 
-          // Aceptar / reanudar trabajo: marcar inicio o última reanudación.
+          // Aceptar / reanudar trabajo: marcar inicio o Ãºltima reanudaciÃ³n.
           if (status === 'EN_PROCESO' && fresh.status !== 'EN_PROCESO') {
             if (!fresh.started_at) {
               merged.started_at = new Date();
@@ -969,7 +974,7 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
             merged.last_resumed_at = null;
           }
 
-          // Cierre: estampar completed_at y descontar repuestos en la misma transacción.
+          // Cierre: estampar completed_at y descontar repuestos en la misma transacciÃ³n.
           if (closing) {
             // Preservar completed_at importado por CSV; solo estampar ahora si falta.
             merged.completed_at = fresh.completed_at ?? new Date();
@@ -998,8 +1003,8 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
                   throw Object.assign(new Error(quantity.error), { httpStatus: 400 });
                 }
 
-                // Baja atómica condicional: nunca deja el stock negativo, aunque otro
-                // proceso retire el mismo ítem al mismo tiempo.
+                // Baja atÃ³mica condicional: nunca deja el stock negativo, aunque otro
+                // proceso retire el mismo Ã­tem al mismo tiempo.
                 const result = await tryConsumeStock(tx, item.id, quantity.value);
                 if (!result.ok) {
                   throw Object.assign(
@@ -1028,7 +1033,7 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
 
           return tx.workOrder.update({
             where: { id },
-            data: merged,
+            data: { ...merged, last_activity_at: new Date() },
           });
         },
         { maxWait: 10_000, timeout: 20_000 }
@@ -1043,32 +1048,32 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
       const folioLabel = formatWorkOrderFolio(currentWorkOrder.folio);
       const statusPart =
         status && status !== currentWorkOrder.status
-          ? `${currentWorkOrder.status} → ${status}`
+          ? `${currentWorkOrder.status} â†’ ${status}`
           : 'datos actualizados';
       const assignPart =
         userRole !== 'TECNICO' && assigned_technicians_ids !== undefined
-          ? `; técnicos: ${assigned_technicians_ids.length}`
+          ? `; tÃ©cnicos: ${assigned_technicians_ids.length}`
           : '';
 
-      // Cambios concretos (antes → después) cuando es edición de datos (no transición).
+      // Cambios concretos (antes â†’ despuÃ©s) cuando es ediciÃ³n de datos (no transiciÃ³n).
       let editChanges: Array<{ campo: string; antes: unknown; despues: unknown }> = [];
       const isTransition = status && status !== currentWorkOrder.status;
       if (!isTransition) {
         const labels: Record<string, string> = {
           priority: 'prioridad',
           maintenance_type: 'tipo de mantenimiento',
-          machine_stopped: 'paro de máquina',
+          machine_stopped: 'paro de mÃ¡quina',
           requester_name: 'solicitante',
           production_group: 'grupo',
           zone_id: 'zona',
           scheduled_date: 'fecha programada',
-          due_date: 'fecha límite',
-          resolution_notes: 'notas de resolución',
+          due_date: 'fecha lÃ­mite',
+          resolution_notes: 'notas de resoluciÃ³n',
           hold_reason: 'motivo de espera',
-          signature_clean_area: 'firma área limpia',
+          signature_clean_area: 'firma Ã¡rea limpia',
           signature_delivery: 'firma entrega',
-          title: 'título',
-          description: 'descripción',
+          title: 'tÃ­tulo',
+          description: 'descripciÃ³n',
         };
         const beforeRec: Record<string, unknown> = {
           priority: currentWorkOrder.priority,
@@ -1086,7 +1091,7 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
           title: currentWorkOrder.title,
           description: currentWorkOrder.description,
         };
-        // Solo campos que el cliente tocó (evita "cambios" por claves undefined).
+        // Solo campos que el cliente tocÃ³ (evita "cambios" por claves undefined).
         const has = (k: string) => (req.body as Record<string, unknown>)[k] !== undefined;
         const requestedEdit: Record<string, unknown> = {};
         if (has('priority')) requestedEdit.priority = updateData.priority;
@@ -1110,7 +1115,7 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
         action: isTransition ? 'UPDATE_WO_STATUS' : 'UPDATE_WORK_ORDER',
         entity: 'work_order',
         entityId: id,
-        summary: `${folioLabel}: ${statusPart}${assignPart}${editChanges.length ? ` · ${editChanges.length} campo(s) editado(s)` : ''}`,
+        summary: `${folioLabel}: ${statusPart}${assignPart}${editChanges.length ? ` Â· ${editChanges.length} campo(s) editado(s)` : ''}`,
         meta: {
           from_status: currentWorkOrder.status,
           to_status: status || currentWorkOrder.status,
@@ -1135,13 +1140,13 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
       }
       if (txError?.code === 'CONFLICT') {
         res.status(409).json({
-          error: 'Otro usuario ya actualizó el estado de esta orden. Recarga e inténtalo de nuevo.',
+          error: 'Otro usuario ya actualizÃ³ el estado de esta orden. Recarga e intÃ©ntalo de nuevo.',
           current_status: txError.current_status,
         });
         return;
       }
-      // Errores de negocio lanzados dentro de la transacción (consumo inválido, stock
-      // insuficiente, repuesto inexistente…). La transacción ya se revirtió completa.
+      // Errores de negocio lanzados dentro de la transacciÃ³n (consumo invÃ¡lido, stock
+      // insuficiente, repuesto inexistenteâ€¦). La transacciÃ³n ya se revirtiÃ³ completa.
       if (txError?.httpStatus && Number.isInteger(txError.httpStatus)) {
         res.status(txError.httpStatus).json({
           error: txError.message || 'No se pudo cerrar la orden de trabajo',
@@ -1174,7 +1179,7 @@ export const deleteWorkOrder = async (req: AuthRequest, res: Response): Promise<
 
     await prisma.workOrder.delete({ where: { id } });
     emitWorkOrderUpdated(id);
-    res.json({ message: 'Orden eliminada con éxito' });
+    res.json({ message: 'Orden eliminada con Ã©xito' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al eliminar orden de trabajo' });
@@ -1227,5 +1232,25 @@ export const joinWorkOrder = async (req: AuthRequest, res: Response): Promise<vo
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al unirse a la orden' });
+  }
+};
+/** POST /api/work-orders/:id/seen â€” marca la orden como revisada por el usuario. */
+export const markWorkOrderSeen = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const workOrderId = req.params.id as string;
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'No autenticado' });
+      return;
+    }
+    await prisma.workOrderView.upsert({
+      where: { user_id_work_order_id: { user_id: userId, work_order_id: workOrderId } },
+      update: { last_seen_at: new Date() },
+      create: { user_id: userId, work_order_id: workOrderId },
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error marcando la OT como vista:', error);
+    res.status(500).json({ error: 'No se pudo marcar la orden como revisada' });
   }
 };

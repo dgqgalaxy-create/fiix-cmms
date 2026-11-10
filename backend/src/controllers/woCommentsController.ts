@@ -1,8 +1,9 @@
-import { Response } from 'express';
+﻿import { Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
 import prisma from '../config/prisma';
+import { touchWorkOrderActivity } from '../utils/workOrderActivity';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import { emitToWorkOrderRoom, getIO } from '../utils/socket';
 import { sendWebPushToUsers } from '../utils/webPush';
@@ -128,6 +129,7 @@ export const createWorkOrderComment = async (req: AuthRequest, res: Response) =>
       await sendWebPushToUsers(ids, { title, body: message, url: link });
     }
 
+    void touchWorkOrderActivity(id);
     res.status(201).json(comment);
   } catch (error: any) {
     console.error('createWorkOrderComment', error);

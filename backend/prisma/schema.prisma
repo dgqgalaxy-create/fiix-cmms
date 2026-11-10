@@ -136,6 +136,7 @@ model User {
   reported_downtimes   AssetDowntime[]
   wo_relations         WorkOrderRelation[]
   work_order_costs     WorkOrderCost[]
+  work_order_views     WorkOrderView[]
   crew_memberships     CrewMember[]
   preferences          Json?       @default("{}")
 }
@@ -350,6 +351,10 @@ model WorkOrder {
   documents           Document[]
   /// Costos adicionales de la orden (servicios, fletes, refacciones externas).
   costs               WorkOrderCost[]
+  /// Última actividad (comentario, cambio de estado…). Sirve para el aviso de
+  /// «cambios sin revisar» por usuario.
+  last_activity_at    DateTime            @default(now())
+  views               WorkOrderView[]
   /// Cuadrilla asignada a la orden (opcional).
   crew_id             String?             @db.Uuid
   crew                Crew?               @relation(fields: [crew_id], references: [id], onDelete: SetNull)
@@ -1288,4 +1293,19 @@ model KitItem {
   quantity Float  @default(1)
 
   @@unique([kit_id, item_id])
+}
+// ---------------------------------------------------------------------------
+// Visto por usuario: marca hasta cuándo revisó cada orden (aviso de cambios).
+// ---------------------------------------------------------------------------
+
+model WorkOrderView {
+  id            String    @id @default(uuid()) @db.Uuid
+  user_id       String    @db.Uuid
+  user          User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  work_order_id String    @db.Uuid
+  work_order    WorkOrder @relation(fields: [work_order_id], references: [id], onDelete: Cascade)
+  last_seen_at  DateTime  @default(now())
+
+  @@unique([user_id, work_order_id])
+  @@index([user_id])
 }

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import { getWorkOrderTimeline } from '../controllers/woTimelineController';
 import {
   getCostCategories,
@@ -25,6 +25,7 @@ import {
   joinWorkOrder,
   getRequesters,
   getMineOpenCount,
+  markWorkOrderSeen,
 } from '../controllers/workOrderController';
 import {
   listWorkOrderComments,
@@ -53,6 +54,7 @@ router.get('/mine-open-count', authenticate, getMineOpenCount);
 
 router.get('/summary', authenticate, getWorkOrdersSummary);
 router.get('/line-stoppage', authenticate, getLineStoppageStatus);
+router.post('/:id/seen', authenticate, markWorkOrderSeen);
 router.get('/:id/timeline', authenticate, getWorkOrderTimeline);
 router.get('/:id/relations', authenticate, getWorkOrderRelations);
 router.get('/:id/relations/search', authenticate, searchWorkOrdersForRelation);

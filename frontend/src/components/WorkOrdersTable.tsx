@@ -684,8 +684,20 @@ export const WorkOrdersTable = ({ workOrders, onRowClick, onAssignClick, onSched
                 >
                   <td className={`${colClass('folio')} wo-print-col-orden px-6 py-4 print:px-0.5 print:py-0.5 align-top print:align-top whitespace-nowrap`}>
                     <div className="flex flex-col gap-1.5 print:gap-0 items-start">
-                      <span className="bg-slate-800 dark:bg-slate-700 text-white px-2.5 py-1 print:px-0.5 print:py-0 rounded-md print:rounded-sm text-xs print:text-[7.5px] font-bold tracking-wide print:tracking-normal">
-                        {formatWorkOrderFolio(wo.folio)}
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="bg-slate-800 dark:bg-slate-700 text-white px-2.5 py-1 print:px-0.5 print:py-0 rounded-md print:rounded-sm text-xs print:text-[7.5px] font-bold tracking-wide print:tracking-normal">
+                          {formatWorkOrderFolio(wo.folio)}
+                        </span>
+                        {wo.has_updates && (
+                          <span
+                            className="relative inline-flex h-2.5 w-2.5 print:hidden"
+                            title="Cambios sin revisar"
+                            aria-label="Cambios sin revisar"
+                          >
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                          </span>
+                        )}
                       </span>
                       {rowPhotoUrl && (
                         <span

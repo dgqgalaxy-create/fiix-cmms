@@ -6,6 +6,7 @@ import { Plus, RefreshCw, Search, Download, XCircle, Users, Filter } from 'lucid
 import { WorkOrdersTable } from '../components/WorkOrdersTable';
 import { CreateWorkOrderModal } from '../components/CreateWorkOrderModal';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
+import { markWorkOrderSeen } from '../api/workOrders';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { InfoTip } from '../components/common/InfoTip';
 import { BulkAssignModal } from '../components/BulkAssignModal';
@@ -346,6 +347,7 @@ export const Dashboard = () => {
 
       if (!found) return;
       setSelectedWorkOrder(found);
+      markSeen(found.id);
     };
 
     openFromDeepLink();
@@ -359,10 +361,22 @@ export const Dashboard = () => {
     setSearchParams(next, { replace: true });
   };
 
+  /** Apaga el aviso de «cambios sin revisar» al abrir el detalle. */
+  const markSeen = (workOrderId: string) => {
+    // Solo cambia la lista si esa orden tenía el aviso (evita re-renders en loop).
+    setWorkOrders((prev) => {
+      const target = prev.find((item) => item.id === workOrderId);
+      if (!target || target.has_updates === false) return prev;
+      return prev.map((item) => (item.id === workOrderId ? { ...item, has_updates: false } : item));
+    });
+    void markWorkOrderSeen(workOrderId).catch(() => { /* silencioso */ });
+  };
+
   /** Abre el detalle empujando ?wo= al historial (Atrás cierra el modal, no sale del módulo). */
   const openWorkOrderDetail = (wo: WorkOrder, options?: { initialFocus?: 'assign' }) => {
     setDetailInitialFocus(options?.initialFocus);
     setSelectedWorkOrder(wo);
+    markSeen(wo.id);
     const next = new URLSearchParams(searchParams);
     const alreadyOpen = Boolean(searchParams.get('wo') || searchParams.get('folio'));
     next.set('wo', wo.id);

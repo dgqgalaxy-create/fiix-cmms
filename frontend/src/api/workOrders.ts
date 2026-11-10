@@ -6,6 +6,9 @@ import {
 } from '../utils/offlinePhotoQueue';
 
 export interface WorkOrder {
+  /** true si la orden tuvo actividad después de la última visita del usuario. */
+  has_updates?: boolean;
+  last_activity_at?: string;
   id: string;
   folio: number;
   title: string;
@@ -333,4 +336,9 @@ export const deleteWorkOrder = async (id: string) => {
 export const joinWorkOrder = async (id: string) => {
   const response = await api.post(`/work-orders/${id}/join`);
   return response.data;
+};
+
+/** Marca la orden como revisada por el usuario actual (apaga el aviso). */
+export const markWorkOrderSeen = async (id: string): Promise<void> => {
+  await api.post(`/work-orders/${id}/seen`);
 };
