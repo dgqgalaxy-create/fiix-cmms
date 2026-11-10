@@ -1,4 +1,4 @@
-import { useEscapeKey } from '../hooks/useEscapeKey';
+﻿import { useEscapeKey } from '../hooks/useEscapeKey';
 import { useState, useEffect, useMemo } from 'react';
 import { X, Loader2, Trash2 } from 'lucide-react';
 import type { Asset } from '../api/assets';
@@ -35,6 +35,9 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
   const [assetKind, setAssetKind] = useState<AssetKindValue | ''>('');
   const [vendorId, setVendorId] = useState('');
   const [price, setPrice] = useState('');
+  const [acquisitionDate, setAcquisitionDate] = useState('');
+  const [usefulLife, setUsefulLife] = useState('');
+  const [residualValue, setResidualValue] = useState('');
   const [isCritical, setIsCritical] = useState(false);
   const [isObsolete, setIsObsolete] = useState(false);
   
@@ -96,6 +99,9 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
         setAssetKind(initialData.asset_kind || '');
         setVendorId(initialData.vendor_id || '');
         setPrice(initialData.price?.toString() || '');
+        setAcquisitionDate(initialData.acquisition_date ? String(initialData.acquisition_date).slice(0, 10) : '');
+        setUsefulLife(initialData.useful_life_years != null ? String(initialData.useful_life_years) : '');
+        setResidualValue(initialData.residual_value != null ? String(initialData.residual_value) : '');
         setIsCritical(initialData.is_critical || false);
         setIsObsolete(initialData.is_obsolete || false);
         setParts(
@@ -116,6 +122,9 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
         setAssetKind('');
         setVendorId('');
         setPrice('');
+        setAcquisitionDate('');
+        setUsefulLife('');
+        setResidualValue('');
         setIsCritical(false);
         setIsObsolete(false);
         setParts([]);
@@ -206,6 +215,9 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
       submitData.append('zone_id', zoneId);
       submitData.append('vendor_id', vendorId);
       submitData.append('price', price);
+      submitData.append('acquisition_date', acquisitionDate);
+      submitData.append('useful_life_years', usefulLife);
+      submitData.append('residual_value', residualValue);
       submitData.append('zone_section_id', needsSection ? zoneSectionId : '');
       submitData.append('asset_kind', assetKind);
       submitData.append('is_critical', String(isCritical));
@@ -405,6 +417,7 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
                     allowEmpty
                     emptyLabel="Sin proveedor registrado"
                     placeholder="Buscar proveedor…"
+
                     inputClassName="w-full px-4 py-2.5 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all"
                   />
                 )}
@@ -415,6 +428,21 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
                   <span className="absolute left-4 top-2.5 text-slate-500 dark:text-slate-400">$</span>
                   <input type="number" step="0.01" min="0" className="w-full pl-8 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="0.00" value={price} onChange={(e) => setPrice(e.target.value)} />
                 </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Fecha de adquisición</label>
+                <input type="date" className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" value={acquisitionDate} onChange={(e) => setAcquisitionDate(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Vida útil (años)</label>
+                <input type="number" min="1" step="1" className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="10" value={usefulLife} onChange={(e) => setUsefulLife(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Valor residual</label>
+                <input type="number" min="0" step="0.01" className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="0.00" value={residualValue} onChange={(e) => setResidualValue(e.target.value)} />
               </div>
             </div>
 

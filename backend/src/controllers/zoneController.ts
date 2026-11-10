@@ -24,7 +24,7 @@ export const getZones = async (_req: Request, res: Response) => {
 
 export const createZone = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, has_sections } = req.body;
+    const { name, has_sections, plan_image_url } = req.body;
     if (!name || !String(name).trim()) {
       res.status(400).json({ error: 'El nombre es obligatorio' });
       return;
@@ -55,7 +55,7 @@ export const createZone = async (req: Request, res: Response): Promise<void> => 
 export const updateZone = async (req: Request, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { name, has_sections } = req.body;
+    const { name, has_sections, plan_image_url } = req.body;
 
     const existing = await prisma.zone.findUnique({ where: { id } });
     if (!existing) {
@@ -63,7 +63,11 @@ export const updateZone = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    const data: { name?: string; has_sections?: boolean } = {};
+    const data: { name?: string; has_sections?: boolean; plan_image_url?: string | null } = {};
+
+    if (plan_image_url !== undefined) {
+      data.plan_image_url = plan_image_url ? String(plan_image_url) : null;
+    }
 
     if (name !== undefined) {
       const trimmed = String(name).trim();
@@ -269,5 +273,29 @@ export const deleteZoneSection = async (req: Request, res: Response): Promise<vo
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al eliminar sección' });
+  }
+};
+
+/** POST /api/zones/:id/plan — sube la imagen del plano de la zona. */
+export const uploadZonePlan = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const zone = await prisma.zone.findUnique({ where: { id } });
+    if (!zone) {
+      res.status(404).json({ error: 'Zona no encontrada' });
+      return;
+    }
+    const file = (req as any).file as { filename?: string } | undefined;
+    if (!file?.filename) {
+      res.status(400).json({ error: 'Adjunta la imagen del plano.' });
+      return;
+    }
+
+    const planUrl = `/uploads/zones/${file.filename}`;
+    const updated = await prisma.zone.update({ where: { id }, data: { plan_image_url: planUrl } });
+    res.json({ plan_image_url: updated.plan_image_url });
+  } catch (error) {
+    console.error('Error subiendo el plano de la zona:', error);
+    res.status(500).json({ error: 'No se pudo guardar el plano' });
   }
 };

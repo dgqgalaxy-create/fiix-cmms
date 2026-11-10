@@ -1,7 +1,7 @@
 import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const APP_VERSION = "1.108.1";
+export const APP_VERSION = "1.109.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -35,6 +35,9 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: Planos por zona — sube la imagen del layout en Activos → Plano y coloca cada equipo arrastrando su punto; al hacer clic abre la ficha del activo. Los puntos cambian de color según el estado.",
+    "Nuevo: Depreciación de activos — captura fecha de adquisición, vida útil y valor residual; el sistema calcula depreciación mensual, acumulada y valor en libros, con barra de avance y resumen por zona.",
+    "Nuevo: Contratistas — registro de proveedores de servicios (especialidad, tarifas, contrato) y asignación a las órdenes de trabajo desde el detalle.",
     "Corrección: el reloj de la barra lateral (hora de planta), la fecha de la tabla de órdenes y la hora de los mensajes ahora respetan el formato de 12/24 h y la zona horaria configurados. Al guardar Fecha y hora la aplicación se recarga para aplicar el formato en todas las vistas.",
     "Mejora: Cuadrillas ahora vive dentro de Personal, junto con el Directorio (la barra lateral lo muestra como desplegable).",
     "Nuevo: Workflows de aprobación — reglas por prioridad, tipo de mantenimiento o activo crítico; si una orden las cumple queda «por aprobar» y no puede iniciarse ni finalizarse hasta que alguien con el permiso «Aprobar órdenes» la autorice o la rechace (con motivo). Queda historial y aviso en la tabla.",

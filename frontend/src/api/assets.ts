@@ -13,7 +13,30 @@ export interface AssetPart {
   } | null;
 }
 
+export interface DepreciationInfo {
+  configured: boolean;
+  cost: number | null;
+  residual: number;
+  useful_life_years: number | null;
+  acquisition_date: string | null;
+  monthly: number;
+  accumulated: number;
+  book_value: number | null;
+  elapsed_months: number;
+  total_months: number | null;
+  percent_depreciated: number;
+  fully_depreciated: boolean;
+}
+
 export interface Asset {
+  /** Datos de depreciación en línea recta. */
+  acquisition_date?: string | null;
+  useful_life_years?: number | null;
+  residual_value?: number | null;
+  /** Posición en el plano de su zona (porcentaje 0-100). */
+  plan_x?: number | null;
+  plan_y?: number | null;
+  depreciation?: DepreciationInfo;
   id: string;
   internal_code: string;
   name: string;

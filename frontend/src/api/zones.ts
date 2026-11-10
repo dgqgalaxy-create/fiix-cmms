@@ -1,4 +1,4 @@
-import api from './axios';
+﻿import api from './axios';
 
 export interface ZoneSection {
   id: string;
@@ -9,6 +9,8 @@ export interface ZoneSection {
 }
 
 export interface Zone {
+  /** Imagen del plano de la zona. */
+  plan_image_url?: string | null;
   id: string;
   name: string;
   has_sections: boolean;

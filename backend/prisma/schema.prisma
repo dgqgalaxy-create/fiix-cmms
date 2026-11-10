@@ -216,6 +216,8 @@ model Zone {
   name          String        @unique
   /// Si false, la zona está en modo «Sin secciones» (activos sin sección).
   has_sections  Boolean       @default(true)
+  /// Imagen del plano de la zona (se sube desde Activos → Plano).
+  plan_image_url String?
   created_at    DateTime      @default(now())
   updated_at    DateTime      @updatedAt
 
@@ -272,7 +274,14 @@ model Asset {
   
   vendor_id       String?     @db.Uuid
   vendor          Vendor?     @relation(fields: [vendor_id], references: [id])
+  /// Posición del activo en el plano de su zona (porcentaje 0-100).
+  plan_x          Float?
+  plan_y          Float?
   price           Float?
+  /// Datos para el cálculo de depreciación (línea recta).
+  acquisition_date   DateTime?
+  useful_life_years  Int?
+  residual_value     Float?
 
   work_orders     WorkOrder[]
   maintenance_plans MaintenancePlan[]
@@ -360,6 +369,9 @@ model WorkOrder {
   /// Estado de aprobación (reglas de autorización).
   approval_status     ApprovalStatus      @default(NONE)
   approvals           WorkOrderApproval[]
+  /// Contratista que ejecuta la orden (opcional).
+  contractor_id       String?             @db.Uuid
+  contractor          Contractor?         @relation(fields: [contractor_id], references: [id], onDelete: SetNull)
   /// Cuadrilla asignada a la orden (opcional).
   crew_id             String?             @db.Uuid
   crew                Crew?               @relation(fields: [crew_id], references: [id], onDelete: SetNull)
@@ -1454,4 +1466,21 @@ model WorkOrderApproval {
 
   @@index([work_order_id])
   @@index([status])
+}
+/// Proveedor de servicios de mantenimiento (no de refacciones).
+model Contractor {
+  id            String    @id @default(uuid()) @db.Uuid
+  name          String
+  contact_name  String?
+  phone         String?
+  email         String?
+  specialty     String?
+  hourly_rate   Float?
+  visit_rate    Float?
+  contract_start DateTime?
+  contract_end   DateTime?
+  notes         String?
+  is_active     Boolean   @default(true)
+  created_at    DateTime  @default(now())
+  work_orders   WorkOrder[]
 }

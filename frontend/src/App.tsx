@@ -49,6 +49,7 @@ const RosterPage = lazy(() => import('./pages/RosterPage').then((m) => ({ defaul
 const NotesPage = lazy(() => import('./pages/NotesPage'));
 const CrewsPage = lazy(() => import('./pages/CrewsPage'));
 const KitsPage = lazy(() => import('./pages/KitsPage'));
+const ContractorsPage = lazy(() => import('./pages/ContractorsPage'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 
 function PageFallback() {
@@ -140,6 +141,17 @@ function App() {
           />
           
           <Route 
+            path="/contractors"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ContractorsPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/kits"
             element={
               <ProtectedRoute>

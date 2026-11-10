@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck, AlertTriangle, Clock, Wrench, Package, CalendarClock, Layers, Pencil, Loader2 } from 'lucide-react';
 import type { Asset } from '../api/assets';
-import { getAssetMetrics } from '../api/assets';
+import { getAssetMetrics, getAssetById } from '../api/assets';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -46,6 +46,7 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit, vari
   const canManageItems = hasPermission('MANAGE_INVENTORY');
   const [activeTab, setActiveTab] = useState<'overview' | 'info' | 'metrics' | 'history' | 'meters' | 'downtimes' | 'files'>('info');
   const [metrics, setMetrics] = useState<any>(null);
+  const [assetDetail, setAssetDetail] = useState<Asset | null>(null);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
   const [itemDetail, setItemDetail] = useState<Item | null>(null);
   const [itemReadOnly, setItemReadOnly] = useState(true);
@@ -53,6 +54,16 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit, vari
   const [itemLocs, setItemLocs] = useState<ItemLocation[]>([]);
   const [itemVendors, setItemVendors] = useState<Vendor[]>([]);
   const [openingItem, setOpeningItem] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !asset?.id) return;
+    let cancelled = false;
+    setAssetDetail(null);
+    getAssetById(asset.id)
+      .then((full) => { if (!cancelled) setAssetDetail(full); })
+      .catch(() => { if (!cancelled) setAssetDetail(null); });
+    return () => { cancelled = true; };
+  }, [isOpen, asset?.id]);
 
   useEffect(() => {
     if (isOpen && asset) {
@@ -359,6 +370,51 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit, vari
                   </p>
                 </div>
               )}
+
+              {/* Depreciación */}
+              {(() => { const dep = (assetDetail?.depreciation ?? asset?.depreciation); if (!dep?.configured) return null; return (
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                  <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-100">
+                    <DollarSign size={15} className="text-emerald-600" /> Depreciación
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Costo</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                        ${(dep.cost ?? 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Valor en libros</p>
+                      <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                        ${(dep.book_value ?? 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Depreciación mensual</p>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        ${dep.monthly.toLocaleString('es-MX', { maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Depreciado</p>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        {dep.percent_depreciated}%
+                        {dep.fully_depreciated ? ' · total' : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                    <div
+                      className="h-full rounded-full bg-emerald-500"
+                      style={{ width: `${Math.min(100, dep.percent_depreciated)}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                    Vida útil {dep.useful_life_years} años · {dep.elapsed_months} de {dep.total_months} meses
+                  </p>
+                </div>
+              ); })()}
 
               {/* Campos personalizados del activo */}
               <CustomFieldsSection entity="ASSET" entityId={asset.id} canWrite={Boolean(canEdit)} isOpen />

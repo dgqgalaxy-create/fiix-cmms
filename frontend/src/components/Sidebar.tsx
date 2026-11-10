@@ -1,4 +1,4 @@
-import { LayoutDashboard, LogOut, Users, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote, MessageSquare, ChevronDown, Gauge, FolderOpen, BarChart3 } from 'lucide-react';
+﻿import { LayoutDashboard, LogOut, Users, X, Package, CalendarClock, ShoppingCart, Info, GitBranch, Settings, Calendar, ClipboardCheck, Clock, Moon, Sun, GripVertical, Settings2, Check, Home, Smartphone, StickyNote, MessageSquare, ChevronDown, Gauge, FolderOpen, BarChart3 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getFeatures, isFeatureEnabled } from '../api/features';
 import { useTheme } from '../context/ThemeContext';
@@ -246,6 +246,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         children: [
           { name: 'Directorio', to: '/users' },
           { name: 'Cuadrillas', to: '/crews' },
+          { name: 'Contratistas', to: '/contractors' },
         ],
       });
     }

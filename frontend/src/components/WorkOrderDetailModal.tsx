@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, CheckCircle2, Users, UserPlus, PauseCircle, PlayCircle, ChevronLeft, ChevronRight, ZoomIn, StickyNote } from 'lucide-react';
 import type { WorkOrder } from '../api/workOrders';
@@ -31,6 +31,7 @@ import { WorkOrderTimeline } from './workorders/WorkOrderTimeline';
 import { WorkOrderRelations } from './workorders/WorkOrderRelations';
 import { WorkOrderCostsSection } from './workorders/WorkOrderCostsSection';
 import { WorkOrderCrewSection } from './workorders/WorkOrderCrewSection';
+import { WorkOrderContractorSection } from './workorders/WorkOrderContractorSection';
 import { CustomFieldsSection } from './common/CustomFieldsSection';
 import { WorkOrderApprovalSection } from './workorders/WorkOrderApprovalSection';
 import { FilesPanel } from './common/FilesPanel';
@@ -1530,6 +1531,11 @@ export const WorkOrderDetailModal = ({
               </div>
 
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <WorkOrderContractorSection
+                  workOrderId={workOrder.id}
+                  currentContractorId={(workOrder as any).contractor?.id ?? null}
+                  canWrite={canWriteOps}
+                />
                 <WorkOrderCrewSection
                   workOrderId={workOrder.id}
                   currentCrewId={(workOrder as any).crew?.id ?? null}

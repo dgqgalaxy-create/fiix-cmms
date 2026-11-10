@@ -1,5 +1,5 @@
-import { Router } from 'express';
-import { getAssets, getAssetById, getAssetMetrics, createAsset, updateAsset, deleteAsset, getLineCosts, updateLineCostsVisibleZones } from '../controllers/assetController';
+﻿import { Router } from 'express';
+import { getAssets, getAssetById, getAssetMetrics, getDepreciationSummary, createAsset, updateAsset, deleteAsset, getLineCosts, updateLineCostsVisibleZones } from '../controllers/assetController';
 import { authenticate, requirePermission } from '../middlewares/authMiddleware';
 import { createDiskUploader } from '../middlewares/upload';
 import path from 'path';
@@ -14,6 +14,7 @@ router.use(authenticate);
 // Todos pueden leer (Admin, Gestionador, Tecnico)
 router.get('/', getAssets);
 router.get('/line-costs', getLineCosts);
+router.get('/depreciation/summary', getDepreciationSummary);
 router.put('/line-costs/visible-zones', requirePermission('MANAGE_LINE_COSTS'), updateLineCostsVisibleZones);
 router.get('/:id', getAssetById);
 router.get('/:id/metrics', getAssetMetrics);

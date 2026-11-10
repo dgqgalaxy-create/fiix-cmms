@@ -1,6 +1,7 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import { AssetKind, Prisma } from '@prisma/client';
 import prisma from '../config/prisma';
+import { computeDepreciation } from '../utils/depreciation';
 import { emitRefresh } from '../utils/socket';
 import { resolveAssetZoneSection } from '../utils/assetSection';
 import {
@@ -397,7 +398,7 @@ export const getAssetById = async (req: Request, res: Response): Promise<void> =
       res.status(404).json({ error: 'Activo no encontrado' });
       return;
     }
-    res.json(asset);
+    res.json({ ...asset, depreciation: computeDepreciation(asset) });
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener activo' });
   }
@@ -421,6 +422,11 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
       zone_section_id,
       asset_kind,
       is_critical,
+       acquisition_date,
+       useful_life_years,
+       residual_value,
+       plan_x,
+       plan_y,
       is_obsolete,
       parts,
     } = req.body;
@@ -489,6 +495,11 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
               description: description || null,
               status,
               price: price ? parseFloat(price) : null,
+              acquisition_date: acquisition_date ? new Date(acquisition_date) : null,
+              useful_life_years: useful_life_years ? parseInt(String(useful_life_years), 10) : null,
+              residual_value: residual_value === undefined || residual_value === null || residual_value === '' ? null : parseFloat(String(residual_value)),
+              plan_x: plan_x === undefined || plan_x === null || plan_x === '' ? null : parseFloat(String(plan_x)),
+              plan_y: plan_y === undefined || plan_y === null || plan_y === '' ? null : parseFloat(String(plan_y)),
               section: sectionResult.section,
               asset_kind: kind,
               is_critical: is_critical === 'true' || is_critical === '1' || is_critical === true,
@@ -563,6 +574,11 @@ export const updateAsset = async (req: Request, res: Response): Promise<void> =>
       zone_section_id,
       asset_kind,
       is_critical,
+       acquisition_date,
+       useful_life_years,
+       residual_value,
+       plan_x,
+       plan_y,
       is_obsolete,
       parts,
     } = req.body;
@@ -654,6 +670,11 @@ export const updateAsset = async (req: Request, res: Response): Promise<void> =>
                 ? { connect: { id: sectionResult.zone_section_id } }
                 : { disconnect: true },
             };
+            if (acquisition_date !== undefined) assetData.acquisition_date = acquisition_date ? new Date(acquisition_date) : null;
+            if (useful_life_years !== undefined) assetData.useful_life_years = useful_life_years ? parseInt(String(useful_life_years), 10) : null;
+            if (residual_value !== undefined) assetData.residual_value = residual_value === null || residual_value === '' ? null : parseFloat(String(residual_value));
+            if (plan_x !== undefined) assetData.plan_x = plan_x === null || plan_x === '' ? null : parseFloat(String(plan_x));
+            if (plan_y !== undefined) assetData.plan_y = plan_y === null || plan_y === '' ? null : parseFloat(String(plan_y));
             if (brand) assetData.brand = brand;
             if (model) assetData.model = model;
             if (serial_number !== undefined) assetData.serial_number = serial_number || null;
@@ -950,5 +971,56 @@ export const updateLineCostsVisibleZones = async (req: Request, res: Response): 
   } catch (error) {
     console.error('Error updating line costs visible zones', error);
     res.status(500).json({ error: 'Error al guardar la configuración de líneas visibles' });
+  }
+};
+/** GET /api/assets/depreciation/summary — valor del parque por zona. */
+export const getDepreciationSummary = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const assets = await prisma.asset.findMany({
+      where: { is_obsolete: false },
+      select: {
+        id: true,
+        price: true,
+        acquisition_date: true,
+        useful_life_years: true,
+        residual_value: true,
+        zone: { select: { id: true, name: true } },
+      },
+    });
+
+    const totals = { cost: 0, book_value: 0, accumulated: 0, monthly: 0, assets: assets.length, configured: 0 };
+    const byZone = new Map<string, { zone: string; cost: number; book_value: number; accumulated: number; assets: number }>();
+
+    for (const asset of assets) {
+      const dep = computeDepreciation(asset);
+      if (!dep.configured) continue;
+      totals.cost += dep.cost ?? 0;
+      totals.book_value += dep.book_value ?? 0;
+      totals.accumulated += dep.accumulated;
+      totals.monthly += dep.monthly;
+      totals.configured += 1;
+
+      const key = asset.zone?.id ?? 'none';
+      const current = byZone.get(key) ?? {
+        zone: asset.zone?.name ?? 'Sin zona',
+        cost: 0,
+        book_value: 0,
+        accumulated: 0,
+        assets: 0,
+      };
+      current.cost += dep.cost ?? 0;
+      current.book_value += dep.book_value ?? 0;
+      current.accumulated += dep.accumulated;
+      current.assets += 1;
+      byZone.set(key, current);
+    }
+
+    res.json({
+      totals,
+      zones: [...byZone.values()].sort((a, b) => b.book_value - a.book_value),
+    });
+  } catch (error) {
+    console.error('Error calculando depreciación:', error);
+    res.status(500).json({ error: 'No se pudo calcular la depreciación' });
   }
 };

@@ -238,6 +238,7 @@ const WO_LIST_SELECT = {
   created_by: { select: { id: true, name: true } },
   assigned_technicians: { select: { id: true, name: true } },
   crew: { select: { id: true, name: true } },
+  contractor: { select: { id: true, name: true } },
   _count: { select: { comments: true } },
   comments: {
     orderBy: { created_at: 'desc' as const },
@@ -541,6 +542,7 @@ export const getWorkOrderById = async (req: AuthRequest, res: Response): Promise
             members: { include: { user: { select: { id: true, name: true } } } },
           },
         },
+        contractor: true,
         failure_problem: true,
         failure_cause: true,
         failure_remedy: true,
@@ -773,7 +775,7 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
 export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { title, description, asset_id, status, hold_reason, resolution_notes, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group, signature_clean_area, signature_delivery, used_items, failure_problem_id, failure_cause_id, failure_remedy_id, scheduled_date, due_date } = req.body;
+    const { title, description, asset_id, status, hold_reason, resolution_notes, zone_id, priority, contractor_id, maintenance_type, machine_stopped, requester_name, production_group, signature_clean_area, signature_delivery, used_items, failure_problem_id, failure_cause_id, failure_remedy_id, scheduled_date, due_date } = req.body;
     let { assigned_technicians_ids } = req.body;
     if (typeof assigned_technicians_ids === 'string') {
       try {
@@ -961,6 +963,9 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
           }
 
           const merged: any = { ...updateData };
+          if (contractor_id !== undefined) {
+            merged.contractor_id = contractor_id ? String(contractor_id) : null;
+          }
 
           // Pausar (EN_ESPERA): registrar motivo y momento de pausa.
           if (status === 'EN_ESPERA') {
