@@ -31,6 +31,7 @@ import { WorkOrderTimeline } from './workorders/WorkOrderTimeline';
 import { WorkOrderRelations } from './workorders/WorkOrderRelations';
 import { WorkOrderCostsSection } from './workorders/WorkOrderCostsSection';
 import { WorkOrderCrewSection } from './workorders/WorkOrderCrewSection';
+import { CustomFieldsSection } from './common/CustomFieldsSection';
 import { FilesPanel } from './common/FilesPanel';
 import { mediaUrl } from '../utils/mediaUrl';
 import { SearchableSelect } from './ui/SearchableSelect';
@@ -1498,6 +1499,15 @@ export const WorkOrderDetailModal = ({
                   workOrderId={workOrder.id}
                   isOpen={isOpen}
                   canWrite={canWriteOps}
+                />
+              </div>
+
+              <div className="mt-4">
+                <CustomFieldsSection
+                  entity="WORK_ORDER"
+                  entityId={workOrder.id}
+                  canWrite={canWriteOps}
+                  isOpen={isOpen}
                 />
               </div>
 

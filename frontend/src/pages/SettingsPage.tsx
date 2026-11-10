@@ -1,7 +1,7 @@
-import { useState, useEffect, type ReactNode } from 'react';
+﻿import { useState, useEffect, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft, Globe, Clock } from 'lucide-react';
+import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft, Globe, Clock, ListPlus, Trash2, Loader2 } from 'lucide-react';
 import { PermissionsPage } from './PermissionsPage';
 import { DeveloperOptions } from './DeveloperOptions';
 import { ChecklistCatalogue } from '../components/ChecklistCatalogue';
@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { MODULE_FEATURES } from '../api/features';
 import { savePortalConfig, PORTAL_FIELD_LABELS, PORTAL_OPTION_LABELS, type PortalConfig, type PortalFieldKey } from '../api/portal';
 import { setDateTimePreferences, formatDateTime, getDateTimePreferences, type DateFormat, type TimeFormat } from '../utils/dateUtils';
+import { getCustomFields, createCustomField, deleteCustomField, updateCustomField, ENTITY_LABELS, TYPE_LABELS, type CustomFieldDefinition, type CustomFieldEntity, type CustomFieldType } from '../api/customFields';
 import api from '../api/axios';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { canUseTechnicianMobileUi, isTechnicianMobileUiPrefOn } from '../hooks/useTechnicianMobileShell';
@@ -162,6 +163,14 @@ export const SettingsPage = () => {
   const [portalConfig, setPortalConfig] = useState<PortalConfig | null>(null);
   const [datePrefs, setDatePrefs] = useState<{ time_zone: string; date_format: DateFormat; time_format: TimeFormat }>(() => getDateTimePreferences());
   const [dateMsg, setDateMsg] = useState<string | null>(null);
+  const [cfEntity, setCfEntity] = useState<CustomFieldEntity>('WORK_ORDER');
+  const [cfFields, setCfFields] = useState<CustomFieldDefinition[]>([]);
+  const [cfLabel, setCfLabel] = useState('');
+  const [cfType, setCfType] = useState<CustomFieldType>('TEXT');
+  const [cfOptions, setCfOptions] = useState('');
+  const [cfRequired, setCfRequired] = useState(false);
+  const [cfBusy, setCfBusy] = useState(false);
+  const [cfMsg, setCfMsg] = useState<string | null>(null);
   const [portalMsg, setPortalMsg] = useState<string | null>(null);
   const [slaPriorityTab, setSlaPriorityTab] = useState<SlaPriorityKey>('URGENTE');
   const { theme, setTheme } = useTheme();
@@ -195,7 +204,16 @@ export const SettingsPage = () => {
     }
   };
 
+
+  // Campos personalizados: se cargan al abrir su pestaña.
   useEffect(() => {
+    if (activeTab !== 'custom_fields' || !isAdmin) return;
+    let cancelled = false;
+    getCustomFields(cfEntity)
+      .then((rows) => { if (!cancelled) setCfFields(rows); })
+      .catch(() => { if (!cancelled) setCfMsg('No se pudieron cargar los campos.'); });
+    return () => { cancelled = true; };
+  }, [activeTab, cfEntity, isAdmin]);  useEffect(() => {
     fetchSettings();
   }, [isAdmin]);
 
@@ -339,6 +357,55 @@ export const SettingsPage = () => {
     setPortalMsg(null);
   };
 
+  const addCustomField = async () => {
+    if (!cfLabel.trim()) {
+      setCfMsg('Escribe el nombre del campo.');
+      return;
+    }
+    setCfBusy(true);
+    setCfMsg(null);
+    try {
+      const options = cfType === 'SELECT'
+        ? cfOptions.split(',').map((item) => item.trim()).filter(Boolean).map((item) => ({ value: item, label: item }))
+        : undefined;
+      await createCustomField({
+        entity: cfEntity,
+        label: cfLabel.trim(),
+        field_type: cfType,
+        options,
+        required: cfRequired,
+      });
+      setCfLabel('');
+      setCfOptions('');
+      setCfRequired(false);
+      setCfFields(await getCustomFields(cfEntity));
+      setCfMsg('Campo creado.');
+    } catch (err: any) {
+      setCfMsg(err?.response?.data?.error || 'No se pudo crear el campo.');
+    } finally {
+      setCfBusy(false);
+    }
+  };
+
+  const toggleCustomField = async (field: CustomFieldDefinition) => {
+    try {
+      await updateCustomField(field.id, { is_active: !field.is_active });
+      setCfFields(await getCustomFields(cfEntity));
+    } catch {
+      setCfMsg('No se pudo actualizar el campo.');
+    }
+  };
+
+  const removeCustomField = async (field: CustomFieldDefinition) => {
+    if (!window.confirm(`¿Eliminar el campo «${field.label}»? Se borrarán los valores capturados.`)) return;
+    try {
+      await deleteCustomField(field.id);
+      setCfFields(await getCustomFields(cfEntity));
+    } catch {
+      setCfMsg('No se pudo eliminar el campo.');
+    }
+  };
+
   const saveDateTime = async () => {
     setIsSaving(true);
     setDateMsg(null);
@@ -426,6 +493,7 @@ export const SettingsPage = () => {
             {isAdmin && navBtn('developer', 'Opciones de Desarrollador', <Code size={18} />)}
             {isAdmin && hasPermission('MANAGE_CHECKLIST_CATALOG') &&
               navBtn('checklist_catalogue', 'Catálogo de Checklist', <ListChecks size={18} />)}
+            {isAdmin && navBtn('custom_fields', 'Campos personalizados', <ListPlus size={18} />)}
             {isAdmin && navBtn('datetime', 'Fecha y hora', <Clock size={18} />)}
             {isAdmin && navBtn('portal', 'Portal de solicitudes', <Globe size={18} />)}
             {isAdmin && navBtn('features', 'Características', <ToggleLeft size={18} />)}
@@ -581,6 +649,137 @@ export const SettingsPage = () => {
                   {slaSaveMsg && (
                     <p className="mt-3 text-sm font-medium text-emerald-700 dark:text-emerald-400">{slaSaveMsg}</p>
                   )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isAdmin && activeTab === 'custom_fields' && (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="border-b border-slate-100 p-6 dark:border-slate-800">
+                  <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200">Campos personalizados</h2>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    Agrega campos propios a las órdenes, los activos o los repuestos. Aparecerán en su ficha para capturar información extra.
+                  </p>
+                </div>
+
+                <div className="flex gap-1 border-b border-slate-100 px-4 pt-3 dark:border-slate-800">
+                  {(['WORK_ORDER', 'ASSET', 'ITEM'] as CustomFieldEntity[]).map((entity) => (
+                    <button
+                      key={entity}
+                      type="button"
+                      onClick={() => setCfEntity(entity)}
+                      className={`rounded-t-lg px-3 py-2 text-xs font-bold transition-colors ${
+                        cfEntity === entity
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                          : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      {ENTITY_LABELS[entity]}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="p-4">
+                  {cfFields.length === 0 ? (
+                    <p className="py-4 text-center text-xs text-slate-500 dark:text-slate-400">
+                      Aún no hay campos para {ENTITY_LABELS[cfEntity].toLowerCase()}.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {cfFields.map((field) => (
+                        <li key={field.id} className="flex items-center gap-3 py-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                              {field.label}
+                              {field.required && <span className="ml-1 text-red-500">*</span>}
+                              {!field.is_active && <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-slate-800">Inactivo</span>}
+                            </p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                              {TYPE_LABELS[field.field_type]} · clave: {field.key}
+                              {field.options && field.options.length > 0 ? ` · ${field.options.map((option) => option.label).join(', ')}` : ''}
+                            </p>
+                          </div>
+                          <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 accent-emerald-600"
+                              checked={field.is_active}
+                              onChange={() => void toggleCustomField(field)}
+                            />
+                            Activo
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => void removeCustomField(field)}
+                            className="rounded p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40"
+                            title="Eliminar campo"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">Nuevo campo</h3>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="cf-label">Nombre</label>
+                    <input
+                      id="cf-label"
+                      value={cfLabel}
+                      onChange={(event) => setCfLabel(event.target.value)}
+                      placeholder="Ej. Número de factura"
+                      className="ui-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="cf-type">Tipo</label>
+                    <select
+                      id="cf-type"
+                      value={cfType}
+                      onChange={(event) => setCfType(event.target.value as CustomFieldType)}
+                      className="ui-input"
+                    >
+                      {(Object.keys(TYPE_LABELS) as CustomFieldType[]).map((type) => (
+                        <option key={type} value={type}>{TYPE_LABELS[type]}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {cfType === 'SELECT' && (
+                    <div className="sm:col-span-2">
+                      <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="cf-options">
+                        Opciones (separadas por coma)
+                      </label>
+                      <input
+                        id="cf-options"
+                        value={cfOptions}
+                        onChange={(event) => setCfOptions(event.target.value)}
+                        placeholder="Opción A, Opción B, Opción C"
+                        className="ui-input"
+                      />
+                    </div>
+                  )}
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 sm:col-span-2 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-emerald-600"
+                      checked={cfRequired}
+                      onChange={(event) => setCfRequired(event.target.checked)}
+                    />
+                    Obligatorio al capturar
+                  </label>
+                </div>
+                <div className="mt-3 flex items-center justify-end gap-3">
+                  {cfMsg && <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">{cfMsg}</span>}
+                  <button type="button" onClick={() => void addCustomField()} disabled={cfBusy} className="ui-btn-primary">
+                    {cfBusy ? <Loader2 size={15} className="animate-spin" /> : <ListPlus size={15} />} Agregar campo
+                  </button>
                 </div>
               </div>
             </div>

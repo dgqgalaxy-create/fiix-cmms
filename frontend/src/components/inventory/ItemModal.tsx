@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { X, Save, Upload, ArrowRightLeft, ChevronLeft, ChevronRight, Loader2, Edit2, Trash2 } from 'lucide-react';
 import { createItem, updateItem, deleteItem, getTransactions } from '../../api/inventory';
@@ -7,6 +7,8 @@ import type { UnitOfMeasure } from '../../api/settings';
 import { ImageSearchModal } from '../inventory/ImageSearchModal';
 import { ItemAssetsTab } from '../inventory/ItemAssetsTab';
 import { ItemFilesTab } from '../inventory/ItemFilesTab';
+
+import { CustomFieldsSection } from '../common/CustomFieldsSection';
 import type { Item, ItemCategory, ItemLocation, Vendor, InventoryTransaction } from '../../api/inventory';
 import { formatDateTime } from '../../utils/dateUtils';
 import { qtyStep, isInvalidQty, type QtyMode } from '../../utils/qtyMode';
@@ -738,6 +740,12 @@ export const ItemModal = ({
               </div>
             </div>
           </div>
+          )}
+
+          {item && (!isDrawer || tab === 'detalle') && (
+            <div className="mt-6">
+              <CustomFieldsSection entity="ITEM" entityId={item.id} canWrite={!readOnly} isOpen />
+            </div>
           )}
 
           {item && (!isDrawer || tab === 'movimientos') && (

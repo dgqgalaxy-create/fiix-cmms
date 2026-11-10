@@ -1309,3 +1309,57 @@ model WorkOrderView {
   @@unique([user_id, work_order_id])
   @@index([user_id])
 }
+// ---------------------------------------------------------------------------
+// Campos personalizados: el administrador agrega campos propios a las
+// entidades sin tocar la base de datos.
+// ---------------------------------------------------------------------------
+
+/// Entidad a la que pertenece un campo personalizado.
+enum CustomFieldEntity {
+  WORK_ORDER
+  ASSET
+  ITEM
+}
+
+/// Tipo de dato del campo (define el control en pantalla y la validación).
+enum CustomFieldType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  DATE
+  SELECT
+  BOOLEAN
+}
+
+model CustomFieldDefinition {
+  id         String           @id @default(uuid()) @db.Uuid
+  entity     CustomFieldEntity
+  /// Clave estable (snake_case) usada en la API y la exportación.
+  key        String
+  label      String
+  field_type CustomFieldType  @default(TEXT)
+  /// Opciones para SELECT: [{ "value": "A", "label": "Opción A" }]
+  options    Json?
+  required   Boolean          @default(false)
+  is_active  Boolean          @default(true)
+  sort_order Int              @default(0)
+  created_at DateTime         @default(now())
+  updated_at DateTime         @updatedAt
+  values     CustomFieldValue[]
+
+  @@unique([entity, key])
+  @@index([entity, sort_order])
+}
+
+model CustomFieldValue {
+  id        String               @id @default(uuid()) @db.Uuid
+  field_id  String               @db.Uuid
+  field     CustomFieldDefinition @relation(fields: [field_id], references: [id], onDelete: Cascade)
+  /// id del registro de la entidad (OT, activo o repuesto).
+  entity_id String               @db.Uuid
+  value     String?
+  updated_at DateTime            @default(now()) @updatedAt
+
+  @@unique([field_id, entity_id])
+  @@index([entity_id])
+}

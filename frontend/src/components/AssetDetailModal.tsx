@@ -1,4 +1,4 @@
-import { useEscapeKey } from '../hooks/useEscapeKey';
+﻿import { useEscapeKey } from '../hooks/useEscapeKey';
 import { useState, useEffect } from 'react';
 import { X, Database, MapPin, Tag, Activity, Settings, Ban, FileText, Download, Eye, DollarSign, Truck, AlertTriangle, Clock, Wrench, Package, CalendarClock, Layers, Pencil, Loader2 } from 'lucide-react';
 import type { Asset } from '../api/assets';
@@ -16,6 +16,7 @@ import { ItemModal } from './inventory/ItemModal';
 import { getItemById, getCategories, getLocations, getVendors } from '../api/inventory';
 import type { Item, ItemCategory, ItemLocation, Vendor } from '../api/inventory';
 import { AssetMeters } from './assets/AssetMeters';
+import { CustomFieldsSection } from './common/CustomFieldsSection';
 import { AssetDowntimes } from './assets/AssetDowntimes';
 import { FilesPanel } from './common/FilesPanel';
 
@@ -358,6 +359,10 @@ export const AssetDetailModal = ({ asset, isOpen, onClose, onEdit, canEdit, vari
                   </p>
                 </div>
               )}
+
+              {/* Campos personalizados del activo */}
+              <CustomFieldsSection entity="ASSET" entityId={asset.id} canWrite={Boolean(canEdit)} isOpen />
+
 
               {/* Details Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
