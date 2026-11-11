@@ -8,6 +8,8 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { monthDays, monthLabel, shiftMonth, addDays, plantDay, weekStart, weekNumber, weekQuery, weeklyReport, weeklyCompletions, repairMs, historyReport, REPORT_TZ, REPORT_STATUSES, REPORT_TYPES, REPORT_LABELS, TYPE_LABELS } from '../utils/weeklyReport';
+import { DetailSkeleton } from '../components/common/Skeleton';
+import { Skeleton } from '../components/common/Skeleton';
 
 const dayLabel = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString('es-MX', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'short' });
 const timestamp = (value?: string) => value ? new Date(value).toLocaleString('es-MX', { timeZone: REPORT_TZ, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
@@ -155,7 +157,7 @@ export default function WeeklyReportPage() {
     </section>}
     {exportError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{exportError}</p>}
     {error && <div role="alert" className="rounded-xl bg-red-50 p-4 text-red-800 dark:bg-red-950 dark:text-red-200">{error}{data && ' Se muestran los últimos datos recibidos.'}</div>}
-    {!data && loading && <p role="status">Cargando informe…</p>}
+    {!data && loading && <div className="p-6"><DetailSkeleton /></div>}
     {history ? (
       <section className="space-y-6">
         <section className={`${panel} p-4`}>
@@ -184,7 +186,7 @@ export default function WeeklyReportPage() {
                 ))}
               </div>
             </>
-          ) : loading ? <p className="py-4 text-slate-500 dark:text-slate-400">Cargando historial…</p> : <p className="py-4 text-slate-500 dark:text-slate-400">Sin datos disponibles.</p>}
+          ) : loading ? <div className="py-4"><Skeleton className="h-3 w-40" /></div> : <p className="py-4 text-slate-500 dark:text-slate-400">Sin datos disponibles.</p>}
         </section>
 
         {historyData && (

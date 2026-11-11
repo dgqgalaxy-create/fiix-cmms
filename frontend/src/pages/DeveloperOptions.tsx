@@ -40,6 +40,8 @@ import {
 } from '../utils/devOptionsSession';
 import { formatDateTime } from '../utils/dateUtils';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { useExitAnimation } from '../hooks/useExitAnimation';
+import { Skeleton } from '../components/common/Skeleton';
 
 type AuditLogRow = {
   id: string;
@@ -58,6 +60,7 @@ export const DeveloperOptions = () => {
   const { logout, user } = useAuth();
   const isAdmin = user?.role === 'ADMINISTRADOR';
   const [password, setPassword] = useState('');
+  const { closing, close } = useExitAnimation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
@@ -2549,7 +2552,7 @@ export const DeveloperOptions = () => {
                   </p>
                 )}
                 {auditLoading && auditLogs.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-slate-400">Cargando bitácora…</p>
+                  <div className="py-6 text-center"><Skeleton className="mx-auto h-3 w-48" /></div>
                 ) : auditLogs.length === 0 ? (
                   <p className="py-6 text-center text-sm text-slate-400">Sin eventos registrados.</p>
                 ) : (
@@ -2807,7 +2810,7 @@ export const DeveloperOptions = () => {
 
       {/* Delete Modal */}
       {isDeleteModalOpen && (
-        <div className="animate-in fade-in duration-150 fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className={`${closing ? 'dialog-closing' : 'animate-in fade-in duration-150'} fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4`}>
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-3 text-red-600 dark:text-red-400 mb-4">
               <AlertTriangle size={24} />
@@ -2840,7 +2843,7 @@ export const DeveloperOptions = () => {
             />
             <div className="flex gap-3">
               <button 
-                onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmText(''); setDeleteUploads(true); }}
+                onClick={() => { close(() => setIsDeleteModalOpen(false)); setDeleteConfirmText(''); setDeleteUploads(true); }}
                 className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-lg transition-colors"
               >
                 Cancelar
@@ -2859,7 +2862,7 @@ export const DeveloperOptions = () => {
 
       {/* Orphan uploads cleanup modal */}
       {isOrphanModalOpen && orphanPreview && (
-        <div className="animate-in fade-in duration-150 fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className={`${closing ? 'dialog-closing' : 'animate-in fade-in duration-150'} fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4`}>
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-3 text-orange-600 dark:text-orange-400 mb-4">
               <ImageOff size={24} />
@@ -2946,7 +2949,7 @@ export const DeveloperOptions = () => {
 
       {/* Restore server backup modal */}
       {isRestoreModalOpen && (
-        <div className="animate-in fade-in duration-150 fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className={`${closing ? 'dialog-closing' : 'animate-in fade-in duration-150'} fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4`}>
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400 mb-4">
               <AlertTriangle size={24} />
@@ -3261,7 +3264,7 @@ export const DeveloperOptions = () => {
 
       {/* Loading Modal */}
       {loadingMessage && (
-        <div className="animate-in fade-in duration-150 fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className={`${closing ? 'dialog-closing' : 'animate-in fade-in duration-150'} fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4`}>
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-md w-full shadow-2xl flex flex-col items-center text-center border border-slate-200 dark:border-slate-700">
             <div className="w-16 h-16 border-4 border-emerald-200 dark:border-emerald-900 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
             <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Procesando...</h3>

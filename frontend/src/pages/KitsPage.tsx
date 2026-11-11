@@ -8,7 +8,7 @@ import { getWorkOrders } from '../api/workOrders';
 import { useAuth } from '../context/AuthContext';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { useEscapeKey } from '../hooks/useEscapeKey';
-
+import { useExitAnimation } from '../hooks/useExitAnimation';
 interface DraftItem {
   item_id: string;
   quantity: number;
@@ -39,6 +39,7 @@ export default function KitsPage() {
   const canManage = hasPermission('MANAGE_INVENTORY');
 
   const [kits, setKits] = useState<Kit[]>([]);
+  const { closing, close } = useExitAnimation();
   const [items, setItems] = useState<Item[]>([]);
   const [orders, setOrders] = useState<WorkOrderOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -332,7 +333,7 @@ export default function KitsPage() {
       )}
 
       {draft && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm" onClick={() => setDraft(null)}>
+        <div className={`${closing ? 'dialog-closing' : ''} fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm`} onClick={() => close(() => setDraft(null))}>
           <form
             onSubmit={save}
             onClick={(event) => event.stopPropagation()}
@@ -342,7 +343,7 @@ export default function KitsPage() {
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                 {draft.id ? 'Editar kit' : 'Nuevo kit'}
               </h2>
-              <button type="button" onClick={() => setDraft(null)} className="rounded p-1 text-slate-400 hover:text-slate-600" aria-label="Cerrar">
+              <button type="button" onClick={() => close(() => setDraft(null))} className="rounded p-1 text-slate-400 hover:text-slate-600" aria-label="Cerrar">
                 <X size={18} />
               </button>
             </div>
@@ -431,7 +432,7 @@ export default function KitsPage() {
             </div>
 
             <div className="flex justify-end gap-2 border-t border-slate-100 p-4 dark:border-slate-800">
-              <button type="button" onClick={() => setDraft(null)} className="ui-btn-secondary">Cancelar</button>
+              <button type="button" onClick={() => close(() => setDraft(null))} className="ui-btn-secondary">Cancelar</button>
               <button type="submit" disabled={saving} className="ui-btn-primary">
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                 {draft.id ? 'Guardar cambios' : 'Crear kit'}
@@ -442,7 +443,7 @@ export default function KitsPage() {
       )}
 
       {consume && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm" onClick={() => setConsume(null)}>
+        <div className={`${closing ? 'dialog-closing' : ''} fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm`} onClick={() => close(() => setConsume(null))}>
           <div onClick={(event) => event.stopPropagation()} className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Consumir «{consume.kit.name}»</h2>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -489,7 +490,7 @@ export default function KitsPage() {
             )}
 
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={() => setConsume(null)} className="ui-btn-secondary">Cancelar</button>
+              <button type="button" onClick={() => close(() => setConsume(null))} className="ui-btn-secondary">Cancelar</button>
               <button type="button" onClick={() => void doConsume()} disabled={consuming} className="ui-btn-primary">
                 {consuming ? <Loader2 size={14} className="animate-spin" /> : <PackageMinus size={14} />}
                 Consumir

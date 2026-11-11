@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { X, Printer } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-
+import { useAnimatedClose } from '../../hooks/useAnimatedClose';
 export interface BulkQRItem {
   id: string;
   title: string;
@@ -67,9 +67,10 @@ export const BulkQRPrintModal: React.FC<Props> = ({ isOpen, onClose, items, shee
     printWindow.document.close();
   };
 
+  const { closing, requestClose } = useAnimatedClose(onClose, Boolean(isOpen));
   return (
-    <div className="animate-in fade-in duration-150 fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
+    <div className={`${closing ? 'dialog-closing' : 'animate-in fade-in duration-150'} fixed inset-0 z-50 flex items-center justify-center p-4`}>
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={requestClose} />
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-3xl relative flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div>
@@ -77,7 +78,7 @@ export const BulkQRPrintModal: React.FC<Props> = ({ isOpen, onClose, items, shee
             <p className="text-sm text-slate-500 dark:text-slate-400">{items.length} etiqueta{items.length === 1 ? '' : 's'} seleccionada{items.length === 1 ? '' : 's'}</p>
           </div>
           <button
-            onClick={onClose}
+            onClick={requestClose}
             className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
           >
             <X size={20} />
@@ -107,7 +108,7 @@ export const BulkQRPrintModal: React.FC<Props> = ({ isOpen, onClose, items, shee
         <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2 shrink-0">
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
           >
             Cancelar

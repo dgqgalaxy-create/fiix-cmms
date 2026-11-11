@@ -1,7 +1,8 @@
 ﻿import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useExitAnimation } from '../hooks/useExitAnimation';
 
-export const APP_VERSION = "1.113.0";
+export const APP_VERSION = "1.114.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -9,6 +10,8 @@ interface VersionModalProps {
 }
 
 export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
+  const { closing, close } = useExitAnimation(isOpen);
+
   if (!isOpen) return null;
 
   const version = APP_VERSION;
@@ -593,13 +596,13 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div className={`${closing ? 'dialog-closing' : 'animate-in fade-in duration-150'} fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm`}>
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
         
         {/* Header */}
         <div className="bg-slate-900 p-6 flex flex-col items-center justify-center relative shrink-0">
           <button 
-            onClick={onClose} 
+            onClick={() => close(onClose)} 
             className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors"
           >
             <X size={20} />
@@ -664,7 +667,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
         <div className="bg-slate-50 dark:bg-slate-950 p-4 border-t border-slate-100 dark:border-slate-800 flex flex-col items-center gap-3">
           <Link 
             to="/manual" 
-            onClick={onClose}
+            onClick={() => close(onClose)}
             className="flex items-center justify-center gap-2 w-full py-2.5 bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200 font-bold rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors border border-slate-200 dark:border-slate-700"
           >
             <BookOpen size={18} />

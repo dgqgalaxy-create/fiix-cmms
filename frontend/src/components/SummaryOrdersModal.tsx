@@ -3,6 +3,7 @@ import { X, RefreshCw } from 'lucide-react';
 import { getWorkOrdersPage, updateWorkOrder, type WorkOrder, type Paginated } from '../api/workOrders';
 import { WorkOrderDetailModal } from './WorkOrderDetailModal';
 import { formatWorkOrderFolio } from '../utils/folio';
+import { Skeleton } from './common/Skeleton';
 const labels: Record<string, string> = { PENDIENTE: 'Pendientes', EN_PROCESO: 'En proceso', EN_ESPERA: 'Pausadas', FINALIZADO: 'Finalizadas', ANULADO: 'Invalidadas', TOTAL: 'Total recibidas' };
 export function SummaryOrdersModal({ status, startDate, endDate, title, priority, unassigned, openOnly, maintenanceType, onClose, onChanged }: {
   status: string;
@@ -60,7 +61,7 @@ export function SummaryOrdersModal({ status, startDate, endDate, title, priority
           <button ref={closeRef} type="button" aria-label="Cerrar lista" onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800"><X size={20} /></button>
         </header>
         <div className="min-h-32 overflow-y-auto p-3" aria-busy={loading}>
-          {loading ? <p role="status" className="p-4">Cargando solicitudes…</p> : error ? <div role="alert" className="p-4">No se pudo cargar la lista. <button type="button" className="underline" onClick={() => setRevision(v => v + 1)}>Reintentar</button></div> : result?.data.length ?
+          {loading ? <div className="p-4"><Skeleton className="h-3 w-48" /></div> : error ? <div role="alert" className="p-4">No se pudo cargar la lista. <button type="button" className="underline" onClick={() => setRevision(v => v + 1)}>Reintentar</button></div> : result?.data.length ?
             <ul className="divide-y divide-slate-200 dark:divide-slate-700">{result.data.map(order => <li key={order.id}>
               <button type="button" onClick={() => setSelected(order)} className="w-full rounded-lg p-3 text-left hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-emerald-500 dark:hover:bg-slate-800">
                 <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">{formatWorkOrderFolio(order.folio)} · {labels[order.status]}</span>

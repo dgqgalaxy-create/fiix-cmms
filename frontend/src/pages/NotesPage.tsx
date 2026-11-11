@@ -37,7 +37,8 @@ import { formatDateTime } from '../utils/dateUtils';
 import { AnnouncementsPanel } from '../components/AnnouncementsPanel';
 import { PersonalNotesBoard } from '../components/notes/PersonalNotesBoard';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
-
+import { useExitAnimation } from '../hooks/useExitAnimation';
+import { Skeleton } from '../components/common/Skeleton';
 type Tab = 'notes' | 'tasks' | 'avisos';
 
 function fromLocalInputValue(local: string): string | null {
@@ -73,6 +74,7 @@ export default function NotesPage() {
     (user?.role === 'ADMINISTRADOR' || user?.role === 'GESTIONADOR');
   const isAdmin = user?.role === 'ADMINISTRADOR';
   const [searchParams, setSearchParams] = useSearchParams();
+  const { closing, close } = useExitAnimation();
   const [tab, setTab] = useState<Tab>(() => {
     const t = searchParams.get('tab');
     if (t === 'tasks') return 'tasks';
@@ -574,7 +576,7 @@ export default function NotesPage() {
 
             <div className={`space-y-1.5 sm:space-y-2 ${canManageTasks ? '' : 'lg:col-span-1'}`}>
               {loading && tasks.length === 0 ? (
-                <p className="text-sm text-slate-400 py-6 text-center">Cargando…</p>
+                <div className="py-6 text-center"><Skeleton className="mx-auto h-3 w-40" /></div>
               ) : tasks.length === 0 ? (
                 <p className="text-sm text-slate-400 py-6 text-center">Sin pendientes.</p>
               ) : (
@@ -753,7 +755,7 @@ export default function NotesPage() {
       )}
 
       {completeTask && (
-        <div className="animate-in fade-in duration-150 fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-3">
+        <div className={`${closing ? 'dialog-closing' : 'animate-in fade-in duration-150'} fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-3`}>
           <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl dark:bg-slate-900">
             <h3 className="text-sm font-black text-slate-900 dark:text-white">Completar pendiente</h3>
             <p className="mt-1 text-xs text-slate-500">{completeTask.title}</p>
@@ -767,7 +769,7 @@ export default function NotesPage() {
             <div className="mt-3 flex gap-2 justify-end">
               <button
                 type="button"
-                onClick={() => setCompleteTask(null)}
+                onClick={() => close(() => setCompleteTask(null))}
                 className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold dark:border-slate-700"
               >
                 Cancelar

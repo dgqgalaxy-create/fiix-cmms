@@ -14,6 +14,7 @@ import {
   type AssetKindValue,
 } from '../utils/assetSection';
 import { SearchableSelect } from './ui/SearchableSelect';
+import { Skeleton } from './common/Skeleton';
 
 interface Props {
   isOpen: boolean;
@@ -308,7 +309,7 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Zona *</label>
                 {isLoadingZones ? (
-                  <div className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400">Cargando...</div>
+                  <div className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400"><Skeleton className="h-3 w-24" /></div>
                 ) : (
                   <SearchableSelect
                     required
@@ -410,7 +411,7 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Proveedor (Opcional)</label>
                 {isLoadingVendors ? (
-                  <div className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400">Cargando...</div>
+                  <div className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400"><Skeleton className="h-3 w-24" /></div>
                 ) : (
                   <SearchableSelect
                     value={vendorId}

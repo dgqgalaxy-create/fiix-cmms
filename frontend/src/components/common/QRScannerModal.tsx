@@ -2,7 +2,7 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { X, Camera, AlertCircle, ImagePlus, Loader2 } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { playScanBeep } from '../../utils/scanBeep';
-
+import { useAnimatedClose } from '../../hooks/useAnimatedClose';
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -210,9 +210,10 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose, onScan }) => 
 
   if (!isOpen) return null;
 
+  const { closing, requestClose } = useAnimatedClose(onClose, Boolean(isOpen));
   return (
-    <div className="animate-in fade-in duration-150 fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-0">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
+    <div className={`${closing ? 'dialog-closing' : 'animate-in fade-in duration-150'} fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-0`}>
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={requestClose} />
 
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-md relative flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
@@ -227,7 +228,7 @@ export const QRScannerModal: React.FC<Props> = ({ isOpen, onClose, onScan }) => 
             onClick={() => {
               const live = scannerRef.current;
               scannerRef.current = null;
-              void safeStop(live).finally(() => onClose());
+              void safeStop(live).finally(() => requestClose());
             }}
             className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
           >

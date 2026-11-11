@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, X, Database, Package, MapPin, ClipboardList, Loader2 } from 'lucide-react';
 import api from '../api/axios';
 import { formatWorkOrderFolio } from '../utils/folio';
+import { useExitAnimation } from '../hooks/useExitAnimation';
 
 interface SearchResults {
   assets: Array<{ id: string; name: string; internal_code: string; status: string; zone?: { name: string } | null }>;
@@ -36,6 +37,7 @@ interface FlatResult {
 export const GlobalSearchModal = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const { closing, close } = useExitAnimation();
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResults>({ assets: [], items: [], locations: [], work_orders: [] });
@@ -115,7 +117,7 @@ export const GlobalSearchModal = () => {
         e.preventDefault();
         setIsOpen(true);
       }
-      if (e.key === 'Escape') setIsOpen(false);
+      if (e.key === 'Escape') close(() => setIsOpen(false));
     };
     const onOpenEvent = () => setIsOpen(true);
     window.addEventListener('keydown', onKeyDown);
@@ -161,7 +163,7 @@ export const GlobalSearchModal = () => {
   }, [query, isOpen]);
 
   const goTo = (item: FlatResult) => {
-    setIsOpen(false);
+    close(() => setIsOpen(false));
     switch (item.kind) {
       case 'work_order':
         navigate(`/dashboard?wo=${item.id}`);
@@ -217,8 +219,8 @@ export const GlobalSearchModal = () => {
   return (
     <>
       {isOpen && (
-        <div className="animate-in fade-in duration-150 fixed inset-0 z-[100] flex items-start justify-center pt-[12vh] px-4">
-          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
+        <div className={`${closing ? 'dialog-closing' : 'animate-in fade-in duration-150'} fixed inset-0 z-[100] flex items-start justify-center pt-[12vh] px-4`}>
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => close(() => setIsOpen(false))} />
           <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800">
               {loading ? <Loader2 size={18} className="animate-spin text-emerald-500" /> : <Search size={18} className="text-slate-400" />}
@@ -230,7 +232,7 @@ export const GlobalSearchModal = () => {
                 placeholder="Buscar activos, repuestos, zonas, folios FOL-…"
                 className="flex-1 bg-transparent outline-none text-slate-800 dark:text-slate-100 placeholder:text-slate-400 text-sm"
               />
-              <button type="button" onClick={() => setIsOpen(false)} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+              <button type="button" onClick={() => close(() => setIsOpen(false))} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                 <X size={18} />
               </button>
             </div>

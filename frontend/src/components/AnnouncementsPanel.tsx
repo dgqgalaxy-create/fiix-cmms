@@ -9,6 +9,7 @@ import {
 } from '../api/notes';
 import { formatDateTime } from '../utils/dateUtils';
 import { mediaUrl } from '../utils/mediaUrl';
+import { Skeleton } from './common/Skeleton';
 
 interface Props {
   isAdmin: boolean;
@@ -254,7 +255,7 @@ export function AnnouncementsPanel({ isAdmin, onChanged }: Props) {
 
       <div className="space-y-2">
         {loading && items.length === 0 ? (
-          <p className="text-sm text-slate-400 py-6 text-center">Cargando…</p>
+          <div className="py-6 text-center"><Skeleton className="mx-auto h-3 w-40" /></div>
         ) : items.filter((a) => a.is_active).length === 0 ? (
           <p className="text-sm text-slate-400 py-6 text-center">No hay avisos publicados.</p>
         ) : (

@@ -675,3 +675,11 @@ textarea:focus-visible {
 .animate-in {
   animation-timing-function: var(--ease-out-quart);
 }
+/* Diálogos: cierre con fundido del fondo y zoom del panel (clase .dialog-closing). */
+.dialog-closing {
+  animation: fade-out 180ms ease-in both;
+  pointer-events: none;
+}
+.dialog-closing > :not(.absolute) {
+  animation: zoom-out 170ms ease-in both;
+}

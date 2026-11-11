@@ -1,6 +1,6 @@
-﻿import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp, Columns3, EyeOff, GripVertical, LayoutGrid, MoreVertical, Table2 } from 'lucide-react';
-import { TableSkeleton } from './Skeleton';
+import { Skeleton, TableSkeleton } from './Skeleton';
 
 /**
  * Tabla reutilizable con columnas redimensionables, menú por encabezado
@@ -222,7 +222,7 @@ export function DataTable<T>({
 
       {renderCard && view === 'cards' ? (
         <div className="grid gap-3 p-3 sm:grid-cols-2 xl:grid-cols-3">
-          {isLoading && <p className="col-span-full py-8 text-center text-sm text-slate-500">Cargando…</p>}
+          {isLoading && <div className="col-span-full py-8"><Skeleton className="mx-auto h-3 w-40" /></div>}
           {!isLoading && rows.length === 0 && (
             <p className="col-span-full py-8 text-center text-sm text-slate-500">{emptyMessage}</p>
           )}

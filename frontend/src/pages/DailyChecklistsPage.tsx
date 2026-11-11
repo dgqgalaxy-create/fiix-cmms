@@ -8,6 +8,7 @@ import type { DailyChecklist } from '../api/checklists';
 import { parseDateOnly } from '../utils/dateUtils';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { useAuth } from '../context/AuthContext';
+import { DetailSkeleton } from '../components/common/Skeleton';
 
 export default function DailyChecklistsPage() {
   const [history, setHistory] = useState<DailyChecklist[]>([]);
@@ -139,7 +140,7 @@ export default function DailyChecklistsPage() {
   }, [history, sortField, sortDirection]);
 
   if (isLoading) {
-    return <div className="p-4 sm:p-8 text-center text-slate-500 text-sm">Cargando...</div>;
+    return <div className="p-4 sm:p-8"><DetailSkeleton /></div>;
   }
 
   return (

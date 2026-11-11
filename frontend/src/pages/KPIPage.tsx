@@ -78,6 +78,7 @@ import { FilterScopeFrame } from '../components/common/FilterScopeFrame';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { getZones } from '../api/zones';
 import type { Zone } from '../api/zones';
+import { Skeleton } from '../components/common/Skeleton';
 
 type MetricStatus = 'good' | 'warn' | 'bad' | 'neutral';
 
@@ -1231,7 +1232,7 @@ export const KPIPage = () => {
                             <tr className="border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/60 dark:bg-slate-800/20">
                               <td colSpan={5} className="p-3">
                                 {isLoadingLineAssets ? (
-                                  <div className="py-4 text-center text-xs text-slate-400 dark:text-slate-500">Cargando equipos…</div>
+                                  <div className="py-4 text-center"><Skeleton className="mx-auto h-3 w-32" /></div>
                                 ) : lineAssets && lineAssets.line === l.line ? (
                                   lineAssets.assets.length === 0 ? (
                                     <div className="py-4 text-center text-xs text-slate-400 dark:text-slate-500">Sin equipos en esta línea</div>
@@ -1808,7 +1809,7 @@ export const KPIPage = () => {
             </div>
             <div className="p-5 overflow-y-auto flex-1">
               {isFetchingOrders ? (
-                <div className="py-16 text-center text-slate-400 dark:text-slate-500 text-sm">Cargando órdenes...</div>
+                <div className="py-16 text-center"><Skeleton className="mx-auto h-3 w-40" /></div>
               ) : failureOrders.length > 0 ? (
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs uppercase">
@@ -1891,7 +1892,7 @@ export const KPIPage = () => {
                   </label>
                 ))}
                 {zonesList.length === 0 && (
-                  <p className="py-4 text-center text-sm text-slate-400">Cargando zonas…</p>
+                  <div className="py-4 text-center"><Skeleton className="mx-auto h-3 w-32" /></div>
                 )}
               </div>
             </div>

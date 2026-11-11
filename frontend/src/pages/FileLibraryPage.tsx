@@ -13,7 +13,7 @@ import { formatDateTime } from '../utils/dateUtils';
 import { mediaUrl } from '../utils/mediaUrl';
 import { useAuth } from '../context/AuthContext';
 import { useEscapeKey } from '../hooks/useEscapeKey';
-
+import { useExitAnimation } from '../hooks/useExitAnimation';
 const formatSize = (bytes?: number | null): string => {
   if (!bytes || bytes <= 0) return '';
   if (bytes < 1024) return `${bytes} B`;
@@ -35,6 +35,7 @@ export const FileLibraryPage = () => {
   const canManage = hasPermission('MANAGE_INVENTORY');
 
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const { closing, close } = useExitAnimation();
   const [folders, setFolders] = useState<DocumentFolder[]>([]);
   const [folderFilter, setFolderFilter] = useState<string>('');
   const [search, setSearch] = useState('');
@@ -409,7 +410,7 @@ export const FileLibraryPage = () => {
         />
       )}
       {folderModal && (
-        <div className="animate-in fade-in duration-150 fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm" onClick={() => setFolderModal(null)}>
+        <div className={`${closing ? 'dialog-closing' : 'animate-in fade-in duration-150'} fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm`} onClick={() => close(() => setFolderModal(null))}>
           <form
             onSubmit={(event) => { event.preventDefault(); void saveFolder(); }}
             onClick={(event) => event.stopPropagation()}
@@ -419,7 +420,7 @@ export const FileLibraryPage = () => {
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 {folderModal.mode === 'create' ? 'Nueva carpeta' : 'Renombrar carpeta'}
               </h2>
-              <button type="button" onClick={() => setFolderModal(null)} className="rounded p-1 text-slate-400 hover:text-slate-600" aria-label="Cerrar">
+              <button type="button" onClick={() => close(() => setFolderModal(null))} className="rounded p-1 text-slate-400 hover:text-slate-600" aria-label="Cerrar">
                 <X size={18} />
               </button>
             </div>
@@ -436,7 +437,7 @@ export const FileLibraryPage = () => {
             />
             {folderError && <p className="mt-2 text-[11px] font-semibold text-rose-600 dark:text-rose-400">{folderError}</p>}
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={() => setFolderModal(null)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+              <button type="button" onClick={() => close(() => setFolderModal(null))} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
                 Cancelar
               </button>
               <button

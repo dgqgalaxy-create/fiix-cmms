@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { HardHat, Plus, Pencil, Trash2, Loader2, X, Search, CheckCircle2 } from 'lucide-react';
 import { getContractors, createContractor, updateContractor, deleteContractor, type Contractor } from '../api/contractors';
 import { useAuth } from '../context/AuthContext';
-
+import { useExitAnimation } from '../hooks/useExitAnimation';
 interface Draft {
   id?: string;
   name: string;
@@ -31,6 +31,7 @@ export default function ContractorsPage() {
   const canManage = hasPermission('MANAGE_SETTINGS');
 
   const [contractors, setContractors] = useState<Contractor[]>([]);
+  const { closing, close } = useExitAnimation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -224,7 +225,7 @@ export default function ContractorsPage() {
       )}
 
       {draft && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm" onClick={() => setDraft(null)}>
+        <div className={`${closing ? 'dialog-closing' : ''} fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm`} onClick={() => close(() => setDraft(null))}>
           <form
             onSubmit={save}
             onClick={(event) => event.stopPropagation()}
@@ -234,7 +235,7 @@ export default function ContractorsPage() {
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                 {draft.id ? 'Editar contratista' : 'Nuevo contratista'}
               </h2>
-              <button type="button" onClick={() => setDraft(null)} className="rounded p-1 text-slate-400 hover:text-slate-600" aria-label="Cerrar">
+              <button type="button" onClick={() => close(() => setDraft(null))} className="rounded p-1 text-slate-400 hover:text-slate-600" aria-label="Cerrar">
                 <X size={18} />
               </button>
             </div>
@@ -283,7 +284,7 @@ export default function ContractorsPage() {
             </div>
 
             <div className="flex justify-end gap-2 border-t border-slate-100 p-4 dark:border-slate-800">
-              <button type="button" onClick={() => setDraft(null)} className="ui-btn-secondary">Cancelar</button>
+              <button type="button" onClick={() => close(() => setDraft(null))} className="ui-btn-secondary">Cancelar</button>
               <button type="submit" disabled={saving} className="ui-btn-primary">
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                 {draft.id ? 'Guardar cambios' : 'Crear contratista'}

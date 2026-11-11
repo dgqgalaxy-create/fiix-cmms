@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+﻿import { useState, useEffect, useMemo, useCallback } from 'react';
 import { DetailSkeleton } from '../components/common/Skeleton';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -42,6 +42,7 @@ import { useAuth } from '../context/AuthContext';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { parseDateOnly } from '../utils/dateUtils';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
+import { useExitAnimation } from '../hooks/useExitAnimation';
 import {
   validateChecklistForSubmit,
   missingCellKeySet,
@@ -65,6 +66,7 @@ export default function ChecklistFormPage() {
   const userId = user?.userId;
 
   const [checklist, setChecklist] = useState<DailyChecklist | null>(null);
+  const { closing, close } = useExitAnimation();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
@@ -1119,7 +1121,7 @@ export default function ChecklistFormPage() {
 
       {isTransferModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden"
+          className={`${closing ? 'dialog-closing' : 'animate-in fade-in duration-150'} fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden`}
           role="dialog"
           aria-modal="true"
           aria-labelledby="transfer-checklist-title"
@@ -1195,7 +1197,7 @@ export default function ChecklistFormPage() {
             <div className="flex gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
               <button
                 type="button"
-                onClick={() => setIsTransferModalOpen(false)}
+                onClick={() => close(() => setIsTransferModalOpen(false))}
                 disabled={transferSaving}
                 className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
               >
@@ -1216,14 +1218,14 @@ export default function ChecklistFormPage() {
 
       {isIncompleteModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden"
+          className={`${closing ? 'dialog-closing' : 'animate-in fade-in duration-150'} fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden`}
           role="dialog"
           aria-modal="true"
           aria-labelledby="incomplete-checklist-title"
         >
           <div
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-            onClick={() => setIsIncompleteModalOpen(false)}
+            onClick={() => close(() => setIsIncompleteModalOpen(false))}
           />
           <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
             <div className="flex items-start gap-3 border-b border-slate-100 px-6 py-5 dark:border-slate-800">
@@ -1243,7 +1245,7 @@ export default function ChecklistFormPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setIsIncompleteModalOpen(false)}
+                onClick={() => close(() => setIsIncompleteModalOpen(false))}
                 className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
                 aria-label="Cerrar"
               >
@@ -1295,7 +1297,7 @@ export default function ChecklistFormPage() {
             <div className="border-t border-slate-100 px-6 py-4 dark:border-slate-800">
               <button
                 type="button"
-                onClick={() => setIsIncompleteModalOpen(false)}
+                onClick={() => close(() => setIsIncompleteModalOpen(false))}
                 className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 transition-colors"
               >
                 Entendido

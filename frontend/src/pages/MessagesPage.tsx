@@ -42,6 +42,7 @@ import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { useTechnicianMobileShell } from '../hooks/useTechnicianMobileShell';
 import { MessageTicks } from '../components/MessageTicks';
 import { EmojiPicker } from '../components/EmojiPicker';
+import { Skeleton } from '../components/common/Skeleton';
 
 type ComposeMode = null | 'direct' | 'group';
 
@@ -905,7 +906,7 @@ export default function MessagesPage() {
         >
           <div className="h-full overflow-y-auto">
             {loadingList ? (
-              <p className="py-10 text-center text-sm text-slate-400">Cargando…</p>
+              <div className="py-10 text-center"><Skeleton className="mx-auto h-3 w-40" /></div>
             ) : conversations.length === 0 ? (
               <p className="px-4 py-10 text-center text-sm text-slate-400">
                 Aún no hay conversaciones. Usa «Chat» o «Grupo».

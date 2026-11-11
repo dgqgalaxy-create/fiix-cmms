@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, X, Download, AlertCircle, Loader2 } from 'lucide-react';
 import { searchImagesWeb } from '../../api/inventory';
 import api from '../../api/axios';
+import { useAnimatedClose } from '../../hooks/useAnimatedClose';
 
 interface ImageSearchModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ interface ImageResult {
 
 export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({ isOpen, onClose, onImageSelected, initialQuery }) => {
   const [query, setQuery] = useState(initialQuery);
+  const { closing, requestClose } = useAnimatedClose(onClose, isOpen);
   const [results, setResults] = useState<ImageResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -83,7 +85,7 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({ isOpen, onCl
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-sm">
+    <div className={`${closing ? 'dialog-closing' : 'animate-in fade-in duration-150'} fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-sm`}>
       <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl animate-in zoom-in-95 duration-200 dark:border-slate-700 dark:bg-slate-900">
         
         {/* Header */}
@@ -93,7 +95,7 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({ isOpen, onCl
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Busca e importa imágenes directamente de internet</p>
           </div>
           <button 
-            onClick={onClose}
+            onClick={requestClose}
             className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
           >
             <X size={24} />

@@ -10,7 +10,7 @@ import { getZones, type Zone } from '../api/zones';
 import { useAuth } from '../context/AuthContext';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { useEscapeKey } from '../hooks/useEscapeKey';
-
+import { useExitAnimation } from '../hooks/useExitAnimation';
 interface Draft {
   id?: string;
   name: string;
@@ -27,6 +27,7 @@ export default function CrewsPage() {
   const canManage = hasPermission('MANAGE_USERS');
 
   const [crews, setCrews] = useState<Crew[]>([]);
+  const { closing, close } = useExitAnimation();
   const [users, setUsers] = useState<User[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(true);
@@ -238,7 +239,7 @@ export default function CrewsPage() {
       )}
 
       {draft && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm" onClick={() => setDraft(null)}>
+        <div className={`${closing ? 'dialog-closing' : ''} fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm`} onClick={() => close(() => setDraft(null))}>
           <form
             onSubmit={save}
             onClick={(event) => event.stopPropagation()}
@@ -248,7 +249,7 @@ export default function CrewsPage() {
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                 {draft.id ? 'Editar cuadrilla' : 'Nueva cuadrilla'}
               </h2>
-              <button type="button" onClick={() => setDraft(null)} className="rounded p-1 text-slate-400 hover:text-slate-600" aria-label="Cerrar">
+              <button type="button" onClick={() => close(() => setDraft(null))} className="rounded p-1 text-slate-400 hover:text-slate-600" aria-label="Cerrar">
                 <X size={18} />
               </button>
             </div>
@@ -329,7 +330,7 @@ export default function CrewsPage() {
             </div>
 
             <div className="flex justify-end gap-2 border-t border-slate-100 p-4 dark:border-slate-800">
-              <button type="button" onClick={() => setDraft(null)} className="ui-btn-secondary">Cancelar</button>
+              <button type="button" onClick={() => close(() => setDraft(null))} className="ui-btn-secondary">Cancelar</button>
               <button type="submit" disabled={saving} className="ui-btn-primary">
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                 {draft.id ? 'Guardar cambios' : 'Crear cuadrilla'}
