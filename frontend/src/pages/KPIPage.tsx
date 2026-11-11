@@ -193,6 +193,8 @@ export const KPIPage = () => {
   const [zonesConfigOpen, setZonesConfigOpen] = useState(false);
   const [zonesList, setZonesList] = useState<Zone[]>([]);
   const [respZoneSel, setRespZoneSel] = useState<string[]>([]);
+  /** Zona individual para mirar ('' = todas las marcadas). */
+  const [zoneFocus, setZoneFocus] = useState<string>('');
   const [isSavingZones, setIsSavingZones] = useState(false);
   // Orden de bloques por usuario (localStorage); null = predeterminado.
   const kpiBlocksKey = `fiix_kpi_blocks_v1_${user?.userId ?? user?.id ?? 'anon'}`;
@@ -213,12 +215,20 @@ export const KPIPage = () => {
   const [failureOrders, setFailureOrders] = useState<FailureOrder[]>([]);
   const [isFetchingOrders, setIsFetchingOrders] = useState(false);
   const [goalsForm, setGoalsForm] = useState<Record<string, number>>({});
+  // Si la zona enfocada deja de estar marcada, vuelve a «todas las marcadas».
+  useEffect(() => {
+    if (zoneFocus && !respZoneSel.includes(zoneFocus)) setZoneFocus('');
+  }, [respZoneSel, zoneFocus]);
+
+  /** Zonas efectivas: si hay una enfocada se mide solo esa; si no, todas las marcadas. */
+  const effectiveZoneIds = zoneFocus ? [zoneFocus] : respZoneSel;
 
   const periodQuery = {
     period,
     startDate: period === 'CUSTOM' ? customStartDate : undefined,
     endDate: period === 'CUSTOM' ? customEndDate : undefined,
     reworkDays,
+    zoneIds: effectiveZoneIds,
   };
 
   const fetchData = async (background = false) => {
@@ -753,7 +763,7 @@ export const KPIPage = () => {
         icon={CalendarClock}
         tone="blue"
         className="print:border-0 print:bg-transparent print:p-0"
-        hint="El periodo elegido aplica a tarjetas, gráficos, costos, fallas, finalizadas por técnico y retrabajo dentro de este marco. Arrastra los bloques por la agarradera lateral (⋮⋮) para reordenarlos a tu gusto; el orden se guarda por usuario."
+        hint="El periodo y las zonas marcadas en «Zonas de respuesta» aplican a tarjetas, gráficos, costos, fallas, finalizadas por técnico y retrabajo dentro de este marco. La rueda junto a las zonas te deja mirar una sola de las marcadas. Arrastra los bloques por la agarradera lateral (⋮⋮) para reordenarlos; el orden se guarda por usuario."
         toolbar={
           <>
             <Filter size={16} className="text-slate-400 shrink-0" />
@@ -790,6 +800,23 @@ export const KPIPage = () => {
               >
                 <RotateCcw size={13} /> Orden predeterminado
               </button>
+            )}
+            {respZoneSel.length > 0 && (
+              <div className="inline-flex items-center gap-1.5" title="Ver una sola de las zonas marcadas">
+                <MapPin size={15} className="text-slate-400 shrink-0" />
+                <SearchableSelect
+                  value={zoneFocus}
+                  onChange={setZoneFocus}
+                  options={[
+                    { value: '', label: `Todas las marcadas (${respZoneSel.length})` },
+                    ...zonesList
+                      .filter((zone) => respZoneSel.includes(zone.id))
+                      .map((zone) => ({ value: zone.id, label: zone.name })),
+                  ]}
+                  placeholder="Todas las marcadas"
+                  inputClassName="px-3 py-2 pr-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm min-w-44 text-slate-700 dark:text-slate-200"
+                />
+              </div>
             )}
             {user?.role === 'ADMINISTRADOR' && (
               <button
@@ -1821,9 +1848,9 @@ export const KPIPage = () => {
           <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col border border-slate-200 dark:border-slate-700">
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <div>
-                <h3 className="font-bold text-slate-800 dark:text-slate-100">Zonas de Tiempo de respuesta y MTBF</h3>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100">Zonas de respuesta</h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  «Tiempo respuesta» mide las zonas marcadas. La tarjeta y la gráfica MTBF incluyen solo equipos y correctivas de equipos de esas zonas. Si no marcas ninguna, se miden todas.
+                  Las zonas marcadas filtran TODOS los indicadores de «Indicadores por periodo»: órdenes, finalizadas, MTTR, MTBF, tiempo de respuesta, SLA, backlog, disponibilidad, reincidencia, gráficos, costos, fallas y desempeño por técnico. Si no marcas ninguna, se miden todas.
                 </p>
               </div>
               <button onClick={() => setZonesConfigOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg">

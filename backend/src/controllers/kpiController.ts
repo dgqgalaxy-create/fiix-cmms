@@ -1,4 +1,4 @@
-import { Response } from 'express';
+﻿import { Response } from 'express';
 import prisma from '../config/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import { resolvePartsUnitCost } from '../utils/resolvePartsUnitCost';
@@ -157,6 +157,23 @@ const normalizeGoal = (metricKey: string, targetValue: number, unit?: string | n
 const avg = (values: number[]) =>
   values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
 
+/**
+ * Zonas solicitadas por la vista (filtro «Zonas de respuesta»).
+ * Devuelve null cuando no se enviaron zonas (se mide todo).
+ */
+function requestedZoneIds(req: AuthRequest): string[] | null {
+  const raw = req.query.zoneIds;
+  if (typeof raw !== 'string' || !raw.trim()) return null;
+  const ids = raw.split(',').map((id) => id.trim()).filter(Boolean);
+  return ids.length > 0 ? ids : null;
+}
+
+/** Condición de zona para consultas de OT (por el activo de la orden). */
+function zoneWhere(ids: string[] | null): Record<string, unknown> {
+  if (!ids) return {};
+  return { asset: { zone_id: { in: ids } } };
+}
+
 export const getTopFailingAssets = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { start, effectiveEnd } = rangeFromReq(req);
@@ -170,6 +187,7 @@ export const getTopFailingAssets = async (req: AuthRequest, res: Response): Prom
           { completed_at: { gte: start, lte: effectiveEnd } },
           { completed_at: null, created_at: { gte: start, lte: effectiveEnd } },
         ],
+        ...zoneWhere(requestedZoneIds(req)),
       },
       _count: { id: true },
       orderBy: { _count: { id: 'desc' } },
@@ -242,6 +260,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
   try {
     const reworkWindowDays = parseReworkWindowDays(req.query.reworkDays);
     const { start, effectiveEnd } = rangeFromReq(req);
+    const zoneIds = requestedZoneIds(req);
 
     const dbGoals = await prisma.kPIGoal.findMany();
     const goals: Record<string, { targetValue: number; unit: string }> = { ...DEFAULT_GOALS };
@@ -258,6 +277,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
             { started_at: { gte: start, lte: effectiveEnd } },
             { created_at: { gte: start, lte: effectiveEnd } },
           ],
+          ...zoneWhere(zoneIds),
         },
         include: { asset: { select: { id: true, name: true, zone_id: true } } },
       }),
@@ -271,6 +291,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
             { completed_at: null },
             { completed_at: { gt: effectiveEnd } },
           ],
+          ...zoneWhere(zoneIds),
         },
       }),
       prisma.systemSettings.findFirst({ select: { response_time_zone_ids: true } }),
@@ -296,7 +317,8 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
       ? (finalizadasDeGeneradas / generatedOrders.length) * 100
       : null;
 
-    const selectedMtbfZones = mtbfZoneIds(settings?.response_time_zone_ids);
+    // Si la vista envia zonas, mandan sobre la configuracion guardada.
+    const selectedMtbfZones = zoneIds ?? mtbfZoneIds(settings?.response_time_zone_ids);
     const mtbfZoneCount = await countMtbfZones(selectedMtbfZones);
     const mtbfOrders = periodOrders.filter(wo => isMtbfOrderInScope(wo, selectedMtbfZones));
     // Denominador MTBF = correctivas LEVANTADAS (creadas) en el periodo, excluidas anuladas.
@@ -326,9 +348,9 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
     // Tiempo de respuesta: created_at → started_at (horas) de órdenes CREADAS en el
     // periodo (no cuenta una orden vieja que apenas se inició en el periodo, lo que
     // inflaba el promedio con respuestas de cientos de horas).
-    const responseZoneIds = Array.isArray(settings?.response_time_zone_ids)
+    const responseZoneIds = zoneIds ?? (Array.isArray(settings?.response_time_zone_ids)
       ? (settings.response_time_zone_ids as string[])
-      : null;
+      : null);
     const restrictResponseZones = responseZoneIds !== null && responseZoneIds.length > 0;
     const startedInPeriod = periodOrders.filter(
       (wo) =>
@@ -425,6 +447,7 @@ export const getKPIs = async (req: AuthRequest, res: Response): Promise<void> =>
           { started_at: { gte: start, lte: effectiveEnd } },
           { status: { in: ['PENDIENTE', 'EN_PROCESO', 'EN_ESPERA'] } },
         ],
+          ...zoneWhere(zoneIds),
       },
     });
 
@@ -628,6 +651,7 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
             { completed_at: { gte: globalStart, lte: globalEnd } },
             { created_at: { gte: globalStart, lte: globalEnd } },
           ],
+          ...zoneWhere(requestedZoneIds(req)),
         },
         include: { asset: { select: { zone_id: true } } },
       }),
@@ -641,7 +665,8 @@ export const getChartData = async (req: AuthRequest, res: Response): Promise<voi
       }),
       prisma.systemSettings.findFirst({ select: { response_time_zone_ids: true } }),
     ]);
-    const selectedMtbfZones = mtbfZoneIds(settings?.response_time_zone_ids);
+    // Si la vista envia zonas, mandan sobre la configuracion guardada.
+    const selectedMtbfZones = requestedZoneIds(req) ?? mtbfZoneIds(settings?.response_time_zone_ids);
     const mtbfZoneCount = await countMtbfZones(selectedMtbfZones);
 
     const chartData = intervals.map((interval) => {
@@ -713,7 +738,7 @@ export const getCostsByAsset = async (req: AuthRequest, res: Response): Promise<
     }
 
     const workOrders = await prisma.workOrder.findMany({
-      where: { folio: { in: [...folios] } },
+      where: { folio: { in: [...folios] }, ...zoneWhere(requestedZoneIds(req)) },
       include: { asset: true },
     });
 
@@ -780,6 +805,7 @@ export const getTechnicianPerformance = async (req: AuthRequest, res: Response):
             { completed_at: { gte: weekStart, lte: weekEnd } },
             { status: { in: ['PENDIENTE', 'EN_PROCESO', 'EN_ESPERA'] } },
           ],
+          ...zoneWhere(requestedZoneIds(req)),
         },
         select: {
           id: true,

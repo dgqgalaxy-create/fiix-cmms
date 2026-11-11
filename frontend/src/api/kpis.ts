@@ -1,4 +1,4 @@
-import api from './axios';
+﻿import api from './axios';
 
 export interface KPIMetric {
   value: number;
@@ -38,6 +38,8 @@ export type KpiPeriodQuery = {
   startDate?: string;
   endDate?: string;
   reworkDays?: number;
+  /** Zonas seleccionadas en «Zonas de respuesta» (vacío = todas). */
+  zoneIds?: string[];
 };
 
 const buildKpiQuery = (params: KpiPeriodQuery = {}): string => {
@@ -48,6 +50,7 @@ const buildKpiQuery = (params: KpiPeriodQuery = {}): string => {
     if (params.endDate) q.set('endDate', params.endDate);
   }
   if (params.reworkDays !== undefined) q.set('reworkDays', String(params.reworkDays));
+  if (params.zoneIds && params.zoneIds.length > 0) q.set('zoneIds', params.zoneIds.join(','));
   const s = q.toString();
   return s ? `?${s}` : '';
 };
