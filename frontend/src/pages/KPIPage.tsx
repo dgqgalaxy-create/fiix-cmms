@@ -291,7 +291,23 @@ export const KPIPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, [period, reworkDays, customStartDate, customEndDate]);
+  }, [period, reworkDays, customStartDate, customEndDate, respZoneSel, zoneFocus]);
+
+  // Carga zonas y la selección guardada al entrar, para que el desplegable
+  // de «Zonas de respuesta» esté disponible sin abrir antes la ventana.
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([getZones(), getResponseTimeZones().catch(() => ({ zoneIds: null }))])
+      .then(([zonesData, configData]) => {
+        if (cancelled) return;
+        setZonesList(zonesData);
+        setRespZoneSel((current) => (
+          current.length > 0 ? current : (configData.zoneIds ?? zonesData.map((zone) => zone.id))
+        ));
+      })
+      .catch(() => { /* se mantiene lo que haya */ });
+    return () => { cancelled = true; };
+  }, []);
 
   useSocketRefresh(['refresh_work_orders', 'refresh_inventory'], () => { void fetchData(true); });
 
