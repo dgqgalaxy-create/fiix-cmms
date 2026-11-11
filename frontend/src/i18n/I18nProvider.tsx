@@ -17,6 +17,24 @@ const STORAGE_KEY = 'gtz_language';
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
+const FORCE_LANG = (() => {
+  try {
+    const param = new URLSearchParams(window.location.search).get('lang');
+    if (param === 'es' || param === 'en') return param;
+  } catch { /* ignore */ }
+  return null;
+})();
+
+/** El traductor del DOM se puede desactivar con ?i18n=off (o ?safe=1). */
+const DOM_TRANSLATION_ENABLED = (() => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('i18n') === 'off' || params.get('safe') === '1') return false;
+    if (localStorage.getItem('gtz_dom_i18n') === 'off') return false;
+  } catch { /* ignore */ }
+  return true;
+})();
+
 function readStored(): Language {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -26,7 +44,7 @@ function readStored(): Language {
 }
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(readStored);
+  const [language, setLanguageState] = useState<Language>(() => FORCE_LANG ?? readStored());
 
   const setLanguage = useCallback((next: Language) => {
     setLanguageState(next);
@@ -53,6 +71,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.lang = language;
     // Traduce los textos ya escritos en español (capa temporal mientras se migra a t()).
+    if (!DOM_TRANSLATION_ENABLED) return;
     const id = window.setTimeout(() => syncDomTranslation(language), 60);
     return () => window.clearTimeout(id);
   }, [language]);

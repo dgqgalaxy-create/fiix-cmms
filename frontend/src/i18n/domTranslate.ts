@@ -116,6 +116,9 @@ function applySafely(root: Node) {
 }
 
 const pendingRoots = new Set<Node>();
+/** Freno de seguridad: si algo entrara en ciclo, la traducción se apaga sola. */
+const MAX_PASSES = 600;
+let passes = 0;
 
 function scheduleApply(root: Node) {
   if (!active) return;
@@ -124,9 +127,23 @@ function scheduleApply(root: Node) {
   scheduled = true;
   window.setTimeout(() => {
     scheduled = false;
+    if (passes >= MAX_PASSES) {
+      console.warn('[i18n] se desactiva la traducción del DOM tras demasiadas pasadas');
+      active = false;
+      observer?.disconnect();
+      observer = null;
+      return;
+    }
+    passes += 1;
     const roots = [...pendingRoots];
     pendingRoots.clear();
-    for (const target of roots) applySafely(target);
+    for (const target of roots) {
+      try {
+        applySafely(target);
+      } catch (error) {
+        console.warn('[i18n] error al traducir un nodo', error);
+      }
+    }
   }, 0);
 }
 
@@ -170,6 +187,7 @@ export function syncDomTranslation(language: Language) {
 
   if (active) return;
   active = true;
+  passes = 0;
   applySafely(document.body);
 
   observer = new MutationObserver((mutations) => {
