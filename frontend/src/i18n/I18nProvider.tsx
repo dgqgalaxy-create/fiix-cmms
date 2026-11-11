@@ -1,6 +1,8 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+﻿import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import api from '../api/axios';
 import { dictionaries, LANGUAGE_LABELS, type Language } from './translations';
+import { enApp } from './en-app';
+import { syncDomTranslation } from './domTranslate';
 
 interface I18nContextValue {
   language: Language;
@@ -50,11 +52,15 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = language;
+    // Traduce los textos ya escritos en español (capa temporal mientras se migra a t()).
+    const id = window.setTimeout(() => syncDomTranslation(language), 60);
+    return () => window.clearTimeout(id);
   }, [language]);
 
   const t = useCallback((key: string, vars?: Record<string, string | number>) => {
     const dict = dictionaries[language] ?? dictionaries.es;
-    let text = dict[key] ?? dictionaries.es[key] ?? key;
+    // 1) clave nombrada (nav.x, common.save…), 2) texto en español como clave.
+    let text = dict[key] ?? (language === 'en' ? enApp[key] : undefined) ?? dictionaries.es[key] ?? key;
     if (vars) {
       for (const [name, value] of Object.entries(vars)) {
         text = text.replace(new RegExp(`\\{${name}\\}`, 'g'), String(value));
