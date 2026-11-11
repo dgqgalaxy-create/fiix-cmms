@@ -120,6 +120,8 @@ export const enApp9: Record<string, string> = {
   'Crear rol': 'Create role',
   '¿Eliminar «': 'Delete "',
 
+  'Árbol de Fallas': 'Failure tree',
+
   // Contratistas
   'Contratistas': 'Contractors',
   'Proveedores de servicios de mantenimiento: especialidad, tarifas y contratos.':

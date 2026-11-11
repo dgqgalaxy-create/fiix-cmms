@@ -1,13 +1,17 @@
 /**
- * Traducción de textos existentes sin reescribir cada componente.
+ * Traducción de los textos que todavía están escritos en español dentro del JSX.
  *
- * La aplicación tiene más de mil textos en español escritos directamente en el
- * JSX. En lugar de modificar 100 archivos (frágil y propenso a errores), cuando
- * el idioma es inglés se recorre el DOM y se sustituyen los textos que existen
- * en el diccionario `en-app`, recordando el original para poder volver a
- * español sin recargar.
+ * Cuando el idioma es inglés se recorre el DOM y se sustituyen los textos que
+ * existen en el diccionario `en-app`, guardando el original para poder volver a
+ * español sin recargar. Es una capa temporal: lo nuevo debe usar `t('clave')`.
  *
- * Es una capa temporal: los módulos nuevos deben usar `t('clave')` directamente.
+ * Reglas importantes (evitan un bucle infinito):
+ *  - Nunca se escribe el mismo valor que ya está puesto (una escritura idéntica
+ *    genera otra mutación del DOM y volvería a disparar el observador).
+ *  - Las traducciones idénticas al original (`Offline` → `Offline`) se ignoran.
+ *  - El observador se desconecta mientras aplicamos cambios y se reconecta al
+ *    terminar, así no procesamos nuestras propias mutaciones.
+ *  - Las mutaciones se agrupan y aplican una sola vez por turno.
  */
 import { enApp } from './en-app';
 
@@ -17,34 +21,47 @@ const ATTRS = ['placeholder', 'title', 'aria-label', 'alt'] as const;
 
 const originals = new WeakMap<Node, string>();
 const originalAttrs = new WeakMap<Element, Map<string, string>>();
+/** Elementos ya traducidos: evita reescribir en cada pasada. */
+const doneText = new WeakSet<Node>();
 
 let observer: MutationObserver | null = null;
 let active = false;
-/** Evita reprocesar lo que nosotros mismos cambiamos. */
-let applying = false;
+let scheduled = false;
 
 const normalize = (text: string) => text.replace(/\s+/g, ' ').trim();
 
-function translateTextNode(node: Node) {
-  const current = node.nodeValue ?? '';
-  const key = normalize(current);
-  if (!key) return;
+/** Devuelve la traducción o null si no aplica (sin entrada o idéntica). */
+function translate(value: string): string | null {
+  const key = normalize(value);
+  if (!key) return null;
   const translation = enApp[key];
-  if (!translation) return;
-  if (!originals.has(node)) originals.set(node, current);
+  if (!translation || translation === key) return null;
+  return translation;
+}
 
-  // conserva los espacios de los extremos
+function translateTextNode(node: Node) {
+  if (doneText.has(node)) return;
+  const current = node.nodeValue ?? '';
+  const translation = translate(current);
+  if (translation === null) return;
+
   const leading = current.match(/^\s*/)?.[0] ?? '';
   const trailing = current.match(/\s*$/)?.[0] ?? '';
-  node.nodeValue = `${leading}${translation}${trailing}`;
+  const next = `${leading}${translation}${trailing}`;
+  if (next === current) return;
+
+  if (!originals.has(node)) originals.set(node, current);
+  doneText.add(node);
+  node.nodeValue = next;
 }
 
 function translateAttributes(element: Element) {
   for (const attr of ATTRS) {
     const value = element.getAttribute(attr);
     if (!value) continue;
-    const translation = enApp[normalize(value)];
-    if (!translation) continue;
+    const translation = translate(value);
+    if (translation === null || translation === value) continue;
+
     let stored = originalAttrs.get(element);
     if (!stored) {
       stored = new Map();
@@ -55,35 +72,66 @@ function translateAttributes(element: Element) {
   }
 }
 
-function walk(root: Node) {
+function applyTo(root: Node) {
   if (root.nodeType === Node.TEXT_NODE) {
     translateTextNode(root);
     return;
   }
   if (root.nodeType !== Node.ELEMENT_NODE) return;
 
-  const element = root as Element;
-  const tag = element.tagName;
-  // no tocar campos de formulario ni contenido editable
-  if (tag !== 'SCRIPT' && tag !== 'STYLE' && tag !== 'TEXTAREA') translateAttributes(element);
+  const walker = document.createTreeWalker(
+    root,
+    NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+  );
 
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  let node: Node | null = walker.nextNode();
+  let node: Node | null = walker.currentNode;
   while (node) {
-    const parent = node.parentElement?.tagName;
-    if (parent !== 'SCRIPT' && parent !== 'STYLE' && parent !== 'TEXTAREA') translateTextNode(node);
+    if (node.nodeType === Node.TEXT_NODE) {
+      const parent = node.parentElement?.tagName;
+      if (parent !== 'SCRIPT' && parent !== 'STYLE' && parent !== 'TEXTAREA') {
+        translateTextNode(node);
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as Element;
+      const tag = element.tagName;
+      if (tag !== 'SCRIPT' && tag !== 'STYLE' && tag !== 'TEXTAREA') {
+        translateAttributes(element);
+      }
+    }
     node = walker.nextNode();
-  }
-
-  if (element.querySelectorAll) {
-    element.querySelectorAll('*').forEach((child) => {
-      const childTag = child.tagName;
-      if (childTag !== 'SCRIPT' && childTag !== 'STYLE') translateAttributes(child);
-    });
   }
 }
 
+/** Aplica los cambios con el observador desconectado. */
+function applySafely(root: Node) {
+  if (!active) return;
+  observer?.disconnect();
+  try {
+    applyTo(root);
+  } finally {
+    if (active && observer) {
+      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    }
+  }
+}
+
+const pendingRoots = new Set<Node>();
+
+function scheduleApply(root: Node) {
+  if (!active) return;
+  pendingRoots.add(root);
+  if (scheduled) return;
+  scheduled = true;
+  window.setTimeout(() => {
+    scheduled = false;
+    const roots = [...pendingRoots];
+    pendingRoots.clear();
+    for (const target of roots) applySafely(target);
+  }, 0);
+}
+
 function restore() {
+  observer?.disconnect();
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   const nodes: Node[] = [];
   let node: Node | null = walker.nextNode();
@@ -93,15 +141,17 @@ function restore() {
   }
   for (const textNode of nodes) {
     const original = originals.get(textNode);
-    if (original !== undefined) {
-      textNode.nodeValue = original;
-      originals.delete(textNode);
-    }
+    if (original === undefined) continue;
+    if (textNode.nodeValue !== original) textNode.nodeValue = original;
+    originals.delete(textNode);
+    doneText.delete(textNode);
   }
   document.body.querySelectorAll('*').forEach((element) => {
     const stored = originalAttrs.get(element);
     if (!stored) return;
-    stored.forEach((value, attr) => element.setAttribute(attr, value));
+    stored.forEach((value, attr) => {
+      if (element.getAttribute(attr) !== value) element.setAttribute(attr, value);
+    });
     originalAttrs.delete(element);
   });
 }
@@ -111,34 +161,28 @@ export function syncDomTranslation(language: Language) {
   if (typeof document === 'undefined' || !document.body) return;
 
   if (language !== 'en') {
-    if (active) {
-      applying = true;
-      restore();
-      active = false;
-      observer?.disconnect();
-      observer = null;
-      applying = false;
-    }
+    if (!active) return;
+    active = false;
+    restore();
+    observer = null;
     return;
   }
 
   if (active) return;
   active = true;
-  applying = true;
-  walk(document.body);
-  applying = false;
+  applySafely(document.body);
 
   observer = new MutationObserver((mutations) => {
-    if (applying) return;
-    applying = true;
+    if (!active) return;
     for (const mutation of mutations) {
-      if (mutation.type === 'childList') {
-        mutation.addedNodes.forEach((added) => walk(added));
-      } else if (mutation.type === 'characterData' && mutation.target) {
-        translateTextNode(mutation.target);
+      if (mutation.type === 'characterData') {
+        // texto nuevo (React volvió a pintar): limpia la marca y reintenta
+        doneText.delete(mutation.target);
+        scheduleApply(mutation.target);
+      } else if (mutation.type === 'childList') {
+        for (const added of Array.from(mutation.addedNodes)) scheduleApply(added);
       }
     }
-    applying = false;
   });
 
   observer.observe(document.body, { childList: true, subtree: true, characterData: true });
