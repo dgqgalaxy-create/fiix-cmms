@@ -9,6 +9,11 @@ import { enApp2 } from './en-app-2';
 import { enApp3 } from './en-app-3';
 import { enApp4 } from './en-app-4';
 import { enApp5 } from './en-app-5';
+import { enApp6 } from './en-app-6';
+import { enApp7 } from './en-app-7';
+import { enApp8 } from './en-app-8';
+import { enApp9 } from './en-app-9';
+import { enApp10 } from './en-app-10';
 
 export const enApp: Record<string, string> = {
   // --- Comunes -----------------------------------------------------------------
@@ -317,4 +322,9 @@ export const enApp: Record<string, string> = {
   ...enApp3,
   ...enApp4,
   ...enApp5,
+  ...enApp6,
+  ...enApp7,
+  ...enApp8,
+  ...enApp9,
+  ...enApp10,
 };

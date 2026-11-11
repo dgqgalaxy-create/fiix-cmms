@@ -13,7 +13,7 @@ function read(name) {
   const body = code.slice(start).replace(/\.\.\.enApp\w*,/g, '').replace(/;\s*$/, '');
   return new Function(`return (${body});`)();
 }
-const dict = ['en-app.ts', 'en-app-2.ts', 'en-app-3.ts', 'en-app-4.ts', 'en-app-5.ts']
+const dict = ['en-app.ts', 'en-app-2.ts', 'en-app-3.ts', 'en-app-4.ts', 'en-app-5.ts', 'en-app-6.ts', 'en-app-7.ts', 'en-app-8.ts', 'en-app-9.ts', 'en-app-10.ts']
   .reduce((acc, name) => ({ ...acc, ...read(name) }), {});
 const keys = new Set(Object.keys(dict));
 
