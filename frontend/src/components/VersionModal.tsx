@@ -2,7 +2,7 @@
 import { Link } from 'react-router-dom';
 import { useExitAnimation } from '../hooks/useExitAnimation';
 
-export const APP_VERSION = "1.117.0";
+export const APP_VERSION = "1.117.1";
 
 interface VersionModalProps {
   isOpen: boolean;
