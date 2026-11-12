@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react';
+import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Package, ArrowRightLeft, Tags, MapPin, Building2, Plus, Search, Edit2, QrCode, AlertCircle, AlertTriangle, Ban, ShoppingCart, Printer, Loader2, X, Download, Filter, DollarSign, Trash2, Table2, LayoutGrid } from 'lucide-react';
 import { 
@@ -1060,10 +1060,10 @@ export const InventoryPage = () => {
                   <div className="flex gap-3 items-center mb-3">
                     <div className="flex-shrink-0">
                       {item.image_url ? (
-                        <img src={mediaUrl(item.image_url)} alt={item.name} className="w-12 h-12 object-cover rounded-xl border border-slate-200" />
+                        <img src={mediaUrl(item.image_url)} alt={item.name} className="w-[72px] h-[72px] shrink-0 object-cover rounded-xl border border-slate-200" />
                       ) : (
-                        <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400">
-                          <Package size={20} />
+                        <div className="w-[72px] h-[72px] shrink-0 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400">
+                          <Package size={30} />
                         </div>
                       )}
                     </div>
