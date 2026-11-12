@@ -1,4 +1,7 @@
 ﻿import { workOrderPeriod } from '../utils/workOrderPeriod';
+import fs from 'fs';
+import path from 'path';
+import { getUploadsRoot, urlToRelativeUploadPath } from '../utils/uploadsCleanup';
 import { touchWorkOrderActivity, withUnreadState } from '../utils/workOrderActivity';
 import { emitWebhook } from '../services/webhookService';
 import { evaluateApproval } from './approvalController';
@@ -1192,25 +1195,212 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
   }
 };
 
+/**
+ * Elimina una orden de trabajo y TODO lo que dependía de ella, como si nunca
+ * se hubiera registrado: fotos/evidencias, movimientos de refacciones (devolviendo
+ * el stock), comentarios, documentos, costos, paros reportados, relaciones, etc.
+ *
+ * Requiere la contraseña maestra (middleware `verifyDevPasswordStrict` en la ruta)
+ * y deja constancia de la eliminación en la bitácora de auditoría, incluyendo los
+ * movimientos de inventario revertidos.
+ */
 export const deleteWorkOrder = async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = req.params.id as string;
+  const userId = req.user?.userId ?? null;
+
   try {
-    const id = req.params.id as string;
-    
-    // Verificamos si existe
-    const currentWorkOrder = await prisma.workOrder.findUnique({ where: { id } });
-    if (!currentWorkOrder) {
+    const current = await prisma.workOrder.findUnique({
+      where: { id },
+      include: {
+        asset: { select: { name: true } },
+        zone: { select: { name: true } },
+        created_by: { select: { name: true } },
+        costs: { select: { amount: true, description: true } },
+        comments: {
+          select: {
+            id: true,
+            body: true,
+            attachment_url: true,
+            attachment_name: true,
+            created_at: true,
+          },
+        },
+        documents: { select: { id: true, file_url: true, file_name: true, title: true } },
+        inventory_transactions: {
+          select: {
+            id: true,
+            item_id: true,
+            amount: true,
+            reason: true,
+            unit_cost: true,
+            external_id: true,
+            created_at: true,
+          },
+          orderBy: { created_at: 'asc' },
+        },
+        downtimes: { select: { id: true } },
+        relations_from: { select: { id: true } },
+        relations_to: { select: { id: true } },
+        approvals: { select: { id: true } },
+        sla_events: { select: { id: true } },
+      },
+    });
+
+    if (!current) {
       res.status(404).json({ error: 'Orden no encontrada' });
       return;
     }
 
-    if (currentWorkOrder.status === 'FINALIZADO') {
-      res.status(400).json({ error: 'No se puede eliminar una orden finalizada.' });
-      return;
+    // Archivos físicos a borrar después de confirmar la transacción.
+    const fileUrls = [
+      current.request_image_url,
+      current.before_image_url,
+      current.after_image_url,
+      current.signature_clean_area,
+      current.signature_delivery,
+      ...current.documents.map((d) => d.file_url),
+      ...current.comments.map((c) => c.attachment_url),
+    ].filter((url): url is string => Boolean(url));
+
+    const restoredStock = await prisma.$transaction(
+      async (tx) => {
+        const restored: Array<{
+          item_id: string;
+          amount: number;
+          direction: 'devuelto' | 'retirado';
+          reason: string;
+          unit_cost: number | null;
+        }> = [];
+
+        // Deshacer el efecto de cada movimiento de la OT sobre el stock:
+        // una salida (amount < 0) devuelve piezas; una entrada las retira.
+        for (const movement of current.inventory_transactions) {
+          if (!movement.amount) continue;
+          const item = await tx.item.findUnique({
+            where: { id: movement.item_id },
+            select: { stock: true },
+          });
+          if (!item) continue;
+          const nextStock =
+            movement.amount < 0
+              ? item.stock + Math.abs(movement.amount)
+              : Math.max(0, item.stock - movement.amount);
+          await tx.item.update({
+            where: { id: movement.item_id },
+            data: { stock: nextStock },
+          });
+          restored.push({
+            item_id: movement.item_id,
+            amount: Math.abs(movement.amount),
+            direction: movement.amount < 0 ? 'devuelto' : 'retirado',
+            reason: movement.reason,
+            unit_cost: movement.unit_cost ?? null,
+          });
+        }
+
+        if (current.inventory_transactions.length > 0) {
+          await tx.inventoryTransaction.deleteMany({ where: { work_order_id: id } });
+        }
+
+        // Documentos y paros quedan con SetNull al borrar la OT; aquí se eliminan
+        // porque formaban parte de la orden (se borran también sus archivos).
+        await tx.document.deleteMany({ where: { work_order_id: id } });
+        await tx.assetDowntime.deleteMany({ where: { work_order_id: id } });
+
+        // El resto (comentarios, costos, aprobaciones, SLA, vistas, relaciones)
+        // se elimina en cascada.
+        await tx.workOrder.delete({ where: { id } });
+
+        return restored;
+      },
+      { maxWait: 10_000, timeout: 30_000 }
+    );
+
+    // Fotos/evidencias/adjuntos: borrado físico best-effort (fuera de la transacción).
+    const uploadsRoot = getUploadsRoot();
+    const deletedFiles: string[] = [];
+    const failedFiles: string[] = [];
+    for (const url of fileUrls) {
+      const relative = urlToRelativeUploadPath(url);
+      if (!relative) continue; // data: URLs (firmas en base64) no son archivos
+      try {
+        await fs.promises.unlink(path.join(uploadsRoot, relative));
+        deletedFiles.push(relative);
+      } catch (fileError: any) {
+        if (fileError?.code !== 'ENOENT') {
+          failedFiles.push(relative);
+          console.warn('[deleteWorkOrder] No se pudo borrar el archivo:', relative, fileError);
+        }
+      }
     }
 
-    await prisma.workOrder.delete({ where: { id } });
+    const actor = userId
+      ? await prisma.user.findUnique({ where: { id: userId }, select: { name: true } })
+      : null;
+    const folioLabel = formatWorkOrderFolio(current.folio);
+    const totalCosts = current.costs.reduce((sum, cost) => sum + Number(cost.amount || 0), 0);
+
+    await writeAuditLog({
+      userId,
+      userName: actor?.name ?? null,
+      action: 'WORK_ORDER_DELETED',
+      entity: 'work_order',
+      entityId: id,
+      summary:
+        `Orden eliminada ${folioLabel} · ${current.title} · estado ${current.status}` +
+        (restoredStock.length > 0
+          ? ` · ${restoredStock.length} movimiento(s) de refacción revertidos al inventario`
+          : ''),
+      meta: {
+        folio: current.folio,
+        status: current.status,
+        title: current.title,
+        description: current.description,
+        asset: current.asset?.name ?? null,
+        zone: current.zone?.name ?? null,
+        created_by: current.created_by?.name ?? null,
+        completed_at: current.completed_at ? current.completed_at.toISOString() : null,
+        resolution_notes: current.resolution_notes ?? null,
+        inventory_movements: current.inventory_transactions.slice(0, 100).map((movement) => ({
+          item_id: movement.item_id,
+          amount: movement.amount,
+          reason: movement.reason,
+          unit_cost: movement.unit_cost ?? null,
+          external_id: movement.external_id ?? null,
+          created_at: movement.created_at.toISOString(),
+        })),
+        inventory_movements_total: current.inventory_transactions.length,
+        restored_stock: restoredStock,
+        costs: current.costs.slice(0, 50).map((cost) => ({ amount: cost.amount, description: cost.description })),
+        costs_total: totalCosts,
+        comments: current.comments.slice(0, 50).map((comment) => ({
+          body: comment.body.slice(0, 200),
+          attachment_name: comment.attachment_name ?? null,
+          created_at: comment.created_at.toISOString(),
+        })),
+        documents: current.documents.map((doc) => doc.file_name),
+        deleted_files: deletedFiles,
+        failed_files: failedFiles,
+        related_counts: {
+          comments: current.comments.length,
+          documents: current.documents.length,
+          costs: current.costs.length,
+          downtimes: current.downtimes.length,
+          relations: current.relations_from.length + current.relations_to.length,
+          approvals: current.approvals.length,
+          sla_events: current.sla_events.length,
+        },
+      },
+    });
+
     emitWorkOrderUpdated(id);
-    res.json({ message: 'Orden eliminada con Ã©xito' });
+    if (restoredStock.length > 0) emitRefresh('refresh_inventory');
+
+    res.json({
+      message: 'Orden eliminada con éxito',
+      restored_stock: restoredStock.length,
+      deleted_files: deletedFiles.length,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al eliminar orden de trabajo' });

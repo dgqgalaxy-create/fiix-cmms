@@ -96,4 +96,17 @@ export const enApp10: Record<string, string> = {
   'Sin órdenes relacionadas. Usa «Relacionar» para vincular una duplicada, una que bloquea o la causa.':
     'No related orders. Use "Relate" to link a duplicate, a blocking one or the cause.',
   'Quitar relación': 'Remove relation',
+  // Eliminación definitiva de OT (contraseña de desarrollador)
+  'Eliminar orden definitivamente': 'Delete work order permanently',
+  'Eliminar orden': 'Delete order',
+  'Eliminando…': 'Deleting…',
+  'Esto no se puede deshacer': 'This cannot be undone',
+  'Se borrarán las fotos, firmas, documentos y comentarios de la orden.':
+    'The order photos, signatures, documents and comments will be deleted.',
+  'Se registrará la eliminación en la bitácora de auditoría.':
+    'The deletion will be recorded in the audit log.',
+  'Refacciones que se devolverán al inventario': 'Parts that will be returned to inventory',
+  'Contraseña de desarrollador': 'Developer password',
+  'Contraseña maestra…': 'Master password…',
+  'para confirmar': 'to confirm',
 };

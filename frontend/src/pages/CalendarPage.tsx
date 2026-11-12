@@ -12,6 +12,7 @@ import { Calendar, LayoutList, CheckCircle2, X, GripVertical } from 'lucide-reac
 import { getWorkOrders, getWorkOrderById, updateWorkOrder, joinWorkOrder, deleteWorkOrder } from '../api/workOrders';
 import type { WorkOrder } from '../api/workOrders';
 import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
+import { DeleteWorkOrderDialog } from '../components/workorders/DeleteWorkOrderDialog';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { formatDateTime } from '../utils/dateUtils';
 import { resolveCalendarDropDate } from '../utils/calendarDropDate';
@@ -96,6 +97,7 @@ export const CalendarPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<WorkOrder | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<WorkOrder | null>(null);
 
   const fetchOrders = async () => {
     try {
@@ -235,17 +237,21 @@ export const CalendarPage = () => {
   };
 
   const handleDeleteWorkOrder = async (id: string) => {
-    if (confirm('¿Estás seguro de que deseas eliminar esta orden permanentemente?')) {
-      try {
-        await deleteWorkOrder(id);
-        setIsDetailModalOpen(false);
-        setIsModalOpen(false);
-        await fetchOrders();
-      } catch (error) {
-        console.error('Error al eliminar:', error);
-        alert('Ocurrió un error al eliminar la orden.');
-      }
-    }
+    const target =
+      workOrders.find((wo) => wo.id === id) ??
+      unscheduled.find((wo) => wo.id === id) ??
+      (selectedOrder?.id === id ? selectedOrder : null);
+    if (!target) return;
+    setDeleteTarget(target);
+  };
+
+  const handleConfirmDeleteWorkOrder = async (devPassword: string) => {
+    if (!deleteTarget) return;
+    await deleteWorkOrder(deleteTarget.id, devPassword);
+    setDeleteTarget(null);
+    setIsDetailModalOpen(false);
+    setIsModalOpen(false);
+    await fetchOrders();
   };
 
   const handlePendingHandlePointerDown = (e: React.PointerEvent, order: WorkOrder) => {
@@ -679,6 +685,13 @@ export const CalendarPage = () => {
           onJoin={handleJoinWorkOrder}
         />
       )}
+
+      <DeleteWorkOrderDialog
+        workOrder={deleteTarget}
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDeleteWorkOrder}
+      />
     </div>
   );
 };

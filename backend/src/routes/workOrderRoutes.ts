@@ -33,6 +33,7 @@ import {
   woCommentUpload,
 } from '../controllers/woCommentsController';
 import { authenticate, requirePermission, requireWritable } from '../middlewares/authMiddleware';
+import { verifyDevPasswordStrict } from '../middlewares/devPassword';
 import { upload } from '../middlewares/upload';
 
 const router = Router();
@@ -85,7 +86,14 @@ router.patch(
   upload.fields([{ name: 'before_image', maxCount: 1 }, { name: 'after_image', maxCount: 1 }]), 
   updateWorkOrder
 );
-router.delete('/:id', authenticate, requireWritable, requirePermission('DELETE_WORK_ORDERS'), deleteWorkOrder);
+router.delete(
+  '/:id',
+  authenticate,
+  requireWritable,
+  requirePermission('DELETE_WORK_ORDERS'),
+  verifyDevPasswordStrict,
+  deleteWorkOrder
+);
 router.post('/:id/join', authenticate, requireWritable, requirePermission('EDIT_WORK_ORDERS'), joinWorkOrder);
 
 export default router;

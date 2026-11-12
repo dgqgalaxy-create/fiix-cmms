@@ -10,6 +10,7 @@ import { markWorkOrderSeen } from '../api/workOrders';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { InfoTip } from '../components/common/InfoTip';
 import { BulkAssignModal } from '../components/BulkAssignModal';
+import { DeleteWorkOrderDialog } from '../components/workorders/DeleteWorkOrderDialog';
 import { getWorkOrders, getWorkOrdersPage, getWorkOrderById, getUniqueRequesters, getWorkOrdersSummary, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder, getMineOpenCount } from '../api/workOrders';
 import type { WorkOrder, WorkOrderListParams } from '../api/workOrders';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -48,6 +49,7 @@ export const Dashboard = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<WorkOrder | null>(null);
   const [detailInitialFocus, setDetailInitialFocus] = useState<'assign' | undefined>(undefined);
   
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -634,16 +636,23 @@ export const Dashboard = () => {
   };
 
   const handleDeleteWorkOrder = async (id: string) => {
-    if (confirm('¿Estás seguro de que deseas eliminar esta orden permanentemente?')) {
-      try {
-        await deleteWorkOrder(id);
-        handleCloseDetail();
-        await fetchWorkOrders();
-      } catch (error) {
-        console.error('Error al eliminar:', error);
-        alert('Ocurrió un error al eliminar la orden. Es posible que el servidor se esté reiniciando.');
-      }
-    }
+    const target =
+      workOrders.find((wo) => wo.id === id) ??
+      (selectedWorkOrder?.id === id ? selectedWorkOrder : null);
+    if (!target) return;
+    setDeleteTarget(target);
+  };
+
+  const handleConfirmDeleteWorkOrder = async (devPassword: string) => {
+    if (!deleteTarget) return;
+    await deleteWorkOrder(deleteTarget.id, devPassword);
+    setDeleteTarget(null);
+    handleCloseDetail();
+    await fetchWorkOrders();
+  };
+
+  const handleDeleteFromTable = (wo: WorkOrder) => {
+    setDeleteTarget(wo);
   };
 
   const canCreate = hasPermission('CREATE_WORK_ORDERS');
@@ -917,7 +926,7 @@ export const Dashboard = () => {
                 onRowClick={openWorkOrderDetail}
                 onAssignClick={canQuickActions ? handleAssignClick : undefined}
                 onScheduleClick={canQuickSchedule ? handleScheduleClick : undefined}
-                onDelete={canDeleteWO ? (wo) => handleDeleteWorkOrder(wo.id) : undefined}
+                onDelete={canDeleteWO ? handleDeleteFromTable : undefined}
               />
               {historyTotal > HISTORY_PER_PAGE && (
                 <div className="flex items-center justify-between bg-white dark:bg-slate-900 px-4 py-3 sm:px-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mt-4 print:hidden">
@@ -1313,6 +1322,13 @@ export const Dashboard = () => {
           />
         </ErrorBoundary>
       )}
+
+      <DeleteWorkOrderDialog
+        workOrder={deleteTarget}
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDeleteWorkOrder}
+      />
     </>
   );
 };

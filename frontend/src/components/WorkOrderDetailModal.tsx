@@ -1753,12 +1753,12 @@ export const WorkOrderDetailModal = ({
 
         <div className="px-4 py-4 sm:px-6 sm:py-5 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center bg-slate-50/50 dark:bg-slate-900/50 mt-auto">
           <div className="flex gap-2 justify-stretch sm:justify-start [&>button]:flex-1 [&>button]:sm:flex-initial">
-            {hasPermission('DELETE_WORK_ORDERS') && onDelete && workOrder.status !== 'FINALIZADO' && canEdit && (
+            {hasPermission('DELETE_WORK_ORDERS') && onDelete && canEdit && (
               <>
                 <button type="button" onClick={() => onDelete(workOrder.id)} className="px-3 sm:px-4 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors">
                   <Trash2 size={15} /> Eliminar
                 </button>
-                {workOrder.status !== 'ANULADO' && (
+                {workOrder.status !== 'ANULADO' && workOrder.status !== 'FINALIZADO' && (
                   <button type="button" onClick={handleVoid} disabled={isSubmitting} className="px-3 sm:px-4 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors disabled:opacity-70">
                     <Ban size={15} /> Anular
                   </button>

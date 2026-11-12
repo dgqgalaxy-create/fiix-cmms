@@ -13,6 +13,7 @@ import {
   emptyUploadsDirectory,
 } from '../utils/uploadsCleanup';
 import { authenticate, type AuthRequest } from '../middlewares/authMiddleware';
+import { verifyDevPassword } from '../middlewares/devPassword';
 import { processCsvImportFiles, CsvImportError } from '../utils/runCsvImport';
 import { importInventoryTransactionsFile } from '../utils/inventoryCsvImport';
 import { buildAnnualFileData } from '../utils/annualFile';
@@ -46,14 +47,6 @@ import {
   endImportJob,
   isImportJobActive,
 } from '../utils/maintenance';
-import {
-  DEV_PASSWORD_CODES,
-  DEV_PASSWORD_MAX_ATTEMPTS,
-  clearDevPasswordFailures,
-  getDevPasswordGateStatus,
-  recordDevPasswordFailure,
-} from '../utils/devPasswordGate';
-
 const router = express.Router();
 
 // Sesión JWT obligatoria: la contraseña maestra NO usa 401 (el interceptor del front cerraría sesión).
@@ -173,122 +166,6 @@ function unlinkUploadedSafe(file?: Express.Multer.File): void {
   }
 }
 
-/** Formatea tiempo restante de bloqueo para mensajes al usuario. */
-function formatLockWait(lockedUntilIso: string): string {
-  const ms = Math.max(0, Date.parse(lockedUntilIso) - Date.now());
-  const mins = Math.ceil(ms / 60000);
-  if (mins >= 60) {
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return m > 0 ? `${h} h ${m} min` : `${h} h`;
-  }
-  return mins <= 1 ? '1 minuto' : `${mins} minutos`;
-}
-
-// Middleware to verify the developer password (403 = wrong/locked; never 401 for bad password)
-const verifyDevPassword = async (req: Request, res: Response, next: express.NextFunction): Promise<void> => {
-  const authReq = req as AuthRequest;
-  const userId = authReq.user?.userId;
-  const password = req.headers['x-dev-password'] as string;
-
-  if (!userId) {
-    // authenticate ya debería haber respondido; defensa en profundidad
-    res.status(401).json({ error: 'No autenticado' });
-    return;
-  }
-
-  if (!password) {
-    res.status(403).json({
-      code: DEV_PASSWORD_CODES.REQUIRED,
-      message: 'Se requiere contraseña maestra.',
-    });
-    return;
-  }
-
-  try {
-    const gate = await getDevPasswordGateStatus(userId);
-    if (gate.locked) {
-      res.status(403).json({
-        code: DEV_PASSWORD_CODES.LOCKED,
-        message: `Demasiados intentos fallidos. Espera ${formatLockWait(gate.lockedUntil)} e inténtalo de nuevo.`,
-        lockedUntil: gate.lockedUntil,
-        remainingAttempts: 0,
-      });
-      return;
-    }
-
-    let isValid = false;
-
-    // 1) Contraseña maestra personalizada guardada en BD (cambiable desde la app)
-    const settings = await prisma.systemSettings.findFirst();
-    if (settings?.dev_menu_password_hash) {
-      const matchesCustomHash = await bcrypt.compare(password, settings.dev_menu_password_hash);
-      if (matchesCustomHash) {
-        isValid = true;
-      }
-    }
-
-    // 2) Fallback a variable de entorno (o clave de emergencia) para prevenir bloqueo si la BD se vacía
-    if (!isValid) {
-      const envPassword = process.env.DEV_MENU_PASSWORD || 'DavidG.Q.1991';
-      if (password === envPassword) {
-        isValid = true;
-      }
-    }
-
-    // 3) Contraseña de cualquier administrador activo
-    if (!isValid) {
-      const admins = await prisma.user.findMany({
-        where: { role: 'ADMINISTRADOR', is_active: true },
-      });
-      for (const admin of admins) {
-        if (!admin.password_hash) continue;
-        const match = await bcrypt.compare(password, admin.password_hash);
-        if (match) {
-          isValid = true;
-          break;
-        }
-      }
-    }
-
-    if (!isValid) {
-      // Solo el desbloqueo (POST /verify) consume intentos; otras rutas no bloquean por sesión caducada.
-      const trackFailures = req.method === 'POST' && (req.path === '/verify' || req.path.endsWith('/verify'));
-
-      if (trackFailures) {
-        const result = await recordDevPasswordFailure(userId);
-        if (result.locked && result.lockedUntil) {
-          res.status(403).json({
-            code: DEV_PASSWORD_CODES.LOCKED,
-            message: `Contraseña incorrecta. Tras ${DEV_PASSWORD_MAX_ATTEMPTS} intentos fallidos, el acceso queda bloqueado 1 hora. Espera ${formatLockWait(result.lockedUntil)}.`,
-            lockedUntil: result.lockedUntil,
-            remainingAttempts: 0,
-          });
-          return;
-        }
-        res.status(403).json({
-          code: DEV_PASSWORD_CODES.INVALID,
-          message: `Contraseña incorrecta. Te quedan ${result.remainingAttempts} intento${result.remainingAttempts === 1 ? '' : 's'}.`,
-          remainingAttempts: result.remainingAttempts,
-          lockedUntil: null,
-        });
-        return;
-      }
-
-      res.status(403).json({
-        code: DEV_PASSWORD_CODES.INVALID,
-        message: 'Contraseña maestra incorrecta.',
-      });
-      return;
-    }
-
-    await clearDevPasswordFailures(userId);
-    next();
-  } catch (error) {
-    console.error(`[DEV VERIFY] Error:`, error);
-    res.status(500).json({ message: 'Error verificando credenciales.' });
-  }
-};
 
 router.post('/verify', verifyDevPassword, (req: Request, res: Response) => {
   res.json({ success: true, message: 'Password is valid.' });

@@ -328,8 +328,15 @@ export const updateWorkOrder = async (id: string, data: any) => {
   }
 };
 
-export const deleteWorkOrder = async (id: string) => {
-  const response = await api.delete(`/work-orders/${id}`);
+/**
+ * Elimina una OT (solo con permiso DELETE_WORK_ORDERS + contraseña maestra).
+ * El backend revierte inventario, borra archivos y deja rastro en auditoría.
+ */
+export const deleteWorkOrder = async (id: string, devPassword: string) => {
+  const response = await api.delete(`/work-orders/${id}`, {
+    headers: { 'x-dev-password': devPassword },
+    timeout: 30_000,
+  });
   return response.data;
 };
 

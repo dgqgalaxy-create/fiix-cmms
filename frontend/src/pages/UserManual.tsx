@@ -350,6 +350,32 @@ export const UserManual = () => {
                   </ul>
                 </div>
 
+                <div className="space-y-4 pt-4">
+                  <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 w-8 h-8 rounded-full flex items-center justify-center text-sm">5</span>
+                    Eliminación definitiva de órdenes
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-400">
+                    Se pueden eliminar órdenes en cualquier estado, incluidas las <strong>Finalizadas</strong>. La acción exige el permiso <strong>Eliminar órdenes</strong>, la <strong>contraseña de desarrollador</strong> y escribir <strong>ELIMINAR</strong> para confirmar.
+                  </p>
+                  <ul className="list-none space-y-3 mt-4">
+                    <li className="flex items-start gap-3">
+                      <AlertTriangle className="text-rose-500 shrink-0 mt-1" size={18} />
+                      <div>
+                        <strong className="text-slate-800 dark:text-slate-200 block">Borrado completo, sin rastro operativo</strong>
+                        <span className="text-sm text-slate-500">Se eliminan fotos, firmas, documentos, comentarios, costos, paros, relaciones y aprobaciones de la orden. Las refacciones consumidas <strong>vuelven al inventario</strong>, de modo que el stock queda como si la orden nunca se hubiera cerrado.</span>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Shield className="text-emerald-500 shrink-0 mt-1" size={18} />
+                      <div>
+                        <strong className="text-slate-800 dark:text-slate-200 block">Queda en auditoría</strong>
+                        <span className="text-sm text-slate-500">La bitácora registra quién eliminó la orden, su folio, estado, los movimientos de refacciones revertidos y los archivos borrados. Consulta Auditoría para el detalle.</span>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+
                 <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/30 p-5 rounded-2xl mt-8 flex gap-4 items-start">
                   <div className="p-2 bg-emerald-100 dark:bg-emerald-800 rounded-full shrink-0">
                     <CheckCircle2 className="text-emerald-600 dark:text-emerald-300" size={20} />

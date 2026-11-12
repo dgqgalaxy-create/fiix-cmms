@@ -2,7 +2,7 @@
 import { Link } from 'react-router-dom';
 import { useExitAnimation } from '../hooks/useExitAnimation';
 
-export const APP_VERSION = "1.117.3";
+export const APP_VERSION = "1.118.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -38,6 +38,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: eliminar órdenes de trabajo en cualquier estado, incluidas las Finalizadas y Anuladas. Exige el permiso «Eliminar órdenes», la contraseña de desarrollador y escribir ELIMINAR para confirmar. Al borrar, se eliminan fotos, firmas, documentos, comentarios, costos, paros y relaciones; las refacciones consumidas se devuelven al inventario y todo el movimiento queda registrado en la bitácora de auditoría.",
     "Mejora visual (toda la app): animación de entrada y salida en los modales de activos, usuarios, catálogo, movimientos, turnos, kits, cuadrillas, contratistas y permisos; foco e interacción de botones y campos unificados; encabezados de tabla fijos con sombra al hacer scroll.",
     "Corrección: el punto de «cambios sin revisar» en Órdenes ya no palpita al abrir el detalle (se apaga al hacer clic y la animación es más tenue).",
     "Mejora visual: las tablas muestran una silueta con brillo mientras cargan (en lugar de «Cargando…»), el encabezado de las tablas proyecta sombra al hacer scroll y las gráficas de Estadística animan sus barras al cambiar de periodo.",
