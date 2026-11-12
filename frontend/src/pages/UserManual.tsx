@@ -337,7 +337,7 @@ export const UserManual = () => {
                       <Clock className="text-amber-500 shrink-0 mt-1" size={18} />
                       <div>
                         <strong className="text-slate-800 dark:text-slate-200 block">Recordatorios y escalamiento</strong>
-                        <span className="text-sm text-slate-500">Cada 15 minutos se evalúan las OT abiertas. Al cruzar umbrales se avisa por Telegram y por la campana; el escalamiento llega a Gestionadores y Administradores. Cada aviso se envía una sola vez por orden. El rezago histórico no satura el grupo (arranque silencioso) y, si hay muchos avisos nuevos, se manda un solo resumen.</span>
+                        <span className="text-sm text-slate-500">Cada 15 minutos se evalúan las OT abiertas. Al cruzar umbrales se avisa por la campana y por notificación push; el escalamiento llega a Gestionadores y Administradores. Cada aviso se envía una sola vez por orden. El rezago histórico no satura el grupo (arranque silencioso) y, si hay muchos avisos nuevos, se manda un solo resumen.</span>
                       </div>
                     </li>
                     <li className="flex items-start gap-3">
@@ -604,7 +604,7 @@ export const UserManual = () => {
                       <CheckCircle2 className="text-emerald-500" size={20} /> Evaluaciones Rápidas
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                      La interfaz es un formulario masivo donde puedes marcar rápidamente si sistemas como Lubricación, Neumática, y Eléctrica están <strong className="text-green-600">OK</strong>, <strong className="text-red-500">NOK (Falla)</strong> o N/A. Algunas tareas piden un <strong>número</strong> (temperaturas) o un <strong>texto</strong> (lecturas de agua) en lugar del check. <strong>Antes de firmar y enviar</strong> deben estar completos todos los checks y lecturas; si falta alguno, verás un <strong>diálogo en la app</strong> con la lista y las celdas resaltadas. Las observaciones vacías se guardan automáticamente como <strong>N/A</strong>. Si el checklist del día no se envía, el sistema puede avisar por <strong>Telegram</strong> en horario laboral. Al pasar la medianoche (hora México) un checklist no enviado pasa a <strong>Incumplimiento</strong> y queda bloqueado: el técnico asignado puede <strong>solicitar continuar</strong> y solo un <strong>Administrador</strong> aprueba; si no hay técnico, el Admin puede asignarlo sin quitar el incumplimiento.
+                      La interfaz es un formulario masivo donde puedes marcar rápidamente si sistemas como Lubricación, Neumática, y Eléctrica están <strong className="text-green-600">OK</strong>, <strong className="text-red-500">NOK (Falla)</strong> o N/A. Algunas tareas piden un <strong>número</strong> (temperaturas) o un <strong>texto</strong> (lecturas de agua) en lugar del check. <strong>Antes de firmar y enviar</strong> deben estar completos todos los checks y lecturas; si falta alguno, verás un <strong>diálogo en la app</strong> con la lista y las celdas resaltadas. Las observaciones vacías se guardan automáticamente como <strong>N/A</strong>. Si el checklist del día no se envía, el sistema lo marca para seguimiento en la campana de notificaciones. Al pasar la medianoche (hora México) un checklist no enviado pasa a <strong>Incumplimiento</strong> y queda bloqueado: el técnico asignado puede <strong>solicitar continuar</strong> y solo un <strong>Administrador</strong> aprueba; si no hay técnico, el Admin puede asignarlo sin quitar el incumplimiento.
                     </p>
                   </div>
 
@@ -641,7 +641,7 @@ export const UserManual = () => {
                   <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
                     <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3">Pendientes operativos</h3>
                     <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Cualquier usuario puede crearlos y asignarlos a otro. Opcionalmente ligas un <strong>folio de OT</strong> o un <strong>código de activo</strong>. Al asignar y al vencer la fecha, el responsable recibe aviso in-app + push (no Telegram).
+                      Cualquier usuario puede crearlos y asignarlos a otro. Opcionalmente ligas un <strong>folio de OT</strong> o un <strong>código de activo</strong>. Al asignar y al vencer la fecha, el responsable recibe aviso in-app + push.
                     </p>
                   </div>
                 </div>
@@ -736,77 +736,6 @@ export const UserManual = () => {
                   </div>
                 </div>
 
-                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 p-6 rounded-2xl shadow-sm">
-                  <h3 className="text-xl font-bold text-blue-800 dark:text-blue-300 mb-3 flex items-center gap-2">
-                    <Terminal size={24} /> Configuración Dinámica de Telegram
-                  </h3>
-                  <p className="text-blue-700 dark:text-blue-400/90 text-sm leading-relaxed mb-4">
-                    Esta opción permite conectar el sistema con un Bot de Telegram para recibir alertas en tiempo real sobre nuevas solicitudes de mantenimiento, sin requerir acceso al código fuente o al servidor (`.env`). Especialmente útil si se instala el sistema en diferentes plantas.
-                  </p>
-                  
-                  <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/20 mb-4">
-                    <h4 className="font-bold text-blue-900 dark:text-blue-200 text-sm uppercase tracking-wider mb-3">¿Qué son estas credenciales?</h4>
-                    <ul className="space-y-3 text-sm text-blue-800/80 dark:text-blue-300/80">
-                      <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-blue-400" size={16} /> <strong>Bot Token:</strong> Llave maestra del bot (formato largo, ej. <code className="text-xs bg-blue-100 dark:bg-blue-950 px-1 rounded">123456:ABC-DEF...</code>). La otorga <em>@BotFather</em>.</li>
-                      <li className="flex gap-2 items-start"><CheckCircle2 className="shrink-0 mt-0.5 text-blue-400" size={16} /> <strong>Chat ID:</strong> Identificador numérico del grupo donde deben llegar las alertas (suele ser negativo, ej. <code className="text-xs bg-blue-100 dark:bg-blue-950 px-1 rounded">-1001234567890</code>).</li>
-                      <li className="flex gap-2 items-start"><Info className="shrink-0 mt-0.5 text-blue-400" size={16} /> <strong>Prioridad:</strong> Lo que guardes aquí reemplaza el `.env`. Para volver al valor del servidor, borra ambos campos y pulsa Guardar.</li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/20 mb-4">
-                    <h4 className="font-bold text-blue-900 dark:text-blue-200 text-sm uppercase tracking-wider mb-3">A) Configuración nueva (crear bot y grupo desde cero)</h4>
-                    <ol className="list-decimal pl-5 space-y-3 text-sm text-blue-800/80 dark:text-blue-300/80">
-                      <li>
-                        <strong>Crear el bot:</strong> En Telegram busca <em>@BotFather</em> → envía <code className="text-xs bg-blue-100 dark:bg-blue-950 px-1 rounded">/newbot</code> → elige nombre y username (debe terminar en <code className="text-xs">bot</code>).
-                        BotFather te devolverá el <strong>Bot Token</strong>. Cópialo y guárdalo.
-                      </li>
-                      <li>
-                        <strong>Crear el grupo:</strong> Crea un grupo de Telegram (ej. “MTTO Alertas”) e invita a los técnicos/administradores que deban ver avisos.
-                      </li>
-                      <li>
-                        <strong>Agregar el bot al grupo:</strong> Añade tu bot como miembro del grupo. Conviene darle permiso para enviar mensajes.
-                      </li>
-                      <li>
-                        <strong>Obtener el Chat ID del grupo:</strong>
-                        <ul className="list-disc pl-5 mt-2 space-y-1.5">
-                          <li>Opción recomendada: agrega temporalmente el bot <em>@RawDataBot</em> o <em>@userinfobot</em> al grupo; te mostrará un campo <code className="text-xs">chat.id</code> (número negativo). Cópialo y luego puedes quitar ese bot auxiliar.</li>
-                          <li>Otra opción: envía cualquier mensaje en el grupo y abre en el navegador:
-                            <code className="block text-xs bg-blue-100 dark:bg-blue-950 px-2 py-1.5 rounded mt-1 break-all">https://api.telegram.org/bot&lt;TU_TOKEN&gt;/getUpdates</code>
-                            Busca <code className="text-xs">"chat":{"{"}"id": ...{"}"}</code> del grupo.
-                          </li>
-                        </ul>
-                      </li>
-                      <li>
-                        <strong>Pegar en CMMS:</strong> Ve a <em>Configuración → Opciones de Desarrollador</em> (contraseña maestra) → sección Telegram → pega <strong>Bot Token</strong> y <strong>Chat ID</strong> → Guardar. Activa también “Alertas por Telegram” en Notificaciones si está apagado.
-                      </li>
-                      <li>
-                        <strong>Probar:</strong> Crea una solicitud de prueba desde el Portal o Nueva Orden; debe llegar un mensaje al grupo.
-                      </li>
-                    </ol>
-                  </div>
-
-                  <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/20">
-                    <h4 className="font-bold text-blue-900 dark:text-blue-200 text-sm uppercase tracking-wider mb-3">B) Ya lo tenían configurado pero olvidaron las claves</h4>
-                    <ul className="space-y-3 text-sm text-blue-800/80 dark:text-blue-300/80">
-                      <li className="flex gap-2 items-start">
-                        <CheckCircle2 className="shrink-0 mt-0.5 text-blue-400" size={16} />
-                        <span><strong>Bot Token olvidado:</strong> Abre chat con <em>@BotFather</em> → <code className="text-xs bg-blue-100 dark:bg-blue-950 px-1 rounded">/mybots</code> → selecciona tu bot → <em>API Token</em> → <em>Show token</em> (o <em>Revoke current token</em> si sospechas que se filtró; el token anterior dejará de servir y debes actualizarlo en CMMS).</span>
-                      </li>
-                      <li className="flex gap-2 items-start">
-                        <CheckCircle2 className="shrink-0 mt-0.5 text-blue-400" size={16} />
-                        <span><strong>Chat ID olvidado:</strong> No hace falta recrear el grupo. Con el bot aún dentro del grupo, usa de nuevo <em>@RawDataBot</em>/<em>@userinfobot</em> o el enlace <code className="text-xs">getUpdates</code> con tu token. El Chat ID del grupo no cambia mientras el grupo exista.</span>
-                      </li>
-                      <li className="flex gap-2 items-start">
-                        <CheckCircle2 className="shrink-0 mt-0.5 text-blue-400" size={16} />
-                        <span><strong>Revisar lo guardado en CMMS:</strong> En Opciones de Desarrollador, si alguien ya lo configuró, el Chat ID suele verse en claro; el Bot Token aparece oculto tipo contraseña. Puedes volver a pegar ambos valores y Guardar sin borrar el grupo.</span>
-                      </li>
-                      <li className="flex gap-2 items-start">
-                        <Info className="shrink-0 mt-0.5 text-blue-400" size={16} />
-                        <span><strong>Si el bot ya no está en el grupo:</strong> vuelve a agregarlo, envía un mensaje de prueba al grupo y vuelve a consultar <code className="text-xs">getUpdates</code> o el bot de info.</span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
               </div>
             )}
 

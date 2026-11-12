@@ -5,7 +5,7 @@ import { evaluateOpenWorkOrders, silentBackfillSlaEvents } from '../services/Sla
 import { emitRefresh } from './socket';
 import { runBackup } from './backupService';
 import { runDbSelfCheck } from './dbHealthCheck';
-import { CHECKLIST_TZ, runChecklistReminderCheck } from './checklistReminder';
+import { CHECKLIST_TZ } from './checklistReminder';
 import { runChecklistNonComplianceClose } from './checklistNonCompliance';
 import { runNotesReminders } from './notesReminders';
 
@@ -43,7 +43,7 @@ export const initCronJobs = () => {
     }
   }, { timezone: CHECKLIST_TZ });
 
-  // Autocomprobación de Postgres cada 5 min (Node vivo, BD caída → Telegram con debounce)
+  // Autocomprobación de Postgres cada 5 min
   cron.schedule('*/5 * * * *', async () => {
     if ((await getSharedMaintenanceState()).active) return;
     try {
@@ -53,15 +53,6 @@ export const initCronJobs = () => {
     }
   });
 
-  // Recordatorio Telegram: checklist del día no enviado (horas en CHECKLIST_REMINDER_HOURS, default 10,14,16 MX)
-  cron.schedule('0 * * * *', async () => {
-    if ((await getSharedMaintenanceState()).active) return;
-    try {
-      await runChecklistReminderCheck();
-    } catch (error) {
-      console.error('Error in checklist reminder:', error);
-    }
-  }, { timezone: CHECKLIST_TZ });
 
   // Recordatorios de notas personales y pendientes operativos (in-app + push)
   cron.schedule('*/5 * * * *', async () => {
@@ -96,9 +87,8 @@ export const initCronJobs = () => {
     checkAndGenerateMaintenanceOrders();
   }, 5000);
 
-  // Arranque: baseline silencioso del rezago (sin Telegram) para no saturar el canal
   setTimeout(() => {
-    console.log('Running silent SLA backfill on startup (no Telegram flood)...');
+    console.log('Running silent SLA backfill on startup...');
     silentBackfillSlaEvents()
       .then((result) => {
         console.log(

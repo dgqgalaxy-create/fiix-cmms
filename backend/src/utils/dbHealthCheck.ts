@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import prisma from '../config/prisma';
-import { sendTelegramAlert } from '../services/TelegramService';
 
 const STATE_FILE = process.env.FIIX_DB_HEALTH_STATE_FILE
   || path.join('/tmp', 'fiix-db-health-state');
@@ -66,10 +65,7 @@ export const runDbSelfCheck = async (): Promise<void> => {
     state.status !== 'unhealthy' || now - state.lastNotifyAt >= REMINDER_MS;
 
   if (shouldNotify) {
-    const suffix = state.status === 'unhealthy' ? ' (sigue caído)' : '';
-    await sendTelegramAlert(`GTZ: Postgres no responde${suffix}`, { allowEnvFallback: true });
     writeState({ status: 'unhealthy', lastNotifyAt: now });
-    console.warn('[health] Postgres unhealthy — Telegram notify sent');
   } else {
     writeState({ status: 'unhealthy', lastNotifyAt: state.lastNotifyAt });
   }

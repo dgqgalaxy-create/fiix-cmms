@@ -1,7 +1,6 @@
 import { Priority, SlaEventType, WorkOrderStatus } from '@prisma/client';
 import prisma from '../config/prisma';
 import { getIO } from '../utils/socket';
-import { sendTelegramAlert } from './TelegramService';
 import { sendWebPushToUsers } from '../utils/webPush';
 import { formatWorkOrderFolio } from '../utils/folio';
 
@@ -83,7 +82,6 @@ export const getSlaSettings = async () => {
   if (!settings) {
     settings = await prisma.systemSettings.create({
       data: {
-        telegram_enabled: true,
         email_enabled: false,
         sla_enabled: true,
         sla_policy: DEFAULT_SLA_POLICY,
@@ -196,7 +194,6 @@ type PendingSlaAction = {
   eventType: SlaEventType;
   title: string;
   message: string;
-  telegramHtml: string;
   recipientIds: string[];
   isEscalation: boolean;
 };
@@ -290,7 +287,6 @@ function collectPendingActions(
       eventType,
       title,
       message: msg,
-      telegramHtml: `${isEscalation ? '🚨' : '⏰'} <b>${title}</b>\n\n${baseInfo}\n\n${msg}`,
       recipientIds: recipients,
       isEscalation,
     });
@@ -367,7 +363,6 @@ function collectPendingActions(
 
 export type EvaluateSlaOptions = {
   /**
-   * silent: registra eventos del rezago sin Telegram ni in-app (arranque / baseline).
    * notify: envía avisos; si hay muchos, un solo resumen.
    */
   mode?: 'silent' | 'notify';
@@ -420,7 +415,6 @@ export async function evaluateOpenWorkOrders(
   // Pocos avisos: mensaje individual. Muchos: un solo digest (anti-saturación).
   if (recorded.length <= SLA_DIGEST_THRESHOLD) {
     for (const action of recorded) {
-      await sendTelegramAlert(action.telegramHtml);
       await notifyInApp(action.recipientIds, action.title, action.message, action.workOrderId);
       notified += 1;
     }
@@ -441,7 +435,6 @@ export async function evaluateOpenWorkOrders(
       `Órdenes: ${sampleFolios}${more}\n` +
       `Revisa el listado de OT (badges En riesgo / Vencido). Los avisos individuales se omitieron para no saturar el canal.`;
 
-    await sendTelegramAlert(`📋 <b>${digestTitle}</b>\n\n${digestMsg}`);
     await notifyInApp(managerIds, digestTitle, digestMsg);
     notified = 1;
   }

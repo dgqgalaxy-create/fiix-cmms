@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react';
+﻿import { useState, useEffect, type ReactNode } from 'react';
 import { DetailSkeleton } from '../components/common/Skeleton';
 import { Navigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
@@ -155,7 +155,6 @@ export const SettingsPage = () => {
   /** Técnico y Gestionador con VIEW_SETTINGS solo ven Apariencia. */
   const appearanceOnly = !isAdmin;
   const [settings, setSettings] = useState({
-    telegram_enabled: false,
     email_enabled: false,
     sla_enabled: true,
   });
@@ -208,7 +207,6 @@ export const SettingsPage = () => {
       const res = await api.get('/settings');
       if (res.data) {
         setSettings({
-          telegram_enabled: res.data.telegram_enabled,
           email_enabled: res.data.email_enabled,
           sla_enabled: res.data.sla_enabled ?? true,
         });
@@ -273,7 +271,7 @@ export const SettingsPage = () => {
 
   useSocketRefresh('refresh_settings', () => { void fetchSettings(); });
 
-  const handleToggle = async (key: 'telegram_enabled' | 'email_enabled' | 'sla_enabled') => {
+  const handleToggle = async (key: 'email_enabled' | 'sla_enabled') => {
     try {
       setIsSaving(true);
       const newValue = !settings[key];
@@ -285,7 +283,6 @@ export const SettingsPage = () => {
       const res = await api.patch('/settings', updatePayload);
       if (res.data) {
         setSettings({
-          telegram_enabled: res.data.telegram_enabled,
           email_enabled: res.data.email_enabled,
           sla_enabled: res.data.sla_enabled ?? settings.sla_enabled,
         });
@@ -713,21 +710,6 @@ export const SettingsPage = () => {
               </div>
 
               <div className="p-6 space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-slate-800 dark:text-slate-200">Alertas por Telegram</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Mensajes al grupo cuando hay nuevas solicitudes, recordatorios y escalamientos SLA.</p>
-                  </div>
-                  <button
-                    onClick={() => handleToggle('telegram_enabled')}
-                    disabled={isSaving}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 ${settings.telegram_enabled ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'} ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings.telegram_enabled ? 'translate-x-5' : 'translate-x-0'}`} />
-                  </button>
-                </div>
-
-                <div className="h-px bg-slate-100 dark:bg-slate-800 w-full" />
 
                 <div className="flex items-center justify-between">
                   <div>

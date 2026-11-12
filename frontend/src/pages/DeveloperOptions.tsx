@@ -84,9 +84,6 @@ export const DeveloperOptions = () => {
   } | null>(null);
   const [isOrphanScanning, setIsOrphanScanning] = useState(false);
   const [isOrphanCleaning, setIsOrphanCleaning] = useState(false);
-  const [telegramToken, setTelegramToken] = useState('');
-  const [telegramChatId, setTelegramChatId] = useState('');
-  const [isSavingTelegram, setIsSavingTelegram] = useState(false);
   const [driveApiKey, setDriveApiKey] = useState('');
   const [driveItemsFolder, setDriveItemsFolder] = useState('');
   const [driveVendorsFolder, setDriveVendorsFolder] = useState('');
@@ -530,8 +527,6 @@ export const DeveloperOptions = () => {
           headers: { 'x-dev-password': pwd },
         });
         if (!cancelled && setRes.data) {
-          setTelegramToken(setRes.data.telegram_bot_token || '');
-          setTelegramChatId(setRes.data.telegram_chat_id || '');
         }
       } catch (e) {
         console.error('Error fetching settings', e);
@@ -632,8 +627,6 @@ export const DeveloperOptions = () => {
           headers: { 'x-dev-password': password }
         });
         if (setRes.data) {
-          setTelegramToken(setRes.data.telegram_bot_token || '');
-          setTelegramChatId(setRes.data.telegram_chat_id || '');
           setDriveApiKey(setRes.data.google_drive_api_key || '');
           setDriveItemsFolder(setRes.data.google_drive_items_folder || '');
           setDriveVendorsFolder(setRes.data.google_drive_vendors_folder || '');
@@ -651,27 +644,6 @@ export const DeveloperOptions = () => {
       parseDevPasswordError(err);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleSaveTelegram = async () => {
-    setIsSavingTelegram(true);
-    try {
-      await axios.post('/dev/settings', {
-        telegram_bot_token: telegramToken,
-        telegram_chat_id: telegramChatId
-      }, {
-        headers: { 'x-dev-password': password }
-      });
-      setSuccessMsg('Configuración de Telegram guardada con éxito.');
-      setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: unknown) {
-      const detail = isAxiosError(err)
-        ? err.response?.data?.message || err.message
-        : err instanceof Error ? err.message : 'Error desconocido';
-      setError(`Error al guardar la configuración de Telegram: ${detail}`);
-    } finally {
-      setIsSavingTelegram(false);
     }
   };
 
@@ -2110,44 +2082,7 @@ export const DeveloperOptions = () => {
 
         <section className="grid gap-5 lg:grid-cols-[1.35fr_1fr]">
           <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="mb-6 flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 dark:bg-sky-950/50 dark:text-sky-400">
-                <Bot size={24} />
-              </div>
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-600 dark:text-sky-400">Integraciones</p>
-                <h2 className="mt-1 text-xl font-black text-slate-900 dark:text-white">Notificaciones de Telegram</h2>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Actualiza las credenciales sin modificar el archivo de entorno.</p>
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-1.5 block text-sm font-bold text-slate-700 dark:text-slate-300">Bot Token</label>
-                <input
-                  type="password"
-                  value={telegramToken}
-                  onChange={(e) => setTelegramToken(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  placeholder="Token del bot"
-                  autoComplete="off"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-bold text-slate-700 dark:text-slate-300">Chat ID</label>
-                <input
-                  type="text"
-                  value={telegramChatId}
-                  onChange={(e) => setTelegramChatId(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  placeholder="ej. -1001234567890 (incluye el signo -)"
-                />
-              </div>
-            </div>
-            <button onClick={handleSaveTelegram} disabled={isSavingTelegram} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-5 py-3 text-sm font-black text-white transition hover:bg-sky-700 disabled:opacity-50 sm:w-fit">
-              <KeyRound size={17} /> {isSavingTelegram ? 'Guardando...' : 'Guardar configuración'}
-            </button>
-
-            <div className="mt-8 border-t border-slate-100 pt-6 dark:border-slate-800">
+            <div className="border-slate-100 dark:border-slate-800">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-start gap-4">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">

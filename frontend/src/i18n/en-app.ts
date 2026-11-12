@@ -249,9 +249,6 @@ export const enApp: Record<string, string> = {
   'Notificaciones y Escalamiento': 'Notifications and escalation',
   'Activa o desactiva los canales por donde se envían las alertas.':
     'Enable or disable the channels used to send alerts.',
-  'Alertas por Telegram': 'Telegram alerts',
-  'Mensajes al grupo cuando hay nuevas solicitudes, recordatorios y escalamientos SLA.':
-    'Group messages for new requests, reminders and SLA escalations.',
   'Alertas por Correo (Email)': 'Email alerts',
   'Envía correos electrónicos a los gerentes para escalamientos.':
     'Sends emails to managers for escalations.',

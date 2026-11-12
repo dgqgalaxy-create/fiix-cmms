@@ -300,14 +300,11 @@ router.get('/settings', verifyDevPassword, async (req: Request, res: Response): 
     if (!settings) {
       settings = await prisma.systemSettings.create({
         data: {
-          telegram_enabled: true,
           email_enabled: false,
         },
       });
     }
     res.json({
-      telegram_bot_token: settings.telegram_bot_token || '',
-      telegram_chat_id: settings.telegram_chat_id || '',
       google_drive_api_key: settings.google_drive_api_key || '',
       google_drive_items_folder: settings.google_drive_items_folder || '',
       google_drive_vendors_folder: settings.google_drive_vendors_folder || '',
@@ -322,8 +319,6 @@ router.get('/settings', verifyDevPassword, async (req: Request, res: Response): 
 router.post('/settings', verifyDevPassword, async (req: Request, res: Response): Promise<void> => {
   try {
     const {
-      telegram_bot_token,
-      telegram_chat_id,
       google_drive_api_key,
       google_drive_items_folder,
       google_drive_vendors_folder,
@@ -332,8 +327,6 @@ router.post('/settings', verifyDevPassword, async (req: Request, res: Response):
     let settings = await prisma.systemSettings.findFirst();
 
     const data = {
-      telegram_bot_token: typeof telegram_bot_token === 'string' ? telegram_bot_token.trim() : undefined,
-      telegram_chat_id: typeof telegram_chat_id === 'string' ? telegram_chat_id.trim() : undefined,
       google_drive_api_key: typeof google_drive_api_key === 'string' ? google_drive_api_key.trim() : undefined,
       google_drive_items_folder: typeof google_drive_items_folder === 'string' ? google_drive_items_folder.trim() : undefined,
       google_drive_vendors_folder: typeof google_drive_vendors_folder === 'string' ? google_drive_vendors_folder.trim() : undefined,
@@ -343,9 +336,6 @@ router.post('/settings', verifyDevPassword, async (req: Request, res: Response):
     if (!settings) {
       settings = await prisma.systemSettings.create({
         data: {
-          telegram_enabled: true,
-          telegram_bot_token: data.telegram_bot_token,
-          telegram_chat_id: data.telegram_chat_id,
           google_drive_api_key: data.google_drive_api_key,
           google_drive_items_folder: data.google_drive_items_folder,
           google_drive_vendors_folder: data.google_drive_vendors_folder,
@@ -392,7 +382,6 @@ router.post('/change-password', verifyDevPassword, async (req: Request, res: Res
     if (!settings) {
       settings = await prisma.systemSettings.create({
         data: {
-          telegram_enabled: true,
           email_enabled: false,
           dev_menu_password_hash: newHash,
         },

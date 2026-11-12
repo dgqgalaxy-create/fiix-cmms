@@ -107,7 +107,6 @@ async function getConfiguredColumnCount(): Promise<number> {
   return normalizeChecklistColumnCount(settings?.checklist_column_count ?? DEFAULT_CHECKLIST_COLUMNS);
 }
 
-/** Día civil del checklist en horario México (alineado con recordatorios Telegram). */
 function getChecklistTodayDate(): Date {
   return getMexicoCityNow().asDate;
 }

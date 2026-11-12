@@ -11,7 +11,6 @@ export const getSettings = async (req: Request, res: Response): Promise<void> =>
     if (!settings) {
       settings = await prisma.systemSettings.create({
         data: {
-          telegram_enabled: true,
           email_enabled: false,
           sla_enabled: true,
           sla_policy: DEFAULT_SLA_POLICY,
@@ -31,7 +30,7 @@ export const getSettings = async (req: Request, res: Response): Promise<void> =>
 
 export const updateSettings = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { telegram_enabled, email_enabled, sla_enabled, sla_policy, checklist_column_count, technician_mobile_ui, features, portal_config, time_zone, date_format, time_format, language } = req.body;
+    const { email_enabled, sla_enabled, sla_policy, checklist_column_count, technician_mobile_ui, features, portal_config, time_zone, date_format, time_format, language } = req.body;
     // Preferencias de fecha y hora (validadas contra catálogos cerrados).
     const ALLOWED_DATE_FORMATS = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'];
     const ALLOWED_TIME_FORMATS = ['12', '24'];
@@ -64,7 +63,6 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
     if (!settings) {
       settings = await prisma.systemSettings.create({
         data: {
-          telegram_enabled: telegram_enabled ?? true,
           email_enabled: email_enabled ?? false,
           sla_enabled: sla_enabled ?? true,
           sla_policy: nextPolicy ?? DEFAULT_SLA_POLICY,
@@ -82,7 +80,6 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
       settings = await prisma.systemSettings.update({
         where: { id: settings.id },
         data: {
-          telegram_enabled: telegram_enabled ?? settings.telegram_enabled,
           email_enabled: email_enabled ?? settings.email_enabled,
           sla_enabled: sla_enabled ?? settings.sla_enabled,
           ...(technician_mobile_ui !== undefined ? { technician_mobile_ui: Boolean(technician_mobile_ui) } : {}),

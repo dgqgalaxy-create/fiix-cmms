@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "1.116.3",
+  "version": "1.117.0",
   "description": "",
   "engines": {
     "node": ">=22"
@@ -30,7 +30,6 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "node-cron": "^4.2.1",
-    "node-telegram-bot-api": "^1.1.2",
     "nodemailer": "^9.0.3",
     "pg": "^8.21.0",
     "socket.io": "^4.8.3",
@@ -45,7 +44,6 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^25.9.3",
     "@types/node-cron": "^3.0.11",
-    "@types/node-telegram-bot-api": "^0.64.15",
     "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.20.0",
     "@types/web-push": "^3.6.4",
