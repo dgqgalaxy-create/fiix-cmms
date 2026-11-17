@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { X, Save, Upload, ArrowRightLeft, ChevronLeft, ChevronRight, Loader2, Edit2, Trash2 } from 'lucide-react';
 import { createItem, updateItem, deleteItem, getTransactions } from '../../api/inventory';
@@ -95,7 +95,6 @@ export const ItemModal = ({
 
   useEffect(() => { if (isOpen) setClosing(false); }, [isOpen]);
 
-  useEscapeKey(requestClose, !closing);
   const { hasPermission } = useAuth();
   const isDrawer = variant === 'drawer';
   const [tab, setTab] = useState<'detalle' | 'movimientos' | 'equipos' | 'archivos'>('detalle');
@@ -125,6 +124,10 @@ export const ItemModal = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isImageSearchModalOpen, setIsImageSearchModalOpen] = useState(false);
   const [uoms, setUoms] = useState<UnitOfMeasure[]>([]);
+
+  // Esc cierra el panel, pero no mientras la búsqueda de imágenes (modal encima) está abierta:
+  // de lo contrario se cerraba también la edición y se perdía lo capturado.
+  useEscapeKey(requestClose, !closing && !isImageSearchModalOpen);
 
   useEffect(() => {
     getUoms().then(setUoms).catch(console.error);
@@ -414,7 +417,15 @@ export const ItemModal = ({
           ? 'fixed inset-0 z-[60] flex justify-end bg-slate-900/40 backdrop-blur-[2px]'
           : 'fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-[60] backdrop-blur-sm'
       }
-      onClick={isDrawer ? requestClose : undefined}
+      onClick={
+        isDrawer
+          ? (event) => {
+              // Cerrar solo al pulsar el fondo, no al interactuar con contenido
+              // anidado (p. ej. la búsqueda de imágenes), que antes cerraba la edición.
+              if (event.target === event.currentTarget) requestClose();
+            }
+          : undefined
+      }
     >
       <div
         onClick={isDrawer ? (event) => event.stopPropagation() : undefined}
