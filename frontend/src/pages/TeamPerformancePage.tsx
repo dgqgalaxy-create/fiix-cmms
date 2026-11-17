@@ -51,6 +51,27 @@ const semaphoreStyles: Record<string, { dot: string; text: string; bg: string }>
   none: { dot: 'bg-slate-300', text: 'text-slate-500 dark:text-slate-400', bg: 'bg-slate-50 dark:bg-slate-800' },
 };
 
+const SHIFT_TITLES: Record<string, string> = {
+  MIXTO: 'Mixto',
+  '4X4_FIJO': '4x4 fijo',
+  '4X4_ROTATORIO': '4x4 rotatorio',
+  D: 'Día',
+  N: 'Noche',
+  M: 'Mixto',
+  M_SAT: 'Mixto sábado',
+  D_TE: 'Día + extra',
+  N_TE: 'Noche + extra',
+  TE: 'Tiempo extra',
+  TXT: 'Tiempo por tiempo',
+  CURSO: 'Curso',
+  V: 'Vacaciones',
+  I: 'Incapacidad',
+  F: 'Falta',
+  PSG: 'Permiso',
+  X: 'Descanso',
+};
+
+const shiftTitle = (code: string | null): string => (code ? SHIFT_TITLES[code] ?? code : 'sin horario');
 const formatPercent = (value: number | null): string => (value === null ? '—' : `${Math.round(value)}%`);
 const formatMinutes = (value: number | null): string => {
   if (value === null) return '—';
@@ -364,7 +385,7 @@ export function TeamPerformancePage() {
 
       {report && report.rows.length > 0 && report.rows.every((row) => row.utilization_pct === null) && (
         <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-2 text-[11.5px] text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-300">
-          La utilización aparece vacía porque no hay turnos registrados en el roster para este periodo. Captúralos en
+          La utilización aparece vacía porque no hay horario (patrón o turno) registrado para estas personas en el periodo. Captúralo en
           «Horarios» para que la métrica se calcule.
         </div>
       )}
@@ -489,7 +510,7 @@ export function TeamPerformancePage() {
                           <span className="block text-sm font-bold text-slate-800 dark:text-slate-100">{row.name}</span>
                           <span className="block text-[10.5px] text-slate-500 dark:text-slate-400">
                             {row.role === 'GESTIONADOR' ? 'Gestionador' : 'Técnico'}
-                            {row.shift_code ? ` · Turno ${row.shift_code}` : ' · sin turno en roster'}
+                            {row.shift_code ? ` · ${shiftTitle(row.shift_code)}` : ' · sin horario en Horarios'}
                           </span>
                         </span>
                       </button>
@@ -637,7 +658,7 @@ export function TeamPerformancePage() {
 
       <p className="px-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
         La atención mide desde la última asignación hasta el inicio de la OT (en órdenes antiguas se usa la fecha de creación).
-        La utilización compara la labor registrada con las horas de turno del roster. El índice combina las seis dimensiones con
+        La utilización compara la labor registrada con las horas programadas del calendario de Horarios (patrones mixto y 4x4, más excepciones y turnos importados). El índice combina las seis dimensiones con
         los pesos configurados y se oculta cuando no hay muestra suficiente ({report?.config.min_sample ?? 10} OT).
       </p>
 

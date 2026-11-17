@@ -4,6 +4,11 @@ import crypto from 'crypto';
 import prisma from '../config/prisma';
 import { getUploadsRoot, urlToRelativeUploadPath } from '../utils/uploadsCleanup';
 import {
+  dominantPatternType,
+  loadRosterSnapshot,
+  rosterDayFor,
+} from '../utils/rosterSchedule';
+import {
   PerformanceCompare,
   PerformanceConfig,
   PerformanceTargets,
@@ -181,20 +186,8 @@ export async function computeTeamReport(options: {
     orderBy: { name: 'asc' },
   });
 
-  const shifts = await prisma.technicianShift.findMany({
-    where: { date: { gte: from, lte: to } },
-    select: { user_id: true, date: true, shift_code: true },
-  });
-
-  const shiftsByUser = new Map<string, { date: string; code: string }[]>();
-  const shiftsByUserDate = new Map<string, string>();
-  for (const shift of shifts) {
-    const key = `${shift.user_id}|${shift.date.toISOString().slice(0, 10)}`;
-    shiftsByUserDate.set(key, shift.shift_code);
-    const list = shiftsByUser.get(shift.user_id) ?? [];
-    list.push({ date: shift.date.toISOString().slice(0, 10), code: shift.shift_code });
-    shiftsByUser.set(shift.user_id, list);
-  }
+  // El horario vive en patrones (MIXTO / 4X4), excepciones y turnos explícitos.
+  const roster = await loadRosterSnapshot(prisma as any, from, to);
 
   const completed = await prisma.workOrder.findMany({
     where: { completed_at: { gte: from, lte: to }, status: 'FINALIZADO' },
@@ -319,8 +312,12 @@ export async function computeTeamReport(options: {
 
   const rows: TechnicianRow[] = technicians.map((tech) => {
     const mine = completed.filter((wo) => wo.assigned_technicians.some((t) => t.id === tech.id));
-    const myShifts = shiftsByUser.get(tech.id) ?? [];
-    const shiftCode = mode(myShifts.map((s) => s.code));
+    // Turno = patrón vigente (MIXTO / 4X4…) o, si no hay patrón, el turno explícito dominante.
+    const patternType = dominantPatternType(roster, tech.id, from, to);
+    const explicitCodes = roster.shifts
+      .filter((shift) => shift.user_id === tech.id)
+      .map((shift) => shift.shift_code);
+    const shiftCode = patternType ?? mode(explicitCodes);
     const targets: PerformanceTargets = targetsForCode(config, shiftCode);
 
     const attentionSamples: number[] = [];
@@ -333,10 +330,17 @@ export async function computeTeamReport(options: {
 
     const laborMs = mine.reduce((sum, wo) => sum + Number(wo.accumulated_time_ms || 0), 0);
     const laborHours = laborMs / 3_600_000;
-    const scheduledHours = myShifts.reduce((sum, shift) => {
-      const hours = config.hours_by_code[shift.code] ?? 8;
-      return sum + (Number.isFinite(hours) ? hours : 0);
-    }, 0);
+
+    // Horas programadas: recorre el calendario del periodo con patrones y excepciones.
+    let scheduledHours = 0;
+    for (let time = from.getTime(); time <= to.getTime(); time += DAY_MS) {
+      const day = new Date(time).toISOString().slice(0, 10);
+      const rosterDay = rosterDayFor(roster, tech.id, day, {
+        hoursByCode: config.hours_by_code,
+        shiftEndByCode: config.shift_end_by_code,
+      });
+      scheduledHours += rosterDay.hours;
+    }
 
     const withDue = mine.filter((wo) => wo.due_date && wo.completed_at);
     const slaOk = withDue.filter((wo) => wo.completed_at! <= wo.due_date!).length;
@@ -382,12 +386,22 @@ export async function computeTeamReport(options: {
     let endOfShift = 0;
     for (const wo of mine) {
       if (!wo.completed_at) continue;
-      const key = `${tech.id}|${dateKey(wo.completed_at)}`;
-      const code = shiftsByUserDate.get(key);
-      if (!code) continue;
-      const end = config.shift_end_by_code[code];
-      if (!end) continue;
-      const diff = toMinutes(end) - toMinutes(localHm(wo.completed_at, timeZone));
+      const completionDay = dateKey(wo.completed_at);
+      let rosterDay = rosterDayFor(roster, tech.id, completionDay, {
+        hoursByCode: config.hours_by_code,
+        shiftEndByCode: config.shift_end_by_code,
+      });
+      // El turno de noche termina al día siguiente: si hoy no hay turno, revisa ayer.
+      if (!rosterDay.endTime) {
+        const previousDay = dateKey(new Date(wo.completed_at.getTime() - DAY_MS));
+        const previous = rosterDayFor(roster, tech.id, previousDay, {
+          hoursByCode: config.hours_by_code,
+          shiftEndByCode: config.shift_end_by_code,
+        });
+        if (previous.code === 'N' || previous.code === 'N_TE') rosterDay = previous;
+      }
+      if (!rosterDay.endTime) continue;
+      const diff = toMinutes(rosterDay.endTime) - toMinutes(localHm(wo.completed_at, timeZone));
       const normalized = ((diff % 1440) + 1440) % 1440;
       if (normalized <= config.flags.end_of_shift_min) endOfShift += 1;
     }

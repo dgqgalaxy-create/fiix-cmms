@@ -15,10 +15,19 @@ type Props = {
 
 type TabKey = 'general' | 'targets' | 'flags' | 'shifts';
 
-const SHIFT_LABELS: Record<string, string> = {
+/** Grupos del roster (patrón vigente) para metas por turno. */
+const SHIFT_GROUPS: Record<string, string> = {
+  MIXTO: 'Turno mixto',
+  '4X4_FIJO': '4x4 fijo',
+  '4X4_ROTATORIO': '4x4 rotatorio',
+};
+
+/** Códigos diarios que expanden los patrones (para horas y fin de turno). */
+const SHIFT_CODES: Record<string, string> = {
   D: 'Día',
   N: 'Noche',
-  M: 'Mixto',
+  M: 'Mixto (lun-vie)',
+  M_SAT: 'Mixto sábado',
   D_TE: 'Día tiempo extra',
   N_TE: 'Noche tiempo extra',
   TE: 'Tiempo extra',
@@ -56,7 +65,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
   const [success, setSuccess] = useState<string | null>(null);
   const [preview, setPreview] = useState<PerformanceReport | null>(null);
   const [previewing, setPreviewing] = useState(false);
-  const [selectedCode, setSelectedCode] = useState<string>('M');
+  const [selectedCode, setSelectedCode] = useState<string>('MIXTO');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -397,9 +406,9 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
                     onChange={(e) => setSelectedCode(e.target.value)}
                     className={`${inputClass} max-w-[220px]`}
                   >
-                    {Object.keys(SHIFT_LABELS).map((code) => (
+                    {[...Object.entries(SHIFT_GROUPS), ...Object.entries(SHIFT_CODES)].map(([code, label]) => (
                       <option key={code} value={code}>
-                        {code} · {SHIFT_LABELS[code]}
+                        {label} ({code})
                       </option>
                     ))}
                   </select>
@@ -553,10 +562,10 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.keys(SHIFT_LABELS).map((code) => (
+                    {Object.keys(SHIFT_CODES).map((code) => (
                       <tr key={code} className="border-t border-slate-100 dark:border-slate-800">
                         <td className="px-3 py-1.5 font-mono font-bold text-slate-700 dark:text-slate-200">{code}</td>
-                        <td className="px-3 py-1.5 text-slate-500 dark:text-slate-400">{SHIFT_LABELS[code]}</td>
+                        <td className="px-3 py-1.5 text-slate-500 dark:text-slate-400">{SHIFT_CODES[code]}</td>
                         <td className="px-3 py-1.5">
                           <input
                             type="number"

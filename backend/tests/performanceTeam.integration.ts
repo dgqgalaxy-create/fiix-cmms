@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Prueba de integración AISLADA del tablero «Desempeño del equipo».
  *
  * Corre contra una base temporal (fiix_cmms_test_*), NUNCA contra la operativa.
@@ -264,6 +264,38 @@ async function main() {
   console.log(
     `  ✓ Caso 5: meta de turno M aplicada (utilización ${Math.round((normalA.scores.utilization ?? 0) * 100)} → ${Math.round((strictA.scores.utilization ?? 0) * 100)})`
   );
+
+  // ---- Caso 6: el horario sale de los PATRONES (MIXTO / 4X4), no solo de turnos explícitos ----
+  {
+    const techMixto = await makeTech('Tech Mixto');
+    const tech4x4 = await makeTech('Tech Cuatro');
+    await prisma.technicianPattern.createMany({
+      data: [
+        { user_id: techMixto.id, pattern_type: 'MIXTO', start_date: new Date(now.getTime() - 40 * DAY) },
+        { user_id: tech4x4.id, pattern_type: '4X4_ROTATORIO', start_date: new Date(now.getTime() - 40 * DAY) },
+      ],
+    });
+
+    const withPatterns = await computeTeamReport({
+      from,
+      to,
+      compare: 'shift',
+      configOverride: baseConfig({ mode: 'fixed', min_sample: 10 }),
+    });
+    const rowMixto = withPatterns.rows.find((row) => row.user_id === techMixto.id);
+    const row4x4 = withPatterns.rows.find((row) => row.user_id === tech4x4.id);
+    assert.ok(rowMixto && row4x4);
+    assert.equal(rowMixto.shift_code, 'MIXTO');
+    assert.equal(row4x4.shift_code, '4X4_ROTATORIO');
+    assert.ok(rowMixto.scheduled_hours > 100, `MIXTO debe programar horas (${rowMixto.scheduled_hours})`);
+    assert.ok(row4x4.scheduled_hours > 100, `4X4 debe programar horas (${row4x4.scheduled_hours})`);
+    console.log(
+      `  ✓ Caso 6: patrones expandidos (MIXTO=${rowMixto.scheduled_hours} h, 4x4=${row4x4.scheduled_hours} h)`
+    );
+
+    await prisma.technicianPattern.deleteMany({ where: { user_id: { in: [techMixto.id, tech4x4.id] } } });
+    await prisma.user.deleteMany({ where: { id: { in: [techMixto.id, tech4x4.id] } } });
+  }
 
   // Limpieza de datos de la prueba.
   await prisma.workOrder.deleteMany({ where: { asset_id: asset.id } });

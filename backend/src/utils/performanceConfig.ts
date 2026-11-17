@@ -76,10 +76,12 @@ export const SHIFT_CODES_KNOWN = [
   'D', 'N', 'M', 'D_TE', 'N_TE', 'TE', 'TXT', 'V', 'I', 'F', 'PSG', 'X', 'CURSO',
 ] as const;
 
+/** Horas por jornada según Horarios: día y noche 12 h; mixto 9 h (sábado 5 h). */
 export const DEFAULT_HOURS_BY_CODE: Record<string, number> = {
   D: 12,
   N: 12,
-  M: 8,
+  M: 9,
+  M_SAT: 5,
   D_TE: 12,
   N_TE: 12,
   TE: 8,
@@ -92,12 +94,14 @@ export const DEFAULT_HOURS_BY_CODE: Record<string, number> = {
   X: 0,
 };
 
+/** Fin de turno por código (Horarios: D 07-19, N 19-07, M 07-16 y sábado 07-12). */
 export const DEFAULT_SHIFT_END_BY_CODE: Record<string, string> = {
-  D: '20:00',
-  N: '08:00',
+  D: '19:00',
+  N: '07:00',
   M: '16:00',
-  D_TE: '20:00',
-  N_TE: '08:00',
+  M_SAT: '12:00',
+  D_TE: '19:00',
+  N_TE: '07:00',
   TE: '16:00',
   TXT: '16:00',
   CURSO: '16:00',

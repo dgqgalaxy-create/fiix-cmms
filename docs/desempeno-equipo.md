@@ -1,4 +1,4 @@
-# Desempeño del equipo
+﻿# Desempeño del equipo
 
 Tablero para detectar si los técnicos atienden de verdad las solicitudes, con señales
 difíciles de falsear. Nada está fijado en código: **los técnicos se descubren en cada
