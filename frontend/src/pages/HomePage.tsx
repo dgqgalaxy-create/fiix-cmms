@@ -543,18 +543,18 @@ export const HomePage = () => {
 
       <div className="flex flex-col xl:flex-row gap-3 mb-1">
         <div className="flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-6 gap-2 sm:gap-3">
-          <SummaryCard title="Total recibidas" value={totalRecibidas} icon={<LayoutDashboard />} color="slate" emphasized hint="Sin contar invalidadas" detail={(summaryStartDate || summaryEndDate) ? `${summaryStartDate || 'Sin inicio'} — ${summaryEndDate || 'Sin fin'}` : 'Histórico completo'} onClick={() => setSummaryFilter({ status: 'TOTAL' })} />
-          <SummaryCard title="Pendientes" value={summary.PENDIENTE || 0} icon={<Clock />} color="amber" onClick={() => setSummaryFilter({ status: 'PENDIENTE' })} detail={
+          <SummaryCard title="Total recibidas" value={totalRecibidas} icon={<LayoutDashboard />} color="slate" emphasized hint="Todas las órdenes creadas en el periodo, sin contar invalidadas" detail={(summaryStartDate || summaryEndDate) ? `${summaryStartDate || 'Sin inicio'} — ${summaryEndDate || 'Sin fin'}` : 'Histórico completo'} onClick={() => setSummaryFilter({ status: 'TOTAL' })} />
+          <SummaryCard title="Pendientes" value={summary.PENDIENTE || 0} icon={<Clock />} color="amber" onClick={() => setSummaryFilter({ status: 'PENDIENTE' })} hint="Creadas y aún sin iniciar; se atienden por prioridad y SLA" detail={
             <div className="flex flex-wrap gap-1">
               {urgentCount > 0 && <span className="bg-rose-600 text-white px-1.5 py-0.5 rounded-sm">{urgentCount} URG</span>}
               {normalCount > 0 && <span className="bg-amber-700 text-white px-1.5 py-0.5 rounded-sm">{normalCount} NOR</span>}
               {lowCount > 0 && <span className="bg-emerald-700 text-white px-1.5 py-0.5 rounded-sm">{lowCount} BAJ</span>}
             </div>
           } />
-          <SummaryCard title="En Proceso" value={summary.EN_PROCESO || 0} icon={<Wrench />} color="blue" onClick={() => setSummaryFilter({ status: 'EN_PROCESO' })} detail={activeTechsText && `👤 ${activeTechsText}`} />
-          <SummaryCard title="Pausadas" value={summary.EN_ESPERA || 0} icon={<AlertCircle />} color="purple" onClick={() => setSummaryFilter({ status: 'EN_ESPERA' })} detail={pausedTechsText && `👤 ${pausedTechsText}`} />
-          <SummaryCard title="Finalizadas" value={summary.FINALIZADO || 0} icon={<CheckCircle2 />} color="emerald" onClick={() => setSummaryFilter({ status: 'FINALIZADO' })} />
-          <SummaryCard title="Invalidadas" value={summary.ANULADO || 0} icon={<XCircle />} color="gray" onClick={() => setSummaryFilter({ status: 'ANULADO' })} />
+          <SummaryCard title="En Proceso" value={summary.EN_PROCESO || 0} icon={<Wrench />} color="blue" onClick={() => setSummaryFilter({ status: 'EN_PROCESO' })} hint="Con trabajo iniciado y cronómetro corriendo" detail={activeTechsText && `👤 ${activeTechsText}`} />
+          <SummaryCard title="Pausadas" value={summary.EN_ESPERA || 0} icon={<AlertCircle />} color="purple" onClick={() => setSummaryFilter({ status: 'EN_ESPERA' })} hint="Detenidas por refacción, otra actividad o autorización" detail={pausedTechsText && `👤 ${pausedTechsText}`} />
+          <SummaryCard title="Finalizadas" value={summary.FINALIZADO || 0} icon={<CheckCircle2 />} color="emerald" onClick={() => setSummaryFilter({ status: 'FINALIZADO' })} hint="Cerradas con evidencia; ya no se editan" />
+          <SummaryCard title="Invalidadas" value={summary.ANULADO || 0} icon={<XCircle />} color="gray" onClick={() => setSummaryFilter({ status: 'ANULADO' })} hint="Anuladas: no procedían o se duplicaron" />
         </div>
 
         <div className="relative w-full xl:w-80 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-gradient-to-br from-white via-slate-50 to-emerald-50/60 dark:from-slate-800 dark:via-slate-800 dark:to-emerald-950/30 p-4 shadow-sm">
@@ -1178,8 +1178,8 @@ const SummaryCard = ({ title, value, icon, color, onClick, detail, hint, emphasi
   );
 
   return onClick ? (
-    <button type="button" onClick={onClick} className={className}>{content}</button>
+    <button type="button" onClick={onClick} className={className} title={hint}>{content}</button>
   ) : (
-    <div className={className}>{content}</div>
+    <div className={className} title={hint}>{content}</div>
   );
 };

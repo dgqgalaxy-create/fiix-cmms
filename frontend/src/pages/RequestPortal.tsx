@@ -534,7 +534,7 @@ export const RequestPortal = () => {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Título <span className="text-red-500">*</span></label>
+              <label title="Resumen corto de la falla o del trabajo solicitado." className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Título <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 required
@@ -547,7 +547,7 @@ export const RequestPortal = () => {
 
             {showField('description') && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción {requiredMark('description')}</label>
+              <label title="Explica qué pasa, desde cuándo y qué necesitas que se haga." className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción {requiredMark('description')}</label>
               <textarea
                 required={requireField('description')}
                 rows={3}
@@ -560,7 +560,7 @@ export const RequestPortal = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Zona <span className="text-red-500">*</span></label>
+                <label title="Área de la planta donde está el equipo." className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Zona <span className="text-red-500">*</span></label>
                 {isLoadingData ? (
                   <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 flex items-center gap-2">
                     <Loader2 className="animate-spin" size={16} /> Cargando zonas...
@@ -581,7 +581,7 @@ export const RequestPortal = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Activo asociado <span className="text-red-500">*</span></label>
+                <label title="Equipo sobre el que se pide el trabajo; determina a qué técnico y zona se asigna." className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Activo asociado <span className="text-red-500">*</span></label>
                 <SearchableSelect
                   required
                   disabled={!zoneId}
@@ -600,7 +600,7 @@ export const RequestPortal = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {showField('priority') && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Prioridad {requiredMark('priority')}</label>
+                  <label title="Urgente: detiene producción. Normal: se atiende en el día. Baja: puede esperar." className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Prioridad {requiredMark('priority')}</label>
                   <SearchableSelect
                     required={requireField('priority')}
                     value={priority}
@@ -617,7 +617,7 @@ export const RequestPortal = () => {
 
               {showField('maintenance_type') && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de Mantenimiento {requiredMark('maintenance_type')}</label>
+                  <label title="Correctivo: reparar una falla. Preventivo: trabajo programado de limpieza o inspección." className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de Mantenimiento {requiredMark('maintenance_type')}</label>
                   <SearchableSelect
                     required={requireField('maintenance_type')}
                     value={maintenanceType}
@@ -636,7 +636,7 @@ export const RequestPortal = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {showField('requester') && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre del Solicitante {requiredMark('requester')}</label>
+                  <label title="Quién pide el trabajo; sirve para contactarlo si falta información." className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre del Solicitante {requiredMark('requester')}</label>
                   {isLoadingData ? (
                     <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 flex items-center gap-2">
                       <Loader2 className="animate-spin" size={16} /> Cargando solicitantes...

@@ -596,7 +596,7 @@ export const ItemModal = ({
             {/* Columnas Derecha: Campos */}
             <div className="md:col-span-2 space-y-5">
               <div className="max-w-xs">
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Código Interno</label>
+                <label title="Identificador del repuesto; se usa para buscarlo y en las etiquetas QR." className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Código Interno</label>
                 <input
                   type="text"
                   disabled
@@ -606,7 +606,7 @@ export const ItemModal = ({
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Nombre del Repuesto *</label>
+                <label title="Nombre con el que lo buscarán los técnicos. Sé específico: medida, marca y modelo." className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Nombre del Repuesto *</label>
                 <input
                   type="text"
                   required
@@ -619,7 +619,7 @@ export const ItemModal = ({
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Descripción</label>
+                <label title="Detalle opcional para distinguirlo (material, acabado, uso)." className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Descripción</label>
                 <textarea
                   rows={2}
                   disabled={readOnly}
@@ -632,7 +632,7 @@ export const ItemModal = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Categoría</label>
+                  <label title="Familia del repuesto; agrupa búsquedas y reportes." className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Categoría</label>
                   <SearchableSelect
                     disabled={readOnly}
                     value={formData.category_id}
@@ -644,7 +644,7 @@ export const ItemModal = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Ubicación</label>
+                  <label title="Lugar físico donde se guarda (estante, almacén, zona)." className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Ubicación</label>
                   <SearchableSelect
                     disabled={readOnly}
                     value={formData.location_id}
@@ -656,7 +656,7 @@ export const ItemModal = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Proveedor</label>
+                  <label title="Quién lo surte. Sin proveedor no se puede generar una compra automática." className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Proveedor</label>
                   <SearchableSelect
                     disabled={readOnly}
                     value={formData.vendor_id}
@@ -671,7 +671,7 @@ export const ItemModal = ({
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Costo ($)</label>
+                  <label title="Precio unitario de compra; se usa para valuar inventario y el costo de las refacciones." className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Costo ($)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -709,7 +709,7 @@ export const ItemModal = ({
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Stock Mínimo</label>
+                  <label title="Cantidad mínima que debe existir; al bajar de ahí el repuesto entra en «Stock bajo»." className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Stock Mínimo</label>
                   <input
                     type="number"
                     step={qtyStep(formData.qty_mode)}
@@ -722,7 +722,7 @@ export const ItemModal = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Unidad</label>
+                  <label title="Unidad de medida: pieza, metro, litro, kilogramo…" className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Unidad</label>
                   <SearchableSelect
                     required
                     disabled={readOnly}
@@ -746,7 +746,7 @@ export const ItemModal = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Cantidades</label>
+                  <label title="Enteros: solo piezas completas. Decimales: permite fracciones (metros, litros)." className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Cantidades</label>
                   <SearchableSelect
                     disabled={readOnly}
                     value={formData.qty_mode}

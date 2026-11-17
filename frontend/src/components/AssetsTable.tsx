@@ -58,19 +58,19 @@ const getStatusBadge = (status: string, compact = false) => {
   switch (status) {
     case 'OPERATIVO':
       return (
-        <span className={`inline-flex items-center gap-1 ${pad} rounded-full text-[11px] font-medium bg-emerald-100 text-emerald-700 whitespace-nowrap`} title="Operativo">
+        <span className={`inline-flex items-center gap-1 ${pad} rounded-full text-[11px] font-medium bg-emerald-100 text-emerald-700 whitespace-nowrap`} title="Operativo: equipo disponible y en producción.">
           <Activity size={iconSize} /> {compact ? 'Op.' : 'Operativo'}
         </span>
       );
     case 'EN_MANTENIMIENTO':
       return (
-        <span className={`inline-flex items-center gap-1 ${pad} rounded-full text-[11px] font-medium bg-amber-100 text-amber-700 whitespace-nowrap`} title="Mantenimiento">
+        <span className={`inline-flex items-center gap-1 ${pad} rounded-full text-[11px] font-medium bg-amber-100 text-amber-700 whitespace-nowrap`} title="En mantenimiento: fuera de servicio por trabajo programado o correctivo.">
           <Settings size={iconSize} /> {compact ? 'Mant.' : 'Mantenimiento'}
         </span>
       );
     case 'FUERA_DE_SERVICIO':
       return (
-        <span className={`inline-flex items-center gap-1 ${pad} rounded-full text-[11px] font-medium bg-red-100 text-red-700 whitespace-nowrap`} title="Fuera de Servicio">
+        <span className={`inline-flex items-center gap-1 ${pad} rounded-full text-[11px] font-medium bg-red-100 text-red-700 whitespace-nowrap`} title="Fuera de servicio: no puede operar (avería mayor, baja o resguardo).">
           <Ban size={iconSize} /> {compact ? 'Fuera' : 'Fuera de Serv.'}
         </span>
       );
@@ -118,7 +118,7 @@ const COLUMNS: ColumnDef[] = [
               {a.name}
             </span>
             {a.is_critical && (
-              <span className="inline-flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Crítico</span>
+              <span title="Equipo crítico: su falla detiene producción o implica riesgo; entra en prioridades y refacciones críticas." className="inline-flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Crítico</span>
             )}
             {a.is_obsolete && (
               <span className="inline-flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">Obsoleto</span>
@@ -840,7 +840,7 @@ export const AssetsTable = ({
                 <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug flex items-center gap-1.5" title={asset.name}>
                   <span className="truncate">{asset.name}</span>
                   {asset.is_critical && (
-                    <span className="inline-flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Crítico</span>
+                    <span title="Equipo crítico: su falla detiene producción o implica riesgo; entra en prioridades y refacciones críticas." className="inline-flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Crítico</span>
                   )}
                   {asset.is_obsolete && (
                     <span className="inline-flex items-center shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">Obsoleto</span>

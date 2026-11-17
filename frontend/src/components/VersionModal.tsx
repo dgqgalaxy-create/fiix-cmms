@@ -2,7 +2,7 @@
 import { Link } from 'react-router-dom';
 import { useExitAnimation } from '../hooks/useExitAnimation';
 
-export const APP_VERSION = "1.120.0";
+export const APP_VERSION = "1.120.1";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -38,6 +38,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Mejora: ayudas al pasar el puntero en Inicio (tarjetas de resumen), Activos (estados y criticidad), Checklists diarios (ⓘ del módulo y columnas) y Portal de solicitudes (campos); además, los formularios de repuesto y de activo explican qué debe llevar cada campo.",
     "Nuevo: Manual → «Glosario». Explica en lenguaje de planta cada indicador (MTTR, MTBF, disponibilidad, SLA, backlog, retrabajo), estados de las órdenes, inventario (stock, mínimo, unidad de medida, entradas/salidas, kits), compras (OC y entregas parciales), activos, horarios (patrones mixto y 4x4, códigos de turno, excepciones) y accesos (roles, contraseña de desarrollador, bitácora). Incluye buscador por término, sigla o palabra de la definición.",
     "Mejora: ayudas al pasar el puntero en Compras (estados y columnas), Inventario (stock, categoría, ubicación y avisos) y detalle de Orden (evidencias y firmas). Horarios agrega un ⓘ con la leyenda de patrones y códigos de turno.",
     "Corrección: 57 mensajes de error de órdenes de trabajo mostraban acentos rotos; ahora se leen correctamente.",

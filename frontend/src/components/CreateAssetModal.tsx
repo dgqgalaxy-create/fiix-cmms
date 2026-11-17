@@ -285,7 +285,7 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Estado *</label>
+                <label title="Operativo: en producción. En mantenimiento: fuera por trabajo. Fuera de servicio: no puede operar." className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Estado *</label>
                 <SearchableSelect
                   value={status}
                   onChange={(v) => setStatus(v as any)}
@@ -303,11 +303,11 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Nombre del Equipo *</label>
+                <label title="Nombre que verá el técnico en las órdenes. Sé específico y único." className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Nombre del Equipo *</label>
                 <input type="text" required className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="Bomba centrífuga..." value={name} onChange={(e) => setName(e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Zona *</label>
+                <label title="Área de la planta donde está instalado el equipo." className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Zona *</label>
                 {isLoadingZones ? (
                   <div className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400"><Skeleton className="h-3 w-24" /></div>
                 ) : (
@@ -357,7 +357,7 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Tipo de activo *</label>
+                <label title="Fijo: maquinaria principal. Controlable: equipo auxiliar o herramienta." className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Tipo de activo *</label>
                 <SearchableSelect
                   required
                   value={assetKind}
@@ -398,11 +398,11 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Marca *</label>
+                <label title="Fabricante del equipo (ej. Siemens, ABB)." className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Marca *</label>
                 <input type="text" required className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="Goulds" value={brand} onChange={(e) => setBrand(e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Modelo *</label>
+                <label title="Modelo o número de parte del fabricante." className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Modelo *</label>
                 <input type="text" required className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none transition-all" placeholder="3196" value={model} onChange={(e) => setModel(e.target.value)} />
               </div>
             </div>
