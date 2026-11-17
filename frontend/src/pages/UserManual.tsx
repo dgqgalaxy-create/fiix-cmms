@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
+﻿import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Search, Wrench, Users, Shield, Package, LayoutDashboard, ArrowLeft, Terminal, AlertTriangle, CheckCircle2, Info, FileText, QrCode, Clock, Filter, Printer, Home, Activity, Bell, Smartphone, ClipboardCheck, Database, Settings, Columns3 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { GLOSSARY } from '../content/glossary';
 
 const SECTIONS = [
   { id: 'intro', title: 'Introducción', icon: <BookOpen size={18} /> },
@@ -14,11 +15,25 @@ const SECTIONS = [
   { id: 'checklists', title: 'Checklist Diario', icon: <FileText size={18} /> },
   { id: 'notes', title: 'Notas y pendientes', icon: <Bell size={18} /> },
   { id: 'roster', title: 'Horarios y Turnos', icon: <Clock size={18} /> },
+  { id: 'glossary', title: 'Glosario', icon: <Info size={18} /> },
 ];
 
 export const UserManual = () => {
   const [activeSection, setActiveSection] = useState('intro');
   const [scrollFade, setScrollFade] = useState(0);
+  const [glossaryQuery, setGlossaryQuery] = useState('');
+
+  const glossaryNeedle = glossaryQuery.trim().toLowerCase();
+  const glossaryGroups = GLOSSARY.map((group) => ({
+    ...group,
+    entries: group.entries.filter((entry) => {
+      if (!glossaryNeedle) return true;
+      const haystack = [entry.term, ...(entry.aliases ?? []), entry.definition, group.title]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(glossaryNeedle);
+    }),
+  })).filter((group) => group.entries.length > 0);
   const contentRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -725,6 +740,66 @@ export const UserManual = () => {
                     <li>Reduce inteligentemente las etiquetas (9px) para garantizar que si hay más de 8 personas en un día, quepan todos sin que se oculte ninguno tras un botón "+X más".</li>
                   </ul>
                 </div>
+              </div>
+            )}
+
+            {activeSection === 'glossary' && (
+              <div className="space-y-6 md:animate-in md:fade-in md:slide-in-from-bottom-4 md:duration-500">
+                <div className="mb-2 flex items-start gap-4 border-b border-slate-200 pb-6 dark:border-slate-700">
+                  <div className="rounded-xl bg-emerald-100 p-3 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                    <Info size={28} />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-black text-slate-900 dark:text-white">Glosario</h2>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      Qué significa cada indicador, parámetro y dato de la aplicación, en lenguaje de planta.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <input
+                    type="text"
+                    value={glossaryQuery}
+                    onChange={(event) => setGlossaryQuery(event.target.value)}
+                    placeholder="Buscar un término, sigla o palabra de la definición (ej. SLA, stock, MTTR, turno)…"
+                    className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-800 shadow-sm outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  />
+                </div>
+
+                {glossaryGroups.length === 0 && (
+                  <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+                    No se encontró «{glossaryQuery}». Prueba con otra palabra o revisa la ortografía.
+                  </div>
+                )}
+
+                {glossaryGroups.map((group) => (
+                  <div
+                    key={group.id}
+                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                  >
+                    <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">{group.title}</h3>
+                    <p className="mb-4 mt-1 text-xs text-slate-500 dark:text-slate-400">{group.description}</p>
+                    <dl className="space-y-3">
+                      {group.entries.map((entry) => (
+                        <div
+                          key={entry.term}
+                          className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-950/40"
+                        >
+                          <dt className="text-sm font-bold text-slate-800 dark:text-slate-100">{entry.term}</dt>
+                          <dd className="mt-0.5 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                            {entry.definition}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                ))}
+
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  ¿Falta algún término? Dímelo y lo agrego al glosario.
+                </p>
               </div>
             )}
 

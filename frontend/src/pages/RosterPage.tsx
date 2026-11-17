@@ -20,6 +20,7 @@ import { startOfMonth, endOfMonth, differenceInDays, addDays } from 'date-fns';
 import { Trash2, UserPlus, BarChart3, Calendar as CalendarIcon, Clock, AlertCircle, X, Printer, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { InfoTip } from '../components/common/InfoTip';
 
 import { RosterHoursModal, type HoursAssignment } from '../components/RosterHoursModal';
 
@@ -479,7 +480,7 @@ export const RosterPage = () => {
             <CalendarIcon className="text-blue-500" />
             Horarios y Turnos (Roster)
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Gestiona los patrones 4x4 y mixtos, y asigna excepciones arrastrando los bloques.</p>
+          <p className="flex flex-wrap items-center gap-1.5 text-slate-500 dark:text-slate-400 text-sm">Gestiona los patrones 4x4 y mixtos, y asigna excepciones arrastrando los bloques.<InfoTip label="Ayuda: patrones y códigos de turno" text="Patrones: Mixto (lun-vie 07:00-16:00, sábado 07:00-12:00), 4x4 fijo (4 días de día y 4 de descanso) y 4x4 rotatorio (2 días, 2 noches y 4 descansos). Códigos: D día, N noche, M mixto, TXT tiempo por tiempo, PSG permiso, V vacaciones, I incapacidad, F falta, X baja." /></p>
         </div>
         <div className="flex items-center gap-3">
           {/* Selector de vista: Semana (matriz, por defecto) o Mes (calendario clásico) */}

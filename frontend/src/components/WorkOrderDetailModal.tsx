@@ -877,7 +877,7 @@ export const WorkOrderDetailModal = ({
             displayWO.after_image_url ? (
               <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-3">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
-                  Evidencias fotográficas
+                  <span title="Fotos de la falla reportada, del estado antes y del resultado después del trabajo.">Evidencias fotográficas</span>
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {displayWO.request_image_url &&
@@ -915,7 +915,7 @@ export const WorkOrderDetailModal = ({
                <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider block mb-2">Firmas de cierre</span>
                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <div>
-                     <span className="text-xs font-semibold text-emerald-700 block mb-1">Firma Liberación de Área:</span>
+                     <span className="text-xs font-semibold text-emerald-700 block mb-1"><span title="Firma de quien confirma que la zona quedó limpia y sin riesgos.">Firma Liberación de Área:</span></span>
                      {typeof displayWO.signature_clean_area === 'string' && displayWO.signature_clean_area.startsWith('data:image') ? (
                        <img src={displayWO.signature_clean_area} alt="Firma" className="h-16 object-contain bg-white dark:bg-slate-900 rounded-lg border border-emerald-100 p-1 block" />
                      ) : (
@@ -923,7 +923,7 @@ export const WorkOrderDetailModal = ({
                      )}
                    </div>
                    <div>
-                     <span className="text-xs font-semibold text-emerald-700 block mb-1">Firma Entrega de Trabajo:</span>
+                     <span className="text-xs font-semibold text-emerald-700 block mb-1"><span title="Firma del solicitante confirmando que el equipo quedó funcionando.">Firma Entrega de Trabajo:</span></span>
                      {typeof displayWO.signature_delivery === 'string' && displayWO.signature_delivery.startsWith('data:image') ? (
                        <img src={displayWO.signature_delivery} alt="Firma" className="h-16 object-contain bg-white dark:bg-slate-900 rounded-lg border border-emerald-100 p-1 block" />
                      ) : (

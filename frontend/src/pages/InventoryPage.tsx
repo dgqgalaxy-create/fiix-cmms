@@ -1052,7 +1052,7 @@ export const InventoryPage = () => {
                         {item.internal_code}
                       </span>
                     </div>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${item.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                    <span title="Activo: se usa normalmente. Descontinuado: ya no se compra ni se consume, pero conserva su historial." className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${item.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                       {item.is_active ? 'Activo' : 'Descontinuado'}
                     </span>
                   </div>
@@ -1071,7 +1071,7 @@ export const InventoryPage = () => {
                       <h3 className="font-bold text-slate-900 text-sm leading-snug">{item.name}</h3>
                       <p className="text-slate-500 text-xs line-clamp-1">{item.description}</p>
                       {!item.vendor_id && item.stock <= item.minimum_inventory && (
-                        <span className="inline-flex mt-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                        <span title="Está por debajo del mínimo y no tiene proveedor asignado: no se puede incluir en una compra automática." className="inline-flex mt-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
                           Sin proveedor
                         </span>
                       )}
@@ -1080,13 +1080,13 @@ export const InventoryPage = () => {
                   
                   <div className="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-3 mt-1">
                     <div className="text-slate-500">
-                      Cat: <span className="font-semibold text-slate-700">{item.category?.name || 'N/A'}</span>
+                      Cat: <span title="Familia del repuesto; agrupa búsquedas y reportes." className="font-semibold text-slate-700">{item.category?.name || 'N/A'}</span>
                     </div>
                     <div className="text-slate-500 text-right">
-                      Ubicación: <span className="font-semibold text-slate-700">{item.location?.name || 'N/A'}</span>
+                      Ubicación: <span title="Lugar físico donde está guardado el repuesto." className="font-semibold text-slate-700">{item.location?.name || 'N/A'}</span>
                     </div>
                     <div className="col-span-2 flex justify-between items-center mt-1 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                      <span className="text-slate-600 font-medium">Stock Actual:</span>
+                      <span title="Cantidad disponible hoy. Sube con entradas y baja con salidas o consumos de OT." className="text-slate-600 font-medium">Stock Actual:</span>
                       <div className="flex items-center gap-1">
                         <span className={`font-bold text-sm ${item.stock <= item.minimum_inventory ? 'text-rose-600' : 'text-emerald-600'}`}>
                           {item.stock}

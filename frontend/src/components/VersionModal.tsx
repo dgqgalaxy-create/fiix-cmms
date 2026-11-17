@@ -2,7 +2,7 @@
 import { Link } from 'react-router-dom';
 import { useExitAnimation } from '../hooks/useExitAnimation';
 
-export const APP_VERSION = "1.119.2";
+export const APP_VERSION = "1.120.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -38,6 +38,9 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: Manual → «Glosario». Explica en lenguaje de planta cada indicador (MTTR, MTBF, disponibilidad, SLA, backlog, retrabajo), estados de las órdenes, inventario (stock, mínimo, unidad de medida, entradas/salidas, kits), compras (OC y entregas parciales), activos, horarios (patrones mixto y 4x4, códigos de turno, excepciones) y accesos (roles, contraseña de desarrollador, bitácora). Incluye buscador por término, sigla o palabra de la definición.",
+    "Mejora: ayudas al pasar el puntero en Compras (estados y columnas), Inventario (stock, categoría, ubicación y avisos) y detalle de Orden (evidencias y firmas). Horarios agrega un ⓘ con la leyenda de patrones y códigos de turno.",
+    "Corrección: 57 mensajes de error de órdenes de trabajo mostraban acentos rotos; ahora se leen correctamente.",
     "Mejora: en los parámetros de «Desempeño del equipo» cada nombre muestra su descripción al pasar el puntero (en móvil, al tocar): modo de evaluación, comparación, muestra mínima, periodo, reincidencia, backlog, semáforo, pesos del índice, metas globales y por turno, banderas y horarios.",
     "Corrección: el tablero «Desempeño del equipo» ahora toma el horario de los patrones de Horarios (Mixto, 4x4 fijo y 4x4 rotatorio) además de los turnos explícitos. Antes, si el horario venía de un patrón, la utilización salía vacía y el técnico aparecía «sin horario».",
     "Nuevo: Estadística → «Desempeño del equipo». Tablero por técnico con atención (asignación → inicio), utilización contra horas de turno, resuelto a la primera, cumplimiento de fecha, cierres con evidencia y backlog viejo, más un índice 0-100 con semáforo. Incluye banderas anti-juego: cierre exprés, OT aceptadas sin iniciar, ping-pong de reasignaciones, evidencia repetida, cierres de fin de turno y selección de trabajo. Parámetros editables desde Configuración → Desempeño del equipo (solo Administrador con contraseña de desarrollador): modo fijo o relativo, comparación por turno o todo el equipo, metas globales y por turno, pesos, banderas y horarios. Exporta CSV, Excel y PDF.",
