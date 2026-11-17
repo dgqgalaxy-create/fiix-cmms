@@ -1,4 +1,4 @@
-﻿import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, lazy, Suspense } from 'react';
 import { syncOfflineQueue } from './utils/offlineSync';
 import { AuthProvider } from './context/AuthContext';
@@ -17,6 +17,7 @@ const AssetsPage = lazy(() => import('./pages/AssetsPage').then((m) => ({ defaul
 const MetersPage = lazy(() => import('./pages/MetersPage').then((m) => ({ default: m.MetersPage })));
 const FileLibraryPage = lazy(() => import('./pages/FileLibraryPage').then((m) => ({ default: m.FileLibraryPage })));
 const StatsPage = lazy(() => import('./pages/StatsPage').then((m) => ({ default: m.StatsPage })));
+const TeamPerformancePage = lazy(() => import('./pages/TeamPerformancePage').then((m) => ({ default: m.TeamPerformancePage })));
 const UsersPage = lazy(() => import('./pages/UsersPage').then((m) => ({ default: m.UsersPage })));
 const KPIPage = lazy(() => import('./pages/KPIPage').then((m) => ({ default: m.KPIPage })));
 const TechnicianPerformancePage = lazy(() => import('./pages/TechnicianPerformancePage').then((m) => ({ default: m.TechnicianPerformancePage })));
@@ -287,6 +288,17 @@ function App() {
 
           {/* Ruta antigua: se conserva para no romper enlaces guardados. */}
           <Route path="/kpis" element={<Navigate to="/stats/kpis" replace />} />
+
+          <Route
+            path="/stats/team"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <TeamPerformancePage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
 
           <Route path="/kpis/technicians/:technicianId" element={<ProtectedRoute><Layout><TechnicianPerformancePage /></Layout></ProtectedRoute>} />
 

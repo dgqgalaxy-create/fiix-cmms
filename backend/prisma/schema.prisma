@@ -319,6 +319,10 @@ model WorkOrder {
   scheduled_date      DateTime?
   due_date            DateTime?
   started_at          DateTime?
+  /// Momento de la última asignación (base de la métrica de atención).
+  assigned_at         DateTime?
+  /// Veces que la orden cambió de técnicos (ping-pong).
+  reassignment_count  Int               @default(0)
   paused_at           DateTime?
   last_resumed_at     DateTime?
   /// Tiempo de labor acumulado en ms (entero 64 bits desde v1.57: sin recorte a ~24.8 días).
@@ -691,6 +695,8 @@ model SystemSettings {
   features           Json?
   /// Configuración del portal público de solicitudes (/request).
   portal_config      Json?
+  /// Parámetros del tablero «Desempeño del equipo» (metas, pesos, banderas y horarios).
+  performance_config Json?
   /// Preferencias de fecha y hora: zona IANA, formato de fecha y formato de hora.
   time_zone          String?
   /// Idioma de la interfaz: es | en.

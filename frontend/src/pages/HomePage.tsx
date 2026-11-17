@@ -1,7 +1,7 @@
 import { SummaryOrdersModal } from '../components/SummaryOrdersModal';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Activity,
   AlertCircle,
@@ -13,6 +13,7 @@ import {
   Clock,
   Download,
   Flame,
+  Gauge,
   LayoutDashboard,
   Loader2,
   RefreshCw,
@@ -458,6 +459,14 @@ export const HomePage = () => {
           <p className="text-slate-500 dark:text-slate-300 mt-1">Resumen operativo del mantenimiento.</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            to="/stats/team"
+            className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-sm transition-colors hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+            title="Abrir el tablero de desempeño por técnico"
+          >
+            <Gauge size={16} />
+            Desempeño del equipo
+          </Link>
           {isControlRoomRole && (
             <button
               type="button"

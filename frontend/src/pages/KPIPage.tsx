@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { DetailSkeleton } from '../components/common/Skeleton';
 import type { ReactNode } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import {
   getKPIs,
   updateKPIGoals,
@@ -712,6 +712,14 @@ export const KPIPage = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/stats/team"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-sm font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+            title="Abrir el tablero de desempeño por técnico"
+          >
+            <Users size={16} />
+            Desempeño del equipo
+          </Link>
           <button
             type="button"
             onClick={handleExportExcel}

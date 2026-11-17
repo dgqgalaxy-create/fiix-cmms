@@ -2,7 +2,7 @@
 import { Link } from 'react-router-dom';
 import { useExitAnimation } from '../hooks/useExitAnimation';
 
-export const APP_VERSION = "1.118.2";
+export const APP_VERSION = "1.119.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -38,6 +38,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: Estadística → «Desempeño del equipo». Tablero por técnico con atención (asignación → inicio), utilización contra horas de turno, resuelto a la primera, cumplimiento de fecha, cierres con evidencia y backlog viejo, más un índice 0-100 con semáforo. Incluye banderas anti-juego: cierre exprés, OT aceptadas sin iniciar, ping-pong de reasignaciones, evidencia repetida, cierres de fin de turno y selección de trabajo. Parámetros editables desde Configuración → Desempeño del equipo (solo Administrador con contraseña de desarrollador): modo fijo o relativo, comparación por turno o todo el equipo, metas globales y por turno, pesos, banderas y horarios. Exporta CSV, Excel y PDF.",
     "Mejora: en el detalle de un repuesto el nombre del artículo ahora puede ocupar dos líneas antes de recortarse con «…», en lugar de quedar cortado en una sola cuando es largo.",
     "Corrección: al elegir una imagen en «Buscar en la Web» desde el panel de un repuesto, se cerraba la edición y se perdía lo capturado. Ahora el panel sigue abierto, la imagen queda como vista previa y puedes guardarla con el resto de los cambios.",
     "Nuevo: eliminar órdenes de trabajo en cualquier estado, incluidas las Finalizadas y Anuladas. Exige el permiso «Eliminar órdenes», la contraseña de desarrollador y escribir ELIMINAR para confirmar. Al borrar, se eliminan fotos, firmas, documentos, comentarios, costos, paros y relaciones; las refacciones consumidas se devuelven al inventario y todo el movimiento queda registrado en la bitácora de auditoría.",

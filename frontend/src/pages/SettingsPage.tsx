@@ -1,8 +1,8 @@
 ﻿import { useState, useEffect, type ReactNode } from 'react';
 import { DetailSkeleton } from '../components/common/Skeleton';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft, Globe, Clock, ListPlus, Trash2, Loader2, Plug, Copy, Plus, ShieldCheck, Languages } from 'lucide-react';
+import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft, Globe, Clock, ListPlus, Trash2, Loader2, Plug, Copy, Plus, ShieldCheck, Languages, Gauge } from 'lucide-react';
 import { PermissionsPage } from './PermissionsPage';
 import { DeveloperOptions } from './DeveloperOptions';
 import { ChecklistCatalogue } from '../components/ChecklistCatalogue';
@@ -694,6 +694,16 @@ export const SettingsPage = () => {
             {isAdmin && navBtn('custom_fields', 'Campos personalizados', <ListPlus size={18} />)}
             {isAdmin && navBtn('datetime', 'Fecha y hora', <Clock size={18} />)}
             {isAdmin && navBtn('portal', 'Portal de solicitudes', <Globe size={18} />)}
+            {isAdmin && (
+              <Link
+                to="/stats/team?settings=1"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium leading-snug transition-colors text-left text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                title="Metas y umbrales del tablero de desempeño (Administrador)"
+              >
+                <span className="shrink-0 inline-flex opacity-90"><Gauge size={18} /></span>
+                <span className="min-w-0">Desempeño del equipo</span>
+              </Link>
+            )}
             {isAdmin && navBtn('features', 'Características', <ToggleLeft size={18} />)}
             {isAdmin && navBtn('uom', 'Unidades de Medida', <Scale size={18} />)}
             {isAdmin && hasPermission('MANAGE_PERMISSIONS') &&

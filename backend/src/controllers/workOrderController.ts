@@ -1,4 +1,4 @@
-﻿import { workOrderPeriod } from '../utils/workOrderPeriod';
+import { workOrderPeriod } from '../utils/workOrderPeriod';
 import fs from 'fs';
 import path from 'path';
 import { getUploadsRoot, urlToRelativeUploadPath } from '../utils/uploadsCleanup';
@@ -750,6 +750,8 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
         due_date: due_date ? parseDateInput(due_date) : null,
         request_image_url,
         created_by_id: req.user.userId,
+        // Base de la métrica de atención: si nace asignada, cuenta desde su creación.
+        assigned_at: assigned_technicians_ids && assigned_technicians_ids.length > 0 ? new Date() : null,
         assigned_technicians: assigned_technicians_ids && assigned_technicians_ids.length > 0
           ? { connect: assigned_technicians_ids.map((id: string) => ({ id })) }
           : undefined
@@ -885,7 +887,18 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
     
     // Solo permitir que Administradores y Gestionadores reasignen masivamente
     if (userRole !== 'TECNICO' && assigned_technicians_ids !== undefined) {
-      updateData.assigned_technicians = { set: assigned_technicians_ids.map((tid: string) => ({ id: tid })) };
+      const previousIds = currentWorkOrder.assigned_technicians.map((tech) => tech.id);
+      const nextIds: string[] = Array.isArray(assigned_technicians_ids) ? assigned_technicians_ids : [];
+      const assignmentChanged =
+        previousIds.length !== nextIds.length || previousIds.some((id) => !nextIds.includes(id));
+      updateData.assigned_technicians = { set: nextIds.map((tid: string) => ({ id: tid })) };
+      if (assignmentChanged) {
+        // Rastrea la atención desde la última asignación y cuenta los rebotes (ping-pong).
+        updateData.assigned_at = new Date();
+        if (previousIds.length > 0 && nextIds.length > 0) {
+          updateData.reassignment_count = currentWorkOrder.reassignment_count + 1;
+        }
+      }
     }
 
     // Auto-asignaciÃ³n al aceptar la orden (pasar de PENDIENTE a EN_PROCESO):
@@ -898,6 +911,8 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
 
       if (!willHaveTechnicians) {
         updateData.assigned_technicians = { set: [{ id: userId }] };
+        // Primera asignación: marca el inicio del reloj de atención.
+        if (!currentWorkOrder.assigned_at) updateData.assigned_at = new Date();
       }
     }
     
