@@ -2,7 +2,7 @@
 import { Link } from 'react-router-dom';
 import { useExitAnimation } from '../hooks/useExitAnimation';
 
-export const APP_VERSION = "1.118.1";
+export const APP_VERSION = "1.118.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -38,6 +38,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Mejora: en el detalle de un repuesto el nombre del artículo ahora puede ocupar dos líneas antes de recortarse con «…», en lugar de quedar cortado en una sola cuando es largo.",
     "Corrección: al elegir una imagen en «Buscar en la Web» desde el panel de un repuesto, se cerraba la edición y se perdía lo capturado. Ahora el panel sigue abierto, la imagen queda como vista previa y puedes guardarla con el resto de los cambios.",
     "Nuevo: eliminar órdenes de trabajo en cualquier estado, incluidas las Finalizadas y Anuladas. Exige el permiso «Eliminar órdenes», la contraseña de desarrollador y escribir ELIMINAR para confirmar. Al borrar, se eliminan fotos, firmas, documentos, comentarios, costos, paros y relaciones; las refacciones consumidas se devuelven al inventario y todo el movimiento queda registrado en la bitácora de auditoría.",
     "Mejora visual (toda la app): animación de entrada y salida en los modales de activos, usuarios, catálogo, movimientos, turnos, kits, cuadrillas, contratistas y permisos; foco e interacción de botones y campos unificados; encabezados de tabla fijos con sombra al hacer scroll.",

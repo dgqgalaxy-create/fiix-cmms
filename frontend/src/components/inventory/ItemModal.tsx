@@ -437,7 +437,10 @@ export const ItemModal = ({
       >
         <div className={`px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex gap-3 bg-slate-50/50 dark:bg-slate-900/50 shrink-0 items-center ${isDrawer ? '' : 'justify-between'}`}>
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <h2 className="truncate text-xl font-bold text-slate-900 dark:text-slate-100">
+            <h2
+              className="line-clamp-2 min-w-0 break-words text-xl font-bold leading-snug text-slate-900 dark:text-slate-100"
+              title={item ? item.name : undefined}
+            >
               {item ? item.name : 'Nuevo Repuesto'}
             </h2>
             {item && (
