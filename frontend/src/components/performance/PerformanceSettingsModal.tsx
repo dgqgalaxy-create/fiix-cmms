@@ -2,6 +2,7 @@
 import { AlertTriangle, Loader2, RotateCcw, Save, Settings2, X, Eye } from 'lucide-react';
 import type { PerformanceConfig, PerformanceReport, PerformanceTargets } from '../../api/performance';
 import { previewTeamPerformance, resetPerformanceSettings, savePerformanceSettings } from '../../api/performance';
+import { FieldHint } from '../common/FieldHint';
 import { useAuth } from '../../context/AuthContext';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
@@ -41,13 +42,22 @@ const SHIFT_CODES: Record<string, string> = {
 };
 
 const NUM_FIELDS: Array<{ key: keyof PerformanceTargets; label: string; suffix: string; hint: string }> = [
-  { key: 'ftf_pct', label: 'Resuelto a la primera', suffix: '%', hint: 'OT cierradas sin reincidencia del activo' },
+  { key: 'ftf_pct', label: 'Resuelto a la primera', suffix: '%', hint: 'OT cerradas sin reincidencia del activo' },
   { key: 'sla_pct', label: 'Cumplimiento de fecha', suffix: '%', hint: 'Cerradas antes de la fecha comprometida' },
   { key: 'evidence_pct', label: 'Cierres con evidencia', suffix: '%', hint: 'Foto, firma, nota o refacción' },
   { key: 'utilization_pct', label: 'Utilización', suffix: '%', hint: 'Labor registrada ÷ horas de turno' },
   { key: 'attention_max_min', label: 'Atención máxima', suffix: 'min', hint: 'Asignación → inicio de la OT' },
   { key: 'backlog_max', label: 'Backlog viejo permitido', suffix: 'OT', hint: 'OT sin iniciar más viejas que el umbral' },
 ];
+
+const WEIGHT_HINTS: Record<string, string> = {
+  attention: 'Peso de la rapidez de atención: tiempo desde la asignación hasta el inicio de la OT.',
+  utilization: 'Peso del tiempo realmente trabajado contra las horas programadas del turno.',
+  ftf: 'Peso de la calidad: OT correctivas que no reincidieron en el mismo activo.',
+  sla: 'Peso del cumplimiento de la fecha comprometida de la orden.',
+  evidence: 'Peso de cerrar con evidencia: foto, firma, nota o refacción.',
+  backlog: 'Peso de no acumular OT viejas sin iniciar.',
+};
 
 const numberValue = (value: string): number => {
   const parsed = Number(value.replace(',', '.'));
@@ -224,7 +234,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
             <div className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Modo de evaluación</label>
+                  <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300"><FieldHint text="Relativa compara cada métrica contra el resto del equipo (percentiles) y se adapta sola al número de técnicos. Fija compara contra las metas numéricas de la pestaña Metas.">Modo de evaluación</FieldHint></label>
                   <div className="inline-flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800">
                     {([['relative', 'Relativa'], ['fixed', 'Fija']] as Array<[PerformanceConfig['mode'], string]>).map(([key, label]) => (
                       <button
@@ -245,7 +255,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Comparación por omisión</label>
+                  <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300"><FieldHint text="Grupo contra el que se compara en modo relativo: por turno (mismo patrón: Mixto, 4x4…) o contra todo el equipo. El tablero permite cambiarlo sin editar aquí.">Comparación por omisión</FieldHint></label>
                   <div className="inline-flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800">
                     {([['shift', 'Por turno'], ['all', 'Todo el equipo']] as Array<[PerformanceConfig['compare'], string]>).map(([key, label]) => (
                       <button
@@ -268,7 +278,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
 
               <div className="grid gap-3 sm:grid-cols-3">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Muestra mínima (OT)</label>
+                  <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300"><FieldHint text="Número mínimo de OT cerradas en el periodo para calificar a alguien. Con menos, se muestra «muestra insuficiente» y no se calcula índice.">Muestra mínima (OT)</FieldHint></label>
                   <input
                     type="number"
                     min={1}
@@ -280,7 +290,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
                   <p className="mt-1 text-[11px] text-slate-500">Con menos, se marca «muestra insuficiente».</p>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Periodo por omisión (días)</label>
+                  <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300"><FieldHint text="Ventana de análisis con la que abre el tablero (7 a 365 días). En el tablero también puedes cambiar entre 7, 30 y 90 días.">Periodo por omisión (días)</FieldHint></label>
                   <input
                     type="number"
                     min={7}
@@ -291,7 +301,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Días de reincidencia</label>
+                  <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300"><FieldHint text="Si el mismo activo vuelve a tener una correctiva dentro de estos días después de cerrar, la orden cuenta como retrabajo y baja el «resuelto a la primera».">Días de reincidencia</FieldHint></label>
                   <input
                     type="number"
                     min={1}
@@ -303,7 +313,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
                   <p className="mt-1 text-[11px] text-slate-500">Ventana para considerar retrabajo del mismo activo.</p>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Backlog viejo (días)</label>
+                  <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300"><FieldHint text="Días de antigüedad para considerar una OT asignada y sin iniciar como backlog viejo. Alimenta la métrica y la bandera «sin iniciar».">Backlog viejo (días)</FieldHint></label>
                   <input
                     type="number"
                     min={1}
@@ -314,7 +324,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Semáforo verde desde</label>
+                  <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300"><FieldHint text="Índice mínimo (0 a 100) para pintar verde. Solo aplica en modo Fijo; en modo Relativo el semáforo se calcula por percentiles del grupo.">Semáforo verde desde</FieldHint></label>
                   <input
                     type="number"
                     min={30}
@@ -326,7 +336,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Semáforo ámbar desde</label>
+                  <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300"><FieldHint text="Índice mínimo para ámbar; por debajo se pinta rojo. Solo aplica en modo Fijo.">Semáforo ámbar desde</FieldHint></label>
                   <input
                     type="number"
                     min={0}
@@ -340,7 +350,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
               </div>
 
               <div>
-                <h3 className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">Pesos del índice</h3>
+                <h3 className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500"><FieldHint text="Cuánto aporta cada dimensión al índice 0-100. Si no suman 100 se normalizan; pon 0 para excluir una dimensión.">Pesos del índice</FieldHint></h3>
                 <div className="grid gap-2 sm:grid-cols-3">
                   {([
                     ['attention', 'Atención'],
@@ -351,7 +361,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
                     ['backlog', 'Backlog'],
                   ] as Array<[keyof PerformanceConfig['weights'], string]>).map(([key, label]) => (
                     <div key={key} className="flex items-center gap-2">
-                      <span className="w-24 text-xs font-semibold text-slate-600 dark:text-slate-300">{label}</span>
+                      <span className="w-24 text-xs font-semibold text-slate-600 dark:text-slate-300"><FieldHint text={WEIGHT_HINTS[key]}>{label}</FieldHint></span>
                       <input
                         type="number"
                         min={0}
@@ -374,11 +384,11 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
           {tab === 'targets' && (
             <div className="space-y-5">
               <div>
-                <h3 className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">Metas globales</h3>
+                <h3 className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500"><FieldHint text="Valores de referencia para el modo Fijo. Cada turno puede tener metas propias en la sección de abajo.">Metas globales</FieldHint></h3>
                 <div className="grid gap-3 sm:grid-cols-3">
                   {NUM_FIELDS.map((field) => (
                     <div key={field.key}>
-                      <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">{field.label}</label>
+                      <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300"><FieldHint text={field.hint}>{field.label}</FieldHint></label>
                       <div className="flex items-center gap-2">
                         <input
                           type="number"
@@ -396,7 +406,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
               </div>
 
               <div>
-                <h3 className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">Metas por turno</h3>
+                <h3 className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500"><FieldHint text="En modo Fijo, cada patrón (Mixto, 4x4 fijo, 4x4 rotatorio) o código diario puede tener sus propias metas; lo que no definas usa las globales.">Metas por turno</FieldHint></h3>
                 <p className="mb-2 text-[11px] text-slate-500 dark:text-slate-400">
                   Solo para el modo Fijo: sobrescriben las globales para el turno elegido (por ejemplo, 4x4 con jornadas largas).
                 </p>
@@ -433,7 +443,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
                 <div className="mt-3 grid gap-3 sm:grid-cols-3">
                   {NUM_FIELDS.map((field) => (
                     <div key={`code-${field.key}`}>
-                      <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">{field.label}</label>
+                      <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300"><FieldHint text={field.hint}>{field.label}</FieldHint></label>
                       <div className="flex items-center gap-2">
                         <input
                           type="number"
@@ -459,7 +469,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
           {tab === 'flags' && (
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Cierre exprés (min)</label>
+                <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300"><FieldHint text="Una OT cerrada en menos de estos minutos, sin evidencia y sin refacción, se marca como cierre exprés (posible «cerrar por cerrar»).">Cierre exprés (min)</FieldHint></label>
                 <input
                   type="number"
                   min={1}
@@ -471,7 +481,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
                 <p className="mt-1 text-[11px] text-slate-500">Cierre más corto, sin evidencia ni refacción.</p>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Aceptar sin iniciar (h)</label>
+                <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300"><FieldHint text="OT asignadas a la persona que siguen sin iniciar después de estas horas. Alimenta la bandera «sin iniciar» y el backlog.">Aceptar sin iniciar (h)</FieldHint></label>
                 <input
                   type="number"
                   min={1}
@@ -483,7 +493,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
                 <p className="mt-1 text-[11px] text-slate-500">OT asignadas que siguen sin iniciar.</p>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Ping-pong (reasignaciones)</label>
+                <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300"><FieldHint text="Número de cambios de técnico a partir del cual la OT se marca como rebotada entre personas.">Ping-pong (reasignaciones)</FieldHint></label>
                 <input
                   type="number"
                   min={1}
@@ -495,7 +505,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
                 <p className="mt-1 text-[11px] text-slate-500">Cambios de técnico antes de marcar rebote.</p>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Cierre de fin de turno (min)</label>
+                <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300"><FieldHint text="Los cierres ocurridos en estos minutos antes del fin de turno se marcan como posible trabajo de relleno.">Cierre de fin de turno (min)</FieldHint></label>
                 <input
                   type="number"
                   min={5}
@@ -507,7 +517,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
                 <p className="mt-1 text-[11px] text-slate-500">Ventana antes del fin de turno.</p>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Evidencia mínima (%)</label>
+                <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300"><FieldHint text="Porcentaje mínimo de cierres con evidencia (foto, firma, nota o refacción). Por debajo se activa la bandera «evidencia baja».">Evidencia mínima (%)</FieldHint></label>
                 <input
                   type="number"
                   min={0}
@@ -518,7 +528,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Margen de selección de trabajo (puntos)</label>
+                <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300"><FieldHint text="Diferencia en puntos porcentuales de OT preventivas sobre el promedio del equipo para marcar «selección de trabajo» (elegir lo fácil).">Margen de selección de trabajo (puntos)</FieldHint></label>
                 <input
                   type="number"
                   min={0}
@@ -529,7 +539,7 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
                 />
                 <p className="mt-1 text-[11px] text-slate-500">Ventaja en % de preventivas sobre el equipo.</p>
               </div>
-              <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300" title="Compara el contenido de las fotos (hash) y marca cuando la misma imagen se usa en varias OT. Lee los archivos del periodo.">
                 <input
                   type="checkbox"
                   checked={draft.flags.duplicate_evidence_enabled}
@@ -557,8 +567,8 @@ export function PerformanceSettingsModal({ isOpen, onClose, config, onSaved, ini
                     <tr>
                       <th className="px-3 py-2">Código</th>
                       <th className="px-3 py-2">Turno</th>
-                      <th className="px-3 py-2">Horas</th>
-                      <th className="px-3 py-2">Fin de turno</th>
+                      <th className="px-3 py-2"><FieldHint text="Horas de jornada que se suman como programadas para ese código. Usa 0 en descansos y ausencias.">Horas</FieldHint></th>
+                      <th className="px-3 py-2"><FieldHint text="Hora en que termina el turno; se usa para la bandera de cierre de fin de turno.">Fin de turno</FieldHint></th>
                     </tr>
                   </thead>
                   <tbody>
