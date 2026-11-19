@@ -17,7 +17,8 @@ if [ "${SKIP_DB_PUSH}" != "1" ]; then
       /app/backend/prisma/migrations/20260907010000_accumulated_time_ms_bigint/migration.sql \
       /app/backend/prisma/migrations/20261112000000_drop_telegram_settings/migration.sql \
       /app/backend/prisma/migrations/20261117000000_performance_team/migration.sql \
-      /app/backend/prisma/migrations/20261119000000_import_timeout/migration.sql; do
+      /app/backend/prisma/migrations/20261119000000_import_timeout/migration.sql \
+      /app/backend/prisma/migrations/20261119010000_asset_work_order_categories/migration.sql; do
       if [ -f "${_mig}" ]; then
         npx prisma db execute --file "${_mig}"
       fi

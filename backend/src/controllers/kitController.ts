@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { emitRefresh } from '../utils/socket';
+import { writeAuditLog } from '../utils/auditLog';
 
 interface IncomingKitItem {
   item_id: string;
@@ -209,5 +210,160 @@ export const getKitAvailability = async (req: Request, res: Response): Promise<v
   } catch (error) {
     console.error('Error verificando disponibilidad del kit:', error);
     res.status(500).json({ error: 'No se pudo verificar la disponibilidad' });
+  }
+};
+
+/**
+ * POST /api/kits/:id/consume — descuenta el kit completo y lo liga a una OT.
+ * Body: { work_order_id, quantity? }
+ *
+ * Todo o nada: si un repuesto no alcanza, no se descuenta ninguno y no queda
+ * movimiento de inventario. Cada consumo deja su propio movimiento por repuesto,
+ * con el costo congelado al momento del consumo.
+ */
+export const consumeKit = async (req: Request, res: Response): Promise<void> => {
+  const kitId = req.params.id as string;
+  const userId = (req as any).user?.userId ?? null;
+  const workOrderId = String((req.body as any)?.work_order_id ?? '').trim();
+  const rawQuantity = Number((req.body as any)?.quantity ?? 1);
+  const quantity = Math.max(1, Math.min(50, Math.round(Number.isFinite(rawQuantity) ? rawQuantity : 1)));
+
+  if (!workOrderId) {
+    res.status(400).json({ error: 'Indica la orden de trabajo que consume el kit.' });
+    return;
+  }
+
+  try {
+    const [kit, workOrder] = await Promise.all([
+      prisma.kit.findUnique({
+        where: { id: kitId },
+        include: {
+          items: {
+            include: {
+              item: {
+                select: {
+                  id: true,
+                  name: true,
+                  internal_code: true,
+                  stock: true,
+                  qty_mode: true,
+                  purchase_cost: true,
+                  uom: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      prisma.workOrder.findUnique({
+        where: { id: workOrderId },
+        select: { id: true, folio: true, title: true, status: true },
+      }),
+    ]);
+
+    if (!kit) {
+      res.status(404).json({ error: 'Kit no encontrado' });
+      return;
+    }
+    if (!workOrder) {
+      res.status(404).json({ error: 'La orden de trabajo no existe' });
+      return;
+    }
+    if (workOrder.status === 'FINALIZADO' || workOrder.status === 'ANULADO') {
+      res.status(400).json({ error: 'No se puede consumir un kit en una orden cerrada o anulada.' });
+      return;
+    }
+    if (kit.items.length === 0) {
+      res.status(400).json({ error: 'El kit no tiene repuestos configurados.' });
+      return;
+    }
+
+    const consumed = await prisma.$transaction(
+      async (tx) => {
+        const rows: Array<{
+          item_id: string;
+          name: string;
+          internal_code: string;
+          amount: number;
+          unit_cost: number;
+          uom: string | null;
+          transaction_id: string;
+        }> = [];
+
+        for (const kitItem of kit.items) {
+          const needed = kitItem.quantity * quantity;
+
+          // Descuento atómico con guarda: si no alcanza, count = 0 y se revierte todo.
+          const updated = await tx.item.updateMany({
+            where: { id: kitItem.item_id, stock: { gte: needed } },
+            data: { stock: { decrement: needed } },
+          });
+          if (updated.count === 0) {
+            throw Object.assign(
+              new Error(
+                `Stock insuficiente de «${kitItem.item.name}»: se necesitan ${needed} ${kitItem.item.uom ?? ''} y hay ${kitItem.item.stock}.`.replace(/\s+/g, ' ')
+              ),
+              { status: 409 }
+            );
+          }
+
+          const unitCost = kitItem.item.purchase_cost ?? 0;
+          const transaction = await tx.inventoryTransaction.create({
+            data: {
+              item_id: kitItem.item_id,
+              user_id: userId,
+              amount: -needed,
+              reason: `Kit «${kit.name}» ×${quantity} · OT ${workOrder.folio}`,
+              unit_cost: unitCost,
+              work_order_id: workOrder.id,
+            },
+          });
+
+          rows.push({
+            item_id: kitItem.item_id,
+            name: kitItem.item.name,
+            internal_code: kitItem.item.internal_code,
+            amount: needed,
+            unit_cost: unitCost,
+            uom: kitItem.item.uom ?? null,
+            transaction_id: transaction.id,
+          });
+        }
+
+        return rows;
+      },
+      { maxWait: 10_000, timeout: 30_000 }
+    );
+
+    await writeAuditLog({
+      userId,
+      userName: null,
+      action: 'KIT_CONSUMED',
+      entity: 'work_order',
+      entityId: workOrder.id,
+      summary: `Kit «${kit.name}» ×${quantity} consumido en la OT ${workOrder.folio} · ${consumed.length} repuesto(s) descontados`,
+      meta: {
+        kit_id: kit.id,
+        kit_name: kit.name,
+        quantity,
+        work_order_folio: workOrder.folio,
+        items: consumed,
+      },
+    });
+
+    emitRefresh('refresh_inventory');
+    emitRefresh('refresh_work_orders');
+
+    res.status(201).json({
+      message: `Kit «${kit.name}» consumido: ${consumed.length} repuesto(s) descontados.`,
+      consumed,
+    });
+  } catch (error: any) {
+    if (error?.status === 409) {
+      res.status(409).json({ error: error.message });
+      return;
+    }
+    console.error('Error consumiendo kit:', error);
+    res.status(500).json({ error: 'No se pudo consumir el kit' });
   }
 };

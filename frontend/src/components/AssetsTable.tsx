@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { Asset } from '../api/assets';
 import { Activity, Ban, Settings, Trash2, Edit, Database, QrCode, Image as ImageIcon, ChevronUp, ChevronDown, Archive, Package, ArrowLeft, ArrowRight, RotateCcw, Columns3, MoreVertical, EyeOff, GripVertical, Table2, LayoutGrid } from 'lucide-react';
@@ -128,6 +128,11 @@ const COLUMNS: ColumnDef[] = [
             {a.zone?.name || 'Sin Zona'}
             {(a.zone_section?.name || a.section) && <span> · {a.zone_section?.name || a.section}</span>}
           </div>
+          {a.category?.name && (
+            <div className="mt-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 truncate">
+              {a.category.name}
+            </div>
+          )}
           {a.description && (
             <div className="hidden md:block text-slate-500 dark:text-slate-400 text-xs mt-0.5 truncate" title={a.description}>
               {a.description}

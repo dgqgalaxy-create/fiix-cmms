@@ -56,6 +56,8 @@ export interface Asset {
   } | null;
   /** Activo fijo (F) o controlable (C). */
   asset_kind: 'FIJO' | 'CONTROLABLE';
+  category_id?: string | null;
+  category?: { id: string; name: string } | null;
   /** Equipo crítico (prioridad alta para mantenimiento). */
   is_critical: boolean;
   /** Equipo obsoleto (oculto de los listados por defecto). */

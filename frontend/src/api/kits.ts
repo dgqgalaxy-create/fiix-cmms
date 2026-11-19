@@ -37,6 +37,25 @@ export const deleteKit = async (id: string): Promise<void> => {
   await api.delete(`/kits/${id}`);
 };
 
+export interface KitConsumeResult {
+  message: string;
+  consumed: Array<{
+    item_id: string;
+    name: string;
+    internal_code: string;
+    amount: number;
+    unit_cost: number;
+    uom: string | null;
+    transaction_id: string;
+  }>;
+}
+
+/** Descuenta el kit completo y lo liga a la orden de trabajo. */
+export const consumeKit = async (
+  kitId: string,
+  data: { work_order_id: string; quantity?: number }
+): Promise<KitConsumeResult> => (await api.post(`/kits/${kitId}/consume`, data)).data;
+
 export const getKitAvailability = async (
   id: string,
   factor = 1

@@ -27,6 +27,8 @@ export interface WorkOrder {
   };
   priority: 'URGENTE' | 'NORMAL' | 'BAJO';
   maintenance_type: 'SERVICIO' | 'PREVENTIVO' | 'CORRECTIVO';
+  category_id?: string | null;
+  category?: { id: string; name: string } | null;
   machine_stopped: boolean;
   requester_name?: string;
   production_group: 'A' | 'B' | 'C' | 'D' | 'NA';

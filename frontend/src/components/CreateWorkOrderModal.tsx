@@ -10,6 +10,7 @@ import { getRequesters } from '../api/requesters';
 import type { Requester } from '../api/requesters';
 import { RequesterModal } from './RequesterModal';
 import { SearchableSelect } from './ui/SearchableSelect';
+import { getWorkOrderCategories, type WorkOrderCategory } from '../api/categories';
 
 interface Props {
   isOpen: boolean;
@@ -24,6 +25,8 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
   const [zoneId, setZoneId] = useState('');
   const [priority, setPriority] = useState('NORMAL');
   const [maintenanceType, setMaintenanceType] = useState('CORRECTIVO');
+  const [categories, setCategories] = useState<WorkOrderCategory[]>([]);
+  const [categoryId, setCategoryId] = useState('');
   const [machineStopped, setMachineStopped] = useState(false);
   const [requesterName, setRequesterName] = useState('');
   const [productionGroup, setProductionGroup] = useState('NA');
@@ -52,11 +55,12 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
   const loadAssetsAndTechs = async () => {
     try {
       setIsLoading(true);
-      const [assetsData, usersData, zonesData, requestersData] = await Promise.all([
+      const [assetsData, usersData, zonesData, requestersData, categoriesData] = await Promise.all([
         getAssets(),
         getUsers(),
         getZones(),
-        getRequesters()
+        getRequesters(),
+        getWorkOrderCategories()
       ]);
       setAssets(assetsData);
       setTechnicians(
@@ -66,6 +70,7 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
       );
       setZones(zonesData);
       setRequesters(requestersData);
+      setCategories(categoriesData.filter((c) => c.is_active));
       setAssetId('');
       setZoneId('');
     } catch (err) {
@@ -105,6 +110,7 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
       payload.append('zone_id', zoneId);
       payload.append('priority', priority);
       payload.append('maintenance_type', maintenanceType);
+      if (categoryId) payload.append('category_id', categoryId);
       payload.append('machine_stopped', String(machineStopped));
       payload.append('requester_name', requesterName.trim());
       payload.append('production_group', productionGroup);
@@ -126,6 +132,7 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
       setMachineStopped(false);
       setPriority('NORMAL');
       setMaintenanceType('CORRECTIVO');
+      setCategoryId('');
       setProductionGroup('NA');
       setAssignedTechniciansIds([]);
       setRequestImage(null);
@@ -256,6 +263,22 @@ export const CreateWorkOrderModal = ({ isOpen, onClose, onSubmit }: Props) => {
                     { value: 'URGENTE', label: 'Urgente' },
                   ]}
                   placeholder="Prioridad…"
+                  inputClassName="w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                  Categoría <span className="text-xs font-normal text-slate-400">(opcional)</span>
+                </label>
+                <SearchableSelect
+                  value={categoryId}
+                  onChange={setCategoryId}
+                  options={[
+                    { value: '', label: 'Sin categoría' },
+                    ...categories.map((category) => ({ value: category.id, label: category.name })),
+                  ]}
+                  placeholder="Categoría…"
                   inputClassName="w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
                 />
               </div>

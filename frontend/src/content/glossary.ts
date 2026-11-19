@@ -27,6 +27,30 @@ export const GLOSSARY: GlossaryGroup[] = [
     description: 'Conceptos de la operación diaria: folios, estados, tiempos y evidencias.',
     entries: [
       {
+        term: 'Categoría de activo',
+        definition:
+          'Clasificación del equipo (bombas, motores, bandas…). Se administra en Configuración → Categorías de activos y OT y permite filtrar y reportar por tipo de equipo.',
+        aliases: ['categoría', 'tipo de activo'],
+      },
+      {
+        term: 'Categoría de orden',
+        definition:
+          'Clasificación de la OT por su naturaleza (seguridad, mejora, proyecto, consumible). No cambia el estado de la orden; sirve para agrupar y reportar.',
+        aliases: ['categoría de OT', 'tipo de orden'],
+      },
+      {
+        term: 'Consumir kit',
+        definition:
+          'Descuenta de una sola vez todos los repuestos de un kit y los liga a la OT. Si un repuesto no alcanza, no se descuenta ninguno (todo o nada).',
+        aliases: ['kit', 'consumo de kit'],
+      },
+      {
+        term: 'Carga de trabajo',
+        definition:
+          'Cuántas órdenes abiertas tiene cada técnico y en qué días se concentran. La carga relativa compara contra el promedio del equipo (100 % = promedio).',
+        aliases: ['workload', 'carga'],
+      },
+      {
         term: 'Folio',
         definition:
           'Número consecutivo que identifica una orden de trabajo. Sirve para buscarla, citarla en reportes y rastrearla en la bitácora.',

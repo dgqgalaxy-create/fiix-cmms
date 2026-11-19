@@ -228,6 +228,7 @@ export const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
           { name: t('nav.stats.costs'), to: '/stats/costs' },
           { name: t('nav.stats.kpis'), to: '/stats/kpis' },
           { name: 'Desempeño del equipo', to: '/stats/team' },
+          { name: 'Carga de trabajo', to: '/workload' },
         ],
       },
       { name: t('nav.checklist'), path: '/checklists', icon: <ClipboardCheck size={16} /> },

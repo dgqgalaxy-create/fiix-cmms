@@ -1,4 +1,4 @@
-﻿import { Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { AssetKind, Prisma } from '@prisma/client';
 import prisma from '../config/prisma';
 import { computeDepreciation } from '../utils/depreciation';
@@ -15,6 +15,7 @@ const assetInclude = {
   zone: { include: { sections: { orderBy: { name: 'asc' as const } } } },
   zone_section: true,
   vendor: true,
+  category: true,
   parts: { include: { item: true } },
 };
 
@@ -326,10 +327,11 @@ export const getAssetMetrics = async (req: Request, res: Response): Promise<void
 };
 export const getAssets = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { page, limit, q, zoneId, zoneSectionId, status, critical, includeObsolete } = req.query;
+    const { page, limit, q, zoneId, zoneSectionId, status, critical, includeObsolete, categoryId } = req.query;
     const and: Record<string, unknown>[] = [];
     if (zoneId) and.push({ zone_id: String(zoneId) });
     if (zoneSectionId) and.push({ zone_section_id: String(zoneSectionId) });
+    if (categoryId) and.push({ category_id: String(categoryId) });
     if (status) and.push({ status: String(status) });
     if (critical === 'true' || critical === '1') and.push({ is_critical: true });
     else if (critical === 'false' || critical === '0') and.push({ is_critical: false });
@@ -421,6 +423,7 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
       section,
       zone_section_id,
       asset_kind,
+      category_id,
       is_critical,
        acquisition_date,
        useful_life_years,
@@ -502,6 +505,7 @@ export const createAsset = async (req: Request, res: Response): Promise<void> =>
               plan_y: plan_y === undefined || plan_y === null || plan_y === '' ? null : parseFloat(String(plan_y)),
               section: sectionResult.section,
               asset_kind: kind,
+              ...(category_id ? { category: { connect: { id: String(category_id) } } } : {}),
               is_critical: is_critical === 'true' || is_critical === '1' || is_critical === true,
               is_obsolete: is_obsolete === 'true' || is_obsolete === '1' || is_obsolete === true,
               zone: { connect: { id: zone_id } },
@@ -573,6 +577,7 @@ export const updateAsset = async (req: Request, res: Response): Promise<void> =>
       section,
       zone_section_id,
       asset_kind,
+      category_id,
       is_critical,
        acquisition_date,
        useful_life_years,
@@ -671,6 +676,9 @@ export const updateAsset = async (req: Request, res: Response): Promise<void> =>
                 : { disconnect: true },
             };
             if (acquisition_date !== undefined) assetData.acquisition_date = acquisition_date ? new Date(acquisition_date) : null;
+            if (category_id !== undefined) {
+              assetData.category = category_id ? { connect: { id: String(category_id) } } : { disconnect: true };
+            }
             if (useful_life_years !== undefined) assetData.useful_life_years = useful_life_years ? parseInt(String(useful_life_years), 10) : null;
             if (residual_value !== undefined) assetData.residual_value = residual_value === null || residual_value === '' ? null : parseFloat(String(residual_value));
             if (plan_x !== undefined) assetData.plan_x = plan_x === null || plan_x === '' ? null : parseFloat(String(plan_x));

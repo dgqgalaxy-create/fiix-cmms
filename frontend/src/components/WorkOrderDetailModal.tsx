@@ -1,6 +1,6 @@
-﻿import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, CheckCircle2, Users, UserPlus, PauseCircle, PlayCircle, ChevronLeft, ChevronRight, ZoomIn, StickyNote } from 'lucide-react';
+import { X, Loader2, Save, Trash2, Ban, Clock, Package, GitBranch, CheckCircle2, Users, UserPlus, PauseCircle, PlayCircle, ChevronLeft, ChevronRight, ZoomIn, StickyNote, Boxes } from 'lucide-react';
 import type { WorkOrder } from '../api/workOrders';
 import { getWorkOrderById } from '../api/workOrders';
 import { useAuth } from '../context/AuthContext';
@@ -28,6 +28,7 @@ import { InfoTip } from './common/InfoTip';
 import { qtyStep, isInvalidQty } from '../utils/qtyMode';
 import { WorkOrderCommentsPanel } from './WorkOrderCommentsPanel';
 import { WorkOrderTimeline } from './workorders/WorkOrderTimeline';
+import { ConsumeKitModal } from './workorders/ConsumeKitModal';
 import { WorkOrderRelations } from './workorders/WorkOrderRelations';
 import { WorkOrderCostsSection } from './workorders/WorkOrderCostsSection';
 import { WorkOrderCrewSection } from './workorders/WorkOrderCrewSection';
@@ -205,6 +206,8 @@ export const WorkOrderDetailModal = ({
   const [failureRemedyId, setFailureRemedyId] = useState<string>('');
   const [consumedParts, setConsumedParts] = useState<NonNullable<WorkOrder['inventory_transactions']>>([]);
   const [partsCostTotal, setPartsCostTotal] = useState(0);
+  const [isKitModalOpen, setIsKitModalOpen] = useState(false);
+  const [kitNotice, setKitNotice] = useState<string | null>(null);
   const [zoomSrc, setZoomSrc] = useState<string | null>(null);
 
   const navIndex = useMemo(() => {
@@ -850,6 +853,12 @@ export const WorkOrderDetailModal = ({
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Tipo</span>
               <div className="text-sm font-medium text-slate-700 dark:text-slate-200">{workOrder.maintenance_type}</div>
             </div>
+            {workOrder.category?.name && (
+              <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Categoría</span>
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-200">{workOrder.category.name}</div>
+              </div>
+            )}
             <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Solicitante</span>
               <div className="text-sm font-medium text-slate-700 dark:text-slate-200 break-words">{workOrder.requester_name || '-'}</div>
@@ -1293,9 +1302,27 @@ export const WorkOrderDetailModal = ({
                       <div className="mt-4 space-y-6">
                         {/* SECCION DE REPUESTOS */}
                         <div className="p-4 bg-blue-50/50 border border-blue-200 rounded-xl">
-                          <label className="block text-sm font-medium text-emerald-800 dark:text-emerald-300 mb-3 flex items-center gap-2">
-                            <Package size={16} /> Repuestos a descontar del almacén
-                          </label>
+                          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <label className="flex items-center gap-2 text-sm font-medium text-emerald-800 dark:text-emerald-300">
+                              <Package size={16} /> Repuestos a descontar del almacén
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setKitNotice(null);
+                                setIsKitModalOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 bg-white px-2.5 py-1.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-800 dark:bg-slate-900 dark:text-blue-300 dark:hover:bg-blue-950/40"
+                              title="Descuenta de una vez todos los repuestos de un kit y los liga a esta orden"
+                            >
+                              <Boxes size={14} /> Consumir kit
+                            </button>
+                          </div>
+                          {kitNotice && (
+                            <p className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">
+                              {kitNotice}
+                            </p>
+                          )}
                           <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                             Al finalizar, se descontará el stock y el costo quedará ligado a esta OT.
                           </p>
@@ -1753,6 +1780,19 @@ export const WorkOrderDetailModal = ({
 
         <div className="px-4 py-4 sm:px-6 sm:py-5 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center bg-slate-50/50 dark:bg-slate-900/50 mt-auto">
           <div className="flex gap-2 justify-stretch sm:justify-start [&>button]:flex-1 [&>button]:sm:flex-initial">
+            {!isReadOnly && !isClosed && hasPermission('EDIT_WORK_ORDERS') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setKitNotice(null);
+                  setIsKitModalOpen(true);
+                }}
+                className="px-3 sm:px-4 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-950/70"
+                title="Descuenta de una vez todos los repuestos de un kit y los liga a esta orden"
+              >
+                <Boxes size={15} /> Consumir kit
+              </button>
+            )}
             {hasPermission('DELETE_WORK_ORDERS') && onDelete && canEdit && (
               <>
                 <button type="button" onClick={() => onDelete(workOrder.id)} className="px-3 sm:px-4 py-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors">
@@ -1800,6 +1840,21 @@ export const WorkOrderDetailModal = ({
         </div>
       </div>
     </div>
+    {isKitModalOpen && (
+      <ConsumeKitModal
+        isOpen={isKitModalOpen}
+        onClose={() => setIsKitModalOpen(false)}
+        workOrderId={workOrder.id}
+        workOrderFolio={formatWorkOrderFolio(workOrder.folio)}
+        onConsumed={(message) => {
+          setKitNotice(message);
+          void getWorkOrderById(workOrder.id)
+            .then((full) => setLiveWorkOrder(full))
+            .catch(() => undefined);
+          window.setTimeout(() => setKitNotice(null), 8000);
+        }}
+      />
+    )}
     {zoomSrc && (
       <div
         className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4"

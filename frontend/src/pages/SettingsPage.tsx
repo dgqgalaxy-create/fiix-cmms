@@ -1,8 +1,8 @@
-﻿import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { DetailSkeleton } from '../components/common/Skeleton';
 import { Navigate, Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft, Globe, Clock, ListPlus, Trash2, Loader2, Plug, Copy, Plus, ShieldCheck, Languages, Gauge } from 'lucide-react';
+import { Settings, Bell, Palette, Code, Monitor, Sun, Moon, Shield, Timer, Save, RotateCcw, ToggleLeft, Globe, Clock, ListPlus, Trash2, Loader2, Plug, Copy, Plus, ShieldCheck, Languages, Gauge, Tags } from 'lucide-react';
 import { PermissionsPage } from './PermissionsPage';
 import { DeveloperOptions } from './DeveloperOptions';
 import { ChecklistCatalogue } from '../components/ChecklistCatalogue';
@@ -17,6 +17,7 @@ import { LANGUAGE_LABELS, type Language } from '../i18n/translations';
 import { getCustomFields, createCustomField, deleteCustomField, updateCustomField, ENTITY_LABELS, TYPE_LABELS, type CustomFieldDefinition, type CustomFieldEntity, type CustomFieldType } from '../api/customFields';
 import { getApiKeys, createApiKey, revokeApiKey, getWebhooks, createWebhook, deleteWebhook, updateWebhook, testWebhook, WEBHOOK_EVENTS, type ApiKeyRow, type WebhookRow } from '../api/integrations';
 import { getApprovalRules, createApprovalRule, updateApprovalRule, deleteApprovalRule, type ApprovalRule } from '../api/approvals';
+import { CategoriesSettings } from '../components/settings/CategoriesSettings';
 import api from '../api/axios';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
 import { canUseTechnicianMobileUi, isTechnicianMobileUiPrefOn } from '../hooks/useTechnicianMobileShell';
@@ -689,6 +690,8 @@ export const SettingsPage = () => {
             {isAdmin && hasPermission('MANAGE_CHECKLIST_CATALOG') &&
               navBtn('checklist_catalogue', 'Catálogo de Checklist', <ListChecks size={18} />)}
             {isAdmin && navBtn('language', t('settings.language'), <Languages size={18} />)}
+            {(hasPermission('MANAGE_ASSETS') || hasPermission('EDIT_WORK_ORDERS')) &&
+              navBtn('categories', 'Categorías de activos y OT', <Tags size={18} />)}
             {isAdmin && navBtn('approvals', 'Aprobaciones', <ShieldCheck size={18} />)}
             {isAdmin && navBtn('integrations', 'Integraciones', <Plug size={18} />)}
             {isAdmin && navBtn('custom_fields', 'Campos personalizados', <ListPlus size={18} />)}
@@ -846,6 +849,8 @@ export const SettingsPage = () => {
               </div>
             </div>
           )}
+
+          {activeTab === 'categories' && <CategoriesSettings />}
 
           {isAdmin && activeTab === 'language' && (
             <div className="space-y-4">

@@ -286,6 +286,7 @@ function buildWorkOrderWhere(req: AuthRequest): Record<string, unknown> {
     openOnly,
     includeUnscheduled,
     overdue,
+    categoryId,
   } = req.query;
 
   const and: Record<string, unknown>[] = [];
@@ -315,6 +316,7 @@ function buildWorkOrderWhere(req: AuthRequest): Record<string, unknown> {
   if (req.query.excludeCancelled === 'true') and.push({ status: { not: 'ANULADO' } });
   if (priority) and.push({ priority: String(priority) });
   if (maintenanceType) and.push({ maintenance_type: String(maintenanceType) });
+  if (categoryId) and.push({ category_id: String(categoryId) });
   if (unassigned === '1' || unassigned === 'true') {
     and.push({ assigned_technicians: { none: {} } });
   }
@@ -546,6 +548,7 @@ export const getWorkOrderById = async (req: AuthRequest, res: Response): Promise
           },
         },
         contractor: true,
+        category: true,
         failure_problem: true,
         failure_cause: true,
         failure_remedy: true,
@@ -707,7 +710,7 @@ export const createPublicWorkOrder = async (req: Request, res: Response): Promis
 
 export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { title, description, asset_id, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group, scheduled_date, due_date } = req.body;
+    const { title, description, asset_id, zone_id, priority, maintenance_type, machine_stopped, requester_name, production_group, scheduled_date, due_date, category_id } = req.body;
     let { assigned_technicians_ids } = req.body;
     
     if (assigned_technicians_ids && !Array.isArray(assigned_technicians_ids)) {
@@ -746,6 +749,7 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
         requester_name,
         production_group,
         status: 'PENDIENTE',
+        ...(category_id ? { category_id: String(category_id) } : {}),
         scheduled_date: scheduled_date ? parseDateInput(scheduled_date) : null,
         due_date: due_date ? parseDateInput(due_date) : null,
         request_image_url,
@@ -759,6 +763,7 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
       include: {
         asset: true,
         zone: true,
+        category: true,
       }
     });
 
@@ -780,7 +785,7 @@ export const createWorkOrder = async (req: AuthRequest, res: Response): Promise<
 export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { title, description, asset_id, status, hold_reason, resolution_notes, zone_id, priority, contractor_id, maintenance_type, machine_stopped, requester_name, production_group, signature_clean_area, signature_delivery, used_items, failure_problem_id, failure_cause_id, failure_remedy_id, scheduled_date, due_date } = req.body;
+    const { title, description, asset_id, status, hold_reason, resolution_notes, zone_id, priority, contractor_id, maintenance_type, machine_stopped, requester_name, production_group, signature_clean_area, signature_delivery, used_items, failure_problem_id, failure_cause_id, failure_remedy_id, scheduled_date, due_date, category_id } = req.body;
     let { assigned_technicians_ids } = req.body;
     if (typeof assigned_technicians_ids === 'string') {
       try {
@@ -873,6 +878,7 @@ export const updateWorkOrder = async (req: AuthRequest, res: Response): Promise<
 
     if (zone_id !== undefined) updateData.zone_id = zone_id;
     if (priority !== undefined) updateData.priority = priority;
+    if (category_id !== undefined) updateData.category_id = category_id ? String(category_id) : null;
     if (maintenance_type !== undefined) updateData.maintenance_type = maintenance_type;
     if (machine_stopped !== undefined) updateData.machine_stopped = machine_stopped === true || machine_stopped === 'true';
     if (requester_name !== undefined) updateData.requester_name = requester_name;

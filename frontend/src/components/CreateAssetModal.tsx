@@ -6,6 +6,7 @@ import type { Asset } from '../api/assets';
 import { getZones } from '../api/zones';
 import type { Zone } from '../api/zones';
 import { getVendors, getItems } from '../api/inventory';
+import { getAssetCategories, type AssetCategory } from '../api/categories';
 import type { Vendor, Item } from '../api/inventory';
 import {
   ASSET_KIND_LABELS,
@@ -43,6 +44,8 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
   const [residualValue, setResidualValue] = useState('');
   const [isCritical, setIsCritical] = useState(false);
   const [isObsolete, setIsObsolete] = useState(false);
+  const [categoryId, setCategoryId] = useState('');
+  const [categories, setCategories] = useState<AssetCategory[]>([]);
   
   const [zones, setZones] = useState<Zone[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -161,6 +164,10 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
           setIsLoadingVendors(false);
         });
 
+      getAssetCategories()
+        .then((data) => setCategories(data.filter((c) => c.is_active)))
+        .catch(() => {});
+
       getItems()
         .then((data) => setItems(data))
         .catch(() => {});
@@ -226,6 +233,7 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
       submitData.append('is_critical', String(isCritical));
       submitData.append('is_obsolete', String(isObsolete));
       submitData.append('parts', JSON.stringify(parts));
+      submitData.append('category_id', categoryId);
       
       if (imageFile) submitData.append('image', imageFile);
       if (documentFile) submitData.append('document', documentFile);
@@ -284,6 +292,20 @@ export const CreateAssetModal = ({ isOpen, onClose, onSubmit, initialData }: Pro
                     : 'Formato MTTO-NNNN-S-DDD-T. NNNN y DDD se asignan al guardar.'}
                 </p>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Categoría</label>
+                <select
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                >
+                  <option value="">Sin categoría</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label title="Operativo: en producción. En mantenimiento: fuera por trabajo. Fuera de servicio: no puede operar." className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Estado *</label>
                 <SearchableSelect

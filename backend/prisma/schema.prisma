@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   engineType = "library"
 }
 
@@ -69,11 +69,11 @@ enum QtyMode {
 }
 
 model UnitOfMeasure {
-  id               String   @id @default(uuid()) @db.Uuid
-  name             String   @unique
-  is_active        Boolean  @default(true)
+  id               String  @id @default(uuid()) @db.Uuid
+  name             String  @unique
+  is_active        Boolean @default(true)
   /// Sugerencia al elegir esta UOM en un ítem (el ítem guarda su propio qty_mode).
-  default_qty_mode QtyMode  @default(INTEGER)
+  default_qty_mode QtyMode @default(INTEGER)
 }
 
 enum FrequencyType {
@@ -84,104 +84,105 @@ enum FrequencyType {
 }
 
 model User {
-  id                   String      @id @default(uuid()) @db.Uuid
+  id                   String          @id @default(uuid()) @db.Uuid
   name                 String
-  email                String      @unique
+  email                String          @unique
   password_hash        String
   role                 Role
   /// Rol configurable (RoleDefinition). Si es null se usa el enum Role.
-  role_id              String?     @db.Uuid
+  role_id              String?         @db.Uuid
   role_def             RoleDefinition? @relation(fields: [role_id], references: [id], onDelete: SetNull)
-  is_active            Boolean     @default(true)
-  must_change_password Boolean     @default(false)
+  is_active            Boolean         @default(true)
+  must_change_password Boolean         @default(false)
   /// Tarifa por hora (MXN). Alimenta el costo de mano de obra.
   hourly_rate          Float?
   last_active          DateTime?
   current_path         String?
-  created_at           DateTime    @default(now())
-  updated_at           DateTime    @updatedAt
+  created_at           DateTime        @default(now())
+  updated_at           DateTime        @updatedAt
 
-  developer_access_lock DeveloperAccessLock?
-  created_orders  WorkOrder[] @relation("CreatedOrders")
-  assigned_orders WorkOrder[] @relation("AssignedOrders")
-  inventory_transactions InventoryTransaction[]
-  created_purchase_orders PurchaseOrder[] @relation("CreatedPurchaseOrders")
-  purchase_order_documents PurchaseOrderDocument[]
-  notifications   AppNotification[]
-  push_subscriptions PushSubscription[]
-  checklist_technician DailyChecklist[] @relation("ChecklistTechnician")
-  checklist_leader DailyChecklist[] @relation("ChecklistLeader")
-  checklist_transfers_from ChecklistTransfer[] @relation("ChecklistTransferFrom")
-  checklist_transfers_to   ChecklistTransfer[] @relation("ChecklistTransferTo")
-  checklist_continuation_requests ChecklistContinuationRequest[] @relation("ChecklistContinuationRequester")
+  developer_access_lock              DeveloperAccessLock?
+  created_orders                     WorkOrder[]                    @relation("CreatedOrders")
+  assigned_orders                    WorkOrder[]                    @relation("AssignedOrders")
+  inventory_transactions             InventoryTransaction[]
+  created_purchase_orders            PurchaseOrder[]                @relation("CreatedPurchaseOrders")
+  purchase_order_documents           PurchaseOrderDocument[]
+  notifications                      AppNotification[]
+  push_subscriptions                 PushSubscription[]
+  checklist_technician               DailyChecklist[]               @relation("ChecklistTechnician")
+  checklist_leader                   DailyChecklist[]               @relation("ChecklistLeader")
+  checklist_transfers_from           ChecklistTransfer[]            @relation("ChecklistTransferFrom")
+  checklist_transfers_to             ChecklistTransfer[]            @relation("ChecklistTransferTo")
+  checklist_continuation_requests    ChecklistContinuationRequest[] @relation("ChecklistContinuationRequester")
   checklist_continuation_resolutions ChecklistContinuationRequest[] @relation("ChecklistContinuationResolver")
-  personal_notes PersonalNote[]
-  operational_tasks_created OperationalTask[] @relation("OperationalTaskCreator")
-  operational_tasks_assigned OperationalTask[] @relation("OperationalTaskAssignee")
-  announcements_created GlobalAnnouncement[] @relation("AnnouncementCreator")
-  announcement_reads GlobalAnnouncementRead[]
-  work_order_comments WorkOrderComment[]
-  chat_conversations_created ChatConversation[] @relation("ChatConversationCreator")
-  chat_participations ChatParticipant[]
-  chat_messages ChatMessage[]
-  chat_message_receipts ChatMessageReceipt[]
-  chat_message_reactions ChatMessageReaction[]
+  personal_notes                     PersonalNote[]
+  operational_tasks_created          OperationalTask[]              @relation("OperationalTaskCreator")
+  operational_tasks_assigned         OperationalTask[]              @relation("OperationalTaskAssignee")
+  announcements_created              GlobalAnnouncement[]           @relation("AnnouncementCreator")
+  announcement_reads                 GlobalAnnouncementRead[]
+  work_order_comments                WorkOrderComment[]
+  chat_conversations_created         ChatConversation[]             @relation("ChatConversationCreator")
+  chat_participations                ChatParticipant[]
+  chat_messages                      ChatMessage[]
+  chat_message_receipts              ChatMessageReceipt[]
+  chat_message_reactions             ChatMessageReaction[]
 
-  patterns             TechnicianPattern[]
-  exceptions           TechnicianException[]
-  time_debts           TechnicianTimeDebt[]
-  shifts               TechnicianShift[]
-  meter_readings       MeterReading[]
-  documents            Document[]
-  reported_downtimes   AssetDowntime[]
-  wo_relations         WorkOrderRelation[]
-  work_order_costs     WorkOrderCost[]
-  work_order_views     WorkOrderView[]
-  api_keys             ApiKey[]
-  approvals_decided    WorkOrderApproval[]
-  crew_memberships     CrewMember[]
-  preferences          Json?       @default("{}")
+  patterns           TechnicianPattern[]
+  exceptions         TechnicianException[]
+  time_debts         TechnicianTimeDebt[]
+  shifts             TechnicianShift[]
+  meter_readings     MeterReading[]
+  documents          Document[]
+  reported_downtimes AssetDowntime[]
+  wo_relations       WorkOrderRelation[]
+  work_order_costs   WorkOrderCost[]
+  work_order_views   WorkOrderView[]
+  api_keys           ApiKey[]
+  approvals_decided  WorkOrderApproval[]
+  crew_memberships   CrewMember[]
+  preferences        Json?                 @default("{}")
 }
 
 /// Patrón de turno con vigencia. Puede haber varios por persona: uno por periodo.
 /// `end_date` nulo = vigente (fijo indefinido). Al programar un cambio se cierra
 /// el anterior el día anterior, así se soportan meses con patrones distintos.
 model TechnicianPattern {
-  id           String   @id @default(uuid()) @db.Uuid
-  user_id      String   @db.Uuid
-  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  pattern_type String   // "MIXTO", "4X4_ROTATORIO", "4X4_FIJO"
+  id           String    @id @default(uuid()) @db.Uuid
+  user_id      String    @db.Uuid
+  user         User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  pattern_type String // "MIXTO", "4X4_ROTATORIO", "4X4_FIJO"
   start_date   DateTime
   end_date     DateTime?
-  created_at   DateTime @default(now())
+  created_at   DateTime  @default(now())
 
   @@index([user_id, start_date])
 }
 
 model TechnicianException {
-  id             String   @id @default(uuid()) @db.Uuid
-  user_id        String   @db.Uuid
-  user           User     @relation(fields: [user_id], references: [id])
-  date           DateTime @db.Date
+  id             String              @id @default(uuid()) @db.Uuid
+  user_id        String              @db.Uuid
+  user           User                @relation(fields: [user_id], references: [id])
+  date           DateTime            @db.Date
   start_time     String?
   end_time       String?
   paid_minutes   Int?
-  time_debt_id   String? @db.Uuid
+  time_debt_id   String?             @db.Uuid
   time_debt      TechnicianTimeDebt? @relation(fields: [time_debt_id], references: [id])
-  exception_type String   // "FALTA", "VACACIONES", "PERMISO_CG", "PERMISO_SG", "TIEMPO_EXTRA", "FESTIVO"
-  notes          String?  
-  created_at     DateTime @default(now())
+  exception_type String // "FALTA", "VACACIONES", "PERMISO_CG", "PERMISO_SG", "TIEMPO_EXTRA", "FESTIVO"
+  notes          String?
+  created_at     DateTime            @default(now())
 }
 
 model TechnicianTimeDebt {
-  id            String @id @default(uuid()) @db.Uuid
-  user_id       String @db.Uuid
-  user          User @relation(fields: [user_id], references: [id])
-  date          DateTime @db.Date
+  id            String                @id @default(uuid()) @db.Uuid
+  user_id       String                @db.Uuid
+  user          User                  @relation(fields: [user_id], references: [id])
+  date          DateTime              @db.Date
   total_minutes Int
   notes         String?
   payments      TechnicianException[]
-  created_at    DateTime @default(now())
+  created_at    DateTime              @default(now())
+
   @@index([user_id])
 }
 
@@ -203,28 +204,28 @@ model TechnicianShift {
 }
 
 model Requester {
-  id          String      @id @default(uuid()) @db.Uuid
-  name        String      @unique
-  email       String?
-  department  String?
-  created_at  DateTime    @default(now())
-  updated_at  DateTime    @updatedAt
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String   @unique
+  email      String?
+  department String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
 
 model Zone {
-  id            String        @id @default(uuid()) @db.Uuid
-  name          String        @unique
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String   @unique
   /// Si false, la zona está en modo «Sin secciones» (activos sin sección).
-  has_sections  Boolean       @default(true)
+  has_sections   Boolean  @default(true)
   /// Imagen del plano de la zona (se sube desde Activos → Plano).
   plan_image_url String?
-  created_at    DateTime      @default(now())
-  updated_at    DateTime      @updatedAt
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
 
-  work_orders   WorkOrder[]
-  crews         Crew[]
-  assets        Asset[]
-  sections      ZoneSection[]
+  work_orders WorkOrder[]
+  crews       Crew[]
+  assets      Asset[]
+  sections    ZoneSection[]
 }
 
 /// Subzona / sección configurable dentro de una zona (p. ej. A–E en L1).
@@ -236,15 +237,38 @@ model ZoneSection {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  assets     Asset[]
+  assets Asset[]
 
   @@unique([zone_id, name])
   @@index([zone_id])
 }
 
+/// Categorías para clasificar activos (bombas, motores, bandas…).
+model AssetCategory {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  is_active   Boolean  @default(true)
+  sort_order  Int      @default(0)
+  created_at  DateTime @default(now())
+  assets      Asset[]
+}
+
+/// Categorías para clasificar órdenes de trabajo (seguridad, mejora, proyecto…).
+model WorkOrderCategory {
+  id          String      @id @default(uuid()) @db.Uuid
+  name        String      @unique
+  description String?
+  color       String?
+  is_active   Boolean     @default(true)
+  sort_order  Int         @default(0)
+  created_at  DateTime    @default(now())
+  work_orders WorkOrder[]
+}
+
 model Asset {
-  id              String      @id @default(uuid()) @db.Uuid
-  internal_code   String      @unique
+  id              String         @id @default(uuid()) @db.Uuid
+  internal_code   String         @unique
   name            String
   brand           String
   model           String
@@ -254,42 +278,44 @@ model Asset {
   /// Letra A–E sincronizada desde ZoneSection.name cuando aplica al código MTTO; null → X.
   section         AssetSection?
   /// Sección/subzona de la zona (nullable = sin sección).
-  zone_section_id String?     @db.Uuid
-  zone_section    ZoneSection? @relation(fields: [zone_section_id], references: [id], onDelete: SetNull)
+  zone_section_id String?        @db.Uuid
+  zone_section    ZoneSection?   @relation(fields: [zone_section_id], references: [id], onDelete: SetNull)
   /// Activo fijo (F) o controlable (C); entra en el código MTTO-…-F/C.
-  asset_kind      AssetKind   @default(FIJO)
+  category_id     String?        @db.Uuid
+  category        AssetCategory? @relation(fields: [category_id], references: [id], onDelete: SetNull)
+  asset_kind      AssetKind      @default(FIJO)
   /// Equipo crítico (prioridad alta para mantenimiento).
-  is_critical     Boolean     @default(false)
+  is_critical     Boolean        @default(false)
   /// Equipo obsoleto (oculto de los listados por defecto).
-  is_obsolete     Boolean     @default(false)
+  is_obsolete     Boolean        @default(false)
 
-  image_url       String?
-  document_url    String?
+  image_url    String?
+  document_url String?
 
-  created_at      DateTime    @default(now())
-  updated_at      DateTime    @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
-  zone_id         String?     @db.Uuid
-  zone            Zone?       @relation(fields: [zone_id], references: [id])
-  
-  vendor_id       String?     @db.Uuid
-  vendor          Vendor?     @relation(fields: [vendor_id], references: [id])
+  zone_id String? @db.Uuid
+  zone    Zone?   @relation(fields: [zone_id], references: [id])
+
+  vendor_id         String?   @db.Uuid
+  vendor            Vendor?   @relation(fields: [vendor_id], references: [id])
   /// Posición del activo en el plano de su zona (porcentaje 0-100).
-  plan_x          Float?
-  plan_y          Float?
-  price           Float?
+  plan_x            Float?
+  plan_y            Float?
+  price             Float?
   /// Datos para el cálculo de depreciación (línea recta).
-  acquisition_date   DateTime?
-  useful_life_years  Int?
-  residual_value     Float?
+  acquisition_date  DateTime?
+  useful_life_years Int?
+  residual_value    Float?
 
-  work_orders     WorkOrder[]
+  work_orders       WorkOrder[]
   maintenance_plans MaintenancePlan[]
   operational_tasks OperationalTask[]
-  parts           AssetPart[]
-  meters          Meter[]
-  downtimes       AssetDowntime[]
-  documents       Document[]
+  parts             AssetPart[]
+  meters            Meter[]
+  downtimes         AssetDowntime[]
+  documents         Document[]
 
   @@index([zone_id])
   @@index([status])
@@ -297,16 +323,16 @@ model Asset {
 }
 
 model WorkOrder {
-  id               String          @id @default(uuid()) @db.Uuid
-  folio            Int             @default(autoincrement())
-  title            String
-  description      String?
+  id          String  @id @default(uuid()) @db.Uuid
+  folio       Int     @default(autoincrement())
+  title       String
+  description String?
 
-  asset_id         String          @db.Uuid
-  asset            Asset           @relation(fields: [asset_id], references: [id])
+  asset_id String @db.Uuid
+  asset    Asset  @relation(fields: [asset_id], references: [id])
 
-  zone_id          String?         @db.Uuid
-  zone             Zone?           @relation(fields: [zone_id], references: [id])
+  zone_id String? @db.Uuid
+  zone    Zone?   @relation(fields: [zone_id], references: [id])
 
   priority         Priority        @default(NORMAL)
   maintenance_type MaintenanceType @default(CORRECTIVO)
@@ -314,19 +340,19 @@ model WorkOrder {
   requester_name   String?
   production_group ProductionGroup @default(NA)
 
-  status           WorkOrderStatus
-  hold_reason      String?
+  status              WorkOrderStatus
+  hold_reason         String?
   scheduled_date      DateTime?
   due_date            DateTime?
   started_at          DateTime?
   /// Momento de la última asignación (base de la métrica de atención).
   assigned_at         DateTime?
   /// Veces que la orden cambió de técnicos (ping-pong).
-  reassignment_count  Int               @default(0)
+  reassignment_count  Int             @default(0)
   paused_at           DateTime?
   last_resumed_at     DateTime?
   /// Tiempo de labor acumulado en ms (entero 64 bits desde v1.57: sin recorte a ~24.8 días).
-  accumulated_time_ms BigInt            @default(0)
+  accumulated_time_ms BigInt          @default(0)
   resolution_notes    String?
   request_image_url   String?
   before_image_url    String?
@@ -335,50 +361,52 @@ model WorkOrder {
   signature_clean_area String?
   signature_delivery   String?
 
-  created_by_id    String          @db.Uuid
-  created_by       User            @relation("CreatedOrders", fields: [created_by_id], references: [id])
+  created_by_id String @db.Uuid
+  created_by    User   @relation("CreatedOrders", fields: [created_by_id], references: [id])
 
-  assigned_technicians User[]          @relation("AssignedOrders")
+  assigned_technicians User[] @relation("AssignedOrders")
 
-  created_at       DateTime        @default(now())
-  updated_at       DateTime        @updatedAt
-  completed_at     DateTime?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+  completed_at DateTime?
 
-  maintenance_plan_id String?      @db.Uuid
-  maintenance_plan    MaintenancePlan? @relation("GeneratedOrders", fields: [maintenance_plan_id], references: [id])
+  category_id         String?            @db.Uuid
+  category            WorkOrderCategory? @relation(fields: [category_id], references: [id], onDelete: SetNull)
+  maintenance_plan_id String?            @db.Uuid
+  maintenance_plan    MaintenancePlan?   @relation("GeneratedOrders", fields: [maintenance_plan_id], references: [id])
 
-  failure_problem_id  String?      @db.Uuid
-  failure_problem     FailureProblem? @relation(fields: [failure_problem_id], references: [id])
+  failure_problem_id String?         @db.Uuid
+  failure_problem    FailureProblem? @relation(fields: [failure_problem_id], references: [id])
 
-  failure_cause_id    String?      @db.Uuid
-  failure_cause       FailureCause?   @relation(fields: [failure_cause_id], references: [id])
+  failure_cause_id String?       @db.Uuid
+  failure_cause    FailureCause? @relation(fields: [failure_cause_id], references: [id])
 
-  failure_remedy_id   String?      @db.Uuid
-  failure_remedy      FailureRemedy?  @relation(fields: [failure_remedy_id], references: [id])
+  failure_remedy_id String?        @db.Uuid
+  failure_remedy    FailureRemedy? @relation(fields: [failure_remedy_id], references: [id])
 
-  sla_events          WorkOrderSlaEvent[]
+  sla_events             WorkOrderSlaEvent[]
   inventory_transactions InventoryTransaction[]
-  operational_tasks   OperationalTask[]
-  comments            WorkOrderComment[]
-  downtimes           AssetDowntime[]
-  relations_from      WorkOrderRelation[] @relation("WorkOrderRelations")
-  relations_to        WorkOrderRelation[] @relation("WorkOrderRelated")
-  documents           Document[]
+  operational_tasks      OperationalTask[]
+  comments               WorkOrderComment[]
+  downtimes              AssetDowntime[]
+  relations_from         WorkOrderRelation[]    @relation("WorkOrderRelations")
+  relations_to           WorkOrderRelation[]    @relation("WorkOrderRelated")
+  documents              Document[]
   /// Costos adicionales de la orden (servicios, fletes, refacciones externas).
-  costs               WorkOrderCost[]
+  costs                  WorkOrderCost[]
   /// Última actividad (comentario, cambio de estado…). Sirve para el aviso de
   /// «cambios sin revisar» por usuario.
-  last_activity_at    DateTime            @default(now())
-  views               WorkOrderView[]
+  last_activity_at       DateTime               @default(now())
+  views                  WorkOrderView[]
   /// Estado de aprobación (reglas de autorización).
-  approval_status     ApprovalStatus      @default(NONE)
-  approvals           WorkOrderApproval[]
+  approval_status        ApprovalStatus         @default(NONE)
+  approvals              WorkOrderApproval[]
   /// Contratista que ejecuta la orden (opcional).
-  contractor_id       String?             @db.Uuid
-  contractor          Contractor?         @relation(fields: [contractor_id], references: [id], onDelete: SetNull)
+  contractor_id          String?                @db.Uuid
+  contractor             Contractor?            @relation(fields: [contractor_id], references: [id], onDelete: SetNull)
   /// Cuadrilla asignada a la orden (opcional).
-  crew_id             String?             @db.Uuid
-  crew                Crew?               @relation(fields: [crew_id], references: [id], onDelete: SetNull)
+  crew_id                String?                @db.Uuid
+  crew                   Crew?                  @relation(fields: [crew_id], references: [id], onDelete: SetNull)
 
   @@index([status, created_at])
   @@index([created_at])
@@ -389,11 +417,11 @@ model WorkOrder {
 }
 
 model KPIGoal {
-  id               String          @id @default(uuid()) @db.Uuid
-  metricKey        String          @unique
-  targetValue      Float
-  unit             String?
-  updated_at       DateTime        @updatedAt
+  id          String   @id @default(uuid()) @db.Uuid
+  metricKey   String   @unique
+  targetValue Float
+  unit        String?
+  updated_at  DateTime @updatedAt
 }
 
 model RolePermission {
@@ -402,6 +430,7 @@ model RolePermission {
   permissions Json
   updated_at  DateTime @updatedAt
 }
+
 /// Rol configurable (estilo Atlas). `base_role` conserva la compatibilidad con el
 /// enum Role que usan middleware, KPIs y reportes; `permissions` es la fuente de
 /// verdad cuando el usuario tiene role_id asignado.
@@ -418,64 +447,64 @@ model RoleDefinition {
 }
 
 model ItemCategory {
-  id          String   @id @default(uuid()) @db.Uuid
-  internal_id String   @unique // Ej. "CAT001"
+  id          String  @id @default(uuid()) @db.Uuid
+  internal_id String  @unique // Ej. "CAT001"
   name        String
   icon_url    String?
-  is_active   Boolean  @default(true)
-  
-  items       Item[]
+  is_active   Boolean @default(true)
+
+  items Item[]
 }
 
 model ItemLocation {
-  id          String   @id @default(uuid()) @db.Uuid
-  internal_id String   @unique // Ej. "LOC0001"
+  id          String  @id @default(uuid()) @db.Uuid
+  internal_id String  @unique // Ej. "LOC0001"
   name        String
   icon_url    String?
-  is_active   Boolean  @default(true)
+  is_active   Boolean @default(true)
 
-  items       Item[]
+  items Item[]
 }
 
 model Vendor {
-  id          String   @id @default(uuid()) @db.Uuid
-  internal_id String   @unique // Ej. "PROV001"
+  id          String  @id @default(uuid()) @db.Uuid
+  internal_id String  @unique // Ej. "PROV001"
   name        String
   logo_url    String?
   website_url String?
   phone       String?
   email       String?
   address     String?
-  is_active   Boolean  @default(true)
+  is_active   Boolean @default(true)
 
-  items       Item[]
+  items           Item[]
   purchase_orders PurchaseOrder[]
-  assets      Asset[]
+  assets          Asset[]
 }
 
 model Item {
-  id                 String          @id @default(uuid()) @db.Uuid
-  internal_code      String          @unique // Ej. "MTTO-0001"
-  name               String
-  description        String?
-  image_url          String?
-  
-  category_id        String?         @db.Uuid
-  category           ItemCategory?   @relation(fields: [category_id], references: [id])
-  
-  vendor_id          String?         @db.Uuid
-  vendor             Vendor?         @relation(fields: [vendor_id], references: [id])
-  
-  location_id        String?         @db.Uuid
-  location           ItemLocation?   @relation(fields: [location_id], references: [id])
-  
-  purchase_cost      Float?
-  stock              Float           @default(0)
-  minimum_inventory  Float           @default(0)
-  is_active          Boolean         @default(true)
-  uom                String
+  id            String  @id @default(uuid()) @db.Uuid
+  internal_code String  @unique // Ej. "MTTO-0001"
+  name          String
+  description   String?
+  image_url     String?
+
+  category_id String?       @db.Uuid
+  category    ItemCategory? @relation(fields: [category_id], references: [id])
+
+  vendor_id String? @db.Uuid
+  vendor    Vendor? @relation(fields: [vendor_id], references: [id])
+
+  location_id String?       @db.Uuid
+  location    ItemLocation? @relation(fields: [location_id], references: [id])
+
+  purchase_cost     Float?
+  stock             Float   @default(0)
+  minimum_inventory Float   @default(0)
+  is_active         Boolean @default(true)
+  uom               String
   /// Enteros (tornillos) vs decimales (litros/kg). Valida cantidades en movimientos/OT/OC.
-  qty_mode           QtyMode         @default(INTEGER)
+  qty_mode          QtyMode @default(INTEGER)
 
   inventory_transactions InventoryTransaction[]
   maintenance_plans      PlanItem[]
@@ -483,7 +512,8 @@ model Item {
   asset_parts            AssetPart[]
   documents              Document[]
 
-  kit_items              KitItem[]
+  kit_items KitItem[]
+
   @@index([category_id])
   @@index([location_id])
   @@index([vendor_id])
@@ -507,13 +537,13 @@ model AssetPart {
 }
 
 model InventoryTransaction {
-  id          String   @id @default(uuid()) @db.Uuid
-  
-  item_id     String   @db.Uuid
-  item        Item     @relation(fields: [item_id], references: [id])
-  
-  user_id     String   @db.Uuid
-  user        User     @relation(fields: [user_id], references: [id])
+  id String @id @default(uuid()) @db.Uuid
+
+  item_id String @db.Uuid
+  item    Item   @relation(fields: [item_id], references: [id])
+
+  user_id String @db.Uuid
+  user    User   @relation(fields: [user_id], references: [id])
 
   work_order_id String?    @db.Uuid
   work_order    WorkOrder? @relation(fields: [work_order_id], references: [id], onDelete: SetNull)
@@ -526,10 +556,10 @@ model InventoryTransaction {
   /// capturado en la app (los movimientos de la app no llevan external_id).
   external_id String? @unique
 
-  unit_cost   Float?   // Costo unitario al momento del consumo (para ligar costo a la OT)
-  amount      Float    // Positivo para entradas, negativo para salidas
-  reason      String   // Texto libre
-  created_at  DateTime @default(now())
+  unit_cost  Float? // Costo unitario al momento del consumo (para ligar costo a la OT)
+  amount     Float // Positivo para entradas, negativo para salidas
+  reason     String // Texto libre
+  created_at DateTime @default(now())
 
   @@index([item_id, created_at])
   @@index([created_at])
@@ -538,38 +568,38 @@ model InventoryTransaction {
 }
 
 model MaintenancePlan {
-  id                String          @id @default(uuid()) @db.Uuid
-  title             String
-  description       String?
-  
-  asset_id          String          @db.Uuid
-  asset             Asset           @relation(fields: [asset_id], references: [id])
-  
-  frequency_type    FrequencyType
-  frequency_value   Int             
-  
+  id          String  @id @default(uuid()) @db.Uuid
+  title       String
+  description String?
+
+  asset_id String @db.Uuid
+  asset    Asset  @relation(fields: [asset_id], references: [id])
+
+  frequency_type  FrequencyType
+  frequency_value Int
+
   last_triggered_at DateTime?
   next_due_date     DateTime
-  days_in_advance   Int             @default(3)
-  
-  is_active         Boolean         @default(true)
-  
-  created_at        DateTime        @default(now())
-  updated_at        DateTime        @updatedAt
+  days_in_advance   Int       @default(3)
 
-  generated_orders  WorkOrder[]     @relation("GeneratedOrders")
-  required_items    PlanItem[]      
+  is_active Boolean @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  generated_orders WorkOrder[] @relation("GeneratedOrders")
+  required_items   PlanItem[]
 }
 
 model PlanItem {
   id                  String          @id @default(uuid()) @db.Uuid
   maintenance_plan_id String          @db.Uuid
   maintenance_plan    MaintenancePlan @relation(fields: [maintenance_plan_id], references: [id], onDelete: Cascade)
-  
-  item_id             String          @db.Uuid
-  item                Item            @relation(fields: [item_id], references: [id])
-  
-  quantity_required   Float
+
+  item_id String @db.Uuid
+  item    Item   @relation(fields: [item_id], references: [id])
+
+  quantity_required Float
 }
 
 enum PurchaseOrderStatus {
@@ -588,132 +618,132 @@ enum PurchaseOrderDocType {
 }
 
 model PurchaseOrder {
-  id              String   @id @default(uuid()) @db.Uuid
-  folio           Int      @default(autoincrement())
-  
-  vendor_id       String   @db.Uuid
-  vendor          Vendor   @relation(fields: [vendor_id], references: [id])
-  
-  status          PurchaseOrderStatus @default(BORRADOR)
-  
-  created_by_id   String   @db.Uuid
-  created_by      User     @relation("CreatedPurchaseOrders", fields: [created_by_id], references: [id])
-  
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-  expected_date   DateTime?
-  received_at     DateTime?
+  id    String @id @default(uuid()) @db.Uuid
+  folio Int    @default(autoincrement())
+
+  vendor_id String @db.Uuid
+  vendor    Vendor @relation(fields: [vendor_id], references: [id])
+
+  status PurchaseOrderStatus @default(BORRADOR)
+
+  created_by_id String @db.Uuid
+  created_by    User   @relation("CreatedPurchaseOrders", fields: [created_by_id], references: [id])
+
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  expected_date DateTime?
+  received_at   DateTime?
 
   /// Folio Solicitud de Pedido en SAP (texto libre).
-  sap_sp_folio    String?
+  sap_sp_folio String?
   /// Folio Orden de Compra en SAP (texto libre).
-  sap_oc_folio    String?
+  sap_oc_folio String?
 
   /// Porcentaje de IVA sobre el subtotal (precios de línea sin IVA). Ej. 16 = 16%.
-  iva_percent     Float    @default(0)
+  iva_percent Float @default(0)
 
-  receipts        PurchaseReceipt[]
-  items           PurchaseOrderItem[]
-  documents       PurchaseOrderDocument[]
+  receipts  PurchaseReceipt[]
+  items     PurchaseOrderItem[]
+  documents PurchaseOrderDocument[]
 }
 
 model PurchaseOrderItem {
-  id                 String   @id @default(uuid()) @db.Uuid
-  
-  purchase_order_id  String   @db.Uuid
-  purchase_order     PurchaseOrder @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade)
-  
-  item_id            String   @db.Uuid
-  item               Item     @relation(fields: [item_id], references: [id])
-  
-  quantity           Float
+  id String @id @default(uuid()) @db.Uuid
+
+  purchase_order_id String        @db.Uuid
+  purchase_order    PurchaseOrder @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade)
+
+  item_id String @db.Uuid
+  item    Item   @relation(fields: [item_id], references: [id])
+
+  quantity          Float
   /// Cantidad realmente recibida al cerrar la OC (null hasta RECIBIDA).
-  received_quantity  Float?
-  unit_cost          Float    // Precio capturado al crear la orden
+  received_quantity Float?
+  unit_cost         Float // Precio capturado al crear la orden
 }
 
 model PurchaseOrderDocument {
-  id                 String               @id @default(uuid()) @db.Uuid
-  purchase_order_id  String               @db.Uuid
-  purchase_order     PurchaseOrder        @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade)
-  doc_type           PurchaseOrderDocType
-  file_url           String
-  file_name          String
-  uploaded_by_id     String?              @db.Uuid
-  uploaded_by        User?                @relation(fields: [uploaded_by_id], references: [id])
-  created_at         DateTime             @default(now())
+  id                String               @id @default(uuid()) @db.Uuid
+  purchase_order_id String               @db.Uuid
+  purchase_order    PurchaseOrder        @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade)
+  doc_type          PurchaseOrderDocType
+  file_url          String
+  file_name         String
+  uploaded_by_id    String?              @db.Uuid
+  uploaded_by       User?                @relation(fields: [uploaded_by_id], references: [id])
+  created_at        DateTime             @default(now())
 
   @@index([purchase_order_id])
 }
 
 model FailureProblem {
-  id          String   @id @default(uuid()) @db.Uuid
-  name        String   @unique
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now())
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String   @unique
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
 
   causes      FailureCause[]
   work_orders WorkOrder[]
 }
 
 model FailureCause {
-  id          String   @id @default(uuid()) @db.Uuid
-  name        String
-  problem_id  String   @db.Uuid
-  problem     FailureProblem @relation(fields: [problem_id], references: [id], onDelete: Cascade)
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now())
+  id         String         @id @default(uuid()) @db.Uuid
+  name       String
+  problem_id String         @db.Uuid
+  problem    FailureProblem @relation(fields: [problem_id], references: [id], onDelete: Cascade)
+  is_active  Boolean        @default(true)
+  created_at DateTime       @default(now())
 
   remedies    FailureRemedy[]
   work_orders WorkOrder[]
 }
 
 model FailureRemedy {
-  id          String   @id @default(uuid()) @db.Uuid
-  name        String
-  cause_id    String   @db.Uuid
-  cause       FailureCause @relation(fields: [cause_id], references: [id], onDelete: Cascade)
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now())
+  id         String       @id @default(uuid()) @db.Uuid
+  name       String
+  cause_id   String       @db.Uuid
+  cause      FailureCause @relation(fields: [cause_id], references: [id], onDelete: Cascade)
+  is_active  Boolean      @default(true)
+  created_at DateTime     @default(now())
 
   work_orders WorkOrder[]
 }
 
 model SystemSettings {
-  id               String   @id @default(uuid()) @db.Uuid
+  id                          String   @id @default(uuid()) @db.Uuid
   /// Contraseña maestra de Opciones de Desarrollador (bcrypt). Si es null, se usa DEV_MENU_PASSWORD del .env.
-  dev_menu_password_hash String?
+  dev_menu_password_hash      String?
   /// Google Drive (importación de fotos) — editables desde Opciones de Desarrollador.
   google_drive_api_key        String?
   google_drive_items_folder   String?
   google_drive_vendors_folder String?
   google_drive_wo_folder      String?
-  email_enabled      Boolean  @default(false)
-  sla_enabled        Boolean  @default(true)
-  sla_policy         Json?
+  email_enabled               Boolean  @default(false)
+  sla_enabled                 Boolean  @default(true)
+  sla_policy                  Json?
   /// Características activas (módulos visibles). Clave = ruta del módulo.
-  features           Json?
+  features                    Json?
   /// Configuración del portal público de solicitudes (/request).
-  portal_config      Json?
+  portal_config               Json?
   /// Parámetros del tablero «Desempeño del equipo» (metas, pesos, banderas y horarios).
-  performance_config Json?
+  performance_config          Json?
   /// Preferencias de fecha y hora: zona IANA, formato de fecha y formato de hora.
-  time_zone          String?
+  time_zone                   String?
   /// Idioma de la interfaz: es | en.
-  language           String?
-  date_format        String?
-  time_format        String?
+  language                    String?
+  date_format                 String?
+  time_format                 String?
   /// Obsoleto: la interfaz móvil de técnico es preferencia por usuario
   /// (`User.preferences.use_technician_mobile_ui`). Se mantiene por compatibilidad de esquema.
-  technician_mobile_ui Boolean @default(true)
+  technician_mobile_ui        Boolean  @default(true)
   /// Tope de tiempo del trabajo de importación (minutos).
-  import_timeout_min    Int   @default(45)
-  checklist_column_count Int  @default(5)
+  import_timeout_min          Int      @default(45)
+  checklist_column_count      Int      @default(5)
   /// Líneas visibles en "Líneas y Costos" (global; editable solo por Admin).
-  line_costs_visible_zones Json?
+  line_costs_visible_zones    Json?
   /// Zonas incluidas en el KPI «Tiempo de respuesta» (global; editable solo por Admin). null/vacío = todas.
-  response_time_zone_ids Json?
-  updated_at       DateTime @updatedAt
+  response_time_zone_ids      Json?
+  updated_at                  DateTime @updatedAt
 }
 
 enum SlaEventType {
@@ -784,30 +814,30 @@ enum ChecklistContinuationStatus {
 }
 
 model ChecklistActivity {
-  id          String   @id @default(uuid()) @db.Uuid
-  name        String
-  order       Int      @default(0)
-  field_type  String   @default("CHECKBOX") // "CHECKBOX", "NUMBER", "TEXT"
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now())
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  order      Int      @default(0)
+  field_type String   @default("CHECKBOX") // "CHECKBOX", "NUMBER", "TEXT"
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
 }
 
 model DailyChecklist {
-  id              String   @id @default(uuid()) @db.Uuid
-  date            DateTime @unique @db.Date
-  technician_id   String?  @db.Uuid
-  technician      User?    @relation("ChecklistTechnician", fields: [technician_id], references: [id])
-  leader_id       String?  @db.Uuid
-  leader          User?    @relation("ChecklistLeader", fields: [leader_id], references: [id])
-  status          ChecklistStatus @default(DRAFT)
-  column_count    Int      @default(5)
-  non_compliance_at DateTime?
-  reopened_from_non_compliance Boolean @default(false)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  id                           String          @id @default(uuid()) @db.Uuid
+  date                         DateTime        @unique @db.Date
+  technician_id                String?         @db.Uuid
+  technician                   User?           @relation("ChecklistTechnician", fields: [technician_id], references: [id])
+  leader_id                    String?         @db.Uuid
+  leader                       User?           @relation("ChecklistLeader", fields: [leader_id], references: [id])
+  status                       ChecklistStatus @default(DRAFT)
+  column_count                 Int             @default(5)
+  non_compliance_at            DateTime?
+  reopened_from_non_compliance Boolean         @default(false)
+  created_at                   DateTime        @default(now())
+  updated_at                   DateTime        @updatedAt
 
-  rows            DailyChecklistRow[]
-  transfers       ChecklistTransfer[]
+  rows                  DailyChecklistRow[]
+  transfers             ChecklistTransfer[]
   continuation_requests ChecklistContinuationRequest[]
 }
 
@@ -831,16 +861,16 @@ model ChecklistTransfer {
 
 /// Solicitud del técnico asignado para continuar un checklist en incumplimiento (aprueba solo Admin).
 model ChecklistContinuationRequest {
-  id              String                       @id @default(uuid()) @db.Uuid
-  checklist_id    String                       @db.Uuid
-  checklist       DailyChecklist               @relation(fields: [checklist_id], references: [id], onDelete: Cascade)
-  requested_by_id String                       @db.Uuid
-  requested_by    User                         @relation("ChecklistContinuationRequester", fields: [requested_by_id], references: [id])
-  status          ChecklistContinuationStatus  @default(PENDING)
+  id              String                      @id @default(uuid()) @db.Uuid
+  checklist_id    String                      @db.Uuid
+  checklist       DailyChecklist              @relation(fields: [checklist_id], references: [id], onDelete: Cascade)
+  requested_by_id String                      @db.Uuid
+  requested_by    User                        @relation("ChecklistContinuationRequester", fields: [requested_by_id], references: [id])
+  status          ChecklistContinuationStatus @default(PENDING)
   note            String?
-  resolved_by_id  String?                      @db.Uuid
-  resolved_by     User?                        @relation("ChecklistContinuationResolver", fields: [resolved_by_id], references: [id])
-  created_at      DateTime                     @default(now())
+  resolved_by_id  String?                     @db.Uuid
+  resolved_by     User?                       @relation("ChecklistContinuationResolver", fields: [resolved_by_id], references: [id])
+  created_at      DateTime                    @default(now())
   resolved_at     DateTime?
 
   @@index([checklist_id, status])
@@ -848,20 +878,20 @@ model ChecklistContinuationRequest {
 }
 
 model DailyChecklistRow {
-  id              String   @id @default(uuid()) @db.Uuid
-  checklist_id    String   @db.Uuid
-  checklist       DailyChecklist @relation(fields: [checklist_id], references: [id], onDelete: Cascade)
-  activity_name   String
-  order           Int      @default(0)
-  field_type      String   @default("CHECKBOX")
-  line_statuses   Json     @default("{}")
-  observations    String?
+  id            String         @id @default(uuid()) @db.Uuid
+  checklist_id  String         @db.Uuid
+  checklist     DailyChecklist @relation(fields: [checklist_id], references: [id], onDelete: Cascade)
+  activity_name String
+  order         Int            @default(0)
+  field_type    String         @default("CHECKBOX")
+  line_statuses Json           @default("{}")
+  observations  String?
 }
 
 model Holiday {
-  id    String   @id @default(uuid()) @db.Uuid
-  name  String
-  date  DateTime
+  id   String   @id @default(uuid()) @db.Uuid
+  name String
+  date DateTime
 }
 
 /// Bitácora de cambios relevantes (OT, inventario, permisos).
@@ -907,25 +937,25 @@ enum OperationalTaskPriority {
 
 /// Pendientes operativos asignables (ligados opcionalmente a OT o activo).
 model OperationalTask {
-  id            String                @id @default(uuid()) @db.Uuid
-  title         String
-  body          String?
-  created_by_id String                @db.Uuid
-  created_by    User                  @relation("OperationalTaskCreator", fields: [created_by_id], references: [id])
-  assignee_id   String                @db.Uuid
-  assignee      User                  @relation("OperationalTaskAssignee", fields: [assignee_id], references: [id])
-  work_order_id String?               @db.Uuid
-  work_order    WorkOrder?            @relation(fields: [work_order_id], references: [id], onDelete: SetNull)
-  asset_id      String?               @db.Uuid
-  asset         Asset?                @relation(fields: [asset_id], references: [id], onDelete: SetNull)
-  due_at        DateTime?
-  reminded_at   DateTime?
-  priority      OperationalTaskPriority @default(NORMAL)
-  status        OperationalTaskStatus @default(OPEN)
-  completed_at  DateTime?
+  id              String                  @id @default(uuid()) @db.Uuid
+  title           String
+  body            String?
+  created_by_id   String                  @db.Uuid
+  created_by      User                    @relation("OperationalTaskCreator", fields: [created_by_id], references: [id])
+  assignee_id     String                  @db.Uuid
+  assignee        User                    @relation("OperationalTaskAssignee", fields: [assignee_id], references: [id])
+  work_order_id   String?                 @db.Uuid
+  work_order      WorkOrder?              @relation(fields: [work_order_id], references: [id], onDelete: SetNull)
+  asset_id        String?                 @db.Uuid
+  asset           Asset?                  @relation(fields: [asset_id], references: [id], onDelete: SetNull)
+  due_at          DateTime?
+  reminded_at     DateTime?
+  priority        OperationalTaskPriority @default(NORMAL)
+  status          OperationalTaskStatus   @default(OPEN)
+  completed_at    DateTime?
   completion_note String?
-  created_at    DateTime              @default(now())
-  updated_at    DateTime              @updatedAt
+  created_at      DateTime                @default(now())
+  updated_at      DateTime                @updatedAt
 
   @@index([assignee_id, status])
   @@index([created_by_id, status])
@@ -953,12 +983,12 @@ model GlobalAnnouncement {
 }
 
 model GlobalAnnouncementRead {
-  id               String             @id @default(uuid()) @db.Uuid
-  announcement_id  String             @db.Uuid
-  announcement     GlobalAnnouncement @relation(fields: [announcement_id], references: [id], onDelete: Cascade)
-  user_id          String             @db.Uuid
-  user             User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  seen_at          DateTime           @default(now())
+  id              String             @id @default(uuid()) @db.Uuid
+  announcement_id String             @db.Uuid
+  announcement    GlobalAnnouncement @relation(fields: [announcement_id], references: [id], onDelete: Cascade)
+  user_id         String             @db.Uuid
+  user            User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  seen_at         DateTime           @default(now())
 
   @@unique([announcement_id, user_id])
   @@index([user_id])
@@ -1015,15 +1045,15 @@ model ChatParticipant {
 }
 
 model ChatMessage {
-  id              String               @id @default(uuid()) @db.Uuid
-  conversation_id String               @db.Uuid
-  conversation    ChatConversation     @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
-  author_id       String               @db.Uuid
-  author          User                 @relation(fields: [author_id], references: [id], onDelete: Cascade)
-  body            String               @default("")
+  id              String                @id @default(uuid()) @db.Uuid
+  conversation_id String                @db.Uuid
+  conversation    ChatConversation      @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  author_id       String                @db.Uuid
+  author          User                  @relation(fields: [author_id], references: [id], onDelete: Cascade)
+  body            String                @default("")
   attachment_url  String?
   attachment_name String?
-  created_at      DateTime             @default(now())
+  created_at      DateTime              @default(now())
   deleted_at      DateTime?
   receipts        ChatMessageReceipt[]
   reactions       ChatMessageReaction[]
@@ -1032,7 +1062,9 @@ model ChatMessage {
   @@index([author_id])
 }
 
-/** Recibo por destinatario: entregado (socket ACK) y leído (abrió el hilo). */
+/**
+ * Recibo por destinatario: entregado (socket ACK) y leído (abrió el hilo).
+ */
 model ChatMessageReceipt {
   id           String      @id @default(uuid()) @db.Uuid
   message_id   String      @db.Uuid
@@ -1047,7 +1079,9 @@ model ChatMessageReceipt {
   @@index([message_id])
 }
 
-/** Reacción (emoji) de un usuario a un mensaje: una por usuario por mensaje. */
+/**
+ * Reacción (emoji) de un usuario a un mensaje: una por usuario por mensaje.
+ */
 model ChatMessageReaction {
   id         String      @id @default(uuid()) @db.Uuid
   message_id String      @db.Uuid
@@ -1064,19 +1098,20 @@ model ChatMessageReaction {
 
 // Estado de seguridad no editable desde preferencias.
 model DeveloperAccessLock {
-  user_id String @id @db.Uuid
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  failed_attempts Int @default(0)
-  locked_until DateTime?
+  user_id         String    @id @db.Uuid
+  user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  failed_attempts Int       @default(0)
+  locked_until    DateTime?
 }
 
 model PurchaseReceipt {
-  request_id String @id
-  purchase_order_id String @db.Uuid
-  purchase_order PurchaseOrder @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade)
-  user_id String @db.Uuid
-  quantities Json
-  created_at DateTime @default(now())
+  request_id        String        @id
+  purchase_order_id String        @db.Uuid
+  purchase_order    PurchaseOrder @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade)
+  user_id           String        @db.Uuid
+  quantities        Json
+  created_at        DateTime      @default(now())
+
   @@index([purchase_order_id, created_at])
 }
 
@@ -1159,23 +1194,23 @@ model DocumentFolder {
 }
 
 model Document {
-  id             String   @id @default(uuid()) @db.Uuid
+  id             String     @id @default(uuid()) @db.Uuid
   file_url       String
   file_name      String
   title          String?
   mime_type      String?
   size           Int?
   /// Carpeta lógica para organizar: Repuestos, Manuales, Fichas técnicas…
-  folder         String   @default("General")
-  item_id        String?  @db.Uuid
-  item           Item?    @relation(fields: [item_id], references: [id], onDelete: SetNull)
-  work_order_id  String?  @db.Uuid
+  folder         String     @default("General")
+  item_id        String?    @db.Uuid
+  item           Item?      @relation(fields: [item_id], references: [id], onDelete: SetNull)
+  work_order_id  String?    @db.Uuid
   work_order     WorkOrder? @relation(fields: [work_order_id], references: [id], onDelete: SetNull)
-  asset_id       String?  @db.Uuid
-  asset          Asset?   @relation(fields: [asset_id], references: [id], onDelete: SetNull)
-  uploaded_by_id String?  @db.Uuid
-  uploaded_by    User?    @relation(fields: [uploaded_by_id], references: [id], onDelete: SetNull)
-  created_at     DateTime @default(now())
+  asset_id       String?    @db.Uuid
+  asset          Asset?     @relation(fields: [asset_id], references: [id], onDelete: SetNull)
+  uploaded_by_id String?    @db.Uuid
+  uploaded_by    User?      @relation(fields: [uploaded_by_id], references: [id], onDelete: SetNull)
+  created_at     DateTime   @default(now())
 
   @@index([item_id])
   @@index([work_order_id])
@@ -1190,18 +1225,18 @@ model Document {
 /// Un paro puede estar abierto (sin `ended_at`) o cerrado. El motivo es libre
 /// para no obligar a catalogar y frenar el registro en piso.
 model AssetDowntime {
-  id             String   @id @default(uuid()) @db.Uuid
-  asset_id       String   @db.Uuid
-  asset          Asset    @relation(fields: [asset_id], references: [id], onDelete: Cascade)
-  work_order_id  String?  @db.Uuid
+  id             String     @id @default(uuid()) @db.Uuid
+  asset_id       String     @db.Uuid
+  asset          Asset      @relation(fields: [asset_id], references: [id], onDelete: Cascade)
+  work_order_id  String?    @db.Uuid
   work_order     WorkOrder? @relation(fields: [work_order_id], references: [id], onDelete: SetNull)
   /// Motivo corto: falla mecánica, falta de material, cambio de formato…
   reason         String?
   started_at     DateTime
   ended_at       DateTime?
-  reported_by_id String?  @db.Uuid
-  reported_by    User?    @relation(fields: [reported_by_id], references: [id], onDelete: SetNull)
-  created_at     DateTime @default(now())
+  reported_by_id String?    @db.Uuid
+  reported_by    User?      @relation(fields: [reported_by_id], references: [id], onDelete: SetNull)
+  created_at     DateTime   @default(now())
 
   @@index([asset_id, started_at])
   @@index([work_order_id])
@@ -1220,16 +1255,16 @@ enum WorkOrderRelationType {
 }
 
 model WorkOrderRelation {
-  id                   String                @id @default(uuid()) @db.Uuid
-  work_order_id        String                @db.Uuid
-  work_order           WorkOrder             @relation("WorkOrderRelations", fields: [work_order_id], references: [id], onDelete: Cascade)
-  related_work_order_id String               @db.Uuid
-  related_work_order   WorkOrder             @relation("WorkOrderRelated", fields: [related_work_order_id], references: [id], onDelete: Cascade)
-  relation_type        WorkOrderRelationType @default(RELACIONADA)
-  note                 String?
-  created_by_id        String?               @db.Uuid
-  created_by           User?                 @relation(fields: [created_by_id], references: [id], onDelete: SetNull)
-  created_at           DateTime              @default(now())
+  id                    String                @id @default(uuid()) @db.Uuid
+  work_order_id         String                @db.Uuid
+  work_order            WorkOrder             @relation("WorkOrderRelations", fields: [work_order_id], references: [id], onDelete: Cascade)
+  related_work_order_id String                @db.Uuid
+  related_work_order    WorkOrder             @relation("WorkOrderRelated", fields: [related_work_order_id], references: [id], onDelete: Cascade)
+  relation_type         WorkOrderRelationType @default(RELACIONADA)
+  note                  String?
+  created_by_id         String?               @db.Uuid
+  created_by            User?                 @relation(fields: [created_by_id], references: [id], onDelete: SetNull)
+  created_at            DateTime              @default(now())
 
   @@unique([work_order_id, related_work_order_id, relation_type])
   @@index([work_order_id])
@@ -1241,10 +1276,10 @@ model WorkOrderRelation {
 // ---------------------------------------------------------------------------
 
 model CostCategory {
-  id         String   @id @default(uuid()) @db.Uuid
-  name       String   @unique
-  is_active  Boolean  @default(true)
-  created_at DateTime @default(now())
+  id         String          @id @default(uuid()) @db.Uuid
+  name       String          @unique
+  is_active  Boolean         @default(true)
+  created_at DateTime        @default(now())
   costs      WorkOrderCost[]
 }
 
@@ -1266,6 +1301,7 @@ model WorkOrderCost {
   @@index([work_order_id])
   @@index([category_id])
 }
+
 // ---------------------------------------------------------------------------
 // Cuadrillas: grupos de trabajo reutilizables, asignables a órdenes.
 // ---------------------------------------------------------------------------
@@ -1294,6 +1330,7 @@ model CrewMember {
 
   @@unique([crew_id, user_id])
 }
+
 // ---------------------------------------------------------------------------
 // Kits de repuestos: conjuntos reutilizables que se consumen en una orden.
 // ---------------------------------------------------------------------------
@@ -1318,6 +1355,7 @@ model KitItem {
 
   @@unique([kit_id, item_id])
 }
+
 // ---------------------------------------------------------------------------
 // Visto por usuario: marca hasta cuándo revisó cada orden (aviso de cambios).
 // ---------------------------------------------------------------------------
@@ -1333,6 +1371,7 @@ model WorkOrderView {
   @@unique([user_id, work_order_id])
   @@index([user_id])
 }
+
 // ---------------------------------------------------------------------------
 // Campos personalizados: el administrador agrega campos propios a las
 // entidades sin tocar la base de datos.
@@ -1356,19 +1395,19 @@ enum CustomFieldType {
 }
 
 model CustomFieldDefinition {
-  id         String           @id @default(uuid()) @db.Uuid
+  id         String             @id @default(uuid()) @db.Uuid
   entity     CustomFieldEntity
   /// Clave estable (snake_case) usada en la API y la exportación.
   key        String
   label      String
-  field_type CustomFieldType  @default(TEXT)
+  field_type CustomFieldType    @default(TEXT)
   /// Opciones para SELECT: [{ "value": "A", "label": "Opción A" }]
   options    Json?
-  required   Boolean          @default(false)
-  is_active  Boolean          @default(true)
-  sort_order Int              @default(0)
-  created_at DateTime         @default(now())
-  updated_at DateTime         @updatedAt
+  required   Boolean            @default(false)
+  is_active  Boolean            @default(true)
+  sort_order Int                @default(0)
+  created_at DateTime           @default(now())
+  updated_at DateTime           @updatedAt
   values     CustomFieldValue[]
 
   @@unique([entity, key])
@@ -1376,17 +1415,18 @@ model CustomFieldDefinition {
 }
 
 model CustomFieldValue {
-  id        String               @id @default(uuid()) @db.Uuid
-  field_id  String               @db.Uuid
-  field     CustomFieldDefinition @relation(fields: [field_id], references: [id], onDelete: Cascade)
+  id         String                @id @default(uuid()) @db.Uuid
+  field_id   String                @db.Uuid
+  field      CustomFieldDefinition @relation(fields: [field_id], references: [id], onDelete: Cascade)
   /// id del registro de la entidad (OT, activo o repuesto).
-  entity_id String               @db.Uuid
-  value     String?
-  updated_at DateTime            @default(now()) @updatedAt
+  entity_id  String                @db.Uuid
+  value      String?
+  updated_at DateTime              @default(now()) @updatedAt
 
   @@unique([field_id, entity_id])
   @@index([entity_id])
 }
+
 // ---------------------------------------------------------------------------
 // Integraciones: llaves de API para sistemas externos y webhooks de salida.
 // ---------------------------------------------------------------------------
@@ -1409,33 +1449,34 @@ model ApiKey {
 }
 
 model Webhook {
-  id            String    @id @default(uuid()) @db.Uuid
-  url           String
-  description   String?
+  id           String            @id @default(uuid()) @db.Uuid
+  url          String
+  description  String?
   /// Eventos suscritos: work_order.created, work_order.updated, work_order.comment
-  events        Json      @default("[]")
+  events       Json              @default("[]")
   /// Secreto para firmar el payload (HMAC-SHA256 en X-GTZ-Signature).
-  secret        String
-  is_active     Boolean   @default(true)
-  last_status   Int?
-  last_error    String?
-  last_sent_at  DateTime?
-  created_at    DateTime  @default(now())
-  deliveries    WebhookDelivery[]
+  secret       String
+  is_active    Boolean           @default(true)
+  last_status  Int?
+  last_error   String?
+  last_sent_at DateTime?
+  created_at   DateTime          @default(now())
+  deliveries   WebhookDelivery[]
 }
 
 model WebhookDelivery {
-  id          String   @id @default(uuid()) @db.Uuid
-  webhook_id  String   @db.Uuid
-  webhook     Webhook  @relation(fields: [webhook_id], references: [id], onDelete: Cascade)
-  event       String
-  status      Int?
-  ok          Boolean  @default(false)
-  error       String?
-  created_at  DateTime @default(now())
+  id         String   @id @default(uuid()) @db.Uuid
+  webhook_id String   @db.Uuid
+  webhook    Webhook  @relation(fields: [webhook_id], references: [id], onDelete: Cascade)
+  event      String
+  status     Int?
+  ok         Boolean  @default(false)
+  error      String?
+  created_at DateTime @default(now())
 
   @@index([webhook_id, created_at])
 }
+
 // ---------------------------------------------------------------------------
 // Aprobaciones: reglas que exigen autorización antes de trabajar una orden.
 // ---------------------------------------------------------------------------
@@ -1448,13 +1489,13 @@ enum ApprovalStatus {
 }
 
 model ApprovalRule {
-  id         String   @id @default(uuid()) @db.Uuid
+  id         String              @id @default(uuid()) @db.Uuid
   name       String
-  is_active  Boolean  @default(true)
+  is_active  Boolean             @default(true)
   /// Condiciones: { priorities: [], maintenance_types: [], asset_critical: bool, zone_ids: [] }
-  conditions Json     @default("{}")
-  sort_order Int      @default(0)
-  created_at DateTime @default(now())
+  conditions Json                @default("{}")
+  sort_order Int                 @default(0)
+  created_at DateTime            @default(now())
   approvals  WorkOrderApproval[]
 }
 
@@ -1474,20 +1515,21 @@ model WorkOrderApproval {
   @@index([work_order_id])
   @@index([status])
 }
+
 /// Proveedor de servicios de mantenimiento (no de refacciones).
 model Contractor {
-  id            String    @id @default(uuid()) @db.Uuid
-  name          String
-  contact_name  String?
-  phone         String?
-  email         String?
-  specialty     String?
-  hourly_rate   Float?
-  visit_rate    Float?
+  id             String      @id @default(uuid()) @db.Uuid
+  name           String
+  contact_name   String?
+  phone          String?
+  email          String?
+  specialty      String?
+  hourly_rate    Float?
+  visit_rate     Float?
   contract_start DateTime?
   contract_end   DateTime?
-  notes         String?
-  is_active     Boolean   @default(true)
-  created_at    DateTime  @default(now())
-  work_orders   WorkOrder[]
+  notes          String?
+  is_active      Boolean     @default(true)
+  created_at     DateTime    @default(now())
+  work_orders    WorkOrder[]
 }

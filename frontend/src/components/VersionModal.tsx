@@ -2,7 +2,7 @@ import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-
 import { Link } from 'react-router-dom';
 import { useExitAnimation } from '../hooks/useExitAnimation';
 
-export const APP_VERSION = "1.121.0";
+export const APP_VERSION = "1.122.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -38,6 +38,9 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: «Consumir kit» desde el detalle de la OT: descuenta de una vez todos los repuestos del kit (todo o nada), los liga a la orden con su costo, deja constancia en la bitácora y avisa si falta stock.",
+    "Nuevo: categorías de activos y de órdenes de trabajo, administrables en Configuración → Categorías de activos y OT. Se asignan al crear activos y órdenes, y se muestran en su ficha; sirven para filtrar y reportar.",
+    "Nuevo: Estadística → Carga de trabajo: órdenes abiertas, en proceso, vencidas y horas de turno por técnico, con mapa por día, carga relativa contra el promedio y sugerencia de a quién asignar.",
     "Nuevo: el tope de tiempo de la importación se ajusta desde la app en Configuración → Opciones de Desarrollador → «Importar ahora desde Google Sheets» (de 1 a 1440 minutos, guardado en base de datos y aplicado a la siguiente importación). La pantalla muestra el valor vigente y confirma al guardar; ya no hace falta editar el .env ni reiniciar el contenedor.",
     "Mejora: la importación muestra su tope de tiempo (45 minutos por omisión) y ahora se ajusta con IMPORT_MAX_MS en el .env (milisegundos, mínimo 1 minuto); Docker ya lo pasa al contenedor. Al cumplirse, la importación se detiene sola, conserva lo ya confirmado y libera el modo de solo lectura.",
     "Mejora: ayudas al pasar el puntero en Inicio (tarjetas de resumen), Activos (estados y criticidad), Checklists diarios (ⓘ del módulo y columnas) y Portal de solicitudes (campos); además, los formularios de repuesto y de activo explican qué debe llevar cada campo.",
