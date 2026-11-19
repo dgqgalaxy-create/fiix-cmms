@@ -171,6 +171,7 @@ export const DeveloperOptions = () => {
     total?: number;
     listed?: number;
     phase?: string;
+    timeout_ms?: number;
   } | null>(null);
   const [auditOpen, setAuditOpen] = useState(false);
   const [auditLogs, setAuditLogs] = useState<AuditLogRow[]>([]);
@@ -1380,6 +1381,7 @@ export const DeveloperOptions = () => {
           total: d.total,
           listed: d.listed,
           phase: d.phase,
+          timeout_ms: d.timeout_ms,
         });
         if (d.message) setLoadingMessage(d.message);
         if (d.phase === 'done') {
@@ -3245,6 +3247,10 @@ export const DeveloperOptions = () => {
             </button>
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
               Se detiene entre archivos. Los datos ya confirmados se conservan.
+            </p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Tope de tiempo: {Math.round((importLiveProgress?.timeout_ms ?? 2_700_000) / 60_000)} min
+              (se ajusta con <code className="text-[11px]">IMPORT_MAX_MS</code>).
             </p>
             <button
               type="button"

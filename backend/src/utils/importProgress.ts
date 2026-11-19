@@ -2,6 +2,7 @@
  * Progreso compartido para import CSV / Sheets / Drive.
  * El POST largo actualiza esto; el cliente consulta GET /dev/import-progress.
  */
+import { getImportTimeoutMs } from './importCancel';
 
 export type ImportProgressPhase =
   | 'idle'
@@ -30,6 +31,8 @@ export type ImportProgress = {
   result?: unknown;
   /** ISO timestamp de cuándo terminó (done/error). */
   finishedAt?: string;
+  /** Tope de tiempo vigente del trabajo (ms), para mostrarlo en la UI. */
+  timeout_ms?: number;
   /** true mientras el usuario pidió cancelar y el motor va a detenerse. */
   cancelling?: boolean;
 };
@@ -42,7 +45,8 @@ let importProgress: ImportProgress = {
 };
 
 export function getImportProgress(): ImportProgress {
-  return { ...importProgress };
+  // Se incluye el tope vigente para que la interfaz pueda mostrarlo.
+  return { ...importProgress, timeout_ms: getImportTimeoutMs() };
 }
 
 export function resetImportProgress(): void {

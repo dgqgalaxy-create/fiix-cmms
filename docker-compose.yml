@@ -36,6 +36,9 @@ services:
       # de perderlos en silencio (ver docker/entrypoint.sh). No lo pongas en 1 de forma
       # permanente: úsalo solo si entiendes el riesgo y vuelve a 0 después.
       ALLOW_DB_PUSH_DATA_LOSS: ${ALLOW_DB_PUSH_DATA_LOSS:-0}
+      # Tope de tiempo del trabajo de importación (CSV / Sheets / Drive), en ms.
+      # Por omisión 45 min. Súbelo si importas miles de fotos desde Drive.
+      IMPORT_MAX_MS: ${IMPORT_MAX_MS:-2700000}
       # --- Dominio público / proxy inverso (Cloudflare Tunnel, nginx, Tailscale Funnel) ---
       # Orígenes EXTRA permitidos para CORS y Socket.IO, separados por comas.
       # No hay ningún dominio hardcodeado aquí: se define en el .env de la raíz, así que
