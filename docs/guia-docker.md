@@ -66,7 +66,7 @@ Variables útiles (todas opcionales, con defaults de prueba):
 | `ALLOW_DB_PUSH_DATA_LOSS` | `0` | Déjalo sin definir. `1` permite que `prisma db push` aplique cambios destructivos al arrancar; con `0` el arranque falla y los datos se conservan. |
 | Claves de Google Drive y Telegram | — | **No van en el `.env`**: se configuran desde la app en **Opciones de Desarrollador → Integraciones** (guardadas en BD, enmascaradas; el `.env` solo es respaldo opcional si el campo queda vacío). |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | vacío | Notificaciones Web Push PWA (solo por `.env`). |
-| `IMPORT_MAX_MS` | `2700000` | Tope de tiempo del trabajo de importación (CSV / Sheets / Drive) en milisegundos; por omisión **45 minutos**, mínimo 1 minuto. Si importas miles de fotos desde Drive, súbelo (ej. `IMPORT_MAX_MS=7200000` = 2 h). Al cumplirse, la importación se detiene sola, conserva lo ya confirmado y libera el modo de solo lectura. |
+| `IMPORT_MAX_MS` | `2700000` | Solo como respaldo: el tope real se ajusta desde la app en **Opciones de Desarrollador → Importar ahora desde Google Sheets** (1 a 1440 minutos, guardado en base de datos). Si no hay preferencia guardada se usa esta variable (milisegundos) y, si tampoco existe, 45 minutos. Al cumplirse, la importación se detiene sola, conserva lo ya confirmado y libera el modo de solo lectura. |
 
 > **Orígenes permitidos siempre** (aunque `CORS_ORIGINS` esté vacío): `localhost`,
 > `127.0.0.1`, `[::1]`, `lpet-cmms`, cualquier host `*.ts.net` (Tailscale), rangos LAN

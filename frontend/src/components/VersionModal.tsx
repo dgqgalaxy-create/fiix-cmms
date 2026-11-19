@@ -2,7 +2,7 @@ import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-
 import { Link } from 'react-router-dom';
 import { useExitAnimation } from '../hooks/useExitAnimation';
 
-export const APP_VERSION = "1.120.2";
+export const APP_VERSION = "1.121.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -38,6 +38,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Nuevo: el tope de tiempo de la importación se ajusta desde la app en Configuración → Opciones de Desarrollador → «Importar ahora desde Google Sheets» (de 1 a 1440 minutos, guardado en base de datos y aplicado a la siguiente importación). La pantalla muestra el valor vigente y confirma al guardar; ya no hace falta editar el .env ni reiniciar el contenedor.",
     "Mejora: la importación muestra su tope de tiempo (45 minutos por omisión) y ahora se ajusta con IMPORT_MAX_MS en el .env (milisegundos, mínimo 1 minuto); Docker ya lo pasa al contenedor. Al cumplirse, la importación se detiene sola, conserva lo ya confirmado y libera el modo de solo lectura.",
     "Mejora: ayudas al pasar el puntero en Inicio (tarjetas de resumen), Activos (estados y criticidad), Checklists diarios (ⓘ del módulo y columnas) y Portal de solicitudes (campos); además, los formularios de repuesto y de activo explican qué debe llevar cada campo.",
     "Nuevo: Manual → «Glosario». Explica en lenguaje de planta cada indicador (MTTR, MTBF, disponibilidad, SLA, backlog, retrabajo), estados de las órdenes, inventario (stock, mínimo, unidad de medida, entradas/salidas, kits), compras (OC y entregas parciales), activos, horarios (patrones mixto y 4x4, códigos de turno, excepciones) y accesos (roles, contraseña de desarrollador, bitácora). Incluye buscador por término, sigla o palabra de la definición.",

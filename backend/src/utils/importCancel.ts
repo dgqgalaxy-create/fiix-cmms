@@ -8,6 +8,7 @@
  * Además hay un tope duro de tiempo: si una descarga de Drive se atasca, el trabajo
  * se aborta solo y el candado de importación (advisory lock) se libera.
  */
+import prisma from '../config/prisma';
 
 export type ImportCancelReason = 'user' | 'timeout';
 
@@ -33,6 +34,45 @@ export const DEFAULT_IMPORT_TIMEOUT_MS = 45 * 60 * 1000;
 export function getImportTimeoutMs(): number {
   const raw = Number(process.env.IMPORT_MAX_MS);
   return Number.isFinite(raw) && raw >= 60_000 ? raw : DEFAULT_IMPORT_TIMEOUT_MS;
+}
+
+/** Tope válido en minutos (1 a 1440). */
+export function clampImportTimeoutMin(value: unknown): number | null {
+  const minutes = Math.round(Number(value));
+  if (!Number.isFinite(minutes)) return null;
+  return Math.min(1440, Math.max(1, minutes));
+}
+
+let resolvedCache: { value: number; at: number } | null = null;
+const RESOLVE_CACHE_MS = 15_000;
+
+/**
+ * Tope efectivo del próximo trabajo de importación.
+ * Prioridad: preferencia guardada en la app (Opciones de Desarrollador) →
+ * variable IMPORT_MAX_MS → 45 minutos.
+ */
+export async function resolveImportTimeoutMs(force = false): Promise<number> {
+  if (!force && resolvedCache && Date.now() - resolvedCache.at < RESOLVE_CACHE_MS) {
+    return resolvedCache.value;
+  }
+  let value: number | null = null;
+  try {
+    const settings = await prisma.systemSettings.findFirst({
+      select: { import_timeout_min: true },
+    });
+    const minutes = clampImportTimeoutMin(settings?.import_timeout_min);
+    if (minutes !== null) value = minutes * 60_000;
+  } catch {
+    /* sin base de datos: se usa la variable de entorno */
+  }
+  const resolved = value ?? getImportTimeoutMs();
+  resolvedCache = { value: resolved, at: Date.now() };
+  return resolved;
+}
+
+/** Invalida el valor memorizado (se llama al guardar la preferencia). */
+export function invalidateImportTimeoutCache(): void {
+  resolvedCache = null;
 }
 
 let controller: AbortController | null = null;

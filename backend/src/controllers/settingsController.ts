@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { DEFAULT_SLA_POLICY, mergeSlaPolicy } from '../services/SlaService';
 import { emitRefresh } from '../utils/socket';
+import { invalidateImportTimeoutCache } from '../utils/importCancel';
 import { clearFeatureCache } from '../utils/features';
 import { mergePortalConfig } from '../utils/portalConfig';
 
@@ -30,7 +31,7 @@ export const getSettings = async (req: Request, res: Response): Promise<void> =>
 
 export const updateSettings = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email_enabled, sla_enabled, sla_policy, checklist_column_count, technician_mobile_ui, features, portal_config, time_zone, date_format, time_format, language } = req.body;
+    const { email_enabled, sla_enabled, sla_policy, checklist_column_count, technician_mobile_ui, features, portal_config, time_zone, date_format, time_format, language, import_timeout_min } = req.body;
     // Preferencias de fecha y hora (validadas contra catálogos cerrados).
     const ALLOWED_DATE_FORMATS = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'];
     const ALLOWED_TIME_FORMATS = ['12', '24'];
@@ -60,6 +61,11 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
         ? Math.min(12, Math.max(1, Math.round(Number(checklist_column_count))))
         : undefined;
 
+    const nextImportTimeout =
+      import_timeout_min !== undefined && Number.isFinite(Number(import_timeout_min))
+        ? Math.min(1440, Math.max(1, Math.round(Number(import_timeout_min))))
+        : undefined;
+
     if (!settings) {
       settings = await prisma.systemSettings.create({
         data: {
@@ -74,6 +80,7 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
           ...(nextTimeFormat ? { time_format: nextTimeFormat } : {}),
           ...(nextLanguage ? { language: nextLanguage } : {}),
           ...(nextColumnCount !== undefined ? { checklist_column_count: nextColumnCount } : {}),
+          ...(nextImportTimeout !== undefined ? { import_timeout_min: nextImportTimeout } : {}),
         },
       });
     } else {
@@ -91,10 +98,12 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
           ...(nextTimeFormat ? { time_format: nextTimeFormat } : {}),
           ...(nextLanguage ? { language: nextLanguage } : {}),
           ...(nextColumnCount !== undefined ? { checklist_column_count: nextColumnCount } : {}),
+          ...(nextImportTimeout !== undefined ? { import_timeout_min: nextImportTimeout } : {}),
         },
       });
     }
     clearFeatureCache();
+    if (nextImportTimeout !== undefined) invalidateImportTimeoutCache();
     emitRefresh('refresh_settings');
     // Si cambió sla_enabled, refrescar listados de OT en las pestañas abiertas
     // (los badges «En riesgo / Vencido» aparecen o desaparecen al instante).

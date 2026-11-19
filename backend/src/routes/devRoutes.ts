@@ -33,6 +33,7 @@ import {
 } from '../utils/googleDriveImport';
 import { getImportProgress, setImportProgress, resetImportProgress, markImportCancelling } from '../utils/importProgress';
 import {
+  resolveImportTimeoutMs,
   startImportGuard,
   endImportGuard,
   requestImportCancel,
@@ -641,7 +642,7 @@ router.post(
   }
 
   try {
-    const signal = startImportGuard();
+    const signal = startImportGuard(await resolveImportTimeoutMs());
     const useGoogleDrive =
       String((req.body as any)?.useGoogleDrive || '').toLowerCase() === 'true' ||
       String((req.body as any)?.useGoogleDrive || '') === '1';
@@ -940,14 +941,15 @@ router.post('/import-sheets', verifyDevPassword, async (req: Request, res: Respo
     String((req.body as any)?.skipAssets || '') === '1';
 
   // Trabajo en segundo plano: el cliente sondea GET /import-progress hasta done/error.
-  const signal = startImportGuard();
+  const signal = startImportGuard(await resolveImportTimeoutMs());
   void runSheetsImportJob({ userId: authReq.user?.userId ?? null, useGoogleDrive, skipAssets, signal });
   res.json({ started: true, message: 'Importación iniciada en segundo plano.' });
 });
 
 /** Progreso de import CSV/Sheets/Drive (poll mientras corre el POST). */
-router.get('/import-progress', verifyDevPassword, (_req: Request, res: Response): void => {
-  res.json(getImportProgress());
+router.get('/import-progress', verifyDevPassword, async (_req: Request, res: Response): Promise<void> => {
+  const timeout = await resolveImportTimeoutMs();
+  res.json({ ...getImportProgress(), timeout_ms: timeout });
 });
 
 /**

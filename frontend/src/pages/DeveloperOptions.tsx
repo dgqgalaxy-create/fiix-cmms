@@ -146,6 +146,53 @@ export const DeveloperOptions = () => {
     };
   }>(null);
   const [useGoogleDrive, setUseGoogleDrive] = useState(true);
+
+  // Tope de tiempo de la importación (preferencia guardada en la app).
+  const [importTimeoutMin, setImportTimeoutMin] = useState<number>(45);
+  const [importTimeoutDraft, setImportTimeoutDraft] = useState<string>('45');
+  const [savingImportTimeout, setSavingImportTimeout] = useState(false);
+  const [importTimeoutMsg, setImportTimeoutMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    axios
+      .get('/settings')
+      .then((res) => {
+        if (!alive) return;
+        const minutes = Number(res.data?.import_timeout_min) || 45;
+        setImportTimeoutMin(minutes);
+        setImportTimeoutDraft(String(minutes));
+      })
+      .catch(() => {
+        /* sin permiso o sin red: se queda el valor por omisión */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const handleSaveImportTimeout = async () => {
+    const minutes = Math.round(Number(importTimeoutDraft));
+    if (!Number.isFinite(minutes) || minutes < 1 || minutes > 1440) {
+      setImportTimeoutMsg('Escribe un número entre 1 y 1440 minutos.');
+      return;
+    }
+    setSavingImportTimeout(true);
+    setImportTimeoutMsg(null);
+    try {
+      const res = await axios.patch('/settings', { import_timeout_min: minutes });
+      const saved = Number(res.data?.import_timeout_min) || minutes;
+      setImportTimeoutMin(saved);
+      setImportTimeoutDraft(String(saved));
+      setImportTimeoutMsg('Guardado. Aplica a la próxima importación.');
+      setTimeout(() => setImportTimeoutMsg(null), 7000);
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setImportTimeoutMsg(detail || 'No se pudo guardar. Revisa tu permiso de configuración.');
+    } finally {
+      setSavingImportTimeout(false);
+    }
+  };
   const [skipAssets, setSkipAssets] = useState(true);
   const [driveStatus, setDriveStatus] = useState<{
     configured: boolean;
@@ -1979,6 +2026,38 @@ export const DeveloperOptions = () => {
                     </span>
                   </span>
                 </label>
+                <div className="mt-3 rounded-xl border border-white/20 bg-white/10 px-4 py-3">
+                  <label className="block text-xs font-bold uppercase tracking-wide text-white">
+                    Tope de tiempo de la importación
+                  </label>
+                  <p className="mt-0.5 text-xs leading-5 text-sky-100">
+                    Si el trabajo tarda más de estos minutos, se detiene solo entre archivos y conserva lo ya importado.
+                    Valor actual: <strong className="text-white">{importTimeoutMin} min</strong> (1 a 1440).
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={1440}
+                      value={importTimeoutDraft}
+                      onChange={(e) => setImportTimeoutDraft(e.target.value)}
+                      disabled={isLoading || savingImportTimeout}
+                      className="w-24 rounded-lg border border-white/30 bg-white/20 px-3 py-2 text-sm font-bold text-white outline-none placeholder:text-sky-200 focus:border-white/60 disabled:opacity-60"
+                    />
+                    <span className="text-xs font-semibold text-sky-100">min</span>
+                    <button
+                      type="button"
+                      onClick={() => void handleSaveImportTimeout()}
+                      disabled={isLoading || savingImportTimeout}
+                      className="rounded-lg bg-white px-3 py-2 text-xs font-black text-sky-700 transition hover:bg-sky-50 disabled:opacity-50"
+                    >
+                      {savingImportTimeout ? 'Guardando…' : 'Guardar tope'}
+                    </button>
+                    {importTimeoutMsg && (
+                      <span className="text-xs font-semibold text-sky-50">{importTimeoutMsg}</span>
+                    )}
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={() => void handleImportSheets()}
@@ -3249,7 +3328,7 @@ export const DeveloperOptions = () => {
               Se detiene entre archivos. Los datos ya confirmados se conservan.
             </p>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Tope de tiempo: {Math.round((importLiveProgress?.timeout_ms ?? 2_700_000) / 60_000)} min
+              Tope de tiempo: {Math.round((importLiveProgress?.timeout_ms ?? importTimeoutMin * 60_000) / 60_000)} min
               (se ajusta con <code className="text-[11px]">IMPORT_MAX_MS</code>).
             </p>
             <button
