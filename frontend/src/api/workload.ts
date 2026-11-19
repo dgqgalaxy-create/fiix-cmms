@@ -1,4 +1,18 @@
-import api from './axios';
+﻿import api from './axios';
+
+export interface WorkloadOrder {
+  id: string;
+  folio: number;
+  title: string;
+  status: 'PENDIENTE' | 'EN_PROCESO' | 'EN_ESPERA' | 'FINALIZADO' | 'ANULADO';
+  priority: 'URGENTE' | 'NORMAL' | 'BAJO';
+  asset_name: string | null;
+  zone_name: string | null;
+  scheduled_date: string | null;
+  due_date: string | null;
+  created_at: string;
+  overdue: boolean;
+}
 
 export interface WorkloadRow {
   user_id: string;
@@ -12,7 +26,8 @@ export interface WorkloadRow {
   urgent: number;
   scheduled_hours: number;
   per_day: Array<{ date: string; count: number }>;
-  title_samples: Array<{ id: string; folio: number; title: string; priority: string }>;
+  /** Órdenes abiertas del técnico, ordenadas por prioridad y fecha límite. */
+  orders: WorkloadOrder[];
   load_pct: number;
   load_level: 'alta' | 'media' | 'baja';
 }

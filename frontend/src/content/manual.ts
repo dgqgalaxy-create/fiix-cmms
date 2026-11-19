@@ -535,8 +535,9 @@ export const MANUAL_SECTIONS: ManualSection[] = [
       'Elegir periodo (7, 14 o 21 días) y filtrar por zona.',
       'Ver por técnico: abiertas, en proceso, vencidas y horas de turno.',
       'Leer el mapa diario: cada celda cuenta órdenes programadas o con fecha límite ese día.',
+      'Hacer clic en el nombre para abrir la lista de sus órdenes abiertas y entrar al detalle de cualquiera sin salir del tablero.',
+      'Usar el botón «Desempeño» dentro de esa lista para abrir su ficha completa.',
       'Usar la sugerencia: la persona con menor carga del equipo.',
-      'Hacer clic en el nombre para abrir su ficha de desempeño.',
     ],
     fields: [
       { label: 'Carga relativa', meaning: 'Sus órdenes contra el promedio del equipo; 100 % es promedio.' },

@@ -2,7 +2,7 @@ import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-
 import { Link } from 'react-router-dom';
 import { useExitAnimation } from '../hooks/useExitAnimation';
 
-export const APP_VERSION = "1.122.2";
+export const APP_VERSION = "1.123.0";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -38,6 +38,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Mejora: en Carga de trabajo, al hacer clic en un técnico se abre una ventana con la lista de sus órdenes abiertas (prioridad, estado, activo, zona y fecha límite). Desde ahí se abre el detalle de cada orden en el panel lateral, sin salir del tablero; el botón «Desempeño» mantiene el acceso a su ficha.",
     "Mejora: filtros por categoría en Activos y en Órdenes de Trabajo (dentro de los filtros del listado). Se suman a la asignación y visualización de categorías que ya existían.",
     "Mejora: Manual de usuario reescrito y buscable, organizado por módulo con «para qué sirve», «qué puedes hacer», «qué significan los datos» y buenas prácticas. Incluye guía rápida de 5 pasos, los módulos nuevos (medidores, kits, categorías, compras, desempeño del equipo, carga de trabajo, portal, importación y respaldos) y el glosario buscable.",
     "Nuevo: «Consumir kit» desde el detalle de la OT: descuenta de una vez todos los repuestos del kit (todo o nada), los liga a la orden con su costo, deja constancia en la bitácora y avisa si falta stock.",

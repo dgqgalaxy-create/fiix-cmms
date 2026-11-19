@@ -76,6 +76,9 @@ export const getWorkload = async (req: Request, res: Response): Promise<void> =>
         priority: true,
         scheduled_date: true,
         due_date: true,
+        created_at: true,
+        asset: { select: { name: true } },
+        zone: { select: { name: true } },
         assigned_technicians: { select: { id: true } },
       },
     });
@@ -132,7 +135,29 @@ export const getWorkload = async (req: Request, res: Response): Promise<void> =>
         urgent: mine.filter((wo) => wo.priority === 'URGENTE').length,
         scheduled_hours: Math.round(scheduledHours * 10) / 10,
         per_day: [...perDay.entries()].map(([date, count]) => ({ date, count })),
-        title_samples: mine.slice(0, 5).map((wo) => ({ id: wo.id, folio: wo.folio, title: wo.title, priority: wo.priority })),
+        // Lista completa de órdenes abiertas del técnico (para abrir el detalle desde el tablero).
+        orders: [...mine]
+          .sort((a, b) => {
+            const priorityRank: Record<string, number> = { URGENTE: 0, NORMAL: 1, BAJO: 2 };
+            const rankDiff = (priorityRank[a.priority] ?? 3) - (priorityRank[b.priority] ?? 3);
+            if (rankDiff !== 0) return rankDiff;
+            const dueA = a.due_date ? a.due_date.getTime() : Number.MAX_SAFE_INTEGER;
+            const dueB = b.due_date ? b.due_date.getTime() : Number.MAX_SAFE_INTEGER;
+            return dueA - dueB;
+          })
+          .map((wo) => ({
+            id: wo.id,
+            folio: wo.folio,
+            title: wo.title,
+            status: wo.status,
+            priority: wo.priority,
+            asset_name: wo.asset?.name ?? null,
+            zone_name: wo.zone?.name ?? null,
+            scheduled_date: wo.scheduled_date ? wo.scheduled_date.toISOString() : null,
+            due_date: wo.due_date ? wo.due_date.toISOString() : null,
+            created_at: wo.created_at.toISOString(),
+            overdue: Boolean(wo.due_date && wo.due_date.getTime() < today),
+          })),
       };
     });
 

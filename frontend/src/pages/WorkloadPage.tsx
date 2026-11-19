@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, Loader2, RefreshCw, Scale, UserCheck, Users } from 'lucide-react';
 import { getWorkload, type WorkloadResponse, type WorkloadRow } from '../api/workload';
+import { getWorkOrderById, type WorkOrder } from '../api/workOrders';
+import { WorkloadOrdersModal } from '../components/workload/WorkloadOrdersModal';
+import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { getZones } from '../api/zones';
 import type { Zone } from '../api/zones';
 
@@ -34,6 +37,9 @@ export function WorkloadPage() {
   const [days, setDays] = useState(14);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [detailTech, setDetailTech] = useState<WorkloadRow | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<WorkOrder | null>(null);
+  const [loadingOrderId, setLoadingOrderId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -203,7 +209,7 @@ export function WorkloadPage() {
                 return (
                   <tr key={row.user_id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30">
                     <td className="border-t border-slate-100 px-3 py-2 dark:border-slate-800">
-                      <button type="button" onClick={() => navigate(`/stats/team?period=30`)} className="text-left">
+                      <button type="button" onClick={() => setDetailTech(row)} className="text-left">
                         <span className="block text-sm font-bold text-slate-800 dark:text-slate-100">{row.name}</span>
                         <span className="block text-[10.5px] text-slate-500 dark:text-slate-400">
                           {row.role === 'GESTIONADOR' ? 'Gestionador' : 'Técnico'}
@@ -267,6 +273,35 @@ export function WorkloadPage() {
           <ChevronLeft size={12} /> Periodo calculado hacia adelante desde hoy <ChevronRight size={12} />
         </span>
       </div>
+      {detailTech && !selectedOrder && (
+        <WorkloadOrdersModal
+          row={detailTech}
+          loadingOrderId={loadingOrderId}
+          onClose={() => setDetailTech(null)}
+          onOpenOrder={(orderId) => {
+            setLoadingOrderId(orderId);
+            getWorkOrderById(orderId)
+              .then((order) => setSelectedOrder(order))
+              .catch(() => setError('No se pudo abrir la orden.'))
+              .finally(() => setLoadingOrderId(null));
+          }}
+          onOpenPerformance={() => navigate('/stats/team?period=30')}
+        />
+      )}
+
+      {selectedOrder && (
+        <WorkOrderDetailModal
+          workOrder={selectedOrder}
+          isOpen
+          onClose={() => setSelectedOrder(null)}
+          onUpdate={async (id) => {
+            const fresh = await getWorkOrderById(id);
+            setSelectedOrder(fresh);
+            void load();
+            return fresh;
+          }}
+        />
+      )}
     </div>
   );
 }
