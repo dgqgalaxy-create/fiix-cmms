@@ -2,7 +2,7 @@ import { X, Info, Rocket, Server, Shield, CheckCircle2, BookOpen } from 'lucide-
 import { Link } from 'react-router-dom';
 import { useExitAnimation } from '../hooks/useExitAnimation';
 
-export const APP_VERSION = "1.122.1";
+export const APP_VERSION = "1.122.2";
 
 interface VersionModalProps {
   isOpen: boolean;
@@ -38,6 +38,7 @@ export const VersionModal = ({ isOpen, onClose }: VersionModalProps) => {
     "Asistente GTZ AI (solo lectura)"
   ];
   const changelog = [
+    "Mejora: filtros por categoría en Activos y en Órdenes de Trabajo (dentro de los filtros del listado). Se suman a la asignación y visualización de categorías que ya existían.",
     "Mejora: Manual de usuario reescrito y buscable, organizado por módulo con «para qué sirve», «qué puedes hacer», «qué significan los datos» y buenas prácticas. Incluye guía rápida de 5 pasos, los módulos nuevos (medidores, kits, categorías, compras, desempeño del equipo, carga de trabajo, portal, importación y respaldos) y el glosario buscable.",
     "Nuevo: «Consumir kit» desde el detalle de la OT: descuenta de una vez todos los repuestos del kit (todo o nada), los liga a la orden con su costo, deja constancia en la bitácora y avisa si falta stock.",
     "Nuevo: categorías de activos y de órdenes de trabajo, administrables en Configuración → Categorías de activos y OT. Se asignan al crear activos y órdenes, y se muestran en su ficha; sirven para filtrar y reportar.",

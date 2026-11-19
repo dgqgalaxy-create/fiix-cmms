@@ -13,6 +13,7 @@ import { BulkAssignModal } from '../components/BulkAssignModal';
 import { DeleteWorkOrderDialog } from '../components/workorders/DeleteWorkOrderDialog';
 import { getWorkOrders, getWorkOrdersPage, getWorkOrderById, getUniqueRequesters, getWorkOrdersSummary, createWorkOrder, updateWorkOrder, deleteWorkOrder, joinWorkOrder, getMineOpenCount } from '../api/workOrders';
 import type { WorkOrder, WorkOrderListParams } from '../api/workOrders';
+import { getWorkOrderCategories, type WorkOrderCategory } from '../api/categories';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { formatWorkOrderFolio } from '../utils/folio';
 import { useSocketRefresh } from '../hooks/useSocketRefresh';
@@ -68,6 +69,8 @@ export const Dashboard = () => {
   const [customStartDate, setCustomStartDate] = useState(firstDayOfMonthYmd);
   const [customEndDate, setCustomEndDate] = useState(todayYmd);
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
+  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+  const [orderCategories, setOrderCategories] = useState<WorkOrderCategory[]>([]);
   const [assetFilter, setAssetFilter] = useState<string>('ALL');
   const [requesterFilter, setRequesterFilter] = useState<string>('ALL');
   const [zoneIds, setZoneIds] = useState<string[]>([]);
@@ -133,11 +136,18 @@ export const Dashboard = () => {
     return {};
   };
 
+  useEffect(() => {
+    getWorkOrderCategories()
+      .then((rows) => setOrderCategories(rows.filter((row) => row.is_active)))
+      .catch(() => undefined);
+  }, []);
+
   const clearListFilters = () => {
     setDateFilter('ALL');
     setCustomStartDate(firstDayOfMonthYmd());
     setCustomEndDate(todayYmd());
     setPriorityFilter('ALL');
+    setCategoryFilter('ALL');
     setAssetFilter('ALL');
     setRequesterFilter('ALL');
     setZoneIds([]);
@@ -202,6 +212,8 @@ export const Dashboard = () => {
             : statusFilter || undefined,
       priority:
         activeTab === 'MIS_ORDENES' || priorityFilter === 'ALL' ? undefined : priorityFilter,
+      categoryId:
+        categoryFilter === 'ALL' ? undefined : categoryFilter,
       unassigned: activeTab === 'MIS_ORDENES' ? undefined : unassignedFilter || undefined,
       overdue:
         activeTab === 'MIS_ORDENES' ? undefined : overdueFilter || undefined,
@@ -575,6 +587,7 @@ export const Dashboard = () => {
     historyPage,
     statusFilter,
     priorityFilter,
+    categoryFilter,
     unassignedFilter,
     requesterFilter,
     zoneIds,
@@ -673,6 +686,7 @@ export const Dashboard = () => {
     customStartDate,
     customEndDate,
     priorityFilter,
+    categoryFilter,
     assetFilter,
     requesterFilter,
     zoneIds,
@@ -1145,7 +1159,19 @@ export const Dashboard = () => {
               inputClassName="px-3 py-2 pr-8 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm"
             />
 
-            {(zoneIds.length > 0 || dateFilter !== 'ALL' || priorityFilter !== 'ALL' || assetFilter !== 'ALL' || requesterFilter !== 'ALL' || searchTerm !== '' || statusFilter !== null || unassignedFilter || slaFilter) && (
+            <SearchableSelect
+              value={categoryFilter}
+              onChange={setCategoryFilter}
+              options={[
+                { value: 'ALL', label: 'Todas las categorías' },
+                ...orderCategories.map((category) => ({ value: category.id, label: category.name })),
+              ]}
+              placeholder="Buscar…"
+              title="Filtrar por categoría de orden"
+              inputClassName="px-3 py-2 pr-8 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-emerald-500 shadow-sm max-w-[220px]"
+            />
+
+            {(zoneIds.length > 0 || dateFilter !== 'ALL' || priorityFilter !== 'ALL' || categoryFilter !== 'ALL' || assetFilter !== 'ALL' || requesterFilter !== 'ALL' || searchTerm !== '' || statusFilter !== null || unassignedFilter || slaFilter) && (
               <button 
                 onClick={() => {
                   clearListFilters();

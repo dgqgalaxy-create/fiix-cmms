@@ -98,6 +98,7 @@ export type WorkOrderListParams = {
   tab?: 'active' | 'mine' | 'history';
   status?: string;
   priority?: string;
+  categoryId?: string;
   maintenanceType?: 'PREVENTIVO' | 'CORRECTIVO' | 'SERVICIO';
   unassigned?: boolean;
   q?: string;

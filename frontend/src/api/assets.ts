@@ -99,6 +99,7 @@ export type AssetListParams = {
   zoneSectionId?: string;
   status?: string;
   critical?: string;
+  categoryId?: string;
   includeObsolete?: string;
 };
 
